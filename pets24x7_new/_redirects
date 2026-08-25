@@ -1,0 +1,17 @@
+# Pets24x7 — Netlify (and Cloudflare Pages) redirect rules.
+# Format: <from>  <to>  <status>
+
+# 301 legacy query-string URLs to clean URLs (server-side, before JS runs).
+# Netlify supports query-param matching via the splat + query syntax.
+/city.html       /:country/:city/          301  country=:country  city=:city
+/listing.html    /:country/:city/:id/      301  country=:country  city=:city  id=:id
+
+# Force trailing slash on directory URLs (Google treats them as same anyway,
+# but explicit is safer for canonical signals).
+/in/:city           /in/:city/         301!
+/us/:city           /us/:city/         301!
+/in/:city/:cat      /in/:city/:cat/    301!
+/us/:city/:cat      /us/:city/:cat/    301!
+
+# Pretty 404
+/*               /404.html                 404

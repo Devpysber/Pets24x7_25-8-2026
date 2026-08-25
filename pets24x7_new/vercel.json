@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": true,
+  "cleanUrls": true,
+  "headers": [
+    { "source": "/styles.css",       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/pets24x7_logo.png","headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/config.js",        "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] },
+    { "source": "/pets-data.js",     "headers": [{ "key": "Cache-Control", "value": "public, max-age=1800" }] },
+    { "source": "/data/(.*)",        "headers": [{ "key": "Cache-Control", "value": "public, max-age=1800" }] }
+  ],
+  "redirects": [
+    { "source": "/city.html",    "destination": "/", "permanent": true, "has": [{ "type": "query", "key": "country" }, { "type": "query", "key": "city" }] },
+    { "source": "/listing.html", "destination": "/", "permanent": true, "has": [{ "type": "query", "key": "id" }] }
+  ]
+}

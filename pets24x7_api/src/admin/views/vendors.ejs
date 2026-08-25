@@ -1,0 +1,62 @@
+<%- include('_head', { title: 'Vendors · Pets24x7 Admin', active: 'vendors' }) %>
+
+<div class="page-head"><h2>Vendors</h2></div>
+
+<div class="filters">
+  <% ['PENDING','ACTIVE','REJECTED','SUSPENDED'].forEach(function(s){ %>
+    <a href="/admin/vendors?status=<%= s %>" class="<%= s === status ? 'active' : '' %>"><%= s.charAt(0) + s.slice(1).toLowerCase() %></a>
+  <% }); %>
+</div>
+
+<div class="card" style="padding:0">
+  <% if (!vendors.length) { %>
+    <div class="empty">No <%= status.toLowerCase() %> vendors.</div>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Business</th><th>WhatsApp</th><th>Listing</th><th>Claimed</th><th style="text-align:right">Actions</th></tr>
+      </thead>
+      <tbody>
+        <% vendors.forEach(function(v){ %>
+          <tr>
+            <td>
+              <strong><%= v.businessName %></strong><br/>
+              <span class="muted"><%= v.category || '—' %> · <%= v.city || '—' %>, <%= v.country || '—' %></span><br/>
+              <% if (v.email) { %><span class="muted"><%= v.email %></span><% } %>
+            </td>
+            <td>
+              <a href="https://wa.me/<%= v.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= v.phone %></a>
+              <br/><span class="pill <%= v.status.toLowerCase() %>"><%= v.status %></span>
+            </td>
+            <td>
+              <% if (v.listing) { %>
+                <strong><%= v.listing.name %></strong><br/>
+                <span class="muted">★ <%= v.listing.rating %> · <%= v.listing.review_count %> reviews</span><br/>
+                <a target="_blank" href="https://pets24x7.com/<%= (v.listing.country || 'in').toLowerCase() %>/<%= v.listing.city_slug %>/<%= v.listing.id %>/">View live →</a>
+              <% } else { %><span class="muted">No listing</span><% } %>
+            </td>
+            <td class="muted"><%= v.claimedAt ? new Date(v.claimedAt).toLocaleString('en-IN') : '—' %></td>
+            <td style="text-align:right">
+              <% if (v.status === 'PENDING') { %>
+                <form class="inline" action="/admin/vendors/<%= v.id %>/approve" method="post">
+                  <button class="btn btn-success btn-sm" type="submit">Approve</button>
+                </form>
+                <form class="inline" action="/admin/vendors/<%= v.id %>/reject" method="post"
+                      onsubmit="this.reason.value = prompt('Reason for rejection?')||''; if (!this.reason.value) return false;">
+                  <input type="hidden" name="reason" value="">
+                  <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+                </form>
+              <% } else if (v.status === 'ACTIVE') { %>
+                <span class="muted">Approved <%= v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('en-IN') : '' %></span>
+              <% } else if (v.status === 'REJECTED') { %>
+                <span class="muted" style="font-size:12px"><%= v.rejectedReason || 'Rejected' %></span>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'vendors' }) %>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Sign in — Pets24x7.com</title>
+<meta name="description" content="Sign in to Pets24x7 — pet parents, business owners and admins." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --primary-light:#EFF6FF; --bg:#FFFFFF; --bg-alt:#F9FAFB; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; --whatsapp:#25D366; --success:#10B981; --warning:#F59E0B; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',sans-serif; color:var(--text); background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%); min-height:100vh; -webkit-font-smoothing:antialiased; }
+  a { color:var(--primary); text-decoration:none; }
+  .top { padding:24px 20px; max-width:1180px; margin:0 auto; }
+  .brand { display:inline-flex; align-items:center; gap:10px; }
+  .brand-logo { width:36px; height:36px; border-radius:8px; }
+  .brand-name { font-weight:800; font-size:22px; color:var(--primary); letter-spacing:-0.5px; }
+  .brand-name .tld { color:var(--text); }
+  .container { max-width:1080px; margin:0 auto; padding:24px 20px 80px; }
+  .page-head { text-align:center; max-width:680px; margin:24px auto 48px; }
+  .page-head h1 { font-size:clamp(28px,3.6vw,40px); font-weight:800; letter-spacing:-0.8px; margin-bottom:12px; }
+  .page-head p { color:var(--text-muted); font-size:17px; }
+  .tile-grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .tile { background:#fff; border:1px solid var(--border); border-radius:18px; padding:36px 28px; text-align:left; transition:all 0.25s; box-shadow:0 1px 2px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:14px; }
+  .tile:hover { transform:translateY(-4px); box-shadow:0 16px 40px rgba(37,99,235,0.12); border-color:rgba(37,99,235,0.3); }
+  .tile .icon { width:56px; height:56px; border-radius:14px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:28px; }
+  .tile h2 { font-size:22px; font-weight:800; letter-spacing:-0.4px; }
+  .tile p { color:var(--text-muted); font-size:14px; flex:1; line-height:1.6; }
+  .tile .cta { color:var(--primary); font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:6px; margin-top:6px; }
+  .tile.parent .icon { background:#FEF3C7; color:#92400E; }
+  .tile.vendor .icon { background:#DCFCE7; color:#166534; }
+  .tile.admin  .icon { background:#FEE2E2; color:#991B1B; }
+  .foot { text-align:center; color:var(--text-muted); font-size:13px; padding:24px 20px; }
+  .foot a { color:var(--text-muted); margin:0 8px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="brand">
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+  </a>
+</header>
+
+<main class="container">
+  <div class="page-head">
+    <h1>Sign in to Pets24x7</h1>
+    <p>Pick how you use Pets24x7. We&rsquo;ll send a one-tap WhatsApp code &mdash; no passwords.</p>
+  </div>
+
+  <div class="tile-grid">
+    <a class="tile parent" href="/parent-login/">
+      <div class="icon">&#x1F415;</div>
+      <h2>I&rsquo;m a pet parent</h2>
+      <p>Save your pets&rsquo; profiles, track enquiries, see nearby deals, manage your Pets24x7 membership.</p>
+      <span class="cta">Continue &rarr;</span>
+    </a>
+    <a class="tile vendor" href="/vendor-login/">
+      <div class="icon">&#x1FA7A;</div>
+      <h2>I run a pet business</h2>
+      <p>Claim your listing with WhatsApp OTP. Improve your profile, collect reviews, invite customers, run ads.</p>
+      <span class="cta">Continue &rarr;</span>
+    </a>
+    <a class="tile admin" href="https://api.pets24x7.com/admin/login">
+      <div class="icon">&#x1F510;</div>
+      <h2>I&rsquo;m Pets24x7 staff</h2>
+      <p>Admin panel for vendor approvals, parent management, campaigns and payments.</p>
+      <span class="cta">Open admin panel &rarr;</span>
+    </a>
+  </div>
+</main>
+
+<footer class="foot">
+  &copy; 2026 Pets24x7.com &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a>
+</footer>
+
+</body>
+</html>

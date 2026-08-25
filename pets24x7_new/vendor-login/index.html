@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Vendor Sign in — Pets24x7.com</title>
+<meta name="description" content="Claim your pet business listing on Pets24x7 with WhatsApp OTP." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--primary-light:#EFF6FF;--bg:#fff;--bg-alt:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--danger:#DC2626;--whatsapp:#25D366;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+  a{color:var(--primary);text-decoration:none}
+  .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
+  .brand{display:inline-flex;align-items:center;gap:10px}
+  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
+  .brand-name .tld{color:var(--text)}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;max-width:540px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .step-hint{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+  h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px}
+  p.sub{color:var(--text-muted);font-size:14px;margin-bottom:24px}
+  label{display:block;font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;background:#fff;font-weight:500;color:var(--text)}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:18px}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.25)}
+  .btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+  .btn-link{background:none;border:none;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;padding:8px 0;margin-top:10px;width:auto}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .err.show{display:block}
+  .ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .ok.show{display:block}
+  .match-list{margin-top:18px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .match{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:14px}
+  .match:last-child{border-bottom:none}
+  .match:hover{background:var(--primary-light)}
+  .match.sel{background:var(--primary-light);border-left:4px solid var(--primary);padding-left:12px}
+  .match input[type=radio]{margin:0;width:18px;height:18px}
+  .match .info{flex:1;min-width:0}
+  .match .info strong{display:block;font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+  .match .info .meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .match .rating{font-size:12px;font-weight:700;color:var(--success);background:#DCFCE7;padding:2px 8px;border-radius:999px;flex-shrink:0}
+  .nomatch{padding:18px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:14px;margin-top:18px;line-height:1.5}
+  .nomatch strong{display:block;margin-bottom:6px}
+  .small{font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center}
+  .small a{font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="brand">
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+  </a>
+</header>
+
+<main>
+  <div class="card">
+    <!-- Dev Mode Banner -->
+    <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;">
+      <div style="font-weight:700;color:#065F46;margin-bottom:4px;display:flex;align-items:center;gap:6px">⚡ Development Mode Active</div>
+      <div style="color:#047857;margin-bottom:8px;line-height:1.4">OTP system is paused for local dev. Use any phone number or click below:</div>
+      <a href="http://localhost:4000/api/dev/login/vendor" style="display:inline-block;background:#059669;color:#fff;font-weight:700;padding:8px 14px;border-radius:6px;font-size:12px;text-decoration:none">Instant Vendor Sign In &rarr;</a>
+    </div>
+
+    <!-- Step 1: phone -->
+    <section id="step1">
+      <div class="step-hint">Step 1 of 3 &middot; Vendor sign in</div>
+      <h1>Claim your business listing</h1>
+      <p class="sub">Enter your phone number to sign in. (Development Mode: OTP system paused)</p>
+
+      <label for="vPhone">WhatsApp number</label>
+      <input id="vPhone" type="tel" placeholder="+91 98765 43210" value="+91 99300 90487" autocomplete="tel" inputmode="tel" />
+
+      <div class="err" id="err1"></div>
+      <button class="btn btn-primary" id="lookupBtn">Sign in to Vendor Dashboard &rarr;</button>
+
+      <p class="small">Pet parent? <a href="/parent-login/">Sign in here</a></p>
+    </section>
+
+    <!-- Step 2: pick listing + send OTP -->
+    <section id="step2" hidden>
+      <div class="step-hint">Step 2 of 3 &middot; Pick your listing</div>
+      <h1 id="step2H">We found a match</h1>
+      <p class="sub" id="step2Sub">Pick the listing you own. We&rsquo;ll send an OTP to confirm.</p>
+
+      <div id="matchList" class="match-list"></div>
+      <div id="noMatch" class="nomatch" hidden>
+        <strong>No listing matches that number.</strong>
+        We couldn&rsquo;t find your business in our database with that WhatsApp number.
+        <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20add%20my%20business%20to%20your%20listings..." target="_blank" rel="noopener" style="color:#92400E;font-weight:700;text-decoration:underline">Message us to add your business &rarr;</a>
+      </div>
+
+      <div class="err" id="err2"></div>
+      <button class="btn btn-primary" id="sendOtpBtn" hidden>Claim &amp; Sign in to Vendor Dashboard &rarr;</button>
+      <button class="btn-link" id="back1">&larr; Try a different number</button>
+    </section>
+
+    <!-- Step 3: OTP + claim (Optional) -->
+    <section id="step3" hidden>
+      <div class="step-hint">Step 3 of 3 &middot; Verify</div>
+      <h1>Enter the code</h1>
+      <p class="sub" id="sentTo">We sent a 6-digit code to your WhatsApp.</p>
+
+      <label for="otp">6-digit code</label>
+      <input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+
+      <label for="vEmail">Business email (optional)</label>
+      <input id="vEmail" type="email" placeholder="you@business.com" autocomplete="email" />
+
+      <div class="err" id="err3"></div>
+      <div class="ok"  id="ok3">Claimed. Redirecting to your dashboard&hellip;</div>
+      <button class="btn btn-primary" id="claimBtn">Verify &amp; claim listing</button>
+      <button class="btn-link" id="back2">&larr; Wrong listing? Go back</button>
+    </section>
+
+  </div>
+</main>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  var s1 = document.getElementById('step1');
+  var s2 = document.getElementById('step2');
+  var s3 = document.getElementById('step3');
+  var err1 = document.getElementById('err1');
+  var err2 = document.getElementById('err2');
+  var err3 = document.getElementById('err3');
+  var ok3 = document.getElementById('ok3');
+  var matchList = document.getElementById('matchList');
+  var noMatch = document.getElementById('noMatch');
+  var sendOtpBtn = document.getElementById('sendOtpBtn');
+
+  var phone = '';
+  var matches = [];
+  var picked = null;
+
+  function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el) { el.classList.remove('show'); }
+  function esc(s) { return (s||'').toString().replace(/[<>&"']/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  // ----- Step 1: Single Click Sign-In (Auto Lookup + Claim + Verify) -----
+  document.getElementById('lookupBtn').addEventListener('click', function () {
+    clearErr(err1);
+    var p = document.getElementById('vPhone').value.trim();
+    if (p.replace(/[^0-9]/g, '').length < 10) return showErr(err1, 'Enter a valid phone number.');
+
+    this.disabled = true; this.textContent = 'Signing in...';
+    var self = this;
+    api.vendorRequestOtp(p).then(function (r) {
+      phone = r.phone || p;
+      matches = r.matches || [];
+      var listingToClaim = matches.length > 0 ? matches[0] : { id: 'dev-listing-1', name: 'Pawsome Pet Care & Clinic' };
+      return api.vendorVerify({
+        phone: phone,
+        code: '123456',
+        listingId: listingToClaim.id,
+        businessName: listingToClaim.name
+      });
+    }).then(function () {
+      location.href = '/dashboard/vendor/';
+    }).catch(function (e) {
+      showErr(err1, fmtErr(e));
+      self.disabled = false; self.textContent = 'Sign in to Vendor Dashboard →';
+    });
+  });
+
+  // ----- Step 2: confirm listing -> direct verify & login -----
+  sendOtpBtn.addEventListener('click', function () {
+    clearErr(err2);
+    var sel = matchList.querySelector('input[name=listing]:checked');
+    if (!sel) return showErr(err2, 'Pick a listing first.');
+    picked = sel.value;
+    var pickedListing = matches.find(function (m) { return m.id === picked; });
+
+    this.disabled = true; this.textContent = 'Signing in...';
+    var self = this;
+    api.vendorVerify({
+      phone: phone,
+      code: '123456',
+      listingId: picked,
+      businessName: pickedListing ? pickedListing.name : undefined
+    }).then(function () {
+      location.href = '/dashboard/vendor/';
+    }).catch(function (e) {
+      showErr(err2, fmtErr(e));
+      self.disabled = false; self.textContent = 'Claim & Sign in to Vendor Dashboard →';
+    });
+  });
+
+  // ----- Step 3: verify + claim -----
+  document.getElementById('claimBtn').addEventListener('click', function () {
+    clearErr(err3);
+    var code = document.getElementById('otp').value.trim();
+    var email = document.getElementById('vEmail').value.trim();
+    if (code.length !== 6) return showErr(err3, 'Enter the 6-digit code.');
+
+    this.disabled = true; this.textContent = 'Verifying...';
+    var self = this;
+    var pickedListing = matches.find(function (m) { return m.id === picked; });
+    api.vendorVerify({
+      phone: phone,
+      code: code,
+      listingId: picked,
+      businessName: pickedListing ? pickedListing.name : undefined,
+      email: email || undefined
+    }).then(function () {
+      ok3.classList.add('show');
+      setTimeout(function () { location.href = '/dashboard/vendor/'; }, 500);
+    }).catch(function (e) {
+      showErr(err3, fmtErr(e));
+      self.disabled = false; self.textContent = 'Verify & claim listing';
+    });
+  });
+
+  // ----- back buttons -----
+  document.getElementById('back1').addEventListener('click', function () {
+    s2.hidden = true; s1.hidden = false; clearErr(err1); clearErr(err2);
+  });
+  document.getElementById('back2').addEventListener('click', function () {
+    s3.hidden = true; s2.hidden = false; clearErr(err3);
+    document.getElementById('otp').value = '';
+  });
+
+  // Manual sign in flow handles navigation on user action
+</script>
+
+</body>
+</html>

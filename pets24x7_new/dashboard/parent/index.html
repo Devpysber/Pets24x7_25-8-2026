@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#1E3A8A" />
+<title>Pet Parent Marketplace — Pets24x7.com</title>
+<meta name="description" content="Discover trusted pet services, vets, groomers, boarders, and manage your pets." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #1E40AF;
+    --primary-hover: #1E3A8A;
+    --primary-light: #F0F4FF;
+    --primary-border: #C7D2FE;
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --text-main: #0F172A;
+    --text-muted: #64748B;
+    --text-subtle: #94A3B8;
+    --border: #E2E8F0;
+    --border-dark: #CBD5E1;
+    --success: #059669;
+    --success-bg: #ECFDF5;
+    --warning: #D97706;
+    --warning-bg: #FFFBEB;
+    --danger: #DC2626;
+    --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-dropdown: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --sidebar-width: 250px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-main); background: var(--bg); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  a { color: var(--primary); text-decoration: none; font-weight: 500; }
+  a:hover { text-decoration: underline; }
+
+  /* App Layout Structure */
+  .app-container { display: flex; min-height: 100vh; }
+
+  /* Desktop Left Sidebar */
+  .sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; }
+  .sidebar-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .brand-logo { width: 32px; height: 32px; border-radius: 8px; }
+  .brand-title { font-weight: 800; font-size: 19px; color: var(--primary); letter-spacing: -0.4px; }
+  .brand-title .tld { color: var(--text-main); font-weight: 700; }
+
+  .sidebar-nav { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  .nav-label { font-size: 11px; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.8px; padding: 12px 12px 6px; }
+
+  .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.15s ease; cursor: pointer; text-decoration: none; }
+  .nav-link:hover { background: #F1F5F9; color: var(--text-main); text-decoration: none; }
+  .nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 700; border-left: 3px solid var(--primary); padding-left: 11px; }
+  .nav-link .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+
+  /* Mobile Top Bar & Drawer */
+  .mobile-top-bar { display: none; position: sticky; top: 0; z-index: 40; background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 18px; justify-content: space-between; align-items: center; }
+  @media (max-width: 840px) {
+    .sidebar { display: none; }
+    .mobile-top-bar { display: flex; }
+    .app-container { flex-direction: column; }
+    .main-wrapper { margin-left: 0 !important; }
+  }
+
+  .mobile-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: var(--surface); border-top: 1px solid var(--border); justify-content: space-around; padding: 8px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+  @media (max-width: 840px) { .mobile-bottom-nav { display: flex; } }
+  .mobile-tab-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; border: none; background: none; }
+  .mobile-tab-btn.active { color: var(--primary); font-weight: 700; }
+
+  /* Main Wrapper */
+  .main-wrapper { flex: 1; margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+  .main-content { max-width: 1080px; width: 100%; margin: 0 auto; padding: 32px 28px 60px; }
+  @media (max-width: 640px) { .main-content { padding: 20px 16px 80px; } }
+
+  /* Typography & Headers */
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 26px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; margin-bottom: 4px; }
+  .page-subtitle { color: var(--text-muted); font-size: 14px; font-weight: 400; }
+
+  .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; margin-top: 32px; }
+  .section-title { font-size: 17px; font-weight: 700; color: var(--text-main); letter-spacing: -0.3px; }
+  .section-link { font-size: 13px; font-weight: 600; color: var(--primary); }
+
+  /* Cards & Components */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-card); margin-bottom: 20px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; border: 1px solid var(--border-dark); background: var(--surface); color: var(--text-main); cursor: pointer; transition: all 0.15s ease; text-decoration: none; font-family: inherit; }
+  .btn:hover { background: #F8FAFC; border-color: #94A3B8; text-decoration: none; }
+  .btn-primary { background: var(--primary); color: #FFFFFF; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-hover); color: #FFFFFF; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+  .btn-ghost:hover { background: #F1F5F9; color: var(--text-main); }
+
+  /* 1. Home - Pet Overview Card */
+  .featured-pet-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 22px 24px; box-shadow: var(--shadow-card); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+  .pet-info-flex { display: flex; align-items: center; gap: 16px; }
+  .pet-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; border: 2px solid var(--primary-border); }
+  .pet-name-h { font-size: 19px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+  .pet-meta-sub { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+  .pet-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .pet-badge.vac { background: var(--success-bg); color: var(--success); }
+
+  .pet-selector-dropdown { padding: 6px 12px; border: 1px solid var(--border-dark); border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; background: var(--surface); color: var(--text-main); cursor: pointer; }
+
+  /* Service Category Cards (6-grid) */
+  .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .category-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 14px; text-align: center; cursor: pointer; transition: all 0.15s ease; box-shadow: var(--shadow-subtle); }
+  .category-box:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-card); }
+  .category-box .icon { font-size: 28px; margin-bottom: 8px; display: block; }
+  .category-box .title { font-size: 13px; font-weight: 700; color: var(--text-main); }
+
+  /* Vendor Cards Grid */
+  .vendor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .vendor-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card); transition: all 0.15s ease; display: flex; flex-direction: column; }
+  .vendor-card:hover { border-color: var(--border-dark); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .vendor-banner { height: 110px; background: linear-gradient(135deg, #E2E8F0, #CBD5E1); position: relative; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+  .vendor-tag { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.85); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .vendor-rating { position: absolute; bottom: 10px; right: 10px; background: #fff; color: #D97706; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .vendor-content { padding: 16px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .vendor-name { font-size: 16px; font-weight: 700; color: var(--text-main); line-height: 1.3; margin-bottom: 4px; }
+  .vendor-address { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+  .vendor-foot { display: flex; justify-content: space-between; align-items: center; pt: 10px; border-top: 1px solid var(--border); }
+
+  /* 2. Find Services - Search Hero */
+  .search-hero-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow-card); }
+  .search-input-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .search-field { flex: 1; min-width: 240px; padding: 11px 14px; border: 1px solid var(--border-dark); border-radius: var(--radius-sm); font-family: inherit; font-size: 14px; background: #fff; }
+  .search-field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.1); }
+  .chip-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .chip-bar::-webkit-scrollbar { display: none; }
+  .chip { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: #fff; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+  .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* 4. My Pets Grid */
+  .pets-manage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .pet-card-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; justify-content: space-between; }
+  .pet-card-top { display: flex; gap: 14px; margin-bottom: 12px; }
+  .pet-card-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 1px solid var(--primary-border); }
+  .pet-card-details h3 { font-size: 17px; font-weight: 700; }
+  .pet-card-details p { font-size: 13px; color: var(--text-muted); }
+  .pet-meta-row { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+  .meta-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #F1F5F9; color: var(--text-muted); }
+  .meta-tag.vac { background: var(--success-bg); color: var(--success); }
+
+  /* 6. Enquiries Table */
+  .enquiries-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card); }
+  .enquiry-row { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .enquiry-row:last-child { border-bottom: none; }
+  .enquiry-main h4 { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+  .enquiry-main p { font-size: 13px; color: var(--text-muted); }
+  .status-pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .status-pill.pending { background: var(--warning-bg); color: var(--warning); }
+  .status-pill.responded { background: var(--success-bg); color: var(--success); }
+
+  /* Modals */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+  .modal-backdrop.show { display: flex; }
+  .modal-box { background: var(--surface); border-radius: var(--radius-md); max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: var(--shadow-dropdown); border: 1px solid var(--border); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .modal-header h3 { font-size: 18px; font-weight: 800; color: var(--text-main); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border-dark); border-radius: var(--radius-sm); font-family: inherit; font-size: 14px; background: #fff; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.1); }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Views Switching */
+  .view-pane { display: none; }
+  .view-pane.active { display: block; animation: fadeIn 0.15s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .empty-box { padding: 48px 20px; text-align: center; color: var(--text-muted); background: var(--surface); border: 1px dashed var(--border-dark); border-radius: var(--radius-md); }
+  .empty-box h3 { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Desktop Left Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img src="/pets24x7_logo.png" alt="Pets24x7" class="brand-logo" />
+      <span class="brand-title">Pets24x7<span class="tld">.com</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Navigation</div>
+      <a class="nav-link active" onclick="navigate('home')">
+        <span class="icon">🏠</span> <span>Home</span>
+      </a>
+      <a class="nav-link" onclick="navigate('search')">
+        <span class="icon">🔍</span> <span>Find Services</span>
+      </a>
+      <a class="nav-link" onclick="navigate('pets')">
+        <span class="icon">🐾</span> <span>My Pets</span>
+      </a>
+      <a class="nav-link" onclick="navigate('enquiries')">
+        <span class="icon">💬</span> <span>My Enquiries</span>
+      </a>
+      <a class="nav-link" onclick="navigate('membership')">
+        <span class="icon">⭐</span> <span>Membership</span>
+      </a>
+      <a class="nav-link" onclick="navigate('account')">
+        <span class="icon">👤</span> <span>My Account</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="nav-link" onclick="navigate('account')">
+        <span class="icon">⚙️</span> <span>Settings</span>
+      </a>
+      <a class="nav-link" style="color: var(--danger);" onclick="handleLogout()">
+        <span class="icon">🚪</span> <span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Mobile Top Bar -->
+  <div class="mobile-top-bar">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="/pets24x7_logo.png" alt="Pets24x7" style="width:28px;height:28px;border-radius:6px;" />
+      <span style="font-weight: 800; font-size: 17px; color: var(--primary);">Pets24x7</span>
+    </div>
+    <span style="font-size: 13px; font-weight: 600;" id="mobUserLabel">Pet Parent</span>
+  </div>
+
+  <!-- Main Wrapper -->
+  <div class="main-wrapper">
+    <main class="main-content">
+
+      <!-- ==================== 1. HOME VIEW ==================== -->
+      <section id="view-home" class="view-pane active">
+        <div class="page-header">
+          <h1 class="page-title" id="homeGreetingTitle">Good morning, Pet Parent</h1>
+          <p class="page-subtitle">Find the right care and services for your pet.</p>
+        </div>
+
+        <!-- Pet Overview Card -->
+        <div class="section-header">
+          <span class="section-title">Selected Pet</span>
+          <a class="section-link" onclick="navigate('pets')">Manage All Pets →</a>
+        </div>
+        <div id="homePetOverview">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Find a Service Prominent Bar -->
+        <div class="card" style="padding: 22px; margin-top: 24px; margin-bottom: 28px;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">What does your pet need?</h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" id="homeSearchInput" class="search-field" placeholder="Search vets, groomers, boarding, pet shops..." onkeyup="if(event.key==='Enter') triggerHomeSearch()" />
+            <button class="btn btn-primary" onclick="triggerHomeSearch()">Search Services</button>
+          </div>
+        </div>
+
+        <!-- Services 6-Grid -->
+        <div class="section-header">
+          <span class="section-title">Services</span>
+        </div>
+        <div class="category-grid">
+          <div class="category-box" onclick="filterCategoryAndSearch('Veterinary')">
+            <span class="icon">🩺</span>
+            <span class="title">Veterinary</span>
+          </div>
+          <div class="category-box" onclick="filterCategoryAndSearch('Grooming')">
+            <span class="icon">✂️</span>
+            <span class="title">Grooming</span>
+          </div>
+          <div class="category-box" onclick="filterCategoryAndSearch('Boarding')">
+            <span class="icon">🏡</span>
+            <span class="title">Boarding</span>
+          </div>
+          <div class="category-box" onclick="filterCategoryAndSearch('Pet Shops')">
+            <span class="icon">🛍️</span>
+            <span class="title">Pet Shops</span>
+          </div>
+          <div class="category-box" onclick="filterCategoryAndSearch('Training')">
+            <span class="icon">🎾</span>
+            <span class="title">Training</span>
+          </div>
+          <div class="category-box" onclick="filterCategoryAndSearch('Pet Sitting')">
+            <span class="icon">🐕‍🦺</span>
+            <span class="title">Pet Sitting</span>
+          </div>
+        </div>
+
+        <!-- Recommended for Your Pet -->
+        <div class="section-header">
+          <span class="section-title" id="homeRecomTitle">Recommended for Your Pet</span>
+        </div>
+        <div class="vendor-grid" id="homeRecomGrid">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Nearby Businesses -->
+        <div class="section-header">
+          <span class="section-title">Nearby Services</span>
+          <a class="section-link" onclick="navigate('search')">View all services →</a>
+        </div>
+        <div class="vendor-grid" id="homeNearbyGrid">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== 2. FIND SERVICES VIEW ==================== -->
+      <section id="view-search" class="view-pane">
+        <div class="page-header">
+          <h1 class="page-title">Find Pet Services</h1>
+          <p class="page-subtitle">Discover trusted pet businesses near you.</p>
+        </div>
+
+        <div class="search-hero-box">
+          <div class="search-input-group">
+            <input type="text" id="searchInput" class="search-field" placeholder="Search businesses or services" oninput="runSearch()" />
+            <select id="searchCity" class="search-field" style="max-width: 200px;" onchange="runSearch()">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Category Chips -->
+          <div class="chip-bar" id="catChipBar">
+            <button class="chip active" onclick="selectChip('all', this)">All</button>
+            <button class="chip" onclick="selectChip('Veterinary', this)">Veterinary</button>
+            <button class="chip" onclick="selectChip('Grooming', this)">Grooming</button>
+            <button class="chip" onclick="selectChip('Boarding', this)">Boarding</button>
+            <button class="chip" onclick="selectChip('Pet Shops', this)">Pet Shops</button>
+            <button class="chip" onclick="selectChip('Training', this)">Training</button>
+            <button class="chip" onclick="selectChip('Pet Sitting', this)">Pet Sitting</button>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <span class="section-title" id="searchCountHeader">Available Businesses</span>
+        </div>
+        <div class="vendor-grid" id="searchResultsGrid">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== 3. VENDOR DETAILS VIEW ==================== -->
+      <section id="view-vendor-details" class="view-pane">
+        <div style="margin-bottom: 20px;">
+          <a class="btn btn-sm btn-ghost" onclick="navigate('search')">← Back to Search</a>
+        </div>
+        <div id="vendorDetailsBody">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== 4. MY PETS VIEW ==================== -->
+      <section id="view-pets" class="view-pane">
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h1 class="page-title">My Pets</h1>
+            <p class="page-subtitle">Manage your pets and keep their information up to date.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openAddPetModal()">+ Add Pet</button>
+        </div>
+
+        <div class="pets-manage-grid" id="petsListGrid">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== 5. MY ENQUIRIES VIEW ==================== -->
+      <section id="view-enquiries" class="view-pane">
+        <div class="page-header">
+          <h1 class="page-title">My Enquiries</h1>
+          <p class="page-subtitle">Track your enquiries with pet businesses.</p>
+        </div>
+
+        <div class="enquiries-table-card" id="enquiriesTableBody">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== 6. MEMBERSHIP VIEW ==================== -->
+      <section id="view-membership" class="view-pane">
+        <div class="page-header">
+          <h1 class="page-title">Membership</h1>
+          <p class="page-subtitle">Exclusive perks and priority healthcare for Pets24x7 members.</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--primary); padding: 24px;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Membership Tier</div>
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Pets24x7 Member</h2>
+          <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+            Enjoy exclusive vendor discounts, priority WhatsApp veterinary advice, free quarterly wellness consults, and verified badge recognition at partner clinics.
+          </p>
+
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Member Benefits Included:</h4>
+          <ul style="list-style: none; padding: 0; margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px;">
+            <li style="font-size: 14px; display: flex; align-items: center; gap: 8px;">✓ Up to 15% off at verified grooming &amp; boarding partners</li>
+            <li style="font-size: 14px; display: flex; align-items: center; gap: 8px;">✓ Direct line to certified veterinarians for emergency guidance</li>
+            <li style="font-size: 14px; display: flex; align-items: center; gap: 8px;">✓ Priority booking slots at top-rated veterinary clinics</li>
+          </ul>
+
+          <a href="/membership/" class="btn btn-primary">View Plans &rarr;</a>
+        </div>
+      </section>
+
+      <!-- ==================== 7. ACCOUNT VIEW ==================== -->
+      <section id="view-account" class="view-pane">
+        <div class="page-header">
+          <h1 class="page-title">My Account</h1>
+        </div>
+
+        <div class="card" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 28px;">
+          <div class="pet-avatar" style="width: 64px; height: 64px; font-size: 28px;" id="accAvatar">P</div>
+          <div style="flex: 1; min-width: 200px;">
+            <h2 style="font-size: 19px; font-weight: 800;" id="accName">Pet Parent</h2>
+            <p style="color: var(--text-muted); font-size: 14px;" id="accEmail">alex.parent@example.com</p>
+            <p style="color: var(--text-muted); font-size: 13px;" id="accPhone">+91 98765 43210</p>
+          </div>
+          <button class="btn" onclick="openProfileModal()">Edit Profile</button>
+        </div>
+
+        <div class="section-header">
+          <span class="section-title">Account Shortcuts</span>
+        </div>
+        <div class="category-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+          <div class="category-box" onclick="navigate('pets')">
+            <span class="icon">🐾</span>
+            <span class="title">My Pets</span>
+          </div>
+          <div class="category-box" onclick="navigate('enquiries')">
+            <span class="icon">💬</span>
+            <span class="title">My Enquiries</span>
+          </div>
+          <div class="category-box" onclick="navigate('membership')">
+            <span class="icon">⭐</span>
+            <span class="title">Membership</span>
+          </div>
+          <div class="category-box" onclick="handleLogout()">
+            <span class="icon" style="color: var(--danger);">🚪</span>
+            <span class="title" style="color: var(--danger);">Logout</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<div class="mobile-bottom-nav">
+  <button class="mobile-tab-btn active" onclick="navigate('home')">
+    <span style="font-size: 18px;">🏠</span>
+    <span>Home</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="navigate('search')">
+    <span style="font-size: 18px;">🔍</span>
+    <span>Services</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="navigate('pets')">
+    <span style="font-size: 18px;">🐾</span>
+    <span>My Pets</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="navigate('enquiries')">
+    <span style="font-size: 18px;">💬</span>
+    <span>Enquiries</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="navigate('account')">
+    <span style="font-size: 18px;">👤</span>
+    <span>Account</span>
+  </button>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- 1. Add / Edit Pet Modal -->
+<div class="modal-backdrop" id="petModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="petModalTitle">Add Pet</h3>
+      <button class="modal-close" onclick="closePetModal()">✕</button>
+    </div>
+    <form id="petForm" onsubmit="savePet(event)">
+      <input type="hidden" id="petEditId" />
+      <div class="form-group">
+        <label>Pet Name *</label>
+        <input type="text" id="pName" placeholder="e.g. Buddy" required />
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Animal Type *</label>
+          <select id="pSpecies" required>
+            <option value="DOG">Dog</option>
+            <option value="CAT">Cat</option>
+            <option value="BIRD">Bird</option>
+            <option value="RABBIT">Rabbit</option>
+            <option value="REPTILE">Reptile</option>
+            <option value="SMALL_MAMMAL">Small Mammal</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Breed</label>
+          <input type="text" id="pBreed" placeholder="e.g. Golden Retriever" />
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Age (years)</label>
+          <input type="number" id="pAge" min="0" max="40" placeholder="3" />
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="pGender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Unspecified">Unspecified</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Vaccinated?</label>
+        <select id="pVac">
+          <option value="true">Yes, Vaccinated</option>
+          <option value="false">No / Not sure</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes / Medical Info</label>
+        <textarea id="pNotes" rows="2" placeholder="Dietary needs, allergies, behavior..."></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn" style="flex: 1;" onclick="closePetModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Pet</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 2. Enquiry Modal -->
+<div class="modal-backdrop" id="enquiryModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Enquire / Book Service</h3>
+      <button class="modal-close" onclick="closeEnquiryModal()">✕</button>
+    </div>
+    <form id="enquiryForm" onsubmit="submitEnquiry(event)">
+      <input type="hidden" id="enqListingId" />
+      <input type="hidden" id="enqListingName" />
+      <input type="hidden" id="enqCategory" />
+
+      <div class="form-group">
+        <label>Business</label>
+        <input type="text" id="enqDisplayVendor" readonly style="background: #F8FAFC; font-weight: 700;" />
+      </div>
+      <div class="form-group">
+        <label>Select Pet</label>
+        <select id="enqPetSelect">
+          <!-- Populated via JS -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Preferred Date</label>
+        <input type="date" id="enqDate" required />
+      </div>
+      <div class="form-group">
+        <label>Message / Requirements *</label>
+        <textarea id="enqNotes" rows="3" placeholder="Specify consultation reason, preferred time, or questions..." required></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn" style="flex: 1;" onclick="closeEnquiryModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Send Enquiry →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 3. Edit Profile Modal -->
+<div class="modal-backdrop" id="profileModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Edit Profile</h3>
+      <button class="modal-close" onclick="closeProfileModal()">✕</button>
+    </div>
+    <form onsubmit="saveProfile(event)">
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input type="text" id="profName" required />
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="profEmail" />
+      </div>
+      <div class="form-group">
+        <label>City / Location</label>
+        <input type="text" id="profCity" />
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn" style="flex: 1;" onclick="closeProfileModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/pets-data.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  // State
+  var state = {
+    parent: { id: 'dev-parent', name: 'Pet Parent', phone: '+91 98765 43210', email: 'alex.parent@example.com', city: 'Mumbai' },
+    pets: [],
+    selectedPetId: null,
+    enquiries: [],
+    searchResults: [],
+    selectedCategory: 'all'
+  };
+
+  var SPECIES_ICON = { DOG:'🐕', CAT:'🐈', BIRD:'🦜', RABBIT:'🐇', REPTILE:'🦎', SMALL_MAMMAL:'🐹', OTHER:'🐾' };
+  var SPECIES_LABEL = { DOG:'Dog', CAT:'Cat', BIRD:'Bird', RABBIT:'Rabbit', REPTILE:'Reptile', SMALL_MAMMAL:'Small Mammal', OTHER:'Other' };
+
+  function esc(s) { return (s || '').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  // Navigation controller
+  function navigate(pageId) {
+    var views = document.querySelectorAll('.view-pane');
+    views.forEach(function(v) { v.classList.remove('active'); });
+
+    var target = document.getElementById('view-' + pageId);
+    if (target) target.classList.add('active');
+
+    // Sidebar active indicator
+    var links = document.querySelectorAll('.sidebar-nav .nav-link');
+    var map = ['home', 'search', 'pets', 'enquiries', 'membership', 'account'];
+    links.forEach(function(l, idx) {
+      if (map[idx] === pageId) l.classList.add('active');
+      else l.classList.remove('active');
+    });
+
+    // Mobile bottom nav active indicator
+    var mobBtns = document.querySelectorAll('.mobile-tab-btn');
+    mobBtns.forEach(function(b, idx) {
+      if (map[idx] === pageId) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    window.scrollTo(0, 0);
+
+    if (pageId === 'search' && !state.searchResults.length) {
+      runSearch();
+    }
+  }
+
+  // Load Dashboard Data
+  function loadData() {
+    initCitySelector();
+
+    api.parentDashboard().then(function(d) {
+      if (d.parent) state.parent = d.parent;
+      state.pets = d.pets || [];
+      state.enquiries = d.enquiries || [];
+      if (state.pets.length) state.selectedPetId = state.pets[0].id;
+      renderAll();
+    }).catch(function() {
+      // Mock Fallback
+      if (!state.pets.length) {
+        state.pets = [
+          { id: 'pet-1', name: 'Buddy', species: 'DOG', breed: 'Golden Retriever', ageYears: 3, gender: 'Male', vaccinated: true, notes: 'Vaccinated & healthy' }
+        ];
+        state.selectedPetId = 'pet-1';
+      }
+      renderAll();
+    });
+
+    runSearch();
+  }
+
+  function initCitySelector() {
+    var sel = document.getElementById('searchCity');
+    if (!sel) return;
+    var index = window.PETS_INDEX || [{ city: 'Mumbai', count: 772 }, { city: 'Bengaluru', count: 658 }];
+    var html = '<option value="all">All Cities</option>';
+    index.slice(0, 35).forEach(function(c) {
+      var selAttr = (c.city.toLowerCase() === (state.parent.city || 'mumbai').toLowerCase()) ? ' selected' : '';
+      html += '<option value="' + esc(c.city) + '"' + selAttr + '>' + esc(c.city) + ' (' + c.count + ')</option>';
+    });
+    sel.innerHTML = html;
+  }
+
+  function renderAll() {
+    // Header text greeting (time aware)
+    var hour = new Date().getHours();
+    var timeSalut = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('homeGreetingTitle').textContent = timeSalut + ', ' + (state.parent.name || 'Pet Parent');
+    document.getElementById('mobUserLabel').textContent = state.parent.name || 'Pet Parent';
+
+    // Account Tab Details
+    document.getElementById('accName').textContent = state.parent.name || 'Pet Parent';
+    document.getElementById('accEmail').textContent = state.parent.email || '';
+    document.getElementById('accPhone').textContent = state.parent.phone || '';
+    document.getElementById('accAvatar').textContent = (state.parent.name || 'P').charAt(0).toUpperCase();
+
+    renderHomePetCard();
+    renderPetsGrid();
+    renderEnquiriesTable();
+  }
+
+  // 1. Home - Pet Card Overview & Switcher
+  function renderHomePetCard() {
+    var box = document.getElementById('homePetOverview');
+    if (!state.pets.length) {
+      box.innerHTML = `
+        <div class="featured-pet-container" style="background: #F8FAFC; border-style: dashed;">
+          <div class="pet-info-flex">
+            <div class="pet-avatar">🐾</div>
+            <div>
+              <div class="pet-name-h">Add your first pet</div>
+              <div class="pet-meta-sub">Keep your pet's health records and get tailored recommendations.</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="openAddPetModal()">+ Add Pet</button>
+        </div>
+      `;
+      document.getElementById('homeRecomTitle').textContent = 'Recommended Services';
+      return;
+    }
+
+    var selectedPet = state.pets.find(function(p){ return p.id === state.selectedPetId; }) || state.pets[0];
+    var icon = SPECIES_ICON[selectedPet.species] || '🐾';
+    var vacBadge = selectedPet.vaccinated ? '<span class="pet-badge vac">Vaccinated</span>' : '<span class="pet-badge" style="background:#FEE2E2;color:#991B1B">Not Vaccinated</span>';
+
+    document.getElementById('homeRecomTitle').textContent = 'Recommended for ' + esc(selectedPet.name);
+
+    // Build Pet Switcher Options if multiple pets exist
+    var switcherHtml = '';
+    if (state.pets.length > 1) {
+      switcherHtml = '<select class="pet-selector-dropdown" onchange="changeSelectedPet(this.value)">' +
+        state.pets.map(function(p) {
+          var sel = p.id === selectedPet.id ? ' selected' : '';
+          return '<option value="' + esc(p.id) + '"' + sel + '>' + esc(p.name) + ' (' + SPECIES_LABEL[p.species] + ')</option>';
+        }).join('') + '</select>';
+    }
+
+    box.innerHTML = `
+      <div class="featured-pet-container">
+        <div class="pet-info-flex">
+          <div class="pet-avatar">${icon}</div>
+          <div>
+            <div class="pet-name-h">${esc(selectedPet.name)} ${vacBadge}</div>
+            <div class="pet-meta-sub">${SPECIES_LABEL[selectedPet.species]} · ${esc(selectedPet.breed || 'Mixed Breed')} · ${selectedPet.ageYears || 0} years</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          ${switcherHtml}
+          <button class="btn" onclick="navigate('pets')">View Pet</button>
+        </div>
+      </div>
+    `;
+  }
+
+  var PET_BANNER_IMAGES = [
+    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=600&h=400&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&h=400&fit=crop&q=80'
+  ];
+
+  function getVendorPhotoUrl(v, idx) {
+    var seed = (v.id || v.name || '').split('').reduce(function(a,c){ return a + c.charCodeAt(0); }, 0);
+    return PET_BANNER_IMAGES[(seed + (idx || 0)) % PET_BANNER_IMAGES.length];
+  }
+
+  // Render Vendor Grids (Deduplicated with real display photos)
+  function renderVendorGrid(list, containerId) {
+    var box = document.getElementById(containerId);
+    if (!list || !list.length) {
+      box.innerHTML = '<p style="color:var(--text-muted); padding: 20px 0;">No matching businesses found.</p>';
+      return;
+    }
+
+    var seenInGrid = {};
+    var uniqueInGrid = [];
+    list.forEach(function(v) {
+      var key = (v.name || '').toLowerCase().trim();
+      if (!seenInGrid[key]) {
+        seenInGrid[key] = true;
+        uniqueInGrid.push(v);
+      }
+    });
+
+    box.innerHTML = uniqueInGrid.map(function(v, idx) {
+      var rating = (v.rating || 4.8).toFixed(1);
+      var photoUrl = getVendorPhotoUrl(v, idx);
+      return `
+        <div class="vendor-card">
+          <div class="vendor-banner" style="position:relative; height:120px; overflow:hidden; background:linear-gradient(135deg, #DBEAFE, #C7D2FE);">
+            <img src="${photoUrl}" alt="${esc(v.name)}" style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;" onerror="this.style.display='none';" />
+            <span class="vendor-tag" style="z-index:2; position:absolute; top:10px; left:10px;">${v.category_icon || '🩺'} ${esc(v.category || 'Pet Service')}</span>
+            <span class="vendor-rating" style="z-index:2; position:absolute; bottom:10px; right:10px;">⭐ ${rating}</span>
+          </div>
+          <div class="vendor-content">
+            <div>
+              <div class="vendor-name">${esc(v.name)}</div>
+              <div class="vendor-address">📍 ${esc(v.address || v.city || 'Mumbai')} · 1.2 km away</div>
+            </div>
+            <div class="vendor-foot">
+              <span style="font-size:12px; font-weight:600; color:var(--text-muted);">${v.review_count || 12} reviews</span>
+              <button class="btn btn-sm btn-primary" onclick="viewVendorDetails('${esc(v.id)}')">View Details</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function changeSelectedPet(petId) {
+    state.selectedPetId = petId;
+    renderHomePetCard();
+  }
+
+  // Search Logic (Deduplicated)
+  function runSearch() {
+    var q = document.getElementById('searchInput').value.trim();
+    var city = document.getElementById('searchCity').value;
+    var cat = state.selectedCategory;
+
+    api.listingsSearch({ q: q, category: cat, city: city, limit: 40 }).then(function(r) {
+      var raw = r.listings || [];
+      var seen = {};
+      var list = [];
+      raw.forEach(function(b) {
+        var k = (b.name || '').toLowerCase().trim();
+        if (!seen[k]) {
+          seen[k] = true;
+          list.push(b);
+        }
+      });
+      state.searchResults = list;
+
+      document.getElementById('searchCountHeader').textContent = list.length + ' Available Businesses';
+      renderVendorGrid(list, 'searchResultsGrid');
+
+      // Populate Home sections with distinct, non-overlapping listings
+      renderVendorGrid(list.slice(0, 3), 'homeRecomGrid');
+      renderVendorGrid(list.slice(3, 6), 'homeNearbyGrid');
+    }).catch(function() {
+      // Mock Fallback
+      var mock = [
+        { id: 'v1', name: 'Paws & Care Veterinary Clinic', category: 'Veterinary Clinics', category_icon: '🩺', city: 'Chembur, Mumbai', rating: 4.8, review_count: 124, address: 'Chembur East, Mumbai', phone: '099300 90487' },
+        { id: 'v2', name: 'Fluffy Grooming & Pet Spa', category: 'Pet Grooming', category_icon: '✂️', city: 'Bandra, Mumbai', rating: 4.9, review_count: 86, address: 'Bandra West, Mumbai', phone: '098200 12345' },
+        { id: 'v3', name: 'Happy Tails Pet Boarding', category: 'Pet Boarding', category_icon: '🏡', city: 'Juhu, Mumbai', rating: 4.7, review_count: 52, address: 'Juhu Tara Rd, Mumbai', phone: '098300 67890' }
+      ];
+      state.searchResults = mock;
+      renderVendorGrid(mock, 'searchResultsGrid');
+      renderVendorGrid(mock, 'homeRecomGrid');
+      renderVendorGrid(mock, 'homeNearbyGrid');
+    });
+  }
+
+  function triggerHomeSearch() {
+    var query = document.getElementById('homeSearchInput').value.trim();
+    navigate('search');
+    document.getElementById('searchInput').value = query;
+    runSearch();
+  }
+
+  function selectChip(cat, el) {
+    state.selectedCategory = cat;
+    document.querySelectorAll('#catChipBar .chip').forEach(function(c) { c.classList.remove('active'); });
+    el.classList.add('active');
+    runSearch();
+  }
+  function filterCategoryAndSearch(cat) {
+    navigate('search');
+    state.selectedCategory = cat;
+    document.querySelectorAll('#catChipBar .chip').forEach(function(c) {
+      if (c.textContent.trim().toLowerCase() === cat.toLowerCase()) c.classList.add('active');
+      else c.classList.remove('active');
+    });
+    runSearch();
+  }
+
+  // 3. View Vendor Profile Details (Navigates directly to exact listing URL like /in/mumbai/sk-packers-and-movers-51760250/)
+  function viewVendorDetails(vendorId) {
+    var v = state.searchResults.find(function(x){ return x.id === vendorId; });
+    if (v && v.id) {
+      var country = (v.country || 'in').toLowerCase();
+      var citySlug = v.city_slug || (v.city || 'mumbai').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      location.href = '/' + country + '/' + citySlug + '/' + v.id + '/';
+      return;
+    }
+    location.href = '/in/mumbai/' + (vendorId || 'sk-packers-and-movers-51760250') + '/';
+  }
+
+  // 4. My Pets Grid
+  function renderPetsGrid() {
+    var grid = document.getElementById('petsListGrid');
+    if (!state.pets.length) {
+      grid.innerHTML = `
+        <div class="empty-box" style="grid-column: 1 / -1;">
+          <h3>No Pets Added</h3>
+          <p>Add your pets to keep their information up to date.</p>
+          <button class="btn btn-primary" style="margin-top: 14px;" onclick="openAddPetModal()">+ Add Pet</button>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = state.pets.map(function(p) {
+      var icon = SPECIES_ICON[p.species] || '🐾';
+      var vac = p.vaccinated ? '<span class="meta-tag vac">Vaccinated</span>' : '<span class="meta-tag" style="background:#FEE2E2;color:#991B1B">Not Vaccinated</span>';
+      return `
+        <div class="pet-card-box">
+          <div>
+            <div class="pet-card-top">
+              <div class="pet-card-avatar">${icon}</div>
+              <div class="pet-card-details">
+                <h3>${esc(p.name)}</h3>
+                <p>${SPECIES_LABEL[p.species]} · ${esc(p.breed || 'Mixed')}</p>
+              </div>
+            </div>
+            <div class="pet-meta-row">
+              <span class="meta-tag">${p.ageYears || 0} yrs · ${p.gender || 'Male'}</span>
+              ${vac}
+            </div>
+            ${p.notes ? '<p style="font-size:13px; color:var(--text-muted);">' + esc(p.notes) + '</p>' : ''}
+          </div>
+          <div style="display:flex; gap:8px; margin-top:16px; border-top:1px solid var(--border); pt:12px;">
+            <button class="btn btn-sm" style="flex:1;" onclick="openEditPetModal('${esc(p.id)}')">Edit</button>
+            <button class="btn btn-sm" style="flex:1; color:var(--danger);" onclick="deletePet('${esc(p.id)}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Add / Edit Pet Modal Actions
+  function openAddPetModal() {
+    document.getElementById('petEditId').value = '';
+    document.getElementById('petModalTitle').textContent = 'Add Pet';
+    document.getElementById('petForm').reset();
+    document.getElementById('petModal').classList.add('show');
+  }
+
+  function openEditPetModal(id) {
+    var pet = state.pets.find(function(x){ return x.id === id; });
+    if (!pet) return;
+    document.getElementById('petEditId').value = pet.id;
+    document.getElementById('petModalTitle').textContent = 'Edit Pet';
+    document.getElementById('pName').value = pet.name || '';
+    document.getElementById('pSpecies').value = pet.species || 'DOG';
+    document.getElementById('pBreed').value = pet.breed || '';
+    document.getElementById('pAge').value = pet.ageYears != null ? pet.ageYears : '';
+    document.getElementById('pGender').value = pet.gender || 'Male';
+    document.getElementById('pVac').value = pet.vaccinated ? 'true' : 'false';
+    document.getElementById('pNotes').value = pet.notes || '';
+    document.getElementById('petModal').classList.add('show');
+  }
+
+  function closePetModal() {
+    document.getElementById('petModal').classList.remove('show');
+  }
+
+  function savePet(e) {
+    e.preventDefault();
+    var editId = document.getElementById('petEditId').value;
+    var payload = {
+      name: document.getElementById('pName').value.trim(),
+      species: document.getElementById('pSpecies').value,
+      breed: document.getElementById('pBreed').value.trim() || undefined,
+      ageYears: document.getElementById('pAge').value ? Number(document.getElementById('pAge').value) : undefined,
+      gender: document.getElementById('pGender').value,
+      vaccinated: document.getElementById('pVac').value === 'true',
+      notes: document.getElementById('pNotes').value.trim() || undefined
+    };
+
+    if (editId) {
+      api.parentPetUpdate(editId, payload).then(function() {
+        closePetModal();
+        loadData();
+      }).catch(function() {
+        var idx = state.pets.findIndex(function(x){ return x.id === editId; });
+        if (idx !== -1) state.pets[idx] = Object.assign({}, state.pets[idx], payload);
+        closePetModal();
+        renderAll();
+      });
+    } else {
+      api.parentPetCreate(payload).then(function() {
+        closePetModal();
+        loadData();
+      }).catch(function() {
+        payload.id = 'pet-' + Date.now();
+        state.pets.unshift(payload);
+        state.selectedPetId = payload.id;
+        closePetModal();
+        renderAll();
+      });
+    }
+  }
+
+  function deletePet(id) {
+    if (!confirm('Are you sure you want to delete this pet?')) return;
+    api.parentPetDelete(id).then(loadData).catch(function() {
+      state.pets = state.pets.filter(function(x){ return x.id !== id; });
+      renderAll();
+    });
+  }
+
+  // Enquiry Modal Actions
+  function openEnquiryModal(vendorId, vendorName, vendorCat) {
+    document.getElementById('enqListingId').value = vendorId;
+    document.getElementById('enqListingName').value = vendorName;
+    document.getElementById('enqCategory').value = vendorCat;
+    document.getElementById('enqDisplayVendor').value = vendorName + ' (' + vendorCat + ')';
+
+    var petSel = document.getElementById('enqPetSelect');
+    if (state.pets.length) {
+      petSel.innerHTML = state.pets.map(function(p){ return '<option value="' + esc(p.name) + '">' + esc(p.name) + ' (' + SPECIES_LABEL[p.species] + ')</option>'; }).join('');
+    } else {
+      petSel.innerHTML = '<option value="My Pet">General Requirement</option>';
+    }
+
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('enqDate').valueAsDate = tomorrow;
+
+    document.getElementById('enquiryModal').classList.add('show');
+  }
+
+  function closeEnquiryModal() {
+    document.getElementById('enquiryModal').classList.remove('show');
+  }
+
+  function submitEnquiry(e) {
+    e.preventDefault();
+    var newEnq = {
+      id: 'enq-' + Date.now(),
+      listingName: document.getElementById('enqListingName').value,
+      category: document.getElementById('enqCategory').value,
+      preferredDate: document.getElementById('enqDate').value,
+      notes: document.getElementById('enqNotes').value.trim(),
+      createdAt: new Date().toISOString(),
+      status: 'PENDING'
+    };
+    state.enquiries.unshift(newEnq);
+    closeEnquiryModal();
+    renderEnquiriesTable();
+    navigate('enquiries');
+  }
+
+  // 6. Render Enquiries Table
+  function renderEnquiriesTable() {
+    var box = document.getElementById('enquiriesTableBody');
+    if (!state.enquiries || !state.enquiries.length) {
+      box.innerHTML = `
+        <div class="empty-box">
+          <h3>No enquiries yet</h3>
+          <p>Submit an enquiry from a vendor listing and it will appear here.</p>
+          <button class="btn btn-primary" style="margin-top: 14px;" onclick="navigate('search')">Browse Services →</button>
+        </div>
+      `;
+      return;
+    }
+
+    box.innerHTML = state.enquiries.map(function(e) {
+      var dateStr = new Date(e.createdAt || Date.now()).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `
+        <div class="enquiry-row">
+          <div class="enquiry-main">
+            <h4>${esc(e.listingName || 'Pet Business')}</h4>
+            <p style="color: var(--primary); font-weight: 600;">${esc(e.category || 'Pet Service')}</p>
+            ${e.notes ? '<p style="margin-top: 4px; color: var(--text-main);">' + esc(e.notes) + '</p>' : ''}
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Date: ${esc(e.preferredDate || dateStr)}</p>
+          </div>
+          <div>
+            <span class="status-pill pending">🟡 Pending</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Profile Modal Actions
+  function openProfileModal() {
+    document.getElementById('profName').value = state.parent.name || '';
+    document.getElementById('profEmail').value = state.parent.email || '';
+    document.getElementById('profCity').value = state.parent.city || 'Mumbai';
+    document.getElementById('profileModal').classList.add('show');
+  }
+
+  function closeProfileModal() {
+    document.getElementById('profileModal').classList.remove('show');
+  }
+
+  function saveProfile(e) {
+    e.preventDefault();
+    state.parent.name = document.getElementById('profName').value.trim();
+    state.parent.email = document.getElementById('profEmail').value.trim();
+    state.parent.city = document.getElementById('profCity').value.trim();
+    closeProfileModal();
+    renderAll();
+  }
+
+  function handleLogout() {
+    api.logout().finally(function() {
+      location.href = '/';
+    });
+  }
+
+  // Init
+  loadData();
+</script>
+</body>
+</html>

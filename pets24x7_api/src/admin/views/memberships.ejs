@@ -1,0 +1,57 @@
+<%- include('_head', { title: 'Memberships · Pets24x7 Admin', active: 'memberships' }) %>
+
+<div class="page-head">
+  <h2>Memberships</h2>
+  <span class="muted"><%= memberships.length %> shown · most recent first</span>
+</div>
+
+<div class="stat-row">
+  <div class="stat-card"><div class="lbl">Active members</div><div class="num"><%= counts.active %></div></div>
+  <div class="stat-card"><div class="lbl">Pending (in checkout)</div><div class="num"><%= counts.pending %></div></div>
+  <div class="stat-card"><div class="lbl">Expired</div><div class="num"><%= counts.expired %></div></div>
+</div>
+
+<div class="filters">
+  <% ['ACTIVE','PENDING','EXPIRED','CANCELLED','REFUNDED'].forEach(function(s){ %>
+    <a href="/admin/memberships?status=<%= s %>" class="<%= s === status ? 'active' : '' %>"><%= s.charAt(0) + s.slice(1).toLowerCase() %></a>
+  <% }); %>
+</div>
+
+<div class="card" style="padding:0">
+  <% if (!memberships.length) { %>
+    <div class="empty">No <%= status.toLowerCase() %> memberships.</div>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Parent</th><th>Plan</th><th>Status</th><th>Paid</th><th>Started</th><th>Ends</th></tr>
+      </thead>
+      <tbody>
+        <% memberships.forEach(function(m){ %>
+          <tr>
+            <td>
+              <strong><%= m.parent ? m.parent.name : '—' %></strong><br/>
+              <% if (m.parent) { %>
+                <a href="https://wa.me/<%= m.parent.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= m.parent.phone %></a>
+              <% } %>
+            </td>
+            <td>
+              <strong><%= m.plan.name %></strong><br/>
+              <span class="muted"><%= m.plan.tier %> · <%= m.plan.billingPeriod %></span>
+            </td>
+            <td><span class="pill <%= m.status.toLowerCase() %>"><%= m.status %></span></td>
+            <td>₹<%= (m.pricePaidMinor / 100).toFixed(0) %><br/><span class="muted"><%= m.currency %></span></td>
+            <td class="muted"><%= m.startsAt ? new Date(m.startsAt).toLocaleDateString('en-IN') : '—' %></td>
+            <td class="muted">
+              <%= m.endsAt ? new Date(m.endsAt).toLocaleDateString('en-IN') : '—' %>
+              <% if (m.endsAt && new Date(m.endsAt) > new Date()) {
+                   var days = Math.ceil((new Date(m.endsAt) - new Date()) / (24*3600*1000));
+              %><br/><span class="muted">in <%= days %>d</span><% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'memberships' }) %>

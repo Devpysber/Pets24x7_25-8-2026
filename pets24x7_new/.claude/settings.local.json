@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:/Users/Psyber Inc/Desktop/\" 2>/dev/null | head -40)",
+      "Bash(where python3 *)",
+      "Bash(command -v python3)",
+      "Bash(ls /c/Python*)",
+      "Read(//c/Program Files/**)",
+      "Bash(\"/c/Users/Psyber Inc/AppData/Local/Python/bin/python3.exe\" build_data.py)",
+      "Bash(\"/c/Users/Psyber Inc/AppData/Local/Python/bin/python3.exe\" -c \"import json; d=json.load\\(open\\('pets-data.js'.replace\\('.js','x'\\),'r'\\) if False else None\\); print\\('ok'\\)\")",
+      "Bash('/c/Users/Psyber Inc/AppData/Local/Python/bin/python3.exe' -c ' *)",
+      "Bash(awk '{print $NF, \"\\(\" $5 \" bytes\\)\"}')",
+      "Bash(\"/c/Users/Psyber Inc/AppData/Local/Python/bin/python3.exe\" build_pages.py)",
+      "Bash(\"/c/Users/Psyber Inc/AppData/Local/Python/bin/python3.exe\" _update_links.py)",
+      "Bash(ls -d in/*delhi*)",
+      "Bash(wc -l data/in-delhi.json data/in-new-delhi.json)",
+      "Bash(npx prisma *)",
+      "Bash(DATABASE_URL=\"postgresql://x:y@localhost/x\" npx prisma generate --schema=./prisma/schema.prisma)",
+      "Bash(cmd.exe /c pack_handoff.bat)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"pack_handoff.ps1\")"
+    ]
+  }
+}

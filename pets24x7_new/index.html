@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Pets24x7.com — Find Vets, Groomers, Boarding & Pet Services Near You | List Your Pet Business Free</title>
+<meta name="description" content="Discover top-rated veterinary clinics, groomers, pet boarding, dog walkers, trainers and pet taxi services across India & USA. Pet business owner? List your business free on Pets24x7 and get direct WhatsApp enquiries." />
+<meta name="keywords" content="pet services near me, veterinary clinics, pet grooming, pet boarding, dog walking, pet training, pet taxi, list my pet business, pets24x7" />
+<link rel="canonical" href="https://pets24x7.com/" />
+<link rel="icon" type="image/png" href="pets24x7_logo.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Pets24x7.com — Pet Services Marketplace | Vets, Groomers, Boarding & More" />
+<meta property="og:description" content="34,000+ verified pet businesses across 570+ cities in India and the USA. Book direct on WhatsApp. List your pet business free." />
+<meta property="og:url" content="https://pets24x7.com/" />
+<meta property="og:image" content="https://pets24x7.com/pets24x7_logo.png" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Pets24x7.com",
+  "image": "https://pets24x7.com/pets24x7_logo.png",
+  "url": "https://pets24x7.com",
+  "telephone": "+91-9930090487",
+  "description": "Marketplace for pet services — vets, groomers, boarding, walking, training and pet taxi — across India and the USA.",
+  "areaServed": ["IN","US"],
+  "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "612" }
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --primary: #2563EB; --primary-dark: #1D4ED8; --primary-light: #EFF6FF;
+    --bg: #FFFFFF; --bg-alt: #F9FAFB;
+    --text: #1F2937; --text-muted: #6B7280; --text-light: #9CA3AF;
+    --success: #10B981; --whatsapp: #25D366; --whatsapp-dark: #1DA851;
+    --warning: #F59E0B; --border: #E5E7EB;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.10);
+    --radius: 10px; --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; font-size: 16px; -webkit-font-smoothing: antialiased; }
+  img { max-width: 100%; height: auto; display: block; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* HEADER */
+  .header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; line-height: 1; }
+  .brand-logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+  .brand-mark { display: flex; flex-direction: column; }
+  .brand-name { font-weight: 800; font-size: 24px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
+  .brand-name .tld { color: var(--text); }
+  .brand-tag { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+  .header-nav { display: flex; align-items: center; gap: 8px; }
+  .header-nav a.nav-link { color: var(--text); font-weight: 500; font-size: 14px; padding: 8px 12px; border-radius: 8px; }
+  .header-nav a.nav-link:hover { background: var(--bg-alt); }
+  .header-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--whatsapp); color: #fff !important; padding: 10px 18px; border-radius: var(--radius); font-weight: 600; font-size: 14px; transition: background 0.2s, transform 0.2s; box-shadow: 0 4px 12px rgba(37,211,102,0.25); }
+  .header-cta:hover { background: var(--whatsapp-dark); transform: translateY(-1px); }
+  .header-cta svg { width: 18px; height: 18px; }
+
+  /* TRAVELER-STYLE HERO */
+  .traveler-hero { background: linear-gradient(135deg, #1E40AF 0%, #2563EB 60%, #3B82F6 100%); color: #fff; padding: 64px 0 88px; position: relative; overflow: hidden; }
+  .traveler-hero::after { content: ""; position: absolute; right: -100px; top: 30px; width: 520px; height: 320px; background: radial-gradient(ellipse at center, rgba(255,255,255,0.12), transparent 60%); pointer-events: none; }
+  .traveler-hero h1 { font-size: clamp(28px, 4.5vw, 44px); font-weight: 800; line-height: 1.1; letter-spacing: -1px; max-width: 760px; margin-bottom: 12px; }
+  .traveler-hero p.lead { color: rgba(255,255,255,0.9); font-size: 17px; max-width: 640px; margin-bottom: 32px; }
+  .search-card { background: #fff; border-radius: 999px; box-shadow: 0 24px 60px rgba(15,23,42,0.18); display: flex; align-items: stretch; padding: 8px; max-width: 980px; gap: 4px; }
+  .search-field { flex: 1; padding: 12px 18px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .search-field + .search-field { border-left: 1px solid var(--border); }
+  .search-field label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
+  .search-field input, .search-field select { border: none; outline: none; background: transparent; font-size: 15px; font-weight: 600; color: var(--text); width: 100%; font-family: inherit; padding: 0; }
+  .search-field input::placeholder { color: var(--text-light); font-weight: 500; }
+  .search-btn { background: var(--warning); color: #1F2937; border-radius: 999px; padding: 0 28px; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; min-height: 56px; }
+  .search-btn:hover { background: #FBBF24; }
+  .search-btn svg { width: 18px; height: 18px; }
+
+  /* CATEGORY STRIP */
+  .cats { padding: 56px 0 24px; background: #fff; }
+  .cats h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .cats .sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .cat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .cat-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; transition: all 0.2s; cursor: pointer; background: #fff; }
+  .cat-item:hover { background: var(--primary-light); border-color: rgba(37,99,235,0.3); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .cat-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #DBEAFE, #BFDBFE); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .cat-info strong { display: block; font-size: 14px; color: var(--text); font-weight: 700; }
+  .cat-info span { font-size: 12px; color: var(--text-muted); }
+
+  /* POPULAR CITIES */
+  .destinations { padding: 56px 0 24px; background: var(--bg-alt); }
+  .destinations h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+  .dest-group-label { color: var(--text-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 12px; }
+  .dest-group-label:first-of-type { margin-top: 0; }
+  .dest-grid { display: grid; gap: 14px 20px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .dest-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; transition: background 0.2s; cursor: pointer; background: #fff; border: 1px solid var(--border); }
+  .dest-item:hover { background: var(--primary-light); border-color: rgba(37,99,235,0.3); }
+  .dest-circle { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #DBEAFE, #BFDBFE); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .dest-info strong { display: block; font-size: 15px; color: var(--text); font-weight: 600; }
+  .dest-info span { font-size: 12px; color: var(--text-muted); }
+
+  /* FEATURED */
+  .featured { padding: 64px 0 32px; background: #fff; }
+  .featured-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+  .featured-head h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+  .featured-head p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+  .feat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .feat-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: all 0.2s; cursor: pointer; display: flex; flex-direction: column; }
+  .feat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: rgba(37,99,235,0.3); }
+  .feat-img { aspect-ratio: 16/10; background: linear-gradient(135deg, #DBEAFE, #93C5FD); position: relative; }
+  .feat-img img { width: 100%; height: 100%; object-fit: cover; }
+  .feat-img .badge-top { position: absolute; top: 10px; left: 10px; background: var(--success); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; box-shadow: var(--shadow); }
+  .feat-img .cat-chip { position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.95); color: var(--text); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; box-shadow: var(--shadow-sm); }
+  .feat-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; }
+  .feat-body h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; color: var(--text); }
+  .feat-loc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .feat-rating { display: inline-flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+  .rating-pill { background: var(--success); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+  .google-badge { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--border); padding: 2px 8px 2px 4px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text); }
+  .google-badge .gscore { background: var(--success); color: #fff; padding: 1px 5px; border-radius: 4px; font-weight: 800; font-size: 10px; }
+  .glogo { font-weight: 800; font-size: 10px; letter-spacing: -0.3px; }
+  .glogo .gB{color:#4285F4}.glogo .go1{color:#EA4335}.glogo .go2{color:#FBBC04}.glogo .gg{color:#4285F4}.glogo .gl{color:#34A853}.glogo .ge{color:#EA4335}
+
+  /* B2B HERO */
+  .hero { padding: 64px 0; background: radial-gradient(ellipse at top right, rgba(37,99,235,0.08), transparent 60%), radial-gradient(ellipse at bottom left, rgba(16,185,129,0.06), transparent 60%), #fff; position: relative; overflow: hidden; }
+  .hero h1 { font-size: clamp(28px, 5.5vw, 48px); font-weight: 800; line-height: 1.1; letter-spacing: -1px; color: var(--text); margin-bottom: 18px; max-width: 880px; }
+  .hero h1 .accent { color: var(--primary); }
+  .hero .subhead { font-size: clamp(16px, 2vw, 19px); color: var(--text-muted); max-width: 720px; margin-bottom: 32px; }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 28px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 28px; border-radius: var(--radius); font-weight: 600; font-size: 16px; transition: all 0.2s; white-space: nowrap; }
+  .btn-whatsapp { background: var(--whatsapp); color: #fff !important; box-shadow: 0 8px 20px rgba(37,211,102,0.3); }
+  .btn-whatsapp:hover { background: var(--whatsapp-dark); transform: translateY(-2px); box-shadow: 0 12px 24px rgba(37,211,102,0.4); }
+  .btn-whatsapp svg { width: 22px; height: 22px; }
+  .btn-outline { background: #fff; color: var(--primary) !important; border: 2px solid var(--primary); }
+  .btn-outline:hover { background: var(--primary); color: #fff !important; }
+  .btn-primary { background: var(--primary); color: #fff !important; box-shadow: 0 8px 20px rgba(37,99,235,0.25); }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+  .trust-badges { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 12px; }
+  .trust-badge { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+  .trust-badge .check { width: 18px; height: 18px; border-radius: 50%; background: var(--success); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+  .hero-strip { margin-top: 44px; display: flex; gap: 16px; flex-wrap: wrap; padding: 20px 24px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .hero-strip .stat { flex: 1 1 150px; min-width: 120px; }
+  .hero-strip .stat strong { display: block; font-size: clamp(20px, 3vw, 28px); color: var(--primary); font-weight: 800; line-height: 1.1; }
+  .hero-strip .stat span { color: var(--text-muted); font-size: 13px; }
+
+  section { padding: 72px 0; }
+  .section-head { text-align: center; max-width: 700px; margin: 0 auto 48px; }
+  .section-eyebrow { display: inline-block; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); margin-bottom: 12px; }
+  .section-head h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.5px; color: var(--text); margin-bottom: 14px; line-height: 1.2; }
+  .section-head p { color: var(--text-muted); font-size: 17px; }
+
+  /* VALUE CARDS */
+  .value-grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .value-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 28px; transition: all 0.25s; }
+  .value-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: rgba(37,99,235,0.3); }
+  .value-icon { width: 56px; height: 56px; border-radius: 14px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 18px; }
+  .value-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+  .value-card p { color: var(--text-muted); font-size: 15px; }
+
+  /* HOW IT WORKS */
+  .steps { background: var(--bg-alt); }
+  .steps-grid { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .step-card { background: #fff; padding: 36px 28px; border-radius: var(--radius-lg); border: 1px solid var(--border); text-align: center; box-shadow: var(--shadow-sm); }
+  .step-num { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; margin-bottom: 18px; box-shadow: 0 6px 14px rgba(37,99,235,0.35); }
+  .step-card h3 { font-size: 19px; margin-bottom: 8px; font-weight: 700; }
+  .step-card p { color: var(--text-muted); font-size: 15px; }
+
+  /* TESTIMONIALS */
+  .testimonials { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .testimonial { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow-sm); }
+  .testimonial .stars { color: #FBBF24; margin-bottom: 12px; font-size: 16px; }
+  .testimonial blockquote { font-size: 16px; color: var(--text); line-height: 1.6; margin-bottom: 16px; font-weight: 500; }
+  .testimonial cite { color: var(--text-muted); font-size: 14px; font-style: normal; display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--success)); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+
+  /* PREMIUM */
+  .premium { background: linear-gradient(135deg, #EFF6FF 0%, #ECFDF5 100%); }
+  .premium-card { background: #fff; border-radius: var(--radius-lg); padding: 48px; box-shadow: var(--shadow); display: grid; gap: 36px; align-items: center; grid-template-columns: 1fr 1fr; max-width: 1000px; margin: 0 auto; }
+  .premium-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #FBBF24, #F59E0B); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 16px; }
+  .premium h3 { font-size: 26px; font-weight: 800; margin-bottom: 14px; line-height: 1.2; letter-spacing: -0.5px; }
+  .premium-list { list-style: none; margin: 18px 0 24px; }
+  .premium-list li { padding: 8px 0; color: var(--text); font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  .premium-list li::before { content: "✓"; color: var(--success); font-weight: 800; background: #ECFDF5; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .premium-visual { background: linear-gradient(135deg, var(--primary), #6366F1); border-radius: var(--radius-lg); aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; padding: 24px; text-align: center; position: relative; overflow: hidden; }
+  .premium-visual .glow-card { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); padding: 24px; border-radius: 12px; max-width: 240px; z-index: 1; }
+
+  /* FAQ */
+  .faq-list { max-width: 780px; margin: 0 auto; }
+  details.faq-item { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+  details.faq-item[open] { box-shadow: var(--shadow); border-color: rgba(37,99,235,0.3); }
+  details.faq-item summary { list-style: none; cursor: pointer; padding: 20px 24px; font-weight: 600; font-size: 16px; color: var(--text); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after { content: "+"; font-size: 24px; color: var(--primary); font-weight: 400; line-height: 1; }
+  details.faq-item[open] summary::after { content: "−"; }
+  details.faq-item .faq-answer { padding: 0 24px 22px; color: var(--text-muted); font-size: 15px; }
+
+  /* FINAL CTA */
+  .final-cta { background: linear-gradient(135deg, var(--primary) 0%, #1E3A8A 100%); color: #fff; text-align: center; position: relative; overflow: hidden; }
+  .final-cta::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1), transparent 40%), radial-gradient(circle at 80% 70%, rgba(16,185,129,0.15), transparent 40%); }
+  .final-cta .container { position: relative; z-index: 1; }
+  .final-cta h2 { color: #fff; font-size: clamp(28px, 4.5vw, 42px); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px; line-height: 1.15; }
+  .final-cta p { color: rgba(255,255,255,0.85); font-size: 18px; margin-bottom: 32px; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .final-cta .hero-ctas { justify-content: center; }
+  .final-cta .btn-outline { background: transparent; color: #fff !important; border-color: rgba(255,255,255,0.5); }
+  .final-cta .btn-outline:hover { background: #fff; color: var(--primary) !important; }
+  .micro-copy { color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 20px; }
+
+  /* URGENCY BAR */
+  .urgency-bar { background: #FEF3C7; color: #92400E; text-align: center; padding: 10px 16px; font-size: 14px; font-weight: 600; }
+  .urgency-bar .pulse { display: inline-block; width: 8px; height: 8px; background: #DC2626; border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* FOOTER */
+  footer { background: #0F172A; color: #94A3B8; padding: 48px 0 24px; font-size: 14px; }
+  footer .footer-grid { display: grid; gap: 32px; grid-template-columns: 1.5fr 1fr 1fr 1fr; margin-bottom: 36px; }
+  footer h4 { color: #fff; font-size: 14px; margin-bottom: 14px; font-weight: 600; }
+  footer ul { list-style: none; }
+  footer li { margin-bottom: 10px; }
+  footer a { color: #94A3B8; }
+  footer a:hover { color: #fff; }
+  footer .footer-logo { color: #fff; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  footer .tagline { font-size: 13px; line-height: 1.6; max-width: 280px; }
+  footer .footer-bottom { border-top: 1px solid #1E293B; padding-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13px; }
+
+  /* FLOATING WHATSAPP */
+  .float-wa { position: fixed; z-index: 99; bottom: 20px; right: 20px; background: var(--whatsapp); color: #fff; padding: 14px 22px; border-radius: 999px; font-weight: 600; font-size: 15px; box-shadow: 0 12px 32px rgba(37,211,102,0.45); display: inline-flex; align-items: center; gap: 10px; transition: transform 0.2s; }
+  .float-wa:hover { transform: translateY(-3px) scale(1.03); background: var(--whatsapp-dark); }
+  .float-wa svg { width: 24px; height: 24px; }
+
+  /* MOBILE */
+  @media (max-width: 900px) { .header-nav .nav-link { display: none; } }
+  @media (max-width: 768px) {
+    section { padding: 56px 0; }
+    .traveler-hero { padding: 40px 0 56px; }
+    .search-card { flex-direction: column; border-radius: 18px; padding: 12px; gap: 6px; }
+    .search-field { padding: 12px 14px; }
+    .search-field + .search-field { border-left: none; border-top: 1px solid var(--border); }
+    .search-btn { width: 100%; justify-content: center; padding: 14px; border-radius: 12px; }
+    .hero { padding: 36px 0 48px; }
+    .hero h1 { font-size: 30px; }
+    .premium-card { grid-template-columns: 1fr; padding: 28px; }
+    footer .footer-grid { grid-template-columns: 1fr 1fr; }
+    .header-cta span { display: none; }
+    .header-cta { padding: 10px 12px; }
+    .float-wa { bottom: 16px; right: 16px; padding: 12px 18px; font-size: 14px; }
+    .btn { padding: 14px 22px; font-size: 15px; }
+    .hero-ctas { flex-direction: column; align-items: stretch; }
+    .hero-ctas .btn { width: 100%; }
+  }
+  @media (max-width: 480px) { footer .footer-grid { grid-template-columns: 1fr; } }
+  @media (min-width: 769px) { .float-wa { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="fileProtoWarn" style="display:none;background:#FEE2E2;color:#991B1B;text-align:center;padding:14px 16px;font-size:14px;font-weight:600;border-bottom:2px solid #DC2626;line-height:1.5;">
+  ⚠ You're opening this site via <code style="background:#FECACA;padding:1px 6px;border-radius:4px;">file://</code> — clean URLs (Browse Listings, city tiles) won't work.
+  <br/>Close this tab. Go to the project folder and <strong>double-click <code style="background:#FECACA;padding:1px 6px;border-radius:4px;">start_local.bat</code></strong>. A browser tab will open at http://localhost:8000/ — everything works there.
+</div>
+<script>if (location.protocol === 'file:') document.getElementById('fileProtoWarn').style.display = 'block';</script>
+
+<div class="urgency-bar">
+  <span class="pulse"></span>
+  Limited Featured Listing slots this month — early-bird visibility for pet businesses ending soon.
+</div>
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="brand" aria-label="Pets24x7 home">
+      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7 logo" />
+      <span class="brand-mark">
+        <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+        <span class="brand-tag">Pet Services Marketplace</span>
+      </span>
+    </a>
+    <nav class="header-nav">
+      <a href="marketing.html" class="nav-link">For Pet Businesses</a>
+      <a href="/in/mumbai/" class="nav-link">Browse Listings</a>
+      <a href="/membership/" class="nav-link">Membership</a>
+      <a href="/login/" class="nav-link">Sign in</a>
+      <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=header&utm_campaign=business_signup" class="header-cta" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.149-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+        <span>List My Business</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- PET-OWNER SEARCH HERO -->
+<section class="traveler-hero">
+  <div class="container">
+    <h1>Find trusted pet services near you — vets, groomers, boarding & more</h1>
+    <p class="lead">34,000+ verified pet businesses across 570+ cities in India &amp; the USA. Real Google ratings. Zero booking fees. Direct WhatsApp enquiries.</p>
+
+    <form class="search-card" id="searchForm" onsubmit="event.preventDefault(); doSearch();">
+      <div class="search-field">
+        <label for="searchCity">Where to?</label>
+        <input list="cityList" id="searchCity" placeholder="City — Mumbai, Dallas, Bengaluru…" autocomplete="off" />
+        <datalist id="cityList"></datalist>
+      </div>
+      <div class="search-field">
+        <label for="searchCat">Service type</label>
+        <select id="searchCat">
+          <option value="">Any pet service</option>
+          <option value="veterinary-clinics">Veterinary Clinics</option>
+          <option value="pet-grooming-spa">Grooming &amp; Spa</option>
+          <option value="pet-boarding-daycare">Boarding &amp; Daycare</option>
+          <option value="pet-walking">Pet Walking</option>
+          <option value="pet-training-obedience-behavior">Training (Obedience)</option>
+          <option value="pet-sitting-in-home-care">Sitting (In-home Care)</option>
+          <option value="emergency-animal-hospital">Emergency Vet</option>
+          <option value="vaccination-centers">Vaccination Centers</option>
+          <option value="mobile-vet-services">Mobile Vet</option>
+          <option value="pet-dental-care">Pet Dental Care</option>
+          <option value="pet-taxi-transport">Pet Taxi &amp; Transport</option>
+          <option value="pet-relocation-services">Pet Relocation</option>
+          <option value="pet-physiotherapy-rehab">Physio &amp; Rehab</option>
+        </select>
+      </div>
+      <button type="submit" class="search-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+      </button>
+    </form>
+  </div>
+</section>
+
+<!-- SERVICE CATEGORIES -->
+<section class="cats">
+  <div class="container">
+    <h2>Pet services we cover</h2>
+    <p class="sub">From a grooming appointment to a 24x7 emergency vet — find verified providers in seconds.</p>
+    <div class="cat-grid">
+      <a class="cat-item" href="/in/mumbai/veterinary-clinics/"><span class="cat-icon">🩺</span><span class="cat-info"><strong>Veterinary Clinics</strong><span>2,500+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-grooming-spa/"><span class="cat-icon">🛁</span><span class="cat-info"><strong>Grooming &amp; Spa</strong><span>2,900+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-boarding-daycare/"><span class="cat-icon">🏠</span><span class="cat-info"><strong>Boarding &amp; Daycare</strong><span>3,200+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-walking/"><span class="cat-icon">🐕</span><span class="cat-info"><strong>Pet Walking</strong><span>2,300+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-training-obedience-behavior/"><span class="cat-icon">🎓</span><span class="cat-info"><strong>Training</strong><span>2,600+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-sitting-in-home-care/"><span class="cat-icon">🛏️</span><span class="cat-info"><strong>In-home Sitting</strong><span>1,900+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/emergency-animal-hospital/"><span class="cat-icon">🚑</span><span class="cat-info"><strong>Emergency Vet</strong><span>2,300+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/vaccination-centers/"><span class="cat-icon">💉</span><span class="cat-info"><strong>Vaccination</strong><span>3,200+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/mobile-vet-services/"><span class="cat-icon">🚐</span><span class="cat-info"><strong>Mobile Vet</strong><span>1,700+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-dental-care/"><span class="cat-icon">🦷</span><span class="cat-info"><strong>Dental Care</strong><span>1,400+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-taxi-transport/"><span class="cat-icon">🚕</span><span class="cat-info"><strong>Pet Taxi</strong><span>500+ listings</span></span></a>
+      <a class="cat-item" href="/in/mumbai/pet-relocation-services/"><span class="cat-icon">✈️</span><span class="cat-info"><strong>Pet Relocation</strong><span>1,400+ listings</span></span></a>
+    </div>
+  </div>
+</section>
+
+<!-- POPULAR CITIES -->
+<section class="destinations">
+  <div class="container">
+    <h2>Popular cities</h2>
+
+    <div class="dest-group-label">India · Top cities</div>
+    <div class="dest-grid" id="citiesIN"></div>
+
+    <div class="dest-group-label">USA · Top cities</div>
+    <div class="dest-grid" id="citiesUS"></div>
+
+    <div class="dest-group-label">USA · More metros</div>
+    <div class="dest-grid" id="citiesUS2"></div>
+  </div>
+</section>
+
+<!-- FEATURED LISTINGS -->
+<section class="featured">
+  <div class="container">
+    <div class="featured-head">
+      <div>
+        <h2>Top-rated this month</h2>
+        <p>Hand-picked highly-rated pet businesses based on Google reviews.</p>
+      </div>
+      <a href="/in/mumbai/" style="color:var(--primary);font-weight:700;font-size:14px;">Browse all listings →</a>
+    </div>
+    <div class="feat-grid" id="featGrid"></div>
+  </div>
+</section>
+
+<!-- B2B HERO -->
+<section class="hero" id="b2b">
+  <div class="container">
+    <h1>Pet Business Owner? Get More <span class="accent">Direct Enquiries.</span> Zero Commission Until You Earn.</h1>
+    <p class="subhead">List your veterinary clinic, grooming salon, boarding facility, walker or trainer on Pets24x7 — and convert local Google searches into WhatsApp leads. No setup fees. No long contracts.</p>
+
+    <div class="hero-ctas">
+      <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=hero&utm_campaign=business_signup" class="btn btn-whatsapp" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+        List My Pet Business Free →
+      </a>
+      <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+    </div>
+
+    <div class="trust-badges">
+      <span class="trust-badge"><span class="check">✓</span> No upfront cost</span>
+      <span class="trust-badge"><span class="check">✓</span> Direct customer chats</span>
+      <span class="trust-badge"><span class="check">✓</span> Google ratings shown</span>
+      <span class="trust-badge"><span class="check">✓</span> SEO-Optimised Listing</span>
+    </div>
+
+    <div class="hero-strip">
+      <div class="stat"><strong>34,000+</strong><span>Verified Pet Businesses</span></div>
+      <div class="stat"><strong>570+</strong><span>Cities · India + USA</span></div>
+      <div class="stat"><strong>4.9/5</strong><span>Owner Rating</span></div>
+      <div class="stat"><strong>0%</strong><span>Setup Fee</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE PROPS -->
+<section id="benefits">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow">Why Pets24x7</span>
+      <h2>Built for Pet Businesses That Want To Own The Customer</h2>
+      <p>Stop paying ad-tech middlemen for clicks. Start owning your customers, your reviews and your bookings.</p>
+    </div>
+    <div class="value-grid">
+      <div class="value-card"><div class="value-icon">🔍</div><h3>SEO-Optimised Visibility</h3><p>We rank for "vets near me", "dog grooming in <em>your city</em>" and 20+ other pet-intent searches — so pet parents find your listing first.</p></div>
+      <div class="value-card"><div class="value-icon">💸</div><h3>Keep 100% of Revenue</h3><p>No commission on bookings. No card-on-file surprises. Customers pay you direct. Pay only for premium visibility, if you want it.</p></div>
+      <div class="value-card"><div class="value-icon">📱</div><h3>Direct WhatsApp Enquiries</h3><p>Pet parents WhatsApp you directly. Quote your rate, upsell vaccinations, dental, grooming add-ons. Build a real client list.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="steps">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow">How It Works</span>
+      <h2>From Sign-Up to First Enquiry in 3 Simple Steps</h2>
+      <p>Less than a day. No paperwork. No tech skills needed.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card"><div class="step-num">1</div><h3>Submit Your Business</h3><p>Send us your business details on WhatsApp — name, address, services, phone, Google reviews link. We handle the rest.</p></div>
+      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team SEO-optimises your listing, syncs Google ratings, embeds your map, and pushes you to relevant city + category pages.</p></div>
+      <div class="step-card"><div class="step-num">3</div><h3>Get Direct Enquiries</h3><p>Pet parents WhatsApp you directly. You confirm bookings. No commission. No middlemen. No surprises.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section id="proof">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow">Trusted By Pet Business Owners</span>
+      <h2>From Boutique Groomers to 24x7 Animal Hospitals</h2>
+    </div>
+    <div class="testimonials">
+      <div class="testimonial"><div class="stars">★★★★★</div><blockquote>"3x more grooming bookings in 6 weeks — and every one came via WhatsApp. Best part: I kept 100% of the fee."</blockquote><cite><span class="avatar">P</span> Priya · Pawsh Grooming, Bengaluru</cite></div>
+      <div class="testimonial"><div class="stars">★★★★★</div><blockquote>"Finally, a listing site that actually shows our Google ratings. Pet parents trust us before they even call."</blockquote><cite><span class="avatar">D</span> Dr. Mehta · Furry Tails Vet, Mumbai</cite></div>
+      <div class="testimonial"><div class="stars">★★★★★</div><blockquote>"Set up in 20 minutes, first boarding enquiry in 3 days. Zero risk. Real results."</blockquote><cite><span class="avatar">J</span> Jason · Camp Bow Wow, Dallas TX</cite></div>
+    </div>
+  </div>
+</section>
+
+<!-- PREMIUM -->
+<section class="premium" id="premium">
+  <div class="container">
+    <div class="premium-card">
+      <div>
+        <span class="premium-badge">⭐ FEATURED LISTING</span>
+        <h3>Get 5x More Enquiries with Premium Visibility</h3>
+        <p style="color:var(--text-muted);">Stand out at the top of city + category search pages with our Featured Listing package — designed for pet businesses serious about growth.</p>
+        <ul class="premium-list">
+          <li>Top placement in your city &amp; category</li>
+          <li>Instagram &amp; Google Reels promotion</li>
+          <li>Google Ads boost (we run them for you)</li>
+          <li>Priority WhatsApp lead routing</li>
+          <li>Monthly performance dashboard</li>
+        </ul>
+        <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20Featured%20Listing%20details...&utm_source=website&utm_medium=premium&utm_campaign=featured_listing" class="btn btn-primary" target="_blank" rel="noopener">Upgrade for 5x Visibility →</a>
+      </div>
+      <div class="premium-visual">
+        <div class="glow-card">
+          <div style="font-size:32px;margin-bottom:8px;">📈</div>
+          <div style="font-size:24px;font-weight:800;margin-bottom:4px;">+487%</div>
+          <div style="font-size:13px;opacity:0.9;">Avg. Enquiry Lift<br/>for Featured Listings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow">FAQ</span>
+      <h2>Questions Pet Business Owners Ask Most</h2>
+      <p>Quick answers. Honest pricing. Zero fine print.</p>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item" open><summary>Is there a setup fee or monthly cost?</summary><div class="faq-answer">Nope. Listing is 100% free. You only pay for the optional Featured Listing upgrade — and only if you want top-of-page visibility. No commissions. No subscriptions.</div></details>
+      <details class="faq-item"><summary>How do you display Google ratings?</summary><div class="faq-answer">We link your listing to your existing Google Business profile (via your Google CID). Your live rating, review count and recent customer scores show up on your Pets24x7 listing — and refresh automatically.</div></details>
+      <details class="faq-item"><summary>Can I list multiple locations or branches?</summary><div class="faq-answer">Yes. Each branch gets its own SEO-optimised listing page, with its own Google reviews and WhatsApp routing. We offer bulk-listing discounts for chains.</div></details>
+      <details class="faq-item"><summary>What categories of pet businesses can list?</summary><div class="faq-answer">Veterinary clinics, emergency animal hospitals, groomers, boarders, daycare, dog walkers, trainers, sitters, pet taxi &amp; transport, relocators, dental care, physiotherapy, mobile vets, vaccination centres, exotic/avian vets — and more. If you serve pets, we'll find you a category.</div></details>
+      <details class="faq-item"><summary>How long does it take to receive my first enquiry?</summary><div class="faq-answer">Most businesses get their first WhatsApp enquiry within 5-7 days of going live. Featured listings often see traction in 24-48 hours.</div></details>
+      <details class="faq-item"><summary>Who owns the customer contact data?</summary><div class="faq-answer">You do. 100%. Pets24x7 never hides customer contact details. Build your CRM, run your own marketing, own your relationships.</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta" id="final">
+  <div class="container">
+    <h2>Ready to Fill Your Calendar with Pet Parents?</h2>
+    <p>Join thousands of vets, groomers, walkers &amp; boarders across India and the USA. Zero risk. Zero setup. Start today.</p>
+    <div class="hero-ctas">
+      <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=final_cta&utm_campaign=business_signup" class="btn btn-whatsapp" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+        Chat to List Now (30 sec)
+      </a>
+      <a href="tel:+919930090487" class="btn btn-outline">📞 Call +91 99300 90487</a>
+    </div>
+    <p class="micro-copy">No spam. No calls. Just WhatsApp.</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">Pets24x7<span style="color:#60A5FA;">.com</span></div>
+        <p class="tagline">Pet Services Marketplace.<br/>Verified vets, groomers, boarders & walkers across India + USA. Direct WhatsApp. Zero commissions.</p>
+      </div>
+      <div>
+        <h4>Browse — India</h4>
+        <ul>
+          <li><a href="/in/mumbai/">Mumbai</a></li>
+          <li><a href="/in/bengaluru/">Bengaluru</a></li>
+          <li><a href="/in/hyderabad/">Hyderabad</a></li>
+          <li><a href="/in/pune/">Pune</a></li>
+          <li><a href="/in/delhi/">Delhi</a></li>
+          <li><a href="/in/ahmedabad/">Ahmedabad</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Browse — USA</h4>
+        <ul>
+          <li><a href="/us/dallas/">Dallas, TX</a></li>
+          <li><a href="/us/houston/">Houston, TX</a></li>
+          <li><a href="/us/los-angeles/">Los Angeles, CA</a></li>
+          <li><a href="/us/brooklyn/">Brooklyn, NY</a></li>
+          <li><a href="/us/miami/">Miami, FL</a></li>
+          <li><a href="/us/atlanta/">Atlanta, GA</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp Us</a></li>
+          <li><a href="tel:+919930090487">+91 99300 90487</a></li>
+          <li><a href="mailto:hello@pets24x7.com">hello@pets24x7.com</a></li>
+          <li><a href="marketing.html">For Pet Businesses</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Pets24x7.com — All rights reserved.</span>
+      <span>Made with ❤ for pet parents &amp; pet pros worldwide</span>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=float_button&utm_campaign=business_signup" class="float-wa" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+  <span>Chat to Get Started</span>
+</a>
+
+<script src="config.js"></script>
+<script src="pets-data.js"></script>
+<script src="pets-loader.js"></script>
+<script>
+  // ---- Shared image pool by category ----
+  // Pet-themed Unsplash photos so cards look relevant (vet → vet pic, groom → groom pic, etc.)
+  // Common "free use" photos via Unsplash CDN.
+  var IMG_POOL = {
+    'veterinary-clinics':              ['photo-1583337130417-3346a1be7dee','photo-1628009368231-7bb7cfcb0def','photo-1581888227599-779811939961'],
+    'emergency-animal-hospital':       ['photo-1628009368231-7bb7cfcb0def','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87'],
+    'vaccination-centers':             ['photo-1606851094291-6efae152bb87','photo-1581888227599-779811939961','photo-1583337130417-3346a1be7dee'],
+    'mobile-vet-services':             ['photo-1535930891776-0c2dfb7fda1a','photo-1628009368231-7bb7cfcb0def','photo-1601758125946-6ec2ef64daf8'],
+    'specialty-vets-exotics-avian-reptiles': ['photo-1452857297128-d9c29adba80b','photo-1535930891776-0c2dfb7fda1a','photo-1583337130417-3346a1be7dee'],
+    'veterinary-labs-diagnostics':     ['photo-1581093588401-fbb62a02f120','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87'],
+    'pet-dental-care':                 ['photo-1601758125946-6ec2ef64daf8','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87'],
+    'pet-physiotherapy-rehab':         ['photo-1450778869180-41d0601e046e','photo-1583337130417-3346a1be7dee','photo-1535930891776-0c2dfb7fda1a'],
+    'pet-grooming-spa':                ['photo-1516734212186-a967f81ad0d7','photo-1559190394-30ec01e76b5e','photo-1591768793355-74d04bb6608f'],
+    'pet-boarding-daycare':            ['photo-1543466835-00a7907e9de1','photo-1601758228041-f3b2795255f1','photo-1587300003388-59208cc962cb'],
+    'pet-walking':                     ['photo-1450778869180-41d0601e046e','photo-1548199973-03cce0bbc87b','photo-1551717743-49959800b1f6'],
+    'pet-training-obedience-behavior': ['photo-1576201836106-db1758fd1c97','photo-1587300003388-59208cc962cb','photo-1601758228041-f3b2795255f1'],
+    'pet-sitting-in-home-care':        ['photo-1601758228041-f3b2795255f1','photo-1543466835-00a7907e9de1','photo-1583337130417-3346a1be7dee'],
+    'pet-relocation-services':         ['photo-1612531048118-826056e83cf7','photo-1559190394-30ec01e76b5e','photo-1450778869180-41d0601e046e'],
+    'pet-taxi-transport':              ['photo-1612531048118-826056e83cf7','photo-1559190394-30ec01e76b5e','photo-1450778869180-41d0601e046e'],
+    'pet-therapy-services':            ['photo-1535930891776-0c2dfb7fda1a','photo-1601758228041-f3b2795255f1','photo-1450778869180-41d0601e046e']
+  };
+  var DEFAULT_IMGS = ['photo-1583337130417-3346a1be7dee','photo-1543466835-00a7907e9de1','photo-1516734212186-a967f81ad0d7','photo-1452857297128-d9c29adba80b','photo-1450778869180-41d0601e046e','photo-1574144611937-0df059b5ef3e'];
+
+  function seedOf(s) { return (s || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
+  function imgFor(p, idx, w, h) {
+    var pool = (p && IMG_POOL[p.category_slug]) || DEFAULT_IMGS;
+    var pic = pool[(seedOf(p && p.id) + (idx || 0)) % pool.length];
+    return 'https://images.unsplash.com/' + pic + '?w=' + (w || 600) + '&h=' + (h || 400) + '&fit=crop&q=70';
+  }
+
+  // ---- Render city groups + featured ----
+  function renderCities() {
+    var idx = window.PETS_INDEX || [];
+    var inCities = idx.filter(function(c){return c.country==='IN';}).slice(0, 12);
+    var usTop    = idx.filter(function(c){return c.country==='US';}).slice(0, 12);
+    var usMore   = idx.filter(function(c){return c.country==='US';}).slice(12, 36);
+
+    function card(c){
+      var icon = {'mumbai':'🌊','bengaluru':'🌳','hyderabad':'🍛','pune':'🎓','delhi':'🏛️','new-delhi':'🏛️','ahmedabad':'🪁','thane':'🏞️','navi-mumbai':'🌆','surat':'💎','pimpri-chinchwad':'🏙️','mira-bhayandar':'🌅','secunderabad':'🚂',
+                   'dallas':'🤠','houston':'🚀','san-antonio':'🌵','fort-worth':'🐴','los-angeles':'🌴','el-paso':'⛰️','manhattan':'🗽','denton':'🎓','brooklyn':'🌉','corpus-christi':'🐚','las-vegas':'🎰','jacksonville':'🌊','orlando':'🎢','queens':'🛫','san-francisco':'🌉','charlotte':'🌳','arlington':'🏟️','miami':'🏖️','phoenix':'🔥','tampa':'⛵','seattle':'☕','garland':'🌹','philadelphia':'🔔','denver':'🏔️','atlanta':'🍑','portland':'🌲','san-jose':'💻','west-palm-beach':'🌴','naples':'🏝️','riverside':'🌉','port-st-lucie':'🏖️','sarasota':'⛱️','lubbock':'🌾','minneapolis':'❄️','sacramento':'🌳','daytona-beach':'🏎️','midland':'🛢️','fort-myers':'🌴','white-plains':'⛅','bridgeport':'🌉','killeen':'⭐','orange-county':'🍊','boston':'🍀','amarillo':'🌪️','beaumont':'⚓','brownsville':'🌊','tyler':'🌹','santa-barbara':'🏖️','melbourne':'🚀','pensacola':'⚓','abilene':'🌵','mineola':'🌳','mcallen':'🌴','college-station':'🎓','washington':'🏛️','waco':'🐄','laredo':'🌵','trenton':'🏛️'}[c.city_slug] || '📍';
+      return '<a class="dest-item" href="/' + c.country.toLowerCase() + '/' + encodeURIComponent(c.city_slug) + '/">' +
+             '<span class="dest-circle">' + icon + '</span>' +
+             '<span class="dest-info"><strong>' + c.city + '</strong><span>' + c.count + '+ listings</span></span>' +
+             '</a>';
+    }
+
+    document.getElementById('citiesIN').innerHTML = inCities.map(card).join('');
+    document.getElementById('citiesUS').innerHTML = usTop.map(card).join('');
+    document.getElementById('citiesUS2').innerHTML = usMore.map(card).join('');
+
+    // populate the search datalist
+    var dl = document.getElementById('cityList');
+    dl.innerHTML = idx.slice(0, 200).map(function(c){
+      return '<option value="' + (c.city + (c.country === 'US' ? ', US' : '')) + '"></option>';
+    }).join('');
+  }
+
+  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+  function renderFeatured() {
+    var list = (window.PETS_FEATURED || []).slice(0, 8);
+    var html = list.map(function(p, i){
+      return '<a class="feat-card" href="/' + p.country.toLowerCase() + '/' + encodeURIComponent(p.city_slug) + '/' + encodeURIComponent(p.id) + '/">' +
+             '<div class="feat-img">' +
+                '<span class="badge-top">★ Top Rated</span>' +
+                '<span class="cat-chip">' + p.category_icon + ' ' + p.category + '</span>' +
+                '<img loading="lazy" src="' + imgFor(p, i, 600, 400) + '" alt="' + escapeAttr(p.name) + '">' +
+             '</div>' +
+             '<div class="feat-body">' +
+                '<h3>' + escapeAttr(p.name) + '</h3>' +
+                '<div class="feat-loc">📍 ' + escapeAttr(p.city) + (p.country==='US' && p.state ? ', ' + p.state : '') + '</div>' +
+                '<div class="feat-rating">' +
+                  '<span class="rating-pill">★ ' + p.rating.toFixed(1) + '</span>' +
+                  '<span class="google-badge">' +
+                    '<span class="gscore">' + p.rating.toFixed(1) + '/5</span>' +
+                    '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
+                    '<span>' + p.review_count + ' ratings</span>' +
+                  '</span>' +
+                '</div>' +
+             '</div>' +
+             '</a>';
+    }).join('');
+    document.getElementById('featGrid').innerHTML = html;
+  }
+
+  function doSearch() {
+    var raw = document.getElementById('searchCity').value.trim();
+    if (!raw) return;
+    // strip ", US" hint from datalist labels
+    var cityName = raw.replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
+    var slug = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    var cat = document.getElementById('searchCat').value;
+    // detect country: USA cities get country=US, else fall back to IN
+    var country = /,\s*US|USA/i.test(raw) ? 'US' : '';
+    if (!country) {
+      // try to detect via the index
+      var match = (window.PETS_INDEX || []).find(function(c){ return c.city_slug === slug; });
+      country = match ? match.country : 'IN';
+    }
+    var url = '/' + country.toLowerCase() + '/' + encodeURIComponent(slug) + '/';
+    if (cat) url += encodeURIComponent(cat) + '/';
+    location.href = url;
+  }
+
+  // initial render
+  renderCities();
+  renderFeatured();
+  window.addEventListener('petsUpdated', function(){ renderCities(); renderFeatured(); });
+</script>
+
+</body>
+</html>

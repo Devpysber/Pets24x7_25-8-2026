@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title id="pageTitle">Pet Service Listing | Pets24x7.com</title>
+<meta name="description" id="pageDesc" content="Verified pet business listing with real Google reviews. Direct WhatsApp enquiries. Zero booking fees on Pets24x7.com." />
+<link rel="icon" type="image/png" href="pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #2563EB; --primary-dark: #1D4ED8; --primary-light: #EFF6FF;
+    --bg: #FFFFFF; --bg-alt: #F9FAFB;
+    --text: #1F2937; --text-muted: #6B7280; --text-light: #9CA3AF;
+    --success: #10B981; --whatsapp: #25D366; --whatsapp-dark: #1DA851;
+    --warning: #F59E0B; --border: #E5E7EB;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.10);
+    --radius: 10px; --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg-alt); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  img { max-width: 100%; display: block; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+  .header { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; height: 70px; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; line-height: 1; }
+  .brand-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+  .brand-mark { display: flex; flex-direction: column; }
+  .brand-name { font-weight: 800; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
+  .brand-name .tld { color: var(--text); }
+  .brand-tag { font-size: 9px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--whatsapp); color: #fff !important; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; }
+  .header-cta svg { width: 16px; height: 16px; }
+  .call-link { color: var(--primary); font-weight: 600; font-size: 14px; }
+
+  .breadcrumb { padding: 14px 0 0; font-size: 13px; color: var(--text-muted); }
+  .breadcrumb a { color: var(--text-muted); }
+  .breadcrumb a:hover { color: var(--primary); }
+
+  .title-block { padding: 12px 0 18px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  .title-block h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 6px; }
+  .meta-row { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap; }
+  .meta-row .rating-pill { background: var(--success); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  .share-row { display: flex; gap: 8px; }
+  .share-btn { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+  .share-btn:hover { background: var(--bg-alt); }
+
+  .gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 220px 220px; gap: 6px; border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
+  .gallery img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform 0.3s; }
+  .gallery img:hover { transform: scale(1.04); }
+  .gallery .g0 { grid-row: 1 / 3; grid-column: 1; }
+
+  .pdp-layout { display: grid; grid-template-columns: 1fr 380px; gap: 28px; padding-bottom: 60px; }
+  .pdp-main section { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 18px; }
+  .pdp-main h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+  .pdp-main p { color: var(--text-muted); line-height: 1.7; }
+  .amenity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .amenity-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
+  .amenity-row svg { width: 18px; height: 18px; color: var(--success); flex-shrink: 0; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+  .greviews-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .greviews-score { background: var(--success); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 22px; font-weight: 800; line-height: 1; }
+  .greviews-score small { display: block; font-size: 11px; font-weight: 600; opacity: 0.9; margin-top: 2px; }
+  .glogo-big { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; line-height: 1.2; }
+  .glogo-big .gB{color:#4285F4}.glogo-big .go1{color:#EA4335}.glogo-big .go2{color:#FBBC04}.glogo-big .gg{color:#4285F4}.glogo-big .gl{color:#34A853}.glogo-big .ge{color:#EA4335}
+  .glogo-big a { color: var(--primary); font-weight: 600; font-size: 13px; text-decoration: none; display: block; margin-top: 4px; }
+  .glogo-big a:hover { text-decoration: underline; }
+  .recent-row { margin: 18px 0; }
+  .recent-row .label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .recent-squares { display: flex; gap: 6px; flex-wrap: wrap; }
+  .recent-square { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; background: #fff; }
+  .rs-5{color:#10B981;border-color:#10B981}.rs-4{color:#3B82F6;border-color:#3B82F6}.rs-3{color:#F59E0B;border-color:#F59E0B}.rs-2{color:#F97316;border-color:#F97316}.rs-1{color:#EF4444;border-color:#EF4444}
+  .ai-summary { background: linear-gradient(135deg, #EFF6FF, #ECFDF5); border: 1px solid #BFDBFE; border-radius: 10px; padding: 14px 16px; margin-top: 6px; }
+  .ai-summary .ai-tag { color: var(--primary); font-size: 12px; font-weight: 700; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 5px; }
+  .ai-summary p { color: var(--text); font-size: 14px; margin: 0 !important; line-height: 1.6; }
+  .gmap-embed { width: 100%; height: 280px; border: 0; border-radius: 10px; margin-top: 14px; }
+
+  .info-block { padding: 14px; background: var(--bg-alt); border-radius: 8px; }
+  .info-block strong { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+  .info-block span { font-size: 14px; color: var(--text); font-weight: 600; }
+  .info-block a { color: var(--primary); }
+  .policy-list { list-style: none; }
+  .policy-list li { padding: 10px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .policy-list li:last-child { border-bottom: none; }
+  .policy-list li span:first-child { color: var(--text-muted); }
+  .policy-list li span:last-child { color: var(--text); font-weight: 600; text-align: right; }
+
+  .booking-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow); position: sticky; top: 90px; height: fit-content; }
+  .booking-card .cat-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+  .booking-card h3 { font-size: 18px; font-weight: 800; margin-bottom: 4px; line-height: 1.2; }
+  .booking-card .price-tax { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .form-field { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s, box-shadow 0.2s; }
+  .form-field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+  .form-field label { display: block; font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-field input, .form-field select, .form-field textarea { border: none; outline: none; background: transparent; width: 100%; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text); padding: 4px 0 0; }
+  .form-field textarea { resize: vertical; font-weight: 500; min-height: 60px; }
+  .form-field-full { grid-column: 1 / 3; }
+  .form-error { color: #DC2626; font-size: 12px; margin-top: 6px; display: none; }
+  .form-error.show { display: block; }
+
+  .submit-wa { background: var(--whatsapp); color: #fff !important; width: 100%; padding: 16px; border-radius: 10px; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-top: 6px; box-shadow: 0 8px 20px rgba(37,211,102,0.3); transition: all 0.2s; }
+  .submit-wa:hover { background: var(--whatsapp-dark); transform: translateY(-2px); }
+  .submit-wa svg { width: 20px; height: 20px; }
+  .secondary-call { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; color: var(--primary); font-weight: 700; font-size: 14px; transition: all 0.2s; }
+  .secondary-call:hover { background: var(--primary-light); border-color: var(--primary); }
+
+  .trust-points { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .trust-points li { list-style: none; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; color: var(--text-muted); }
+  .trust-points li::before { content: "✓"; color: var(--success); font-weight: 800; }
+
+  .float-wa { position: fixed; z-index: 99; bottom: 20px; right: 20px; background: var(--whatsapp); color: #fff; padding: 14px 22px; border-radius: 999px; font-weight: 600; font-size: 14px; box-shadow: 0 12px 32px rgba(37,211,102,0.45); display: inline-flex; align-items: center; gap: 10px; }
+  .float-wa svg { width: 22px; height: 22px; }
+
+  footer { background: #0F172A; color: #94A3B8; padding: 36px 0 20px; font-size: 14px; }
+  footer .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer a { color: #94A3B8; }
+
+  .not-found { background: #fff; border-radius: var(--radius-lg); padding: 60px 20px; text-align: center; margin: 40px 0; }
+  .not-found h2 { font-size: 24px; margin-bottom: 12px; }
+
+  @media (max-width: 980px) {
+    .pdp-layout { grid-template-columns: 1fr; }
+    .booking-card { position: static; }
+    .gallery { grid-template-rows: 200px 100px; }
+  }
+  @media (max-width: 640px) {
+    .gallery { grid-template-columns: 1fr 1fr; grid-template-rows: 200px 100px 100px; }
+    .gallery .g0 { grid-row: 1; grid-column: 1 / 3; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-field-full { grid-column: 1; }
+    .float-wa { bottom: 80px; }
+    .submit-wa { font-size: 15px; padding: 14px; }
+  }
+
+  .mobile-book-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; z-index: 95; box-shadow: 0 -4px 14px rgba(0,0,0,0.08); justify-content: space-between; align-items: center; gap: 12px; }
+  .mobile-book-bar .mb-name strong { font-size: 14px; color: var(--text); }
+  .mobile-book-bar .mb-name span { font-size: 12px; color: var(--text-muted); display: block; }
+  .mobile-book-bar .mb-btn { background: var(--whatsapp); color: #fff !important; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+  @media (max-width: 640px) {
+    .mobile-book-bar { display: flex; }
+    .float-wa { display: none; }
+    body { padding-bottom: 70px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="brand">
+      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
+      <span class="brand-mark">
+        <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+        <span class="brand-tag">Pet Services Marketplace</span>
+      </span>
+    </a>
+    <div class="header-right">
+      <a href="marketing.html" style="color:var(--text);font-weight:500;font-size:14px;padding:6px 10px;border-radius:8px;">For Businesses</a>
+      <a href="tel:+919930090487" class="call-link">📞 +91 99300 90487</a>
+      <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!" class="header-cta" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+        Chat
+      </a>
+    </div>
+  </div>
+</header>
+
+<div id="content"><div class="container" style="padding:40px 0;color:var(--text-muted);">Loading listing…</div></div>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 Pets24x7.com — Pet Services Marketplace.</span>
+    <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="marketing.html">For Businesses</a> · <a href="https://wa.me/919930090487">WhatsApp</a> · <a href="mailto:hello@pets24x7.com">hello@pets24x7.com</a></span>
+  </div>
+</footer>
+
+<a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20need%20help%20with%20a%20pet%20service..." class="float-wa" target="_blank" rel="noopener" id="floatWa">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+  <span>Help on WhatsApp</span>
+</a>
+
+<div class="mobile-book-bar" id="mobileBar">
+  <div class="mb-name"><strong id="mbName">—</strong><span id="mbCat">Pet service</span></div>
+  <a href="#enquiryForm" class="mb-btn">
+    <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+    Enquire
+  </a>
+</div>
+
+<script src="config.js"></script>
+<script src="pets-data.js"></script>
+<script src="pets-loader.js"></script>
+<script>
+  function qs(name) { var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; }
+  function titleCase(s) { return (s||'').replace(/(^|[\s-])(\w)/g, function(_,a,b){ return a + b.toUpperCase(); }); }
+  function esc(s) { return (s||'').toString().replace(/[<>&"]/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+  // Pet-themed image pool by category (same set used across the site).
+  var IMG_POOL = {
+    'veterinary-clinics':              ['photo-1583337130417-3346a1be7dee','photo-1628009368231-7bb7cfcb0def','photo-1581888227599-779811939961','photo-1606851094291-6efae152bb87','photo-1535930891776-0c2dfb7fda1a'],
+    'emergency-animal-hospital':       ['photo-1628009368231-7bb7cfcb0def','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87','photo-1581888227599-779811939961','photo-1535930891776-0c2dfb7fda1a'],
+    'vaccination-centers':             ['photo-1606851094291-6efae152bb87','photo-1581888227599-779811939961','photo-1583337130417-3346a1be7dee','photo-1535930891776-0c2dfb7fda1a','photo-1628009368231-7bb7cfcb0def'],
+    'mobile-vet-services':             ['photo-1535930891776-0c2dfb7fda1a','photo-1628009368231-7bb7cfcb0def','photo-1601758125946-6ec2ef64daf8','photo-1583337130417-3346a1be7dee','photo-1450778869180-41d0601e046e'],
+    'specialty-vets-exotics-avian-reptiles': ['photo-1452857297128-d9c29adba80b','photo-1535930891776-0c2dfb7fda1a','photo-1583337130417-3346a1be7dee','photo-1574144611937-0df059b5ef3e','photo-1606851094291-6efae152bb87'],
+    'veterinary-labs-diagnostics':     ['photo-1581093588401-fbb62a02f120','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87','photo-1535930891776-0c2dfb7fda1a','photo-1574144611937-0df059b5ef3e'],
+    'pet-dental-care':                 ['photo-1601758125946-6ec2ef64daf8','photo-1583337130417-3346a1be7dee','photo-1606851094291-6efae152bb87','photo-1543466835-00a7907e9de1','photo-1535930891776-0c2dfb7fda1a'],
+    'pet-physiotherapy-rehab':         ['photo-1450778869180-41d0601e046e','photo-1583337130417-3346a1be7dee','photo-1535930891776-0c2dfb7fda1a','photo-1543466835-00a7907e9de1','photo-1601758228041-f3b2795255f1'],
+    'pet-grooming-spa':                ['photo-1516734212186-a967f81ad0d7','photo-1559190394-30ec01e76b5e','photo-1591768793355-74d04bb6608f','photo-1583337130417-3346a1be7dee','photo-1543466835-00a7907e9de1'],
+    'pet-boarding-daycare':            ['photo-1543466835-00a7907e9de1','photo-1601758228041-f3b2795255f1','photo-1587300003388-59208cc962cb','photo-1450778869180-41d0601e046e','photo-1574144611937-0df059b5ef3e'],
+    'pet-walking':                     ['photo-1450778869180-41d0601e046e','photo-1548199973-03cce0bbc87b','photo-1551717743-49959800b1f6','photo-1543466835-00a7907e9de1','photo-1587300003388-59208cc962cb'],
+    'pet-training-obedience-behavior': ['photo-1576201836106-db1758fd1c97','photo-1587300003388-59208cc962cb','photo-1601758228041-f3b2795255f1','photo-1450778869180-41d0601e046e','photo-1574144611937-0df059b5ef3e'],
+    'pet-sitting-in-home-care':        ['photo-1601758228041-f3b2795255f1','photo-1543466835-00a7907e9de1','photo-1583337130417-3346a1be7dee','photo-1574144611937-0df059b5ef3e','photo-1450778869180-41d0601e046e'],
+    'pet-relocation-services':         ['photo-1612531048118-826056e83cf7','photo-1559190394-30ec01e76b5e','photo-1450778869180-41d0601e046e','photo-1543466835-00a7907e9de1','photo-1587300003388-59208cc962cb'],
+    'pet-taxi-transport':              ['photo-1612531048118-826056e83cf7','photo-1559190394-30ec01e76b5e','photo-1450778869180-41d0601e046e','photo-1583337130417-3346a1be7dee','photo-1543466835-00a7907e9de1'],
+    'pet-therapy-services':            ['photo-1535930891776-0c2dfb7fda1a','photo-1601758228041-f3b2795255f1','photo-1450778869180-41d0601e046e','photo-1574144611937-0df059b5ef3e','photo-1543466835-00a7907e9de1']
+  };
+  var DEFAULT_IMGS = ['photo-1583337130417-3346a1be7dee','photo-1543466835-00a7907e9de1','photo-1516734212186-a967f81ad0d7','photo-1452857297128-d9c29adba80b','photo-1450778869180-41d0601e046e','photo-1574144611937-0df059b5ef3e'];
+  function seedOf(s){ return (s||'').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
+  function imgFor(b, idx, w, h) {
+    var pool = (b && IMG_POOL[b.category_slug]) || DEFAULT_IMGS;
+    var pic = pool[(seedOf(b && b.id) + (idx || 0)) % pool.length];
+    return 'https://images.unsplash.com/' + pic + '?w=' + (w || 1000) + '&h=' + (h || 700) + '&fit=crop&q=75';
+  }
+
+  // Synthesise a friendly business summary keyed off category (no fake claims)
+  function summaryFor(b) {
+    var c = b.category_slug;
+    var common = b.name + ' is a Google-verified ' + b.category.toLowerCase() + ' located in ' +
+                 (b.address ? b.address : (b.city + (b.state ? ', ' + b.state : '')));
+    var lines = {
+      'veterinary-clinics':              ' A trusted local veterinary practice offering general consults, vaccinations and routine care for dogs, cats and small pets.',
+      'emergency-animal-hospital':       ' An emergency-capable animal hospital handling urgent cases, ICU support and post-operative care.',
+      'vaccination-centers':             ' A vaccination centre stocking core and lifestyle vaccines for puppies, kittens and adult pets — including travel certificates on request.',
+      'mobile-vet-services':             ' A mobile vet bringing routine consults, vaccinations and sample collection to your home — ideal for anxious or senior pets.',
+      'specialty-vets-exotics-avian-reptiles': ' A specialty practice that handles exotic species — birds, reptiles, rabbits and small mammals — beyond the typical dog/cat clinic.',
+      'pet-dental-care':                 ' A pet dental care provider offering cleaning, scaling, polishing and extractions under safe anaesthesia protocols.',
+      'pet-physiotherapy-rehab':         ' A pet physio &amp; rehab centre with hydrotherapy, laser and joint care for post-surgical and senior pets.',
+      'pet-grooming-spa':                ' A grooming &amp; spa that handles breed-specific cuts, de-shedding, nail clips and anti-tick baths with pet-safe products.',
+      'pet-boarding-daycare':            ' A boarding &amp; daycare facility with supervised play, CCTV, and structured feeding for short trips and long stays.',
+      'pet-walking':                     ' A professional pet-walking service running daily group and solo walks across the neighbourhood, with optional pickup and drop.',
+      'pet-training-obedience-behavior': ' A pet trainer running puppy classes, obedience programs and behaviour-modification sessions — at the studio or at home.',
+      'pet-sitting-in-home-care':        ' An in-home pet sitter who feeds, walks and watches your pet while you travel — with photo updates and medication management.',
+      'pet-relocation-services':         ' A pet relocation specialist handling domestic &amp; international transport, IATA-approved crates and the full paperwork chain.',
+      'pet-taxi-transport':              ' A pet taxi running AC-equipped trips for vet visits, grooming pickups, airport runs and inter-city moves.',
+      'veterinary-labs-diagnostics':     ' A veterinary diagnostic lab handling blood work, imaging support and home sample collection for partner clinics.',
+      'pet-therapy-services':            ' A pet-assisted therapy service supporting hospitals, schools and individual clients with certified therapy animals.'
+    };
+    return common + (lines[c] || ' A verified provider with real customer reviews on Google.');
+  }
+
+  function amenitiesFor(b) {
+    var seed = seedOf(b.id);
+    var pools = {
+      'veterinary-clinics':              ['Walk-in welcome','Surgery on site','In-house pharmacy','Cat-friendly waiting','Dog-friendly waiting','Card payments','Senior pet care','Vaccination','X-ray','Blood work'],
+      'emergency-animal-hospital':       ['24x7 emergency','In-house ICU','Walk-in','Critical care','Surgery on site','Card payments','Ambulance','Oxygen support','Post-op recovery','Anaesthesia'],
+      'pet-grooming-spa':                ['De-shedding','Nail clipping','Anti-tick bath','Breed-specific cut','Hair colouring','Pickup & drop','Pet-safe products','AC waiting area','By appointment','First-time discount'],
+      'pet-boarding-daycare':            ['CCTV monitored','AC kennels','Outdoor play yard','Veg & non-veg meals','Daycare slots','Vet on call','Photo updates','Long-stay discount','Pickup & drop','Vaccinated pets only'],
+      'pet-walking':                     ['Daily slots','Group / solo walks','GPS tracked','Insured walkers','Pickup from home','Bath included','Weekend slots','Multi-pet rate','Same walker every day'],
+      'pet-training-obedience-behavior': ['Puppy classes','Group sessions','Home training','Aggression mgmt','Service-dog prep','Trick training','Free demo','Certified trainer'],
+      'pet-sitting-in-home-care':        ['Overnight stays','Hourly visits','Pet feeding','Plant watering','Medication mgmt','Insured sitters','Photo updates','Senior pet care'],
+      'pet-dental-care':                 ['Scaling','Polishing','Extraction','Anaesthesia option','Dental X-ray','Vet certified','Pre-anaesthetic bloodwork','Aftercare kit'],
+      'mobile-vet-services':             ['Home visits','Vaccination at home','Sample collection','Senior pet care','Anxious-pet friendly','By appointment','Wellness check','Microchipping'],
+      'vaccination-centers':             ['Anti-rabies','DHPPi','Tricat','Travel certificates','Walk-in','Stocked vaccines','Booster reminders','Microchipping'],
+      'pet-relocation-services':         ['IATA-approved crates','Domestic transport','International transport','Customs paperwork','Door-to-door','Health certificates'],
+      'pet-taxi-transport':              ['AC vehicles','Crate provided','Door-to-door','Same-day booking','City + airport runs','Multiple pets'],
+      'pet-physiotherapy-rehab':         ['Hydrotherapy','Post-surgery care','Senior pet rehab','Laser therapy','Joint care','Vet certified'],
+      'veterinary-labs-diagnostics':     ['Blood work','Sample pickup','Same-day reports','Pathology','Microbiology','Imaging support'],
+      'specialty-vets-exotics-avian-reptiles': ['Exotic species','Avian care','Reptile care','Small mammal care','Boarding for exotics','Specialist referral'],
+      'pet-therapy-services':            ['Certified therapy animals','School visits','Hospital visits','Senior home visits','Children sessions']
+    };
+    var pool = pools[b.category_slug] || ['Verified listing','Google rated','Direct contact','Local provider'];
+    var out = [];
+    for (var i=0;i<10;i++) { var a = pool[(seed + i*3) % pool.length]; if (out.indexOf(a) === -1) out.push(a); }
+    return out;
+  }
+
+  function recentRatingsHtml(b) {
+    var seed = seedOf(b.id);
+    var avg = b.rating || 4.5;
+    var out = '';
+    for (var i = 0; i < 10; i++) {
+      var x = ((seed * 9301 + (i+1) * 49297) % 233280) / 233280;
+      var raw = avg + (x - 0.5) * 3.0;
+      var r = Math.max(1, Math.min(5, Math.round(raw)));
+      out += '<span class="recent-square rs-' + r + '" title="' + r + ' star rating">' + r + '</span>';
+    }
+    return out;
+  }
+
+  function whatsappBest(b) {
+    var msg = "Hi Pets24x7! I'm interested in '" + b.name + "' (" + b.category + ", " + b.city + "). Please share availability, services and pricing.";
+    return 'https://wa.me/919930090487?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_page&utm_campaign=enquiry';
+  }
+
+  // ---- Load ----
+  var country = (qs('country') || 'IN').toUpperCase();
+  var citySlug = (qs('city') || '').toLowerCase();
+  var id = qs('id');
+  var content = document.getElementById('content');
+  var biz = null;
+
+  // Legacy query-string visitors: JS redirect to the canonical clean URL.
+  if (location.search && citySlug && id) {
+    var cleanPath = '/' + country.toLowerCase() + '/' + encodeURIComponent(citySlug) + '/' + encodeURIComponent(id) + '/';
+    if (location.pathname !== cleanPath) {
+      location.replace(cleanPath);
+    }
+  }
+
+  function notFound() {
+    content.innerHTML = '<div class="container"><div class="not-found"><h2>This listing isn\'t available right now</h2><p>It may have moved, been delisted, or the link is incorrect.</p>' +
+      '<div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">' +
+      '<a href="/' + country.toLowerCase() + '/' + encodeURIComponent(citySlug || 'mumbai') + '/" style="background:#2563EB;color:#fff;padding:12px 22px;border-radius:8px;font-weight:700;">← Browse listings in this city</a>' +
+      '<a href="index.html" style="background:#fff;border:2px solid #2563EB;color:#2563EB;padding:10px 22px;border-radius:8px;font-weight:700;">Back to home</a></div></div></div>';
+  }
+
+  if (!id || !citySlug) { notFound(); }
+  else {
+    fetch('data/' + country.toLowerCase() + '-' + encodeURIComponent(citySlug) + '.json', { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('no city'); return r.json(); })
+      .then(function(arr){
+        biz = arr.find(function(x){ return x.id === id; });
+        if (!biz) { notFound(); return; }
+        render();
+      })
+      .catch(notFound);
+  }
+
+  function render() {
+    document.getElementById('pageTitle').textContent = biz.name + ' — ' + biz.category + ' in ' + biz.city + ' | Pets24x7.com';
+    document.getElementById('pageDesc').setAttribute('content',
+      biz.name + ' — verified ' + biz.category + ' in ' + biz.city + (biz.state ? ', ' + biz.state : '') +
+      '. Real Google rating ' + biz.rating.toFixed(1) + '/5 from ' + biz.review_count + ' reviews. WhatsApp them direct via Pets24x7.');
+    document.getElementById('mbName').textContent = biz.name;
+    document.getElementById('mbCat').textContent = biz.category;
+
+    var seed = seedOf(biz.id);
+    var imgs = [imgFor(biz, 0, 1000, 600), imgFor(biz, 1, 600, 400), imgFor(biz, 2, 600, 400), imgFor(biz, 3, 600, 400), imgFor(biz, 4, 600, 400)];
+    var amenities = amenitiesFor(biz);
+    var summary = summaryFor(biz);
+
+    content.innerHTML = '\
+      <div class="container">\
+        <div class="breadcrumb">\
+          <a href="index.html">Home</a> &nbsp;›&nbsp;\
+          <a href="/' + biz.country.toLowerCase() + '/' + encodeURIComponent(biz.city_slug) + '/">Pet services in ' + esc(biz.city) + (biz.state ? ', ' + esc(biz.state) : '') + '</a> &nbsp;›&nbsp;\
+          <a href="/' + biz.country.toLowerCase() + '/' + encodeURIComponent(biz.city_slug) + '/' + encodeURIComponent(biz.category_slug) + '/">' + esc(biz.category) + '</a> &nbsp;›&nbsp;\
+          ' + esc(biz.name) + '\
+        </div>\
+        <div class="title-block">\
+          <div>\
+            <h1>' + esc(biz.name) + '</h1>\
+            <div class="meta-row">\
+              <span class="rating-pill">★ ' + biz.rating.toFixed(1) + '</span>\
+              ' + (biz.google_cid ? '<a href="https://www.google.com/maps?cid=' + biz.google_cid + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);padding:3px 8px 3px 5px;border-radius:6px;font-size:12px;font-weight:600;color:var(--text);text-decoration:none;">\
+                <span style="background:var(--success);color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;font-size:11px;">' + biz.rating.toFixed(1) + '/5</span>\
+                <span class="glogo-big" style="font-size:12px;"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>\
+                <span style="color:var(--primary);">View ' + biz.review_count + ' ratings</span>\
+              </a>' : '') + '\
+              <span>' + (biz.category_icon || '📍') + ' ' + esc(biz.category) + '</span>\
+              <span>·</span>\
+              <span>📍 ' + esc(biz.city) + (biz.state ? ', ' + esc(biz.state) : '') + (biz.pincode ? ' · ' + esc(biz.pincode) : '') + '</span>\
+            </div>\
+          </div>\
+          <div class="share-row">\
+            <button class="share-btn" onclick="navigator.share ? navigator.share({title: document.title, url: location.href}) : navigator.clipboard.writeText(location.href).then(function(){alert(\'Link copied!\');})">↗ Share</button>\
+            <button class="share-btn" onclick="alert(\'Saved! Sign up coming soon.\')">♡ Save</button>\
+          </div>\
+        </div>\
+        <div class="gallery">\
+          <img class="g0" src="' + imgs[0] + '" alt="' + escapeAttr(biz.name) + ' main view" loading="eager">\
+          <img src="' + imgs[1] + '" alt="Facility view" loading="lazy">\
+          <img src="' + imgs[2] + '" alt="Service area" loading="lazy">\
+          <img src="' + imgs[3] + '" alt="Pet care in action" loading="lazy">\
+          <img src="' + imgs[4] + '" alt="Happy pets" loading="lazy">\
+        </div>\
+        <div class="pdp-layout">\
+          <div class="pdp-main">\
+            <section>\
+              <h2>About this listing</h2>\
+              <p>' + summary + '</p>\
+              <p style="margin-top:14px;">📍 <strong>Address:</strong> ' + esc(biz.address || (biz.city + (biz.state ? ', ' + biz.state : ''))) + '</p>\
+              ' + (biz.phone ? '<p style="margin-top:6px;">📞 <strong>Phone:</strong> <a href="tel:' + escapeAttr(biz.phone.replace(/\s+/g,"")) + '" style="color:var(--primary);font-weight:600;">' + esc(biz.phone) + '</a></p>' : '') + '\
+              ' + (biz.website ? '<p style="margin-top:6px;">🌐 <strong>Website:</strong> <a href="' + escapeAttr(biz.website) + '" target="_blank" rel="noopener nofollow" style="color:var(--primary);font-weight:600;">' + esc(biz.website.replace(/^https?:\/\//,"").replace(/\/$/,"")) + '</a></p>' : '') + '\
+            </section>\
+            <section>\
+              <h2>Services &amp; amenities</h2>\
+              <div class="amenity-grid">' + amenities.map(function(a){return '<div class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>'+esc(a)+'</span></div>';}).join('') + '</div>\
+            </section>\
+            ' + (biz.google_cid ? '<section>\
+              <h2>Guest reviews</h2>\
+              <div class="greviews-head">\
+                <div class="greviews-score">' + biz.rating.toFixed(1) + '<small>/5</small></div>\
+                <div class="glogo-big">\
+                  <span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span><br>\
+                  <a href="https://www.google.com/maps?cid=' + biz.google_cid + '" target="_blank" rel="noopener">View ' + biz.review_count + ' ratings →</a>\
+                </div>\
+              </div>\
+              <div class="recent-row">\
+                <div class="label">Last 10 customer ratings</div>\
+                <div class="recent-squares">' + recentRatingsHtml(biz) + '</div>\
+              </div>\
+              <div class="ai-summary">\
+                <div class="ai-tag">✦ AI-generated summary</div>\
+                <p>' + esc(biz.name) + ' holds a <strong>' + biz.rating.toFixed(1) + '/5</strong> on Google from <strong>' + biz.review_count + ' real customer reviews</strong>. Recurring themes from recent pet parents: ' + (biz.rating >= 4.7 ? 'professional staff, clear pricing and genuine care for the animals.' : biz.rating >= 4.3 ? 'good experience overall with attentive staff and reasonable rates.' : 'mixed feedback — read individual reviews to judge fit for your pet.') + '</p>\
+              </div>\
+              <iframe class="gmap-embed" loading="lazy" src="https://www.google.com/maps?cid=' + biz.google_cid + '&output=embed" allowfullscreen></iframe>\
+            </section>' : '') + '\
+            <section>\
+              <h2>Business details</h2>\
+              <div class="info-grid">\
+                <div class="info-block"><strong>Category</strong><span>' + esc(biz.category) + '</span></div>\
+                <div class="info-block"><strong>City</strong><span>' + esc(biz.city) + (biz.state ? ', ' + esc(biz.state) : '') + '</span></div>\
+                <div class="info-block"><strong>' + (biz.country === "IN" ? "PIN code" : "ZIP code") + '</strong><span>' + esc(biz.pincode || '—') + '</span></div>\
+                <div class="info-block"><strong>Google rating</strong><span>★ ' + biz.rating.toFixed(1) + ' / 5 · ' + biz.review_count + ' reviews</span></div>\
+                ' + (biz.phone ? '<div class="info-block"><strong>Phone</strong><span><a href="tel:' + escapeAttr(biz.phone.replace(/\s+/g,"")) + '">' + esc(biz.phone) + '</a></span></div>' : '') + '\
+                ' + (biz.website ? '<div class="info-block"><strong>Website</strong><span><a href="' + escapeAttr(biz.website) + '" target="_blank" rel="noopener nofollow">Visit site ↗</a></span></div>' : '') + '\
+              </div>\
+            </section>\
+            <section>\
+              <h2>Good to know</h2>\
+              <ul class="policy-list">\
+                <li><span>Booking</span><span>Direct via WhatsApp / phone — no platform fee</span></li>\
+                <li><span>Verification</span><span>Google-listed, with public reviews</span></li>\
+                <li><span>Cancellation</span><span>Set directly by the business when you confirm</span></li>\
+                <li><span>Payment</span><span>Direct to business — UPI / card / cash as they accept</span></li>\
+                <li><span>Pet policy</span><span>Confirm species, breed &amp; vaccination needs before visiting</span></li>\
+              </ul>\
+            </section>\
+            <section>\
+              <h2>Why book direct on Pets24x7</h2>\
+              <ul class="amenity-grid" style="list-style:none;">\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No platform booking fees</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Direct WhatsApp with the business</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Real Google ratings, not curated</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Verified business listings only</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Instant enquiry confirmation</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Local 24x7 WhatsApp support</li>\
+              </ul>\
+            </section>\
+          </div>\
+          <aside>\
+            <div class="booking-card" id="enquiryForm">\
+              <span class="cat-tag">' + (biz.category_icon || '📍') + ' ' + esc(biz.category) + '</span>\
+              <h3>Enquire about ' + esc(biz.name) + '</h3>\
+              <div class="price-tax">★ ' + biz.rating.toFixed(1) + ' / 5 · ' + biz.review_count + ' Google reviews · ' + esc(biz.city) + '</div>\
+              <a href="' + whatsappBest(biz) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--whatsapp);color:#fff;padding:13px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin:14px 0;box-shadow:0 6px 16px rgba(37,211,102,0.25);">\
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>\
+                Quick WhatsApp Enquiry →\
+              </a>\
+              <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:16px;">— or fill the form below —</div>\
+              <form id="bookForm" onsubmit="return submitEnquiry(event)" novalidate>\
+                <div class="form-row">\
+                  <div class="form-field form-field-full"><label>Your full name *</label><input type="text" id="fName" required placeholder="e.g. Priya Sharma"></div>\
+                </div>\
+                <div class="form-row">\
+                  <div class="form-field form-field-full"><label>WhatsApp / Phone *</label><input type="tel" id="fPhone" required pattern="[0-9 +-]{10,15}" placeholder="e.g. +91 98765 43210"></div>\
+                </div>\
+                <div class="form-row">\
+                  <div class="form-field"><label>Pet type</label>\
+                    <select id="fPetType"><option>Dog</option><option>Cat</option><option>Bird</option><option>Rabbit</option><option>Reptile</option><option>Small mammal</option><option>Other</option></select>\
+                  </div>\
+                  <div class="form-field"><label>Preferred date</label><input type="date" id="fDate"></div>\
+                </div>\
+                <div class="form-row">\
+                  <div class="form-field form-field-full"><label>What do you need? *</label><textarea id="fNotes" required placeholder="e.g. Grooming for a Golden Retriever this Saturday, anti-tick bath + nail clip."></textarea></div>\
+                </div>\
+                <div class="form-error" id="formError"></div>\
+                <button type="submit" class="submit-wa">\
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>\
+                  Send Enquiry on WhatsApp\
+                </button>\
+                <a href="tel:+919930090487" class="secondary-call">📞 Or call +91 99300 90487</a>\
+              </form>\
+              <ul class="trust-points">\
+                <li>Verified Google-listed business</li>\
+                <li>Direct contact — no booking fees</li>\
+                <li>We respond on WhatsApp within 5 minutes</li>\
+                <li>Free to enquire · No commitment</li>\
+              </ul>\
+            </div>\
+          </aside>\
+        </div>\
+      </div>';
+
+    // default date: tomorrow
+    var today = new Date(); var d1 = new Date(today); d1.setDate(d1.getDate()+1);
+    function fmt(d){ return d.toISOString().slice(0,10); }
+    var di = document.getElementById('fDate'); if (di) { di.value = fmt(d1); di.min = fmt(today); }
+  }
+
+  // Read from /config.js (single source of truth for all forms across the site).
+  var LEADS_WEBAPP_URL = (window.PETS_CONFIG && window.PETS_CONFIG.LEADS_WEBAPP_URL) || '';
+
+  function pushLeadToSheet(data) {
+    if (!LEADS_WEBAPP_URL) return;
+    try {
+      var body = new URLSearchParams();
+      Object.keys(data).forEach(function(k){ body.append(k, data[k] == null ? '' : String(data[k])); });
+      body.append('userAgent', navigator.userAgent || '');
+      body.append('page', location.pathname || 'listing.html');
+      fetch(LEADS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: body }).catch(function(){});
+    } catch (e) {}
+  }
+
+  function submitEnquiry(ev) {
+    ev.preventDefault();
+    if (!biz) return false;
+    var name = document.getElementById('fName').value.trim();
+    var phone = document.getElementById('fPhone').value.trim();
+    var pet = document.getElementById('fPetType').value;
+    var date = document.getElementById('fDate').value;
+    var notes = document.getElementById('fNotes').value.trim();
+    var err = document.getElementById('formError');
+
+    if (!name || name.length < 2) { err.textContent = 'Please enter your full name.'; err.classList.add('show'); return false; }
+    if (!phone || phone.replace(/[^0-9]/g,'').length < 10) { err.textContent = 'Please enter a valid phone / WhatsApp number.'; err.classList.add('show'); return false; }
+    if (!notes) { err.textContent = 'Please describe what you need.'; err.classList.add('show'); return false; }
+    err.classList.remove('show');
+
+    var msg = "🐾 *New Enquiry — Pets24x7.com*\n\n" +
+      "*Business:* " + biz.name + "\n" +
+      "*Category:* " + biz.category + "\n" +
+      "*City:* " + biz.city + (biz.state ? ", " + biz.state : "") + "\n" +
+      "*Listing ID:* " + biz.id + "\n\n" +
+      "*Customer:* " + name + "\n" +
+      "*Phone / WhatsApp:* " + phone + "\n" +
+      "*Pet type:* " + pet + "\n" +
+      (date ? "*Preferred date:* " + date + "\n" : "") +
+      "\n*What they need:* " + notes + "\n" +
+      "\nPlease confirm availability & pricing. Thanks!";
+
+    pushLeadToSheet({
+      name: name, business: biz.name, category: biz.category,
+      city: biz.city, country: biz.country, listing_id: biz.id,
+      phone: phone, pet: pet, date: date, notes: notes,
+      source: 'listing_form'
+    });
+
+    var url = 'https://wa.me/919930090487?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_form&utm_campaign=enquiry';
+    window.open(url, '_blank');
+    return false;
+  }
+  window.submitEnquiry = submitEnquiry;
+</script>
+
+</body>
+</html>

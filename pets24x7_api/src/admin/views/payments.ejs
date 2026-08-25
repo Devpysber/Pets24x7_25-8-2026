@@ -1,0 +1,62 @@
+<%- include('_head', { title: 'Payments · Pets24x7 Admin', active: 'payments' }) %>
+
+<div class="page-head">
+  <h2>Payments</h2>
+  <span class="muted"><%= payments.length %> shown · most recent first</span>
+</div>
+
+<div class="stat-row">
+  <% totals.forEach(function(t){ %>
+    <div class="stat-card">
+      <div class="lbl"><%= t.status %></div>
+      <div class="num"><%= t._count %></div>
+      <div class="muted" style="font-size:12px;margin-top:2px">₹<%= ((t._sum.amountMinor || 0) / 100).toLocaleString('en-IN') %></div>
+    </div>
+  <% }); %>
+</div>
+
+<div class="filters">
+  <a href="/admin/payments" class="<%= !status ? 'active' : '' %>">All</a>
+  <% ['SUCCESS','PENDING','INITIATED','FAILED','REFUNDED','CANCELLED'].forEach(function(s){ %>
+    <a href="/admin/payments?status=<%= s %>" class="<%= s === status ? 'active' : '' %>"><%= s.charAt(0) + s.slice(1).toLowerCase() %></a>
+  <% }); %>
+</div>
+
+<div class="card" style="padding:0">
+  <% if (!payments.length) { %>
+    <div class="empty">No payments<%= status ? ' with status ' + status : '' %>.</div>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>When</th><th>Parent</th><th>Plan</th><th>Amount</th><th>Gateway</th><th>Status</th><th>Txn IDs</th></tr>
+      </thead>
+      <tbody>
+        <% payments.forEach(function(p){ %>
+          <tr>
+            <td class="muted"><%= new Date(p.createdAt).toLocaleString('en-IN') %></td>
+            <td>
+              <% if (p.parent) { %>
+                <strong><%= p.parent.name %></strong><br/>
+                <a href="https://wa.me/<%= p.parent.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= p.parent.phone %></a>
+              <% } else { %>—<% } %>
+            </td>
+            <td>
+              <% if (p.membership && p.membership.plan) { %>
+                <strong><%= p.membership.plan.name %></strong>
+              <% } else { %><span class="muted">—</span><% } %>
+            </td>
+            <td>₹<%= (p.amountMinor / 100).toFixed(0) %><br/><span class="muted"><%= p.currency %></span></td>
+            <td><span class="pill"><%= p.gateway %></span></td>
+            <td><span class="pill <%= p.status.toLowerCase() %>"><%= p.status %></span><% if (p.errorMessage) { %><br/><span class="muted" style="font-size:11px"><%= p.errorMessage.slice(0,80) %></span><% } %></td>
+            <td style="font-family:monospace;font-size:11px;color:var(--muted)">
+              <%= p.merchantTxnId %><br/>
+              <% if (p.gatewayTxnId) { %><%= p.gatewayTxnId %><% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'payments' }) %>

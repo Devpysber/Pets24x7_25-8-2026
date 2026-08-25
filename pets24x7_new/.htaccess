@@ -1,0 +1,134 @@
+# Pets24x7.com — Apache / LiteSpeed config for Hostinger.
+# Place this file at the document root (public_html/ or whatever your domain
+# points to). Hostinger's LiteSpeed reads .htaccess directives natively.
+
+# -------------------------------------------------------------------
+# 1. Default index file (serves /in/mumbai/index.html when visiting /in/mumbai/)
+# -------------------------------------------------------------------
+DirectoryIndex index.html
+
+# -------------------------------------------------------------------
+# 2. Pretty URLs + legacy 301 redirects
+# -------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS (Hostinger free SSL — turn it on in hPanel first).
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [L,R=301]
+
+  # Force www → apex (or apex → www — pick one). Default: apex (cleaner SEO).
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^(.*)$ https://%1/$1 [L,R=301]
+
+  # Legacy query-string URLs → clean URLs (server-side 301).
+  #   /city.html?country=IN&city=mumbai            -> /in/mumbai/
+  #   /city.html?country=IN&city=mumbai&cat=foo    -> /in/mumbai/foo/
+  #   /listing.html?country=IN&city=mumbai&id=xyz  -> /in/mumbai/xyz/
+  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)&cat=([a-z0-9-]+)
+  RewriteRule ^city\.html$ /%1/%2/%3/? [L,R=301,NE]
+
+  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)
+  RewriteRule ^city\.html$ /%1/%2/? [L,R=301,NE]
+
+  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)&id=([a-z0-9-]+)
+  RewriteRule ^listing\.html$ /%1/%2/%3/? [L,R=301,NE]
+
+  # Force trailing slash on directory URLs that resolve to a real directory.
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteCond %{REQUEST_URI} !/$
+  RewriteRule ^(.+)$ /$1/ [L,R=301]
+
+  # Block direct access to the legacy fallback HTML (canonical now lives at
+  # /in/<city>/ etc.) — visitors get the JS redirect from the file itself,
+  # but bots that try /city.html with no query string should land on home.
+  RewriteCond %{QUERY_STRING} ^$
+  RewriteRule ^(city|listing)\.html$ / [L,R=301]
+</IfModule>
+
+# Lowercase the country prefix if someone uses /IN/mumbai/ instead of /in/mumbai/.
+<IfModule mod_rewrite.c>
+  RewriteRule ^IN/(.*)$ /in/$1 [L,R=301]
+  RewriteRule ^US/(.*)$ /us/$1 [L,R=301]
+</IfModule>
+
+# Phase 3.1 — Review short-link routing.
+#   /review/<CODE>/         -> /review/index.html?code=<CODE>
+#   /review/<CODE>/form/    -> /review/form/index.html?code=<CODE>
+#   /review/<CODE>/thanks/  -> /review/thanks/index.html?code=<CODE>
+# Codes are 4-16 chars of A-Z0-9 (build_id format from src/reviews/vendor.routes.ts).
+<IfModule mod_rewrite.c>
+  RewriteRule ^review/([A-Z0-9]{4,16})/?$              /review/index.html?code=$1        [L,QSA]
+  RewriteRule ^review/([A-Z0-9]{4,16})/form/?$         /review/form/index.html?code=$1   [L,QSA]
+  RewriteRule ^review/([A-Z0-9]{4,16})/thanks/?$       /review/thanks/index.html?code=$1 [L,QSA]
+</IfModule>
+
+# -------------------------------------------------------------------
+# 3. Custom 404
+# -------------------------------------------------------------------
+ErrorDocument 404 /404.html
+
+# -------------------------------------------------------------------
+# 4. Compression — saves 70-80% on HTML/CSS/JS over the wire.
+# -------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/json
+  AddOutputFilterByType DEFLATE image/svg+xml application/xml
+</IfModule>
+
+# -------------------------------------------------------------------
+# 5. Cache headers — long for static assets, short for HTML so edits ship fast.
+# -------------------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault                                    "access plus 1 day"
+
+  # HTML — 5 min so listing/content updates roll out quickly
+  ExpiresByType text/html                           "access plus 5 minutes"
+
+  # Long-cache assets
+  ExpiresByType text/css                            "access plus 1 year"
+  ExpiresByType image/png                           "access plus 1 year"
+  ExpiresByType image/jpeg                          "access plus 1 year"
+  ExpiresByType image/webp                          "access plus 1 year"
+  ExpiresByType image/svg+xml                       "access plus 1 year"
+  ExpiresByType font/woff2                          "access plus 1 year"
+
+  # Medium-cache (so live-sheet refresh works)
+  ExpiresByType application/javascript              "access plus 30 minutes"
+  ExpiresByType application/json                    "access plus 30 minutes"
+  ExpiresByType application/xml                     "access plus 1 hour"
+</IfModule>
+
+# Override specific files (config.js gets short cache so updates land fast).
+<IfModule mod_headers.c>
+  <FilesMatch "config\.js$">
+    Header set Cache-Control "public, max-age=300"
+  </FilesMatch>
+  <FilesMatch "styles\.css$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "pets24x7_logo\.png$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "public, max-age=300, s-maxage=600"
+  </FilesMatch>
+
+  # Security headers
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+</IfModule>
+
+# -------------------------------------------------------------------
+# 6. Hide build / source files from the web
+# -------------------------------------------------------------------
+<FilesMatch "(^\.|\.(py|md|gs|bat|toml)$|^_)">
+  Require all denied
+</FilesMatch>
+
+# (.htaccess itself is denied above via the ^\. pattern.)

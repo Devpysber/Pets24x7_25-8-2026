@@ -1,0 +1,33 @@
+User-agent: *
+Allow: /
+
+# Pre-rendered SEO pages
+Allow: /in/
+Allow: /us/
+
+# Allow image / logo crawling for OG previews
+Allow: /pets24x7_logo.png
+Allow: /data/
+
+# Don't index the raw data dumps
+Disallow: /pets-data.js
+Disallow: /pets.csv
+Disallow: /data/
+
+# Legacy query-string pages redirect to clean URLs; canonical URLs are in /in/, /us/.
+Disallow: /city.html
+Disallow: /listing.html
+
+# Auth + dashboard pages — noindex (private user surface, not SEO)
+Disallow: /login/
+Disallow: /parent-login/
+Disallow: /vendor-login/
+Disallow: /dashboard/
+# Return page is private (per-txn); /membership/ landing IS indexable.
+Disallow: /membership/return/
+
+# Review-request landing + form + thanks — private per-customer surface
+Disallow: /review/
+Disallow: /r/
+
+Sitemap: https://pets24x7.com/sitemap.xml

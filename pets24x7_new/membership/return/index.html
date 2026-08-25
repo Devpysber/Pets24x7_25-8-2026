@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Confirming payment — Pets24x7.com</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--bg:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--danger:#DC2626;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+  a{color:var(--primary);text-decoration:none}
+  .card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:48px 36px;max-width:480px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,0.10)}
+  .spinner{width:56px;height:56px;border:5px solid var(--border);border-top-color:var(--primary);border-radius:50%;margin:0 auto 20px;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .icon{font-size:64px;line-height:1;margin-bottom:14px}
+  .icon.ok{color:var(--success)}
+  .icon.fail{color:var(--danger)}
+  h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px}
+  p{color:var(--text-muted);font-size:15px;margin-bottom:18px;line-height:1.6}
+  .meta{background:var(--bg);border-radius:10px;padding:14px 18px;text-align:left;font-size:13px;margin:14px 0 22px}
+  .meta div{display:flex;justify-content:space-between;padding:4px 0}
+  .meta strong{color:var(--text)}
+  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 22px;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);text-decoration:none}
+  .btn:hover{background:var(--bg)}
+  .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .btn-primary:hover{background:var(--primary-dark);color:#fff}
+  .small{font-size:13px;color:var(--text-muted);margin-top:18px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Loading state -->
+  <section id="sLoad">
+    <div class="spinner"></div>
+    <h1>Confirming your payment…</h1>
+    <p>Hang tight. We&rsquo;re asking PhonePe for the final status. This usually takes a few seconds.</p>
+  </section>
+
+  <!-- Success -->
+  <section id="sOk" hidden>
+    <div class="icon ok">✓</div>
+    <h1>You&rsquo;re a member!</h1>
+    <p id="okMsg">Your Pets24x7 membership is now active.</p>
+    <div class="meta" id="okMeta"></div>
+    <div class="actions">
+      <a href="/dashboard/parent/" class="btn btn-primary">Open my dashboard →</a>
+    </div>
+  </section>
+
+  <!-- Failure -->
+  <section id="sFail" hidden>
+    <div class="icon fail">✗</div>
+    <h1>Payment didn&rsquo;t complete</h1>
+    <p id="failMsg">PhonePe reported the payment was not successful. You haven&rsquo;t been charged.</p>
+    <div class="actions">
+      <a href="/membership/" class="btn btn-primary">Try again →</a>
+      <a href="/dashboard/parent/" class="btn">Back to dashboard</a>
+    </div>
+    <p class="small">Need help? <a href="https://wa.me/919930090487">WhatsApp us</a></p>
+  </section>
+
+  <!-- Still pending (rare) -->
+  <section id="sPending" hidden>
+    <div class="icon">⏳</div>
+    <h1>Payment still processing</h1>
+    <p>This sometimes happens with UPI. We&rsquo;ll keep checking — your dashboard updates automatically once confirmed.</p>
+    <div class="actions">
+      <a href="/dashboard/parent/" class="btn btn-primary">Go to dashboard</a>
+    </div>
+  </section>
+</div>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
+  function fmtINR(p){return '₹' + (p/100).toLocaleString('en-IN', {maximumFractionDigits:0})}
+  function show(id) {
+    ['sLoad','sOk','sFail','sPending'].forEach(function(x){ document.getElementById(x).hidden = (x !== id); });
+  }
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+  }
+
+  var txn = qs('txn');
+  if (!txn) {
+    show('sFail');
+    document.getElementById('failMsg').textContent = 'Missing transaction reference. If you completed payment, check your dashboard.';
+  } else {
+    poll(0);
+  }
+
+  function poll(tries) {
+    api.paymentStatus(txn).then(function (r) {
+      var p = r.payment;
+      if (!p) { show('sFail'); return; }
+      if (p.status === 'SUCCESS') {
+        var plan = p.membership && p.membership.plan;
+        document.getElementById('okMsg').textContent = plan
+          ? 'Welcome to ' + plan.name + '. Your benefits unlock immediately.'
+          : 'Your Pets24x7 membership is active.';
+        document.getElementById('okMeta').innerHTML =
+          (plan ? '<div><span>Plan</span><strong>' + esc(plan.name) + '</strong></div>' : '') +
+          '<div><span>Amount</span><strong>' + fmtINR(p.amountMinor) + '</strong></div>' +
+          (p.membership && p.membership.endsAt ? '<div><span>Renews</span><strong>' + new Date(p.membership.endsAt).toLocaleDateString('en-IN', {month:'short',day:'numeric',year:'numeric'}) + '</strong></div>' : '') +
+          '<div><span>Transaction</span><strong style="font-family:monospace;font-size:11px">' + esc(txn) + '</strong></div>';
+        show('sOk');
+        return;
+      }
+      if (p.status === 'FAILED' || p.status === 'CANCELLED') {
+        show('sFail');
+        document.getElementById('failMsg').textContent = p.errorMessage || 'PhonePe reported the payment was not successful. You haven’t been charged.';
+        return;
+      }
+      // INITIATED / PENDING — keep polling up to ~30s
+      if (tries < 15) {
+        setTimeout(function(){ poll(tries + 1); }, 2000);
+      } else {
+        show('sPending');
+      }
+    }).catch(function () {
+      // If not signed in or other error, retry a couple times then bail
+      if (tries < 5) { setTimeout(function(){ poll(tries + 1); }, 2000); return; }
+      show('sFail');
+      document.getElementById('failMsg').textContent = 'Could not confirm payment automatically. Open your dashboard to check.';
+    });
+  }
+</script>
+
+</body>
+</html>

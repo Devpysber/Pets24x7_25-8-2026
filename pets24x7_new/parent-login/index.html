@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Pet Parent Sign in — Pets24x7.com</title>
+<meta name="description" content="Sign in to your Pets24x7 pet parent dashboard with a WhatsApp code." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --primary-light:#EFF6FF; --bg:#fff; --bg-alt:#F9FAFB; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; --success:#10B981; --danger:#DC2626; --whatsapp:#25D366; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+  a{color:var(--primary);text-decoration:none}
+  .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
+  .brand{display:inline-flex;align-items:center;gap:10px}
+  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
+  .brand-name .tld{color:var(--text)}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;max-width:440px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .step-hint{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+  h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px}
+  p.sub{color:var(--text-muted);font-size:14px;margin-bottom:24px}
+  label{display:block;font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;background:#fff;font-weight:500;color:var(--text)}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  input[disabled]{background:#F9FAFB;color:var(--text-muted)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:18px}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.25)}
+  .btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+  .btn-link{background:none;border:none;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;padding:8px 0;margin-top:10px;width:auto}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .err.show{display:block}
+  .ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .ok.show{display:block}
+  .otp-row{display:flex;gap:8px;justify-content:space-between;margin-top:8px}
+  .otp-row input{text-align:center;font-size:20px;font-weight:800;padding:14px 0;letter-spacing:2px}
+  .small{font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center}
+  .small a{font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="brand">
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+  </a>
+</header>
+
+<main>
+  <div class="card">
+    <!-- Dev Mode Banner -->
+    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;">
+      <div style="font-weight:700;color:#1E40AF;margin-bottom:4px;display:flex;align-items:center;gap:6px">⚡ Development Mode Active</div>
+      <div style="color:#1E3A8A;margin-bottom:8px;line-height:1.4">OTP system is paused for local dev. Use any phone number or click below:</div>
+      <a href="http://localhost:4000/api/dev/login/parent" style="display:inline-block;background:#2563EB;color:#fff;font-weight:700;padding:8px 14px;border-radius:6px;font-size:12px;text-decoration:none">Instant Pet Parent Sign In &rarr;</a>
+    </div>
+
+    <!-- Step 1: phone + name -->
+    <section id="step1">
+      <div class="step-hint">Step 1 of 2</div>
+      <h1>Sign in as a pet parent</h1>
+      <p class="sub">Enter your details to sign in. (Development Mode: OTP system paused)</p>
+
+      <label for="pName">Your name</label>
+      <input id="pName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
+
+      <label for="pPhone">WhatsApp number</label>
+      <input id="pPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+
+      <div class="err" id="err1"></div>
+      <button class="btn btn-primary" id="sendBtn">Sign in as Pet Parent &rarr;</button>
+
+      <p class="small">Business owner? <a href="/vendor-login/">Vendor sign in</a></p>
+    </section>
+
+    <!-- Step 2: OTP -->
+    <section id="step2" hidden>
+      <div class="step-hint">Step 2 of 2</div>
+      <h1>Enter the code</h1>
+      <p class="sub" id="sentTo">We sent a 6-digit code to your WhatsApp.</p>
+
+      <label for="otp">6-digit code</label>
+      <input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+
+      <div class="err" id="err2"></div>
+      <div class="ok"  id="ok2">Verified. Redirecting&hellip;</div>
+      <button class="btn btn-primary" id="verifyBtn">Verify &amp; sign in</button>
+      <button class="btn-link" id="backBtn">&larr; Wrong number? Start over</button>
+    </section>
+  </div>
+</main>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  var s1 = document.getElementById('step1');
+  var s2 = document.getElementById('step2');
+  var err1 = document.getElementById('err1');
+  var err2 = document.getElementById('err2');
+  var ok2  = document.getElementById('ok2');
+  var phone = '', name = '';
+
+  function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el) { el.classList.remove('show'); }
+
+  document.getElementById('sendBtn').addEventListener('click', function () {
+    clearErr(err1);
+    var n = document.getElementById('pName').value.trim();
+    var p = document.getElementById('pPhone').value.trim();
+    if (n.length < 2) return showErr(err1, 'Please enter your name.');
+    if (p.replace(/[^0-9]/g, '').length < 10) return showErr(err1, 'Enter a valid phone number.');
+
+    this.disabled = true; this.textContent = 'Signing in...';
+    var self = this;
+    api.parentRequestOtp({ name: n, phone: p }).then(function (r) {
+      phone = r.phone || p;
+      name = n;
+      // Auto-verify with dev bypass code to skip manual OTP input
+      return api.parentVerify(phone, '123456');
+    }).then(function () {
+      location.href = '/dashboard/parent/';
+    }).catch(function (e) {
+      showErr(err1, fmtErr(e));
+      self.disabled = false; self.textContent = 'Sign in as Pet Parent →';
+    });
+  });
+
+  document.getElementById('verifyBtn').addEventListener('click', function () {
+    clearErr(err2);
+    var code = document.getElementById('otp').value.trim();
+    if (code.length !== 6) return showErr(err2, 'Enter the 6-digit code.');
+
+    this.disabled = true; this.textContent = 'Verifying...';
+    var self = this;
+    api.parentVerify(phone, code).then(function () {
+      ok2.classList.add('show');
+      setTimeout(function () { location.href = '/dashboard/parent/'; }, 500);
+    }).catch(function (e) {
+      showErr(err2, fmtErr(e));
+      self.disabled = false; self.textContent = 'Verify & sign in';
+    });
+  });
+
+  document.getElementById('backBtn').addEventListener('click', function () {
+    s2.hidden = true; s1.hidden = false; clearErr(err1); clearErr(err2);
+    document.getElementById('otp').value = '';
+    document.getElementById('verifyBtn').disabled = false;
+    document.getElementById('verifyBtn').textContent = 'Verify & sign in';
+  });
+
+  // Auto-redirect if already signed in
+  api.me().then(function (r) {
+    if (r.role === 'pet_parent') location.href = '/dashboard/parent/';
+  }).catch(function () {});
+</script>
+
+</body>
+</html>

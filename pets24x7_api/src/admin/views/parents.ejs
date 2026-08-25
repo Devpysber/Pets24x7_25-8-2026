@@ -1,0 +1,28 @@
+<%- include('_head', { title: 'Pet Parents · Pets24x7 Admin', active: 'parents' }) %>
+
+<div class="page-head"><h2>Pet Parents</h2><span class="muted"><%= parents.length %> shown · most recent first</span></div>
+
+<div class="card" style="padding:0">
+  <% if (!parents.length) { %>
+    <div class="empty">No pet parents yet. They appear here once the first parent verifies a WhatsApp OTP.</div>
+  <% } else { %>
+    <table>
+      <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>City</th><th>Pets</th><th>Enquiries</th><th>Joined</th></tr></thead>
+      <tbody>
+        <% parents.forEach(function(p){ %>
+          <tr>
+            <td><strong><%= p.name %></strong></td>
+            <td><a href="https://wa.me/<%= p.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= p.phone %></a></td>
+            <td><%= p.email || '—' %></td>
+            <td><%= p.city || '—' %> <% if (p.country) { %><span class="muted">· <%= p.country %></span><% } %></td>
+            <td><%= p._count.pets %></td>
+            <td><%= p._count.enquiries %></td>
+            <td class="muted"><%= new Date(p.createdAt).toLocaleDateString('en-IN') %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'parents' }) %>

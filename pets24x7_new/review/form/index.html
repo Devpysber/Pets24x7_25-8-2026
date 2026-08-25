@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Write your review — Pets24x7.com</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--bg:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--gold:#F59E0B;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased}
+  .card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:36px 32px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .brand{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px}
+  .brand img{width:28px;height:28px;border-radius:6px}
+  .brand span{font-weight:800;font-size:18px;color:var(--primary);letter-spacing:-0.5px}
+  .brand .tld{color:var(--text)}
+  h1{font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+  .biz{font-size:14px;color:var(--text-muted);margin-bottom:24px}
+  .biz strong{color:var(--text);font-weight:700}
+  label{display:block;font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;margin-top:18px}
+  .stars{display:flex;gap:4px;margin-bottom:6px}
+  .star{font-size:36px;cursor:pointer;color:var(--border);transition:color 0.15s;line-height:1;background:none;border:none;padding:0;font-family:inherit}
+  .star.on{color:var(--gold)}
+  .star:hover{transform:scale(1.05)}
+  .rating-lbl{font-size:13px;color:var(--text-muted);font-weight:600;height:18px}
+  textarea{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;min-height:120px;background:#fff}
+  textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;background:#fff}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .err.show{display:block}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;background:var(--primary);color:#fff;margin-top:18px;box-shadow:0 8px 20px rgba(37,99,235,0.25);transition:all 0.2s}
+  .btn:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+  .small{font-size:12px;color:var(--text-muted);margin-top:14px;text-align:center;line-height:1.5}
+  .loading{text-align:center;padding:60px 20px;color:var(--text-muted)}
+  .spinner{width:36px;height:36px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;margin:0 auto 14px;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <img src="/pets24x7_logo.png" alt="" />
+    <span>Pets24x7<span class="tld">.com</span></span>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading…</div>
+  </div>
+
+  <div id="content" hidden>
+    <h1>Your review</h1>
+    <p class="biz" id="bizMeta"></p>
+
+    <label>Rating *</label>
+    <div class="stars" id="stars">
+      <button type="button" class="star" data-r="1">★</button>
+      <button type="button" class="star" data-r="2">★</button>
+      <button type="button" class="star" data-r="3">★</button>
+      <button type="button" class="star" data-r="4">★</button>
+      <button type="button" class="star" data-r="5">★</button>
+    </div>
+    <div class="rating-lbl" id="ratingLbl"></div>
+
+    <label for="rText">Your review *</label>
+    <textarea id="rText" maxlength="2000" placeholder="What did you like? What could be better? (8 characters min)"></textarea>
+
+    <label for="rName">Your name <span style="font-weight:500;text-transform:none;color:var(--text-light)">(optional)</span></label>
+    <input id="rName" type="text" maxlength="60" placeholder="Priya Sharma" />
+
+    <div class="err" id="err"></div>
+    <button class="btn" id="submitBtn">Post my review &rarr;</button>
+    <p class="small">Reviews are moderated before going live on the business listing. You won&rsquo;t be charged anything.</p>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
+  function getCode() {
+    var parts = location.pathname.split('/').filter(Boolean);
+    var idx = parts.indexOf('review');
+    var fromPath = (idx >= 0 && parts[idx + 1] && parts[idx + 1] !== 'form' && parts[idx + 1] !== 'thanks')
+                   ? parts[idx + 1] : '';
+    var fromQuery = (new URLSearchParams(location.search).get('code') || '');
+    return (fromPath || fromQuery).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+  }
+
+  var code = getCode();
+  var rating = 0;
+  var LABELS = { 1: 'Terrible', 2: 'Bad', 3: 'OK', 4: 'Good', 5: 'Excellent!' };
+
+  function setRating(r) {
+    rating = r;
+    Array.prototype.forEach.call(document.querySelectorAll('.star'), function (b, i) {
+      b.classList.toggle('on', (i + 1) <= r);
+    });
+    document.getElementById('ratingLbl').textContent = r ? (r + '/5 · ' + LABELS[r]) : '';
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.star'), function (b) {
+    b.addEventListener('click', function () { setRating(+b.getAttribute('data-r')); });
+  });
+
+  if (!code) {
+    document.getElementById('loading').innerHTML = 'Missing code. <a href="/">Home</a>';
+  } else {
+    api.reviewContext(code).then(function (r) {
+      document.getElementById('loading').hidden = true;
+      document.getElementById('content').hidden = false;
+      document.getElementById('bizMeta').innerHTML =
+        'Reviewing <strong>' + esc(r.vendor.businessName) + '</strong>' +
+        (r.vendor.city ? ' &middot; ' + esc(r.vendor.city) : '');
+      if (r.alreadyReviewed) {
+        location.href = '/review/thanks/' + (location.search || '');
+      }
+      if (r.customer && r.customer.name) {
+        document.getElementById('rName').value = r.customer.name;
+      }
+    }).catch(function (err) {
+      document.getElementById('loading').innerHTML = fmtErr(err);
+    });
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    var err = document.getElementById('err');
+    err.classList.remove('show');
+    var text = document.getElementById('rText').value.trim();
+    var name = document.getElementById('rName').value.trim();
+    if (!rating) { err.textContent = 'Pick a star rating.'; err.classList.add('show'); return; }
+    if (text.length < 8) { err.textContent = 'Write at least 8 characters.'; err.classList.add('show'); return; }
+
+    this.disabled = true; this.textContent = 'Posting…';
+    var self = this;
+    api.reviewSubmit(code, {
+      rating: rating,
+      text: text,
+      reviewerName: name || undefined,
+    }).then(function () {
+      location.href = '/review/thanks/' + (location.search || '');
+    }).catch(function (e) {
+      err.textContent = fmtErr(e);
+      err.classList.add('show');
+      self.disabled = false; self.textContent = 'Post my review →';
+    });
+  });
+</script>
+
+</body>
+</html>
