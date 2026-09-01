@@ -1,0 +1,32 @@
+# Pets24x7 — Netlify cache headers.
+# Static assets get long cache; HTML stays fresh so content edits ship fast.
+
+/*.html
+  Cache-Control: public, max-age=300, s-maxage=600
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+
+/styles.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/config.js
+  Cache-Control: public, max-age=300
+
+/pets-data.js
+  Cache-Control: public, max-age=1800
+
+/pets-loader.js
+  Cache-Control: public, max-age=86400
+
+/pets24x7_logo.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/*
+  Cache-Control: public, max-age=1800
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+
+/robots.txt
+  Cache-Control: public, max-age=3600

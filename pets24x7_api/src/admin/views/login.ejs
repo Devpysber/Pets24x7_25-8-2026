@@ -1,0 +1,26 @@
+<%- include('_head', { title: 'Pets24x7 Admin Login' }) %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#F9FAFB">
+  <div class="card" style="max-width:380px;width:100%">
+    <h1 style="font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:-0.4px">Pets24x7 <span style="color:#2563EB">Admin</span></h1>
+    <p class="muted" style="margin-bottom:24px;font-size:13px">Sign in to manage vendors, parents and enquiries.</p>
+
+    <% if (error) { %>
+      <div style="background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600">
+        <%= error %>
+      </div>
+    <% } %>
+
+    <form action="/admin/login" method="post">
+      <div style="margin-bottom:14px">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autofocus>
+      </div>
+      <div style="margin-bottom:18px">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:12px">Sign in</button>
+    </form>
+  </div>
+</div>
+<%- include('_foot') %>

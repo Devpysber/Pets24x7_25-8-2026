@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0F172A" />
+<title>Vendor Portal — Pets24x7</title>
+<meta name="description" content="Professional business management dashboard for pet service providers on Pets24x7." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #1E40AF;
+    --primary-hover: #1D4ED8;
+    --primary-light: #EFF6FF;
+    --bg: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --sidebar-bg: #FFFFFF;
+    --sidebar-text: #475569;
+    --sidebar-hover: #F1F5F9;
+    --sidebar-active-bg: #EFF6FF;
+    --sidebar-active-border: #1E40AF;
+    --text-main: #0F172A;
+    --text-muted: #64748B;
+    --text-subtle: #94A3B8;
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
+    --success: #15803D;
+    --success-bg: #F0FDF4;
+    --success-border: #DCFCE7;
+    --warning: #B45309;
+    --warning-bg: #FFFBEB;
+    --warning-border: #FEF3C7;
+    --danger: #B91C1C;
+    --danger-bg: #FEF2F2;
+    --whatsapp: #25D366;
+    --radius-sm: 6px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text-main); -webkit-font-smoothing: antialiased; line-height: 1.5; font-size: 14px; }
+
+  /* App Layout */
+  .app-layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar - Clean Light Navigation */
+  .sidebar {
+    width: 250px;
+    background: #FFFFFF;
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    z-index: 100;
+    border-right: 1px solid var(--border);
+  }
+  .sidebar-brand {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand img { width: 28px; height: 28px; border-radius: 6px; }
+  .sidebar-brand-text { font-weight: 700; font-size: 16px; color: var(--primary); letter-spacing: -0.3px; }
+  .sidebar-brand-text span { font-size: 11px; color: var(--text-muted); font-weight: 500; display: block; margin-top: -1px; }
+
+  .sidebar-nav { padding: 16px 10px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    color: #475569;
+    font-weight: 500;
+    font-size: 13.5px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+  .nav-item:hover { background: #F1F5F9; color: var(--text-main); text-decoration: none; }
+  .nav-item.active { background: #EFF6FF; color: var(--primary); font-weight: 700; }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 3px;
+    background: var(--primary);
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-item svg { color: #64748B; flex-shrink: 0; transition: color 0.15s; }
+  .nav-item:hover svg { color: var(--text-main); }
+  .nav-item.active svg { color: var(--primary); }
+  .nav-item .badge { margin-left: auto; background: #F1F5F9; border: 1px solid var(--border); color: #475569; font-size: 11px; padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+  .nav-item.active .badge { background: #DBEAFE; color: var(--primary); border: none; }
+
+  .sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+
+  /* Mobile Bar */
+  .mobile-bar {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: #FFFFFF;
+    color: var(--text-main);
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 90;
+    border-bottom: 1px solid var(--border);
+  }
+  .mobile-bar .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--primary); }
+  .menu-btn { background: none; border: none; color: var(--text-main); cursor: pointer; padding: 4px; }
+
+  /* Main Workspace */
+  .main-workspace {
+    margin-left: 250px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Top Header Bar */
+  .top-header {
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .top-header h1 { font-size: 22px; font-weight: 700; color: var(--text-main); letter-spacing: -0.4px; }
+  .top-header p { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+  .header-actions { display: flex; align-items: center; gap: 12px; }
+  .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: #F1F5F9; color: var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border: 1px solid var(--border); }
+
+  /* Content Body */
+  .content-container { padding: 28px 32px; flex: 1; max-width: 1140px; margin: 0 auto; width: 100%; }
+
+  /* View Panes */
+  .view-pane { display: none; }
+  .view-pane.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--text-main); }
+  .card-subtitle { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #FFFFFF;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+    text-decoration: none;
+    line-height: 1.2;
+  }
+  .btn:hover { background: #F8FAFC; border-color: #CBD5E1; color: var(--text-main); text-decoration: none; }
+  .btn-primary { background: var(--primary); color: #FFFFFF; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-hover); color: #FFFFFF; border-color: var(--primary-hover); }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+  .btn-wa { background: var(--whatsapp); color: #FFFFFF; border-color: var(--whatsapp); font-weight: 600; }
+  .btn-wa:hover { background: #1DA851; color: #FFFFFF; border-color: #1DA851; }
+
+  /* Business Overview Section */
+  .biz-overview-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .biz-overview-main h2 { font-size: 18px; font-weight: 700; color: var(--text-main); letter-spacing: -0.3px; margin-bottom: 4px; }
+  .biz-overview-sub { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .status-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 99px; font-weight: 600; font-size: 11.5px; }
+  .status-tag.active { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+  /* Quick Actions Bar */
+  .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* Business Metrics Cards */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .metric-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .metric-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .metric-lbl { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+  .metric-icon { color: var(--text-subtle); }
+  .metric-val { font-size: 26px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; line-height: 1.1; }
+  .metric-trend { font-size: 11.5px; font-weight: 600; color: var(--success); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+
+  /* Professional Data Table */
+  .table-container { overflow-x: auto; margin-top: 8px; }
+  table.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  table.data-table th { padding: 10px 14px; background: #F8FAFC; border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+  table.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); vertical-align: middle; color: var(--text-main); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover td { background: #F8FAFC; }
+
+  /* Muted Status Pills */
+  .status-pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; display: inline-block; }
+  .pill-pending { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .pill-responded { background: var(--primary-light); color: var(--primary); border: 1px solid #BFDBFE; }
+  .pill-completed { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+  /* Services Grid */
+  .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .service-card { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+
+  /* Grow Your Business Hero */
+  .grow-hero {
+    background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+    color: #FFFFFF;
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(30,64,175,0.2);
+  }
+  .grow-hero h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .grow-hero p.sub { font-size: 15px; color: #DBEAFE; max-width: 740px; line-height: 1.6; margin-bottom: 20px; }
+
+  /* Marketing Features Grid */
+  .handles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .handle-card { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+  .handle-title { font-weight: 700; font-size: 14.5px; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .handle-desc { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+
+  /* Goal Cards Grid */
+  .goals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 24px; }
+  .goal-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .goal-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .goal-icon { font-size: 24px; margin-bottom: 8px; }
+  .goal-title { font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 6px; }
+  .goal-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px; }
+  .goal-badge { font-size: 11.5px; font-weight: 700; color: var(--primary); background: #EFF6FF; border: 1px solid #BFDBFE; padding: 4px 10px; border-radius: 99px; display: inline-block; margin-bottom: 12px; }
+
+  /* Marketing Plans Grid */
+  .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 24px; }
+  .plan-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .plan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #BFDBFE; }
+  .plan-card.recommended { border: 2px solid var(--primary); }
+  .plan-rec-badge { position: absolute; top: -11px; right: 16px; background: var(--primary); color: #fff; font-size: 10.5px; font-weight: 700; padding: 2px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .plan-price { font-size: 28px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; margin: 12px 0 4px; }
+  .plan-price s { font-size: 14px; color: var(--text-muted); font-weight: 500; margin-right: 6px; }
+  .plan-estimates { font-size: 12.5px; color: var(--text-muted); margin: 14px 0 20px; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .plan-estimates li strong { color: var(--text-main); font-weight: 700; }
+
+  /* Form controls */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 13.5px; background: #FFFFFF; color: var(--text-main); }
+  .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.1); }
+
+  /* Modals */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
+  .modal-backdrop.show { display: flex; }
+  .modal-panel { background: #FFFFFF; width: 100%; max-width: 620px; border-radius: var(--radius-lg); padding: 28px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow); border: 1px solid var(--border); }
+
+  @media (max-width: 840px) {
+    .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+    .sidebar.open { transform: translateX(0); }
+    .mobile-bar { display: flex; }
+    .main-workspace { margin-left: 0; padding-top: 56px; }
+    .top-header { display: none; }
+    .content-container { padding: 20px 16px; }
+    .biz-overview-card { flex-direction: column; align-items: flex-start; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .plans-grid { grid-template-columns: 1fr; }
+    .goals-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- Mobile Topbar -->
+  <header class="mobile-bar">
+    <a class="brand" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
+      <img src="/pets24x7_logo.png" width="26" height="26" alt="Pets24x7" />
+      <span>Pets24x7 Vendor</span>
+    </a>
+    <button class="menu-btn" id="menuToggle">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </header>
+
+  <!-- Left Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
+      <img src="/pets24x7_logo.png" alt="Pets24x7" />
+      <div class="sidebar-brand-text">
+        Pets24x7
+        <span>Vendor Portal</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-view="dash">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" data-view="listing">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        My Listing
+      </a>
+      <a class="nav-item" data-view="services">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        Services
+      </a>
+      <a class="nav-item" data-view="enquiries">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Enquiries
+        <span class="badge" id="enqNavBadge" hidden>0</span>
+      </a>
+      <a class="nav-item" data-view="reviews">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Reviews
+      </a>
+      <a class="nav-item" data-view="performance">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Performance
+      </a>
+      <a class="nav-item" data-view="account">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Business Account
+      </a>
+      <a class="nav-item" data-view="grow" style="color:var(--primary); font-weight:600;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Grow Your Business
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="nav-item" data-view="settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a class="nav-item" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main class="main-workspace">
+    
+    <!-- Header Bar -->
+    <header class="top-header">
+      <div>
+        <h1 id="headerTitle">Dashboard</h1>
+        <p id="headerSub">Overview of your business activity on Pets24x7.</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm" onclick="openPreviewModal()">Preview Listing</button>
+        <div class="user-avatar" id="avatarBadge">P</div>
+      </div>
+    </header>
+
+    <div class="content-container">
+
+      <!-- 1. DASHBOARD VIEW -->
+      <section id="view-dash" class="view-pane active">
+        <!-- Business Overview Card -->
+        <div class="biz-overview-card">
+          <div class="biz-overview-main">
+            <h2 id="dashBizName">—</h2>
+            <div class="biz-overview-sub">
+              <span id="dashBizMeta">—</span>
+              <span class="status-tag active" id="dashStatusTag">—</span>
+              <span style="font-weight:600; color:var(--text-main);" id="dashRatingLine">No reviews yet</span>
+            </div>
+          </div>
+          <button class="btn btn-sm" onclick="openPreviewModal()">View Listing →</button>
+        </div>
+
+        <!-- Quick Actions Bar -->
+        <div class="quick-actions">
+          <button class="btn btn-primary btn-sm" onclick="navigate('listing')">Edit Listing</button>
+          <button class="btn btn-sm" onclick="openAddServiceModal()">Add Service</button>
+          <button class="btn btn-sm" onclick="navigate('enquiries')">View Enquiries</button>
+          <button class="btn btn-sm" onclick="navigate('grow')">🚀 Grow Your Business</button>
+        </div>
+
+        <!-- Business Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-lbl">Total Enquiries</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="metric-val" id="mEnqTotal">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mEnqNew">—</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-lbl">Services Listed</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5M17 3l3 4-3 4M7 21l-3-4 3-4"/></svg>
+            </div>
+            <div class="metric-val" id="mServices">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);">On your listing</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-lbl">Published Reviews</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="metric-val" id="mReviews">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mReviewAvg">No reviews yet</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-lbl">Review Requests Sent</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </div>
+            <div class="metric-val" id="mInvitesSent">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mInvitesDone">—</div>
+          </div>
+        </div>
+
+        <!-- Recent Enquiries Section -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Recent Enquiries</div>
+              <div class="card-subtitle">Latest customer requests received via Pets24x7.</div>
+            </div>
+            <a onclick="navigate('enquiries')" style="color:var(--primary); font-size:13px; font-weight:600; cursor:pointer;">View all →</a>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Pet</th>
+                  <th>Requested Service</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="dashTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. MY LISTING VIEW -->
+      <section id="view-listing" class="view-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Listing Status</div>
+              <div class="card-subtitle">Current status of your listing on the public directory.</div>
+            </div>
+            <span class="status-tag active" id="listingStatusTag">—</span>
+          </div>
+          <p style="font-size:13.5px; color:var(--text-muted);" id="listingStatusNote">Loading your listing status…</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Storefront Photo</div>
+              <div class="card-subtitle">Shown at the top of your public listing. One clear photo of your place, team or work.</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap;">
+            <div id="vImgPreview" style="width:180px; height:135px; border-radius:10px; border:1px dashed var(--border); background:#F8FAFC linear-gradient(135deg,#DBEAFE,#C7D2FE); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:34px; flex-shrink:0;">🏪</div>
+            <div style="flex:1; min-width:200px;">
+              <input type="file" id="vImgFile" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-sm btn-primary" onclick="document.getElementById('vImgFile').click()">Upload photo</button>
+                <button class="btn btn-sm" id="vImgRemove" hidden onclick="removeVendorImage()">Remove</button>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:8px;">JPG / PNG / WebP. Auto-resized to ~600px and saved instantly.</div>
+              <div id="vImgMsg" style="font-size:12px; margin-top:6px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Business Information</div>
+              <div class="card-subtitle">Public details shown to customers.</div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="openEditBizModal()">Edit Business Information</button>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; font-size:13.5px;">
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Business Name</div><div style="font-weight:600; margin-top:2px;" id="infoBizName">—</div></div>
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Category</div><div style="font-weight:600; margin-top:2px;" id="infoCategory">—</div></div>
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Phone</div><div style="font-weight:600; margin-top:2px;" id="infoPhone">—</div></div>
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Email</div><div style="font-weight:600; margin-top:2px;" id="infoEmail">—</div></div>
+            <div style="grid-column: 1 / -1;"><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Street Address</div><div style="font-weight:600; margin-top:2px;" id="infoAddress">—</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. SERVICES VIEW -->
+      <section id="view-services" class="view-pane">
+        <div class="card-header" style="margin-bottom:16px;">
+          <div>
+            <h2 style="font-size:18px; font-weight:700;">Services Offered</h2>
+            <div class="card-subtitle">Manage the services customers can find on your listing.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddServiceModal()">+ Add Service</button>
+        </div>
+        <div class="services-grid" id="servicesGrid"></div>
+      </section>
+
+      <!-- 4. ENQUIRIES VIEW -->
+      <section id="view-enquiries" class="view-pane">
+        <div class="card-header" style="margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:18px; font-weight:700;">Customer Enquiries</h2>
+            <div class="card-subtitle">Manage enquiries received from Pet Parents.</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;" id="enqFilterBar">
+          <button class="btn btn-sm btn-primary filter-enq" data-filter="all">All Enquiries (0)</button>
+          <button class="btn btn-sm filter-enq" data-filter="new">New (0)</button>
+          <button class="btn btn-sm filter-enq" data-filter="responded">Responded (0)</button>
+          <button class="btn btn-sm filter-enq" data-filter="completed">Completed (0)</button>
+          <button class="btn btn-sm filter-enq" data-filter="archived">Archived (0)</button>
+        </div>
+
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Pet</th>
+                  <th>Requested Service</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="fullEnquiriesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. REVIEWS VIEW -->
+      <section id="view-reviews" class="view-pane">
+        <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+          <div>
+            <div style="font-size:32px; font-weight:700; color:var(--text-main); line-height:1;" id="revAvg">—</div>
+            <div style="color:#D97706; font-size:14px; margin-top:4px; font-weight:700;" id="revStars"></div>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;" id="revCount">No reviews yet</div>
+          </div>
+          <button class="btn btn-wa btn-sm" onclick="openBulkReviewModal()">Request Reviews on WhatsApp</button>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px;">Customer Reviews</div>
+          <div id="reviewsList"></div>
+        </div>
+      </section>
+
+      <!-- 6. PERFORMANCE VIEW -->
+      <section id="view-performance" class="view-pane">
+        <div class="card-header" style="margin-bottom:16px;">
+          <div>
+            <h2 style="font-size:18px; font-weight:700;">Performance Overview</h2>
+            <div class="card-subtitle">Track profile visibility and customer engagement over time.</div>
+          </div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card"><span class="metric-lbl">Total Enquiries</span><div class="metric-val" id="pEnqTotal">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">New / Unhandled</span><div class="metric-val" id="pEnqNew">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Completed</span><div class="metric-val" id="pEnqDone">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Published Reviews</span><div class="metric-val" id="pReviews">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Avg. Rating</span><div class="metric-val" id="pRating">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Services Listed</span><div class="metric-val" id="pServices">—</div></div>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-muted); margin-top:12px;">Profile-view and impression tracking is not enabled for this account yet.</p>
+      </section>
+
+      <!-- 7. GROW YOUR BUSINESS VIEW (FRONT PAGE: HERO, WHAT WE HANDLE, ACTIVE CAMPAIGN, MARKETING GOALS) -->
+      <section id="view-grow" class="view-pane">
+        <!-- Hero Section -->
+        <div class="grow-hero">
+          <h2>Grow Your Business</h2>
+          <p class="sub" style="font-size:16px; font-weight:600; color:#FFFFFF; margin-bottom:4px;">Get More Customers. Grow Your Business.</p>
+          <p class="sub">Reach more pet owners, generate qualified leads, increase enquiries and bookings, and grow your business with <strong>Pets24x7 Marketing Solutions</strong>.</p>
+
+          <div style="margin-top:16px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:10px 16px; border-radius:8px; font-weight:700; font-size:13.5px; color:#FFFFFF; display:inline-block;">
+            💡 Core Promise: "You focus on your business. We handle the marketing."
+          </div>
+        </div>
+
+        <!-- What We Handle Grid -->
+        <div style="margin-bottom:28px;">
+          <h3 style="font-size:18px; font-weight:800; margin-bottom:12px;">What We Handle For You</h3>
+          <div class="handles-grid">
+            <div class="handle-card">
+              <div class="handle-title">🎨 Ad Designing</div>
+              <div class="handle-desc">Professional advertising creatives designed specifically for your pet business.</div>
+            </div>
+            <div class="handle-card">
+              <div class="handle-title">✍️ Content Writing</div>
+              <div class="handle-desc">Persuasive ad copy engineered to attract pet owners and drive immediate action.</div>
+            </div>
+            <div class="handle-card">
+              <div class="handle-title">🎯 Audience Targeting</div>
+              <div class="handle-desc">Precision geographic &amp; demographic targeting for pet owners in your area.</div>
+            </div>
+            <div class="handle-card">
+              <div class="handle-title">📈 Campaign Optimization</div>
+              <div class="handle-desc">Continuous monitoring and daily optimization to maximize your return on ad spend.</div>
+            </div>
+            <div class="handle-card">
+              <div class="handle-title">💬 Lead Generation</div>
+              <div class="handle-desc">Generate qualified potential customers directly for your phone, WhatsApp, or website.</div>
+            </div>
+            <div class="handle-card">
+              <div class="handle-title">🤝 Growth Support</div>
+              <div class="handle-desc">Our dedicated marketing team manages your campaign seamlessly from start to finish.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Campaign Section — one card per campaign still in flight -->
+        <div id="activeCampaignList"></div>
+
+        <!-- Choose Your Marketing Goal (FRONT PAGE CARDS) -->
+        <div style="margin-bottom:28px;">
+          <h3 style="font-size:20px; font-weight:800; letter-spacing:-0.4px;">Choose Your Marketing Goal</h3>
+          <p style="font-size:13.5px; color:var(--text-muted); margin-top:2px;">Choose what you want your campaign to achieve. Our marketing team will handle the advertising, content, targeting and optimization.</p>
+          
+          <div class="goals-grid" style="margin-top:16px;">
+            <!-- Goal 1: WhatsApp Enquiries -->
+            <div class="goal-card">
+              <div>
+                <div class="goal-icon">💬</div>
+                <div class="goal-title">1. Get WhatsApp Enquiries</div>
+                <span class="goal-badge">Best for direct customer chat</span>
+                <p class="goal-desc">Generate customer enquiries directly on WhatsApp through targeted Facebook and Instagram campaigns managed by the Pets24x7 marketing team.</p>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">Ideal for: Veterinary clinics, Groomers, Pet boarding, Pet trainers, Pet shops, Pet sitters.</div>
+              </div>
+              <button class="btn btn-sm btn-primary" style="width:100%; justify-content:center;" onclick="openGoalPlans('Get WhatsApp Enquiries')">View WhatsApp Plans →</button>
+            </div>
+
+            <!-- Goal 2: Website Leads -->
+            <div class="goal-card">
+              <div>
+                <div class="goal-icon">🌐</div>
+                <div class="goal-title">2. Get Website Leads</div>
+                <span class="goal-badge">Best for website owners</span>
+                <p class="goal-desc">Send interested pet owners to your website and generate enquiries through your website contact forms, booking forms or enquiry pages.</p>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">Ideal for: Businesses with existing websites or booking landing pages.</div>
+              </div>
+              <button class="btn btn-sm" style="width:100%; justify-content:center;" onclick="openGoalPlans('Get Website Leads')">View Website Lead Plans →</button>
+            </div>
+
+            <!-- Goal 3: Get Profile Visits -->
+            <div class="goal-card">
+              <div>
+                <div class="goal-icon">👀</div>
+                <div class="goal-title">3. Get Profile Visits</div>
+                <span class="goal-badge">Best for visibility &amp; brand</span>
+                <p class="goal-desc">Drive pet owners to your Pets24x7 listing so more people discover your business, services and reviews.</p>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">Ideal for: New businesses building awareness in a city.</div>
+              </div>
+              <button class="btn btn-sm" style="width:100%; justify-content:center;" onclick="openGoalPlans('Get Profile Visits')">View Visibility Plans →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Featured Placement — paid top-of-page slot on this listing's city + category pages -->
+        <div class="card" id="featuredCard" style="margin-top:28px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">⭐ Featured Placement</div>
+              <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Pin your listing to the top of your city and category pages on pets24x7.com, with a "Featured" badge.</p>
+            </div>
+          </div>
+          <div id="featuredActive" style="display:none; margin-bottom:16px;"></div>
+          <div class="plans-grid" id="featuredPlans">
+            <p style="color:var(--text-muted);">Loading placements…</p>
+          </div>
+          <div id="featuredHistory" style="margin-top:16px;"></div>
+        </div>
+      </section>
+
+      <!-- 7B. DEDICATED PLAN SELECTION PAGE (SEPARATE VIEW FROM FRONT PAGE) -->
+      <section id="view-grow-plans" class="view-pane">
+        <!-- Back Navigation Link -->
+        <div style="margin-bottom:16px;">
+          <a onclick="navigate('grow')" style="font-size:13px; font-weight:600; color:var(--primary); cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            ← Back to Marketing Goals
+          </a>
+        </div>
+
+        <!-- 3-Step Progress Indicator at top of Plan Selection -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; padding:12px 18px; background:#FFFFFF; border-radius:var(--radius); border:1px solid var(--border); font-size:13px; font-weight:700; box-shadow:var(--shadow-sm);">
+          <span style="color:var(--primary); font-weight:800;">1 Choose Plan (Active)</span>
+          <span style="color:var(--text-subtle);">➔</span>
+          <span style="color:var(--text-muted);">2 Campaign Settings</span>
+          <span style="color:var(--text-subtle);">➔</span>
+          <span style="color:var(--text-muted);">3 Payment</span>
+        </div>
+
+        <!-- Marketing Plan Duration Selection Section -->
+        <div style="margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="font-size:22px; font-weight:800;" id="selectedGoalTitle">Get WhatsApp Enquiries — Marketing Plans</h3>
+              <p style="font-size:13.5px; color:var(--text-muted); margin-top:2px;">Select campaign duration. Targeted Facebook + Instagram campaigns managed by the Pets24x7 marketing team.</p>
+            </div>
+            <div class="status-tag" style="background:#EFF6FF; color:var(--primary); font-weight:700; font-size:12px;">Platforms: Facebook + Instagram</div>
+          </div>
+
+          <div class="plans-grid" id="plansGrid">
+            <p style="color:var(--text-muted);">Loading plans…</p>
+          </div>
+
+          <!-- Custom Campaign Box -->
+          <div class="card" style="background:#F8FAFC; border:1px dashed #CBD5E1; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+            <div>
+              <h4 style="font-size:16px; font-weight:800;">Custom Campaign</h4>
+              <div style="font-size:14px; font-weight:700; color:var(--primary); margin:2px 0;">Starting from ₹20,000</div>
+              <p style="font-size:13px; color:var(--text-muted);">For businesses requiring custom targeting, multiple locations, special campaigns or larger marketing requirements.</p>
+            </div>
+            <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20discuss%20a%20Custom%20Marketing%20Campaign..." target="_blank" class="btn btn-wa btn-sm">Talk to Our Marketing Team →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. ACCOUNT VIEW -->
+      <section id="view-account" class="view-pane">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:16px;">Business Profile Details</div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; font-size:13.5px;">
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Business Name</div><div style="font-weight:600; margin-top:2px;" id="accBizName">—</div></div>
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Category</div><div style="font-weight:600; margin-top:2px;" id="accCategory">—</div></div>
+            <div>
+              <div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Email Address</div>
+              <div style="font-weight:600; margin-top:2px;" id="accEmail">—</div>
+              <div id="accEmailVerify" style="margin-top:6px; font-size:12.5px;"></div>
+            </div>
+            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Phone Number</div><div style="font-weight:600; margin-top:2px;" id="accPhone">—</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. SETTINGS VIEW -->
+      <section id="view-settings" class="view-pane">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px;">Settings</div>
+          <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="fName" /></div>
+          <div class="form-group"><label>Contact Email</label><input type="email" class="form-control" id="fEmail" /></div>
+          <button class="btn btn-primary btn-sm" id="saveBtn">Save Settings</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- 3-Step Campaign Setup Flow Modal -->
+<div class="modal-backdrop" id="campaignSetupModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:17px; font-weight:800;" id="csModalTitle">Campaign Setup</h3>
+      <button onclick="closeModal('campaignSetupModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <!-- 3-Step Progress Indicator -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding:10px 14px; background:#F8FAFC; border-radius:8px; border:1px solid var(--border); font-size:12.5px; font-weight:700;">
+      <span id="progStep1" style="color:var(--text-muted);">1 Choose Plan</span>
+      <span style="color:var(--text-subtle);">➔</span>
+      <span id="progStep2" style="color:var(--primary);">2 Campaign Settings</span>
+      <span style="color:var(--text-subtle);">➔</span>
+      <span id="progStep3" style="color:var(--text-muted);">3 Payment</span>
+    </div>
+
+    <!-- Step 2: Campaign Settings -->
+    <div id="csStep2">
+      <div class="form-group">
+        <label>Selected Package</label>
+        <input type="text" class="form-control" id="csPlanName" readonly style="background:#F8FAFC; font-weight:700; color:var(--primary);" />
+      </div>
+
+      <div class="form-group">
+        <label>Campaign Objective</label>
+        <input type="text" class="form-control" id="csGoalDisplay" readonly style="background:#F8FAFC; font-weight:600;" />
+      </div>
+
+      <div class="form-group">
+        <label>Business Name</label>
+        <input type="text" class="form-control" id="csBizName" readonly style="background:#F8FAFC; font-weight:600;" />
+      </div>
+
+      <div class="form-group">
+        <label>WhatsApp Number for Enquiries</label>
+        <input type="text" class="form-control" id="csPhone" required />
+        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Confirm or update the WhatsApp number where customer enquiries will be received.</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Target Location</label>
+          <input type="text" class="form-control" id="csLocation" required />
+        </div>
+        <div class="form-group">
+          <label>Target Radius</label>
+          <select class="form-control" id="csRadius">
+            <option>5 km radius</option>
+            <option>10 km radius</option>
+            <option>Entire City</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Services to Promote</label>
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:13px; margin-top:4px;">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
+            <input type="checkbox" checked /> Veterinary Consultation
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
+            <input type="checkbox" checked /> Vaccination Package
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
+            <input type="checkbox" /> Pet Grooming &amp; Bathing
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Campaign Information (Special offers, highlights, instructions)</label>
+        <textarea class="form-control" id="csInfo" placeholder="e.g. 10% discount on first consultation, open 7 days a week" style="height:70px;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Creative Assets (Upload photos/offers - Optional)</label>
+        <input type="file" class="form-control" multiple accept="image/*,video/*" />
+        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Optional. Our marketing team can design all creatives for you if no files are provided.</div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+        <button class="btn btn-sm" onclick="closeModal('campaignSetupModal')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="goToStep3()">Continue to Payment →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Payment Review -->
+    <div id="csStep3" style="display:none;">
+      <div style="font-size:15px; font-weight:800; margin-bottom:12px;">Review Your Campaign</div>
+
+      <div class="card" style="background:#F8FAFC; border:1px solid var(--border); padding:18px; margin-bottom:16px; font-size:13px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div><div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">CAMPAIGN GOAL</div><div style="font-weight:700;" id="revGoal">Get WhatsApp Enquiries</div></div>
+          <div><div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">DURATION</div><div style="font-weight:700;" id="revDuration">20 Days</div></div>
+          <div><div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">TARGET LOCATION</div><div style="font-weight:700;" id="revLoc">—</div></div>
+          <div><div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">WHATSAPP NUMBER</div><div style="font-weight:700;" id="revPhone">—</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#EFF6FF; border-radius:8px; margin-bottom:20px;">
+        <span style="font-weight:700; color:var(--text-main); font-size:15px;">Total Amount</span>
+        <span style="font-size:24px; font-weight:800; color:var(--primary);" id="csReviewPrice">₹8,999</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:8px;">
+        <button class="btn btn-sm" onclick="goToStep2()">← Back</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmPayment()" id="payBtn">Continue to payment →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Submission Confirmation (Post Payment) -->
+    <div id="csStep4" style="display:none;">
+      <div style="text-align:center; padding:10px 0 20px;">
+        <div style="width:52px; height:52px; border-radius:50%; background:var(--success-bg); color:var(--success); font-size:26px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">✓</div>
+        <h3 style="font-size:20px; font-weight:800; margin-bottom:6px;">Campaign Submitted</h3>
+        <p style="font-size:13.5px; color:var(--text-muted); max-width:460px; margin:0 auto 14px;">Your campaign has been successfully submitted to the Pets24x7 marketing team.</p>
+        <span class="status-tag" style="background:#FEF3C7; color:#92400E; font-size:12.5px; padding:4px 14px;">🟡 Status: Pending Review</span>
+      </div>
+
+      <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:18px; margin-bottom:20px; font-size:13px;">
+        <div style="font-weight:800; font-size:14px; margin-bottom:12px;">What happens next?</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div><strong>1. Campaign Review</strong> — Our team reviews your business and campaign requirements.</div>
+          <div><strong>2. Ad Creation</strong> — We create the advertising creatives and campaign content.</div>
+          <div><strong>3. Campaign Setup</strong> — We configure the audience, location and campaign targeting.</div>
+          <div><strong>4. Campaign Goes Live</strong> — Your campaign starts running.</div>
+          <div><strong>5. Receive Leads</strong> — Interested pet owners can contact your business through WhatsApp, your website or the selected campaign channel.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="closeModal('campaignSetupModal'); navigate('grow');">Go to Marketing Dashboard</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Other Modals -->
+<div class="modal-backdrop" id="addServiceModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px; font-weight:700;">Add Service</h3>
+      <button onclick="closeModal('addServiceModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <form id="addServiceForm">
+      <div class="form-group"><label>Service Name</label><input type="text" class="form-control" placeholder="e.g. Grooming &amp; Bathing" id="sName" required /></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>Price (₹)</label><input type="number" class="form-control" min="0" placeholder="700" id="sPrice" required /></div>
+        <div class="form-group"><label>Duration</label><input type="text" class="form-control" placeholder="45 mins" id="sDuration" /></div>
+      </div>
+      <div class="form-group"><label>Description <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label><textarea class="form-control" id="sDesc" rows="2" placeholder="What's included, e.g. bath + blow-dry + nail clip"></textarea></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button type="button" class="btn btn-sm" onclick="closeModal('addServiceModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editBizModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px; font-weight:700;">Edit Business Information</h3>
+      <button onclick="closeModal('editBizModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <form id="editBizForm">
+      <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="ebName" required /></div>
+      <div class="form-group"><label>Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" readonly style="background:#F8FAFC;" /><div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Your login WhatsApp number — cannot be changed here.</div></div>
+      <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" required /></div>
+      <div class="form-group"><label>Street Address</label><textarea class="form-control" id="ebAddress" readonly style="background:#F8FAFC;"></textarea><div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Pulled from your Google listing. Update it on Google and it syncs here.</div></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button type="button" class="btn btn-sm" onclick="closeModal('editBizModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="enquiryModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:16px; font-weight:700;">Enquiry Details</h3>
+      <button onclick="closeModal('enquiryModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <div id="enquiryModalBody"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="previewModal">
+  <div class="modal-panel" style="max-width:840px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:16px; font-weight:700;">Listing Preview</h3>
+      <button onclick="closeModal('previewModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <iframe id="previewIframe" src="about:blank" style="width:100%; height:580px; border:1px solid var(--border); border-radius:var(--radius-sm);"></iframe>
+    <p id="previewNote" style="font-size:12.5px; color:var(--text-muted); margin-top:8px;"></p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="bulkReviewModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:16px; font-weight:700;">Send Review Requests</h3>
+      <button onclick="closeModal('bulkReviewModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">Enter customer WhatsApp numbers (one per line) to send review invitation links.</p>
+    <textarea class="form-control" id="rrInput" placeholder="+91 98765 43210 — Rahul Sharma&#10;+91 99887 76655 — Priya Mehta" style="height:110px;"></textarea>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+      <button class="btn btn-sm" onclick="closeModal('bulkReviewModal')">Cancel</button>
+      <button class="btn btn-wa btn-sm" id="rrSend">Send Review Requests</button>
+    </div>
+    <div id="rrResults" style="display:none; margin-top:16px; border-top:1px solid var(--border); padding-top:14px;"></div>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  var state = {
+    currentView: 'dash',
+    selectedGoal: 'Get WhatsApp Enquiries',
+    selectedPlan: { name: '20 Days', price: 8999 },
+    campaigns: [],
+    vendor: { businessName: '', category: '', phone: '', email: '', address: '', status: '', imageUrl: '', emailVerified: false },
+    services: [],
+    enquiries: [],
+    enquiryAgg: { total: 0, new: 0, responded: 0, completed: 0, archived: 0 },
+    reviews: [],
+    reviewAgg: { total: 0, published: 0, average: null },
+    invites: { sent: 0, opened: 0, completed: 0 },
+    serviceCount: 0,
+    featured: [],
+    featuredCatalogue: null
+  };
+
+  function esc(s) { return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  // Modal UX: click backdrop or press Escape to close.
+  document.addEventListener('click', function(ev) {
+    if (ev.target.classList && ev.target.classList.contains('modal-backdrop')) ev.target.classList.remove('show');
+  });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Escape') document.querySelectorAll('.modal-backdrop.show').forEach(function(m){ m.classList.remove('show'); });
+  });
+
+  function navigate(viewId) {
+    state.currentView = viewId;
+    document.querySelectorAll('.view-pane').forEach(function(el){ el.classList.remove('active'); });
+    var target = document.getElementById('view-' + viewId);
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(function(el){
+      var v = el.getAttribute('data-view');
+      if (v === viewId || (viewId === 'grow-plans' && v === 'grow')) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+
+    var titles = {
+      dash: ['Dashboard', 'Overview of your business activity on Pets24x7.'],
+      listing: ['My Listing', 'Manage how your business appears on Pets24x7.'],
+      services: ['Services Offered', 'Manage the services customers can find on your listing.'],
+      enquiries: ['Customer Enquiries', 'Manage enquiries received from Pet Parents.'],
+      reviews: ['Customer Reviews', 'View ratings and feedback.'],
+      performance: ['Business Performance', 'Track profile visibility and customer engagement.'],
+      account: ['Business Account', 'Manage owner profile and account details.'],
+      grow: ['Grow Your Business', 'Managed marketing campaigns by the Pets24x7 team.'],
+      'grow-plans': ['Select Marketing Plan', 'Choose campaign duration and estimated customer reach.'],
+      settings: ['Settings', 'Update business display and notification settings.']
+    };
+
+    var info = titles[viewId] || titles['dash'];
+    document.getElementById('headerTitle').textContent = info[0];
+    document.getElementById('headerSub').textContent = info[1];
+
+    document.getElementById('sidebar').classList.remove('open');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(el){
+    el.addEventListener('click', function(){ navigate(this.getAttribute('data-view')); });
+  });
+
+  document.getElementById('menuToggle').addEventListener('click', function(){
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  function openGoalPlans(goalName) {
+    state.selectedGoal = goalName;
+    document.getElementById('selectedGoalTitle').textContent = goalName + ' — Marketing Plans';
+    document.getElementById('csGoalDisplay').value = goalName;
+    navigate('grow-plans');
+  }
+
+  function renderPlans() {
+    var grid = document.getElementById('plansGrid');
+    if (!grid) return;
+    var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
+    if (!opts.length) { grid.innerHTML = '<p style="color:var(--text-muted);">Plans are temporarily unavailable.</p>'; return; }
+    // Highlight the middle option as "Recommended".
+    var recIdx = Math.min(1, opts.length - 1);
+    grid.innerHTML = opts.map(function(o, i) {
+      var rupees = Math.round(o.priceMinor / 100);
+      return '<div class="plan-card' + (i === recIdx ? ' recommended' : '') + '">' +
+        (i === recIdx ? '<span class="plan-rec-badge">Recommended</span>' : '') +
+        '<div style="margin-bottom:24px;">' +
+          '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
+          '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
+        '</div>' +
+        '<button class="btn btn-sm btn-primary" style="width:100%;" onclick="startCampaignSetup(' + o.durationDays + ')">Choose ' + esc(o.label) + ' Plan →</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ---- Featured Placement ----
+  function fmtDate(d) {
+    return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  }
+
+  function loadFeatured() {
+    return api.vendorFeatured().then(function(r) {
+      state.featured = r.featured || [];
+      state.featuredCatalogue = r.catalogue || null;
+      renderFeatured();
+    }).catch(function() { renderFeatured(); });
+  }
+
+  function liveFeatured() {
+    var now = Date.now();
+    return state.featured.filter(function(f) {
+      return f.status === 'ACTIVE' && f.endsAt && new Date(f.endsAt).getTime() > now &&
+             (!f.startsAt || new Date(f.startsAt).getTime() <= now);
+    })[0] || null;
+  }
+
+  // Paid placements that have not started yet — they run after the live one.
+  function queuedFeatured() {
+    var now = Date.now();
+    return state.featured.filter(function(f) {
+      return f.status === 'ACTIVE' && f.startsAt && new Date(f.startsAt).getTime() > now;
+    });
+  }
+
+  function pendingFeatured() {
+    return state.featured.filter(function(f) { return f.status === 'PENDING_PAYMENT'; })[0] || null;
+  }
+
+  function renderFeatured() {
+    var grid = document.getElementById('featuredPlans');
+    var live = document.getElementById('featuredActive');
+    var hist = document.getElementById('featuredHistory');
+    if (!grid || !live || !hist) return;
+
+    var current = liveFeatured();
+    var queued = queuedFeatured();
+    var awaiting = pendingFeatured();
+    if (current) {
+      live.style.display = 'block';
+      live.innerHTML =
+        '<div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:var(--radius); padding:14px 16px;">' +
+          '<div style="font-weight:800; color:#047857;">⭐ Your listing is featured right now</div>' +
+          '<div style="font-size:13px; color:var(--text-muted); margin-top:4px;">' +
+            esc(current.city || '') + (current.category ? ' · ' + esc(current.category) : '') +
+            ' — live until ' + fmtDate(current.endsAt) +
+          '</div>' +
+          (queued.length
+            ? '<div style="font-size:13px; color:var(--text-muted); margin-top:6px;">' +
+                queued.length + ' more placement' + (queued.length > 1 ? 's' : '') + ' booked — next starts ' +
+                fmtDate(queued[0].startsAt) + '</div>'
+            : '') +
+        '</div>';
+    } else {
+      live.style.display = 'none';
+      live.innerHTML = '';
+    }
+
+    var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
+    if (!opts.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted);">Featured placements are temporarily unavailable.</p>';
+    } else {
+      grid.innerHTML = opts.map(function(o, i) {
+        var rupees = Math.round(o.priceMinor / 100);
+        // A live placement no longer blocks the sale — the new term is queued and
+        // starts when the current one ends. Only an unpaid slot blocks.
+        return '<div class="plan-card' + (i === 0 ? ' recommended' : '') + '">' +
+          (i === 0 ? '<span class="plan-rec-badge">Most popular</span>' : '') +
+          '<div style="margin-bottom:24px;">' +
+            '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
+            '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
+            '<p style="font-size:12.5px; color:var(--text-muted); margin-top:8px;">Top of your city + category pages for ' + o.durationDays + ' days.</p>' +
+          '</div>' +
+          '<button class="btn btn-sm btn-primary" style="width:100%;" ' +
+            (awaiting
+              ? 'disabled title="Finish the placement you already started paying for"'
+              : 'onclick="buyFeatured(' + o.durationDays + ', this)"') +
+            '>' + (awaiting
+              ? 'Payment pending'
+              : (current ? 'Book ' + esc(o.label) + ' next →' : 'Feature for ' + esc(o.label) + ' →')) + '</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    var past = state.featured.filter(function(f) {
+      return f !== current && queued.indexOf(f) === -1;
+    });
+    hist.innerHTML = past.length
+      ? '<div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Past placements</div>' +
+        past.slice(0, 5).map(function(f) {
+          return '<div style="font-size:13px; color:var(--text-muted); padding:6px 0; border-top:1px solid var(--border);">' +
+            esc(f.status) + ' · ' + f.durationDays + ' days · ' +
+            (f.startsAt ? fmtDate(f.startsAt) + ' → ' + fmtDate(f.endsAt) : 'not started') +
+          '</div>';
+        }).join('')
+      : '';
+  }
+
+  function buyFeatured(durationDays, btn) {
+    var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
+    var o = opts.filter(function(x){ return x.durationDays === durationDays; })[0];
+    if (!o) { alert('That placement is no longer available.'); return; }
+    var rupees = Math.round(o.priceMinor / 100);
+    var live = liveFeatured();
+    var msg = live
+      ? 'Book ' + o.label + ' of featured placement at ₹' + rupees.toLocaleString('en-IN') +
+        '? It starts when your current placement ends on ' + fmtDate(live.endsAt) + '.'
+      : 'Feature your listing for ' + o.label + ' at ₹' + rupees.toLocaleString('en-IN') + '?';
+    if (!confirm(msg)) return;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Starting payment…'; }
+    api.vendorFeaturedCreate({ durationDays: durationDays }).then(function(r) {
+      var c = r.checkout || {};
+      if (c.mode === 'razorpay') return openRazorpay(c, r.merchantTxnId, 'Featured placement — ' + o.label, btn);
+      var url = r.redirectUrl || c.redirectUrl;
+      if (!url) throw new Error('No payment URL returned');
+      location.href = url;
+    }).catch(function(e) {
+      alert(fmtErr(e));
+      if (btn) { btn.disabled = false; btn.textContent = 'Feature for ' + o.label + ' →'; }
+    });
+  }
+
+  // Campaign Setup Modal Logic
+  function startCampaignSetup(durationDays) {
+    var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
+    var o = opts.find(function(x){ return x.durationDays === durationDays; });
+    if (!o) { alert('That plan is no longer available.'); return; }
+    state.selectedPlan = { name: o.label, price: Math.round(o.priceMinor / 100), durationDays: o.durationDays, priceMinor: o.priceMinor };
+    document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ₹' + Math.round(o.priceMinor / 100).toLocaleString('en-IN') + ')';
+    document.getElementById('csStep2').style.display = 'block';
+    document.getElementById('csStep3').style.display = 'none';
+    document.getElementById('csStep4').style.display = 'none';
+    document.getElementById('csModalTitle').textContent = 'Campaign Settings';
+
+    document.getElementById('progStep1').style.color = 'var(--text-muted)';
+    document.getElementById('progStep2').style.color = 'var(--primary)';
+    document.getElementById('progStep3').style.color = 'var(--text-muted)';
+
+    document.getElementById('campaignSetupModal').classList.add('show');
+  }
+
+  function goToStep2() {
+    document.getElementById('csStep2').style.display = 'block';
+    document.getElementById('csStep3').style.display = 'none';
+    document.getElementById('csModalTitle').textContent = 'Campaign Settings';
+
+    document.getElementById('progStep2').style.color = 'var(--primary)';
+    document.getElementById('progStep3').style.color = 'var(--text-muted)';
+  }
+
+  function goToStep3() {
+    var phone = document.getElementById('csPhone').value.trim() || state.vendor.phone || '';
+    var location = document.getElementById('csLocation').value.trim() || state.vendor.city || '';
+    var radius = document.getElementById('csRadius').value || '5 km radius';
+
+    document.getElementById('revGoal').textContent = state.selectedGoal;
+    document.getElementById('revDuration').textContent = state.selectedPlan.name;
+    document.getElementById('revLoc').textContent = location + ' · ' + radius;
+    document.getElementById('revPhone').textContent = phone;
+    document.getElementById('csReviewPrice').textContent = '₹' + state.selectedPlan.price.toLocaleString();
+    document.getElementById('payBtn').textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString() + ' →';
+
+    document.getElementById('csStep2').style.display = 'none';
+    document.getElementById('csStep3').style.display = 'block';
+    document.getElementById('csModalTitle').textContent = 'Review & Payment';
+
+    document.getElementById('progStep2').style.color = 'var(--text-muted)';
+    document.getElementById('progStep3').style.color = 'var(--primary)';
+  }
+
+  function loadRazorpay() {
+    return new Promise(function(resolve, reject) {
+      if (window.Razorpay) return resolve();
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = resolve; s.onerror = function(){ reject(new Error('Could not load Razorpay')); };
+      document.head.appendChild(s);
+    });
+  }
+  function openRazorpay(c, merchantTxnId, desc, btn) {
+    return loadRazorpay().then(function() {
+      var rzp = new Razorpay({
+        key: c.keyId, order_id: c.orderId, amount: c.amountMinor, currency: c.currency || 'INR',
+        name: 'Pets24x7', description: desc, theme: { color: '#2563EB' },
+        handler: function(resp) {
+          if (btn) btn.textContent = 'Confirming…';
+          api.razorpayVerify({
+            razorpay_order_id: resp.razorpay_order_id,
+            razorpay_payment_id: resp.razorpay_payment_id,
+            razorpay_signature: resp.razorpay_signature
+          }).then(function() {
+            location.href = '/dashboard/vendor/?view=marketing&txn=' + encodeURIComponent(merchantTxnId);
+          }).catch(function(e) {
+            alert('Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + merchantTxnId);
+            if (btn) { btn.disabled = false; }
+          });
+        },
+        modal: { ondismiss: function(){ if (btn) { btn.disabled = false; btn.textContent = 'Pay →'; } } }
+      });
+      rzp.on('payment.failed', function(e){ alert((e.error && e.error.description) || 'Payment failed'); if (btn) btn.disabled = false; });
+      rzp.open();
+    });
+  }
+
+  function confirmPayment() {
+    var goalEnum = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
+    var durationDays = state.selectedPlan.durationDays;
+    if (!durationDays) { alert('Please choose a plan first.'); return; }
+    var payBtn = document.getElementById('payBtn');
+    if (payBtn) { payBtn.disabled = true; payBtn.textContent = 'Starting payment…'; }
+
+    // Capture the targeting the vendor entered so the marketing team receives it.
+    var loc = (document.getElementById('csLocation').value || '').trim();
+    var rad = document.getElementById('csRadius').value || '';
+    var wa  = (document.getElementById('csPhone').value || '').trim();
+    var notes = 'Goal: ' + state.selectedGoal +
+      (loc ? ' | Target area: ' + loc : '') +
+      (rad ? ' | Radius: ' + rad : '') +
+      (wa ? ' | WhatsApp: ' + wa : '');
+
+    api.vendorCampaignCreate({ goal: goalEnum, durationDays: durationDays, notes: notes.slice(0, 500) }).then(function(r) {
+      var c = r.checkout;
+      if (c && c.mode === 'razorpay') { return openRazorpay(c, r.merchantTxnId, 'Marketing campaign', payBtn); }
+      if (r.redirectUrl) { location.href = r.redirectUrl; return; }
+      throw new Error('No checkout method returned');
+    }).catch(function(err) {
+      if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString() + ' →'; }
+      alert('Could not start payment: ' + fmtErr(err));
+    });
+  }
+
+
+  function enqPill(status) {
+    var s = (status || 'new').toLowerCase();
+    var map = {
+      new:       ['pill-pending',   'New'],
+      responded: ['pill-responded', 'Responded'],
+      completed: ['pill-completed', 'Completed'],
+      archived:  ['pill-pending',   'Archived']
+    };
+    var e = map[s] || ['pill-pending', s];
+    return '<span class="status-pill ' + e[0] + '">' + e[1] + '</span>';
+  }
+
+  function renderDashTable() {
+    var body = document.getElementById('dashTableBody');
+    if (!body) return;
+    var list = state.enquiries.slice(0, 5);
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">No enquiries yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = list.map(function(e) {
+      return `
+        <tr>
+          <td style="font-weight:600;">${esc(e.name)}</td>
+          <td>${esc(e.petName)}</td>
+          <td>${esc(e.service)}</td>
+          <td style="color:var(--text-muted); font-size:12px;">${esc(e.date)}</td>
+          <td>${enqPill(e.status)}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-sm" onclick="openEnquiryDetails('${e.id}')">View</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderServices() {
+    var grid = document.getElementById('servicesGrid');
+    if (!grid) return;
+    if (!state.services.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted); padding:20px 0;">No services listed yet. Click “+ Add Service” to add one.</p>';
+      return;
+    }
+    grid.innerHTML = state.services.map(function(s) {
+      var hidden = s.rawStatus === 'HIDDEN';
+      return `
+        <div class="service-card" style="${hidden ? 'opacity:0.6;' : ''}">
+          <div>
+            <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:4px;">${esc(s.name)}</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">${esc(s.duration || 'Duration not set')}</div>
+            ${s.description ? '<div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">' + esc(s.description) + '</div>' : ''}
+            <div style="font-size:16px; font-weight:700; color:var(--text-main);">₹${s.price}</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:10px; border-top:1px solid var(--border-light);">
+            <span class="status-tag ${hidden ? '' : 'active'}" style="font-size:11px;">${hidden ? 'Hidden' : 'Visible'}</span>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-sm" onclick="toggleServiceVisibility('${s.id}')">${hidden ? 'Show' : 'Hide'}</button>
+              <button class="btn btn-sm" onclick="editService('${s.id}')">Edit</button>
+              <button class="btn btn-sm" style="color:var(--danger);" onclick="removeService('${s.id}')">Remove</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function toggleServiceVisibility(id) {
+    var s = state.services.find(function(x){ return x.id === id; });
+    if (!s) return;
+    var next = s.rawStatus === 'HIDDEN' ? 'ACTIVE' : 'HIDDEN';
+    api.vendorServiceUpdate(id, { status: next }).then(loadServices)
+      .catch(function(err){ alert('Could not update: ' + fmtErr(err)); });
+  }
+
+  function renderFullEnquiries(filter) {
+    filter = filter || 'all';
+    var list = state.enquiries.filter(function(e){ return filter === 'all' || e.status === filter; });
+    var body = document.getElementById('fullEnquiriesTableBody');
+    if (!body) return;
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">No enquiries match this filter.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = list.map(function(e) {
+      return `
+        <tr>
+          <td style="font-weight:600;">${esc(e.name)}</td>
+          <td>${esc(e.petName)}${e.species ? ' <span style="font-size:11px; color:var(--text-muted);">(' + esc(e.species) + ')</span>' : ''}</td>
+          <td>${esc(e.service)}</td>
+          <td style="color:var(--text-muted); font-size:12px;">${esc(e.date)}</td>
+          <td>${enqPill(e.status)}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-sm btn-primary" onclick="openEnquiryDetails('${e.id}')">View Details</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderEnquiryFilters() {
+    var a = state.enquiryAgg || {};
+    var badge = document.getElementById('enqNavBadge');
+    if (badge) {
+      var n = a.new || 0;
+      badge.textContent = n;
+      badge.hidden = n === 0;
+    }
+    var bar = document.getElementById('enqFilterBar');
+    if (!bar) return;
+    var counts = { all: a.total || 0, new: a.new || 0, responded: a.responded || 0, completed: a.completed || 0, archived: a.archived || 0 };
+    var labels = { all: 'All Enquiries', new: 'New', responded: 'Responded', completed: 'Completed', archived: 'Archived' };
+    bar.querySelectorAll('.filter-enq').forEach(function(btn) {
+      var f = btn.getAttribute('data-filter');
+      btn.textContent = labels[f] + ' (' + (counts[f] != null ? counts[f] : 0) + ')';
+    });
+  }
+
+  function renderReviews() {
+    var listEl = document.getElementById('reviewsList');
+    if (!listEl) return;
+    if (!state.reviews.length) {
+      listEl.innerHTML = '<p style="color:var(--text-muted); padding:16px 0;">No reviews collected yet. Use “Request Reviews on WhatsApp” to invite recent customers.</p>';
+      return;
+    }
+    listEl.innerHTML = state.reviews.map(function(r) {
+      var replyBlock = r.vendorReply
+        ? '<div style="margin-top:8px;padding:8px 10px;background:#F1F5F9;border-radius:6px;font-size:12.5px;"><strong>Your reply:</strong> ' + esc(r.vendorReply) + '</div>'
+        : '';
+      var replyBtn = r.id
+        ? '<button class="btn btn-sm" onclick="replyToReview(\'' + r.id + '\')">' + (r.vendorReply ? 'Edit reply' : 'Reply') + '</button>'
+        : '';
+      return `
+        <div class="review-item">
+          <div class="review-meta">
+            <div style="font-weight:600; font-size:13.5px;">${esc(r.name)}</div>
+            <div class="review-rating">${r.rating ? '⭐ ' + Number(r.rating).toFixed(1) : ''}</div>
+          </div>
+          <p style="font-size:13px; color:var(--text-main); line-height:1.4;">"${esc(r.comment)}"</p>
+          ${replyBlock}
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:11.5px; color:var(--text-muted);">
+            <span>Verified Customer Review &bull; ${esc(r.date)}</span>
+            ${replyBtn}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function replyToReview(id) {
+    var r = state.reviews.find(function(x){ return x.id === id; });
+    var txt = prompt('Your public reply to this review:', (r && r.vendorReply) || '');
+    if (txt === null || !txt.trim()) return;
+    api.vendorReviewReply(id, txt.trim()).then(function(res) {
+      if (r) r.vendorReply = (res.review && res.review.vendorReply) || txt.trim();
+      renderReviews();
+    }).catch(function(err) { alert('Could not post reply: ' + fmtErr(err)); });
+  }
+
+  function openAddServiceModal() { document.getElementById('addServiceModal').classList.add('show'); }
+  function openEditBizModal() { document.getElementById('editBizModal').classList.add('show'); }
+  function openPreviewModal() {
+    var f = document.getElementById('previewIframe');
+    var note = document.getElementById('previewNote');
+    var url = state.listingUrl;
+    if (url) {
+      if (f.getAttribute('src') !== url) f.setAttribute('src', url);
+      if (note) note.textContent = 'Public URL: ' + url;
+    } else {
+      if (f.getAttribute('src') !== 'about:blank') f.setAttribute('src', 'about:blank');
+      if (note) note.textContent = 'No public listing is linked to this account yet.';
+    }
+    document.getElementById('previewModal').classList.add('show');
+  }
+  // Business email trust state. Enquiry alerts, receipts and review
+  // notifications go here, so an unproven address gets a visible nudge.
+  function renderEmailVerification() {
+    var box = document.getElementById('accEmailVerify');
+    if (!box) return;
+    if (!state.vendor.email) {
+      box.innerHTML = '<span style="color:var(--text-muted);">No email on file — add one in Edit Business.</span>';
+      return;
+    }
+    if (state.vendor.emailVerified) {
+      box.innerHTML = '<span style="color:#047857; font-weight:700;">✓ Verified</span>';
+      return;
+    }
+    box.innerHTML =
+      '<span style="color:#B45309; font-weight:700;">Not verified</span> ' +
+      '<button class="btn btn-sm" id="resendVerifyBtn" style="margin-left:8px;">Send verification link</button>' +
+      '<div id="resendVerifyMsg" style="color:var(--text-muted); margin-top:4px;"></div>';
+    var btn = document.getElementById('resendVerifyBtn');
+    btn.addEventListener('click', function() {
+      var msg = document.getElementById('resendVerifyMsg');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      api.vendorEmailResend().then(function(r) {
+        if (r.alreadyVerified) {
+          state.vendor.emailVerified = true;
+          renderEmailVerification();
+          return;
+        }
+        if (msg) msg.textContent = 'Link sent to ' + state.vendor.email + '. It expires in ' + (r.expiresInMinutes || 10) + ' minutes.';
+        btn.textContent = 'Resend link';
+      }).catch(function(e) {
+        if (msg) msg.textContent = 'Could not send: ' + fmtErr(e);
+        btn.textContent = 'Send verification link';
+      }).finally(function(){ btn.disabled = false; });
+    });
+  }
+
+  // Banner for the ?emailVerified= state the verify link redirects back with.
+  function handleEmailVerifyReturn(params) {
+    var stateParam = params.get('emailVerified');
+    if (!stateParam) return;
+    var copy = {
+      ok: ['#ECFDF5', '#047857', 'Email verified — alerts and receipts will reach this address.'],
+      used: ['#FFFBEB', '#B45309', 'That link was already used. If the address still shows as unverified, send a new one.'],
+      expired: ['#FFFBEB', '#B45309', 'That link expired. Send a fresh one below.'],
+      invalid: ['#FEF2F2', '#B91C1C', 'That verification link is not valid. Send a fresh one below.']
+    }[stateParam];
+    if (!copy) return;
+    navigate('account');
+    var host = document.getElementById('view-account');
+    if (host) {
+      var bar = document.createElement('div');
+      bar.style.cssText = 'background:' + copy[0] + '; color:' + copy[1] +
+        '; border-radius:var(--radius); padding:12px 16px; font-weight:700; font-size:13.5px; margin-bottom:16px;';
+      bar.textContent = copy[2];
+      host.insertBefore(bar, host.firstChild);
+    }
+    if (history.replaceState) history.replaceState(null, '', location.pathname);
+  }
+
+  function openBulkReviewModal() {
+    var box = document.getElementById('rrResults');
+    if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+    document.getElementById('bulkReviewModal').classList.add('show');
+  }
+
+  // Every request always produces a working review link. When WhatsApp is not
+  // connected (or a single send fails) the link is shown with a one-tap wa.me
+  // button so the vendor can deliver it themselves — the request is not lost.
+  function renderReviewRequestResults(r) {
+    var box = document.getElementById('rrResults');
+    if (!box) { alert('Created ' + ((r.results || []).length) + ' review request(s).'); return; }
+    var results = r.results || [];
+    var sent = r.sent || 0;
+    var linkOnly = r.linkOnly != null ? r.linkOnly : (r.failed || 0);
+
+    var head = '';
+    if (sent) head += '<div style="font-weight:700; color:#047857;">✓ ' + sent + ' sent on WhatsApp</div>';
+    if (linkOnly) {
+      head += '<div style="font-weight:700; color:#B45309; margin-top:' + (sent ? '6px' : '0') + ';">' +
+        linkOnly + ' need sending by hand' +
+        (r.whatsappConnected === false ? ' — WhatsApp is not connected on this account yet' : '') +
+      '</div>';
+    }
+
+    var rows = results.map(function(x) {
+      var who = esc(x.phone);
+      if (x.status === 'sent') {
+        return '<div style="font-size:13px; padding:8px 0; border-top:1px solid var(--border);">✓ ' + who + ' — sent</div>';
+      }
+      return '<div style="font-size:13px; padding:8px 0; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
+        '<span>' + who + '</span>' +
+        '<a class="btn btn-wa btn-sm" href="' + esc(x.shareUrl) + '" target="_blank" rel="noopener">Send on WhatsApp</a>' +
+        '<button class="btn btn-sm" onclick="copyReviewLink(this, \'' + esc(x.url) + '\')">Copy link</button>' +
+      '</div>';
+    }).join('');
+
+    box.innerHTML = head + rows +
+      '<p style="font-size:12px; color:var(--text-muted); margin-top:10px;">Requests today remaining: ' +
+      (r.dailyRemaining != null ? r.dailyRemaining : '—') + '</p>';
+    box.style.display = 'block';
+  }
+
+  function copyReviewLink(btn, url) {
+    var done = function() { btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = 'Copy link'; }, 1800); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(function(){ window.prompt('Copy this link:', url); });
+    } else {
+      window.prompt('Copy this link:', url);
+    }
+  }
+
+  // Refreshes the sent/opened/completed tiles after a batch.
+  function loadReviewRequests() {
+    if (!api.vendorReviewRequests) return;
+    api.vendorReviewRequests().then(function(r) {
+      if (r && r.counts) {
+        state.invites = {
+          sent: r.counts.total != null ? r.counts.total : state.invites.sent,
+          opened: r.counts.opened != null ? r.counts.opened : state.invites.opened,
+          completed: r.counts.completed != null ? r.counts.completed : state.invites.completed
+        };
+        if (typeof renderMetrics === 'function') renderMetrics();
+      }
+    }).catch(function(){});
+  }
+
+  (function wireBulkReview(){
+    var btn = document.getElementById('rrSend');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      var raw = (document.getElementById('rrInput').value || '').split(/\n+/);
+      var customers = [];
+      raw.forEach(function(line) {
+        line = line.trim(); if (!line) return;
+        var parts = line.split(/\s*[—–-]{1,2}\s*/);
+        var phone = (parts[0] || '').trim();
+        var name = (parts[1] || '').trim();
+        if (phone.replace(/[^0-9]/g, '').length >= 10) customers.push(name ? { phone: phone, name: name } : { phone: phone });
+      });
+      if (!customers.length) { alert('Enter at least one valid phone number.'); return; }
+      btn.disabled = true; btn.textContent = 'Sending…';
+      api.vendorReviewRequestBulk(customers).then(function(r) {
+        document.getElementById('rrInput').value = '';
+        renderReviewRequestResults(r);
+        loadReviewRequests();
+      }).catch(function(err) {
+        alert('Could not send: ' + fmtErr(err));
+      }).finally(function() { btn.disabled = false; btn.textContent = 'Send Review Requests'; });
+    });
+  })();
+
+  function openEnquiryDetails(id) {
+    var e = state.enquiries.find(function(x){ return x.id === id; });
+    if (!e) return;
+    var cleanPhone = e.phone.replace(/\s+/g, '');
+    var waMsg = "Hi " + e.name + ", regarding your enquiry for " + e.service + " on Pets24x7.";
+
+    var body = document.getElementById('enquiryModalBody');
+    var digits = cleanPhone.replace(/[^0-9]/g, '');
+    body.innerHTML = `
+      <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:6px; padding:14px; margin-bottom:14px; font-size:13px;">
+        <div style="font-size:15px; font-weight:700; margin-bottom:2px;">${esc(e.name)}</div>
+        <div style="color:var(--text-muted);">Phone: <a href="tel:${esc(cleanPhone)}">${esc(e.phone || '—')}</a></div>
+        ${e.petName && e.petName !== 'Pet' ? '<div style="color:var(--text-muted); margin-top:2px;">Pet: ' + esc(e.petName) + '</div>' : ''}
+        <div style="color:var(--text-muted); margin-top:2px;">Service: ${esc(e.service)}</div>
+        <div style="color:var(--text-muted); margin-top:2px;">Received: ${esc(e.date)}</div>
+        <div style="margin-top:6px;">${enqPill(e.status)}</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Customer Message</div>
+        <p style="font-size:13.5px; color:var(--text-main); margin-top:4px; line-height:1.4;">${e.message ? '"' + esc(e.message) + '"' : '<span style="color:var(--text-muted);">No message provided.</span>'}</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        ${digits.length >= 10 ? '<a href="https://wa.me/' + digits + '?text=' + encodeURIComponent(waMsg) + '" target="_blank" class="btn btn-wa btn-sm" style="width:100%;">Respond on WhatsApp</a>' : ''}
+        ${cleanPhone ? '<a href="tel:' + esc(cleanPhone) + '" class="btn btn-sm" style="width:100%; justify-content:center;">Call customer</a>' : ''}
+        <div style="display:flex; gap:8px; margin-top:4px; flex-wrap:wrap;">
+          <button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus('${e.id}', 'RESPONDED')">Mark responded</button>
+          <button class="btn btn-sm btn-primary" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus('${e.id}', 'COMPLETED')">Mark completed</button>
+          <button class="btn btn-sm" style="flex:1; min-width:120px; color:var(--text-muted);" onclick="updateEnquiryStatus('${e.id}', 'ARCHIVED')">Archive</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('enquiryModal').classList.add('show');
+  }
+
+  function updateEnquiryStatus(id, newStatus) {
+    var apiStatus = newStatus.toUpperCase();
+    api.vendorEnquiryStatus(id, apiStatus).then(function() {
+      closeModal('enquiryModal');
+      return refreshEnquiries();
+    }).catch(function(err) { alert('Could not update: ' + fmtErr(err)); });
+  }
+
+  function refreshEnquiries() {
+    return api.vendorEnquiries().then(function(r) {
+      state.enquiries = (r.enquiries || []).map(mapEnquiry);
+      // Recompute aggregate from the live list.
+      var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
+      state.enquiries.forEach(function(e){ if (agg[e.status] != null) agg[e.status]++; });
+      state.enquiryAgg = agg;
+      renderDashTable(); renderFullEnquiries(); renderEnquiryFilters(); renderMetrics();
+    });
+  }
+
+  function removeService(id) {
+    if (!confirm('Remove this service?')) return;
+    api.vendorServiceDelete(id).then(loadServices).catch(function(err){ alert('Could not remove: ' + fmtErr(err)); });
+  }
+
+  function editService(id) {
+    var s = state.services.find(function(x){ return x.id === id; });
+    if (!s) return;
+    var name = prompt('Service name:', s.name);
+    if (name === null) return;
+    name = name.trim();
+    if (!name) { alert('Service name is required.'); return; }
+    var price = prompt('Price (₹):', s.price);
+    if (price === null) return;
+    var pn = parseFloat(price);
+    if (isNaN(pn) || pn < 0) { alert('Enter a valid price.'); return; }
+    var duration = prompt('Duration (e.g. 45 mins):', s.duration || '30 mins');
+    if (duration === null) return;
+    var desc = prompt('Description (optional):', s.description || '');
+    if (desc === null) return;
+    api.vendorServiceUpdate(id, {
+      name: name,
+      priceMinor: Math.round(pn * 100),
+      durationLabel: (duration.trim() || '30 mins'),
+      description: desc.trim() || undefined
+    }).then(loadServices).catch(function(err){ alert('Could not update: ' + fmtErr(err)); });
+  }
+
+  document.getElementById('addServiceForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var name = document.getElementById('sName').value.trim();
+    var price = parseFloat(document.getElementById('sPrice').value);
+    var duration = document.getElementById('sDuration').value.trim() || '30 mins';
+    var desc = document.getElementById('sDesc').value.trim();
+    if (!name) { alert('Service name is required.'); return; }
+    if (isNaN(price) || price < 0) { alert('Enter a valid price.'); return; }
+    var form = this;
+    var sb = form.querySelector('button[type="submit"]');
+    if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
+    api.vendorServiceCreate({ name: name, priceMinor: Math.round(price * 100), durationLabel: duration, description: desc || undefined }).then(function() {
+      return loadServices();
+    }).then(function() {
+      closeModal('addServiceModal');
+      form.reset();
+    }).catch(function(err) {
+      alert('Could not add service: ' + fmtErr(err));
+    }).finally(function() {
+      if (sb) { sb.disabled = false; sb.textContent = 'Save Service'; }
+    });
+  });
+
+  document.getElementById('editBizForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var name = document.getElementById('ebName').value.trim();
+    if (name.length < 2) { alert('Business name is required.'); return; }
+    var payload = {
+      businessName: name,
+      category: document.getElementById('ebCategory').value.trim() || undefined,
+      email: document.getElementById('ebEmail').value.trim()
+    };
+    var sb = this.querySelector('button[type="submit"]');
+    if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
+    api.vendorPatch(payload).then(function(r) {
+      applyVendor(r.vendor || payload);
+      closeModal('editBizModal');
+    }).catch(function(err) {
+      alert('Could not save: ' + fmtErr(err));
+    }).finally(function() {
+      if (sb) { sb.disabled = false; sb.textContent = 'Save Changes'; }
+    });
+  });
+
+  document.querySelectorAll('.filter-enq').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.filter-enq').forEach(function(b){ b.classList.remove('btn-primary'); });
+      this.classList.add('btn-primary');
+      renderFullEnquiries(this.getAttribute('data-filter'));
+    });
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    var payload = {
+      businessName: document.getElementById('fName').value.trim(),
+      email: document.getElementById('fEmail').value.trim()
+    };
+    var btn = this;
+    btn.disabled = true;
+    api.vendorPatch(payload).then(function(r) {
+      applyVendor(r.vendor || payload);
+      alert('Settings saved.');
+    }).catch(function(err) {
+      alert('Could not save: ' + fmtErr(err));
+    }).finally(function(){ btn.disabled = false; });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    api.logout().finally(function(){ location.href = '/'; });
+  });
+
+  var SVC_LABEL = { WHATSAPP_ENQUIRIES: 'Get WhatsApp Enquiries', WEBSITE_LEADS: 'Get Website Leads', PROFILE_VISITS: 'Get Profile Visits' };
+  var GOAL_ENUM = { 'Get WhatsApp Enquiries': 'WHATSAPP_ENQUIRIES', 'Get Website Leads': 'WEBSITE_LEADS', 'Get Profile Visits': 'PROFILE_VISITS' };
+
+  function mapEnquiry(e) {
+    var d = e.createdAt ? new Date(e.createdAt) : null;
+    var valid = d && !isNaN(d.getTime());
+    return {
+      id: e.id,
+      name: e.name || 'Pet Parent',
+      phone: e.phone || '',
+      petName: e.petType || 'Pet',
+      species: '',
+      service: e.category || e.listingName || 'General enquiry',
+      time: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—',
+      date: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+      status: (e.status || 'NEW').toLowerCase(),
+      message: e.notes || ''
+    };
+  }
+
+  var VENDOR_STATUS = {
+    ACTIVE:    ['🟢 Active', 'Your business profile is verified and live on the public directory.'],
+    PENDING:   ['🟡 Pending approval', 'Your listing is awaiting review by the Pets24x7 admin team.'],
+    SUSPENDED: ['🔴 Suspended', 'Your listing is currently hidden. Contact Pets24x7 support.'],
+    REJECTED:  ['🔴 Rejected', 'Your claim was not approved. Contact Pets24x7 support.']
+  };
+
+  function applyVendor(v) {
+    if (!v) return;
+    state.vendor.businessName = v.businessName || state.vendor.businessName;
+    state.vendor.email = v.email || '';
+    state.vendor.emailVerified = !!v.emailVerified;
+    state.vendor.phone = v.phone || state.vendor.phone;
+    state.vendor.category = v.category || state.vendor.category;
+    state.vendor.city = v.city || state.vendor.city || '';
+    state.vendor.status = v.status || state.vendor.status || '';
+    if (v.imageUrl !== undefined) state.vendor.imageUrl = v.imageUrl || '';
+    if (v.address) state.vendor.address = v.address;
+    var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+    set('dashBizName', state.vendor.businessName);
+    set('infoBizName', state.vendor.businessName);
+    set('infoCategory', state.vendor.category);
+    set('infoPhone', state.vendor.phone);
+    set('infoEmail', state.vendor.email);
+    set('infoAddress', state.vendor.address);
+    set('dashBizMeta', [state.vendor.category, state.vendor.city].filter(Boolean).join(' · '));
+    set('accBizName', state.vendor.businessName);
+    set('accCategory', state.vendor.category);
+    set('accEmail', state.vendor.email);
+    renderEmailVerification();
+    set('accPhone', state.vendor.phone);
+    renderVendorImage();
+    var st = VENDOR_STATUS[state.vendor.status] || ['—', ''];
+    set('dashStatusTag', st[0]);
+    set('listingStatusTag', st[0]);
+    set('listingStatusNote', st[1]);
+    var av = document.getElementById('avatarBadge');
+    if (av && state.vendor.businessName) av.textContent = state.vendor.businessName.charAt(0).toUpperCase();
+    var f;
+    if ((f = document.getElementById('fName'))) f.value = state.vendor.businessName;
+    if ((f = document.getElementById('fEmail'))) f.value = state.vendor.email;
+    if ((f = document.getElementById('ebName'))) f.value = state.vendor.businessName;
+    if ((f = document.getElementById('ebCategory'))) f.value = state.vendor.category;
+    if ((f = document.getElementById('ebPhone'))) f.value = state.vendor.phone;
+    if ((f = document.getElementById('ebEmail'))) f.value = state.vendor.email;
+    if ((f = document.getElementById('ebAddress'))) f.value = state.vendor.address || '';
+    if ((f = document.getElementById('csBizName'))) f.value = state.vendor.businessName;
+    if ((f = document.getElementById('csPhone')) && !f.value) f.value = state.vendor.phone;
+    if ((f = document.getElementById('csLocation')) && !f.value) f.value = state.vendor.city || '';
+  }
+
+  // ---- Storefront photo ----
+  function renderVendorImage() {
+    var box = document.getElementById('vImgPreview');
+    var rm = document.getElementById('vImgRemove');
+    if (!box) return;
+    if (state.vendor.imageUrl) {
+      box.innerHTML = '<img src="' + state.vendor.imageUrl + '" alt="Storefront" style="width:100%;height:100%;object-fit:cover;">';
+      box.style.border = '1px solid var(--border)';
+      if (rm) rm.hidden = false;
+    } else {
+      box.textContent = '🏪';
+      box.style.border = '1px dashed var(--border)';
+      if (rm) rm.hidden = true;
+    }
+  }
+
+  function resizeImage(file, maxDim, quality) {
+    return new Promise(function(resolve, reject) {
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return reject(new Error('Use a JPG, PNG or WebP image.'));
+      if (file.size > 12 * 1024 * 1024) return reject(new Error('Image is too large (max 12MB).'));
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function() {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.round(w * scale), ch = Math.round(h * scale);
+        var c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        resolve(c.toDataURL('image/jpeg', quality || 0.82));
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('Could not read that image.')); };
+      img.src = url;
+    });
+  }
+
+  (function wireImageUpload() {
+    var input = document.getElementById('vImgFile');
+    if (!input) return;
+    input.addEventListener('change', function() {
+      var file = this.files && this.files[0];
+      this.value = '';
+      if (!file) return;
+      var msg = document.getElementById('vImgMsg');
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resizing…';
+      resizeImage(file, 600, 0.82).then(function(dataUrl) {
+        // Shrink further if still big.
+        if (dataUrl.length > 480000) return resizeImage(file, 480, 0.7);
+        return dataUrl;
+      }).then(function(dataUrl) {
+        if (dataUrl.length > 560000) throw new Error('Image still too large after resize — try a simpler photo.');
+        msg.textContent = 'Saving…';
+        return api.vendorPatch({ imageUrl: dataUrl }).then(function(r) {
+          state.vendor.imageUrl = (r.vendor && r.vendor.imageUrl) || dataUrl;
+          renderVendorImage();
+          msg.style.color = 'var(--success)'; msg.textContent = 'Saved ✓';
+          setTimeout(function(){ msg.textContent = ''; }, 2500);
+        });
+      }).catch(function(err) {
+        msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
+      });
+    });
+  })();
+
+  function removeVendorImage() {
+    if (!confirm('Remove your storefront photo?')) return;
+    var msg = document.getElementById('vImgMsg');
+    msg.style.color = 'var(--text-muted)'; msg.textContent = 'Removing…';
+    api.vendorPatch({ imageUrl: '' }).then(function() {
+      state.vendor.imageUrl = '';
+      renderVendorImage();
+      msg.textContent = '';
+    }).catch(function(err) {
+      msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
+    });
+  }
+
+  var GOAL_LABEL = { WHATSAPP_ENQUIRIES: 'Get WhatsApp Enquiries', WEBSITE_LEADS: 'Get Website Leads', PROFILE_VISITS: 'Get Profile Visits' };
+
+  function campaignStatusLine(c) {
+    if (c.status === 'ACTIVE') {
+      var days = c.endsAt ? Math.max(0, Math.ceil((new Date(c.endsAt) - Date.now()) / 86400000)) : 0;
+      return '\u{1F7E2} ACTIVE \u2022 ' + days + ' day' + (days === 1 ? '' : 's') + ' remaining';
+    }
+    if (c.status === 'PENDING_REVIEW') return '\u{1F7E1} With Pets24x7 team for review';
+    if (c.status === 'PENDING_PAYMENT') return '\u{1F7E0} Awaiting payment';
+    return c.status;
+  }
+
+  function campaignCardHtml(c) {
+    var goal = GOAL_LABEL[c.goal] || c.goal || 'Campaign';
+    var sub = goal + (c.durationDays ? ' \u2022 ' + c.durationDays + '-day plan' : '');
+    if (c.status === 'PENDING_REVIEW') sub += ' \u2014 approval usually within 1 business day';
+    var cell = function(label, value, accent) {
+      return '<div><div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">' + label + '</div>' +
+             '<div style="font-size:16px; font-weight:800; color:' + (accent ? 'var(--primary)' : 'var(--text-main)') + ';">' + esc(value) + '</div></div>';
+    };
+    return '<div class="card">' +
+      '<div class="card-header"><div>' +
+        '<div class="card-title">Your Campaign</div>' +
+        '<div class="card-subtitle">' + esc(sub) + '</div>' +
+      '</div><span class="status-tag active" style="font-size:12px;">' + esc(campaignStatusLine(c)) + '</span></div>' +
+      '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin: 14px 0;">' +
+        cell('Goal', goal) +
+        cell('Duration', c.durationDays ? c.durationDays + ' days' : '\u2014') +
+        cell('Started', c.startsAt ? fmtDate(c.startsAt) : 'Not started') +
+        cell('Ends', c.endsAt ? fmtDate(c.endsAt) : '\u2014', true) +
+      '</div>' +
+      '<p style="font-size:12px; color:var(--text-muted);">Ad-delivery metrics (reach, impressions) are reported by the Pets24x7 marketing team and will appear here once the campaign starts delivering.</p>' +
+    '</div>';
+  }
+
+  // Every campaign still in flight gets its own card. Rendering only the first
+  // one hid campaigns the vendor had already paid for.
+  function renderCampaign() {
+    var list = document.getElementById('activeCampaignList');
+    if (!list) return;
+    var now = Date.now();
+    var live = (state.campaigns || []).filter(function(c) {
+      if (c.status === 'PENDING_REVIEW' || c.status === 'PENDING_PAYMENT') return true;
+      // An ACTIVE row whose window has closed is finished — the expiry sweep
+      // just has not run yet; do not advertise it as running.
+      return c.status === 'ACTIVE' && (!c.endsAt || new Date(c.endsAt).getTime() > now);
+    });
+    list.innerHTML = live.map(campaignCardHtml).join('');
+  }
+
+  function renderMetrics() {
+    var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+    var ea = state.enquiryAgg || {}, ra = state.reviewAgg || {}, iv = state.invites || {};
+    var unhandled = (ea.new || 0);
+    set('mEnqTotal', ea.total != null ? ea.total : '—');
+    set('mEnqNew', unhandled + ' new / unhandled');
+    set('mServices', state.serviceCount != null ? state.serviceCount : (state.services.length || 0));
+    set('mReviews', ra.published != null ? ra.published : 0);
+    set('mReviewAvg', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' average') : 'No reviews yet');
+    set('mInvitesSent', iv.sent != null ? iv.sent : 0);
+    set('mInvitesDone', (iv.completed || 0) + ' completed');
+    // Performance view
+    set('pEnqTotal', ea.total != null ? ea.total : '—');
+    set('pEnqNew', unhandled);
+    set('pEnqDone', ea.completed != null ? ea.completed : '—');
+    set('pReviews', ra.published != null ? ra.published : 0);
+    set('pRating', ra.average != null ? ra.average.toFixed(1) : '—');
+    set('pServices', state.serviceCount != null ? state.serviceCount : (state.services.length || 0));
+    // Reviews view header
+    set('revAvg', ra.average != null ? ra.average.toFixed(1) : '—');
+    var stars = document.getElementById('revStars');
+    if (stars) stars.textContent = ra.average != null ? '★'.repeat(Math.round(ra.average)) + '☆'.repeat(5 - Math.round(ra.average)) : '';
+    set('revCount', ra.published ? (ra.published + ' verified customer review' + (ra.published === 1 ? '' : 's')) : 'No reviews yet');
+    // Dash overview rating line
+    set('dashRatingLine', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' (' + (ra.published || 0) + ' review' + ((ra.published || 0) === 1 ? '' : 's') + ')') : 'No reviews yet');
+  }
+
+  function loadServices() {
+    return api.vendorServices().then(function(r) {
+      state.services = (r.services || []).map(function(s) {
+        return { id: s.id, name: s.name, price: Math.round(s.priceMinor / 100), duration: s.durationLabel, description: s.description || '', rawStatus: s.status };
+      });
+      state.serviceCount = state.services.length;
+      renderServices();
+      renderMetrics();
+    });
+  }
+
+  function load() {
+    api.vendorDashboard().then(function(d) {
+      if (d.listing && d.listing.address) state.vendor.address = d.listing.address;
+      if (d.listing && d.listing.id && d.listing.id !== 'unclaimed') {
+        var co = (d.listing.country || 'in').toLowerCase();
+        var cs = d.listing.city_slug || (d.listing.city || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        state.listingUrl = '/' + co + '/' + cs + '/' + d.listing.id + '/';
+      }
+      applyVendor(d.vendor);
+      state.reviewAgg = d.reviews || state.reviewAgg;
+      state.enquiryAgg = d.enquiries || state.enquiryAgg;
+      state.invites = d.customerInvites || state.invites;
+      renderEnquiryFilters();
+      if (d.serviceCount != null) state.serviceCount = d.serviceCount;
+      if (d.reviews && d.reviews.recent) {
+        state.reviews = d.reviews.recent.map(function(r) {
+          return { id: r.id, name: r.reviewerName || 'Customer', rating: r.rating || 0, comment: r.text || '',
+            vendorReply: r.vendorReply || '',
+            date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' };
+        });
+      }
+      state.campaigns = d.campaigns || [];
+      renderReviews();
+      renderCampaign();
+      renderMetrics();
+    }).catch(function(err){
+      if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
+      if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
+      renderReviews();
+    });
+
+    loadServices().catch(function(err){
+      if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
+      if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
+      renderServices();
+    });
+
+    api.vendorEnquiries().then(function(r) {
+      state.enquiries = (r.enquiries || []).map(mapEnquiry);
+      var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
+      state.enquiries.forEach(function(e){ if (agg[e.status] != null) agg[e.status]++; });
+      state.enquiryAgg = agg;
+      renderDashTable();
+      renderFullEnquiries();
+      renderEnquiryFilters();
+      renderMetrics();
+    }).catch(function(){ renderDashTable(); renderFullEnquiries(); });
+
+    api.vendorCampaigns().then(function(r) {
+      state.campaigns = r.campaigns || [];
+      state.campaignCatalogue = r.catalogue || null;
+      renderCampaign();
+      renderPlans();
+    }).catch(function(){});
+
+    loadFeatured();
+
+    // Return from a campaign checkout — payment done, now awaiting admin review.
+    var params = new URLSearchParams(location.search);
+    handleEmailVerifyReturn(params);
+
+    // A featured-placement return must be polled against the featured endpoint,
+    // not the campaign one — they are separate payments.
+    // The dev bypass names it featured_txn; PhonePe appends a plain txn and we
+    // tag the return URL with featured=1 to tell the two payments apart.
+    var featuredTxn = params.get('featured_txn') || params.get('ftxn') ||
+      (params.get('featured') === '1' ? params.get('txn') : null);
+    if (featuredTxn) {
+      navigate('grow');
+      api.vendorFeaturedStatus(featuredTxn).then(function(r) {
+        if (r.payment && r.payment.status === 'SUCCESS') {
+          alert('Payment received — your listing is now featured. It shows at the top of your city and category pages.');
+        } else if (r.payment && r.payment.status === 'FAILED') {
+          alert('Payment failed or cancelled. Your listing was not featured.');
+        }
+        return loadFeatured();
+      }).catch(function(){})
+        .finally(function() {
+          if (history.replaceState) history.replaceState(null, '', location.pathname);
+        });
+    }
+
+    var txn = params.get('featured') === '1' ? null : params.get('txn');
+    if (txn) {
+      navigate('grow');
+      api.vendorCampaignStatus(txn).then(function(r) {
+        if (r.payment && r.payment.status === 'SUCCESS') {
+          alert('Payment received. Your campaign has been sent to the Pets24x7 team for review — it goes live once an admin approves it.');
+        } else if (r.payment && r.payment.status === 'FAILED') {
+          alert('Payment failed or cancelled. Please try again.');
+        }
+        return api.vendorCampaigns();
+      }).then(function(r) { if (r) { state.campaigns = r.campaigns || []; renderCampaign(); } }).catch(function(){})
+        .finally(function() {
+          // Clean the txn param so a refresh doesn't re-alert.
+          if (history.replaceState) history.replaceState(null, '', location.pathname);
+        });
+    }
+  }
+
+  // A disabled account still holds a cookie, so /api/me reports role:null with
+  // a `disabled` reason. Say why, instead of bouncing to a login that will not
+  // let them back in.
+  function showDisabled(reason) {
+    document.body.innerHTML =
+      '<div style="max-width:520px;margin:14vh auto;padding:34px;background:#fff;border:1px solid #E5E7EB;' +
+      'border-radius:16px;font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">' +
+        '<h1 style="margin:0 0 10px;font-size:22px;">' +
+          (reason === 'REJECTED' ? 'Listing claim not approved' : 'Account suspended') +
+        '</h1>' +
+        '<p style="margin:0 0 16px;color:#4B5563;">' +
+          (reason === 'REJECTED'
+            ? 'This listing claim was not approved, so the business dashboard is closed.'
+            : 'This business account has been suspended, so the dashboard is closed.') +
+          ' Email <a href="mailto:support@pets24x7.com">support@pets24x7.com</a> if you think this is a mistake.' +
+        '</p>' +
+        '<a href="/" style="color:#F97316;font-weight:600;">← Back to Pets24x7</a>' +
+      '</div>';
+  }
+
+  // Require a signed-in vendor, else bounce to login.
+  api.me('vendor').then(function(r) {
+    if (r && r.disabled) { showDisabled(r.disabled); return; }
+    if (!r || r.role !== 'vendor') { location.href = '/vendor-login/'; return; }
+    load();
+  }).catch(function() {
+    location.href = '/vendor-login/';
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Leave a review — Pets24x7.com</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--bg:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--warning:#F59E0B;--google:#4285F4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased}
+  .card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:36px 32px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .brand{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px}
+  .brand img{width:28px;height:28px;border-radius:6px}
+  .brand span{font-weight:800;font-size:18px;color:var(--primary);letter-spacing:-0.5px}
+  .brand .tld{color:var(--text)}
+  h1{font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+  .biz{font-size:14px;color:var(--text-muted);margin-bottom:24px}
+  .biz strong{color:var(--text);font-weight:700}
+  .sub{font-size:14px;color:var(--text);margin-bottom:20px;line-height:1.6}
+  .opt{display:block;width:100%;padding:18px 20px;border-radius:12px;border:2px solid var(--border);background:#fff;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:12px;transition:all 0.2s;text-decoration:none;color:var(--text)}
+  .opt:hover{border-color:var(--primary);box-shadow:0 8px 20px rgba(37,99,235,0.10);transform:translateY(-2px)}
+  .opt .lbl{font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px}
+  .opt .sub2{font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5}
+  .opt.google .lbl{color:var(--google)}
+  .opt.pets24x7 .lbl{color:var(--primary)}
+  .gicon{display:inline-flex;width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid var(--border);align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .gicon .gB{color:#4285F4}.gicon .go1{color:#EA4335}.gicon .go2{color:#FBBC04}.gicon .gg{color:#4285F4}.gicon .gl{color:#34A853}.gicon .ge{color:#EA4335}
+  .loading{text-align:center;padding:60px 20px;color:var(--text-muted)}
+  .spinner{width:36px;height:36px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;margin:0 auto 14px;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:14px 16px;font-size:14px;font-weight:600;text-align:center}
+  .err a{color:#991B1B;text-decoration:underline}
+  .done{background:#DCFCE7;color:#166534;border-radius:8px;padding:16px;font-size:14px;text-align:center;margin-bottom:14px}
+  .done strong{display:block;font-size:16px;margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <img src="/pets24x7_logo.png" alt="" />
+    <span>Pets24x7<span class="tld">.com</span></span>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading review request…</div>
+  </div>
+
+  <div id="content" hidden>
+    <div id="alreadyDone" class="done" hidden></div>
+    <h1 id="greeting">How was your visit?</h1>
+    <p class="biz" id="bizMeta"></p>
+    <p class="sub" id="prompt">Help other pet parents — leave a quick review. Pick where:</p>
+
+    <a class="opt google" id="optGoogle" href="#">
+      <div class="lbl">
+        <span class="gicon"><span class="glogo"><span class="gB">G</span></span></span>
+        Leave a Google review (recommended)
+      </div>
+      <div class="sub2">Boosts the business&rsquo;s Google rating. Takes ~30 seconds. Opens Google directly.</div>
+    </a>
+    <button class="opt pets24x7" id="optPets" type="button">
+      <div class="lbl">
+        🐾 Leave a quick review here on Pets24x7
+      </div>
+      <div class="sub2">Show up on the business&rsquo;s Pets24x7 listing after moderation. Rating + a short note.</div>
+    </button>
+  </div>
+
+  <div id="errBox" hidden class="err"></div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
+
+  // Code lives at /review/<CODE>/ in production (Apache rewrite handles it).
+  // Falls back to ?code=<CODE> for local dev (Python http.server has no rewrite).
+  function getCode() {
+    var parts = location.pathname.split('/').filter(Boolean);
+    var idx = parts.indexOf('review');
+    var fromPath = (idx >= 0 && parts[idx + 1] && parts[idx + 1] !== 'form' && parts[idx + 1] !== 'thanks')
+                   ? parts[idx + 1] : '';
+    var fromQuery = (new URLSearchParams(location.search).get('code') || '');
+    return (fromPath || fromQuery).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+  }
+
+  var code = getCode();
+  if (!code) {
+    document.getElementById('loading').hidden = true;
+    document.getElementById('errBox').hidden = false;
+    document.getElementById('errBox').innerHTML = 'Missing review link code. <a href="/">Go to home</a>';
+  } else {
+    api.reviewContext(code).then(function (r) {
+      document.getElementById('loading').hidden = true;
+      document.getElementById('content').hidden = false;
+
+      if (r.customer && r.customer.name) {
+        document.getElementById('greeting').textContent = 'Hi ' + r.customer.name + ', how was your visit?';
+      }
+      document.getElementById('bizMeta').innerHTML =
+        'Reviewing <strong>' + esc(r.vendor.businessName) + '</strong>' +
+        (r.vendor.category ? ' &middot; ' + esc(r.vendor.category) : '') +
+        (r.vendor.city ? ' &middot; ' + esc(r.vendor.city) : '');
+
+      if (r.alreadyReviewed) {
+        document.getElementById('alreadyDone').hidden = false;
+        document.getElementById('alreadyDone').innerHTML = '<strong>Thanks &mdash; you already reviewed.</strong>You can&rsquo;t submit twice from the same link.';
+        document.getElementById('optGoogle').style.display = 'none';
+        document.getElementById('optPets').style.display = 'none';
+        document.getElementById('prompt').style.display = 'none';
+        return;
+      }
+
+      // Wire Google option
+      document.getElementById('optGoogle').addEventListener('click', function (e) {
+        e.preventDefault();
+        api.reviewChoose(code, 'GOOGLE').then(function (rr) {
+          location.href = rr.nextUrl;
+        }).catch(function (err) {
+          alert(fmtErr(err));
+        });
+      });
+      // Wire Pets24x7 option
+      document.getElementById('optPets').addEventListener('click', function () {
+        api.reviewChoose(code, 'PETS24X7').then(function (rr) {
+          location.href = rr.nextUrl;
+        }).catch(function (err) {
+          alert(fmtErr(err));
+        });
+      });
+    }).catch(function (err) {
+      document.getElementById('loading').hidden = true;
+      document.getElementById('errBox').hidden = false;
+      document.getElementById('errBox').innerHTML =
+        (err && err.status === 404)
+          ? 'This review link has expired or is invalid. <a href="/">Visit Pets24x7</a>'
+          : fmtErr(err);
+    });
+  }
+</script>
+
+</body>
+</html>

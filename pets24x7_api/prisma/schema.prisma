@@ -1,0 +1,776 @@
+// Pets24x7 — Phase 1 schema.
+// Models: PetParent, Pet, Vendor, Admin, OtpCode, Enquiry, AuditLog.
+// Listing data itself stays in the static frontend (JSON files); Vendor.listingId
+// references that immutable id so we can join without duplicating 34k rows.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------
+// Pet Parents (consumers)
+// -----------------------------------------------------------
+model PetParent {
+  id      String  @id @default(cuid())
+  // Nullable: email-first signups have no phone until they add one.
+  phone   String? @unique
+  email   String? @unique
+  name    String
+  city    String?
+  country String? // "IN" | "US"
+
+  // Email/password signup (null for OTP- or Google-only accounts).
+  passwordHash    String?
+  // Google Sign-In subject id. Presence implies a Google-verified email.
+  googleId        String?   @unique
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  // Set once so the welcome mail never goes out twice.
+  welcomeEmailAt  DateTime?
+
+  // Tokens issued before this instant are rejected. Signing out everywhere, or
+  // an admin disabling the account, bumps it — a JWT alone is no longer proof.
+  sessionsRevokedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  emailTokens EmailVerificationToken[]
+
+  pets        Pet[]
+  enquiries   Enquiry[]
+  memberships Membership[]
+  payments    Payment[]
+  saved       SavedListing[]
+
+  @@map("pet_parents")
+}
+
+// Single-use email-verification links. Only the SHA-256 hash of the token is
+// stored, so a DB leak cannot be replayed as a working verification link.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  parentId  String
+  parent    PetParent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([parentId])
+  @@map("email_verification_tokens")
+}
+
+// A pet parent's bookmarked business listings (static frontend ids).
+model SavedListing {
+  id          String    @id @default(cuid())
+  parentId    String
+  parent      PetParent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  listingId   String
+  listingName String?
+  category    String?
+  city        String?
+  country     String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([parentId, listingId])
+  @@index([parentId])
+  @@map("saved_listings")
+}
+
+model Pet {
+  id         String     @id @default(cuid())
+  ownerId    String
+  owner      PetParent  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name       String
+  species    PetSpecies
+  breed      String?
+  ageYears   Int?
+  gender     String? // "Male" | "Female" | "Unspecified"
+  vaccinated Boolean    @default(false)
+  notes      String?
+  avatarUrl  String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([ownerId])
+  @@map("pets")
+}
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  REPTILE
+  SMALL_MAMMAL
+  OTHER
+}
+
+// -----------------------------------------------------------
+// Vendors (business owners who claimed a listing)
+// -----------------------------------------------------------
+model Vendor {
+  id              String       @id @default(cuid())
+  phone           String       @unique
+  businessName    String
+  email           String?
+  // Proven ownership of `email`. A vendor claims a listing by phone OTP, so the
+  // address is self-declared until they click the mailed link.
+  emailVerified   Boolean      @default(false)
+  emailVerifiedAt DateTime?
+  // The static listing id from frontend (../pets24x7_new/data/*.json -> item.id).
+  // Unique so two vendors can't claim the same listing.
+  listingId       String?      @unique
+  city            String?
+  country         String? // "IN" | "US"
+  category        String?
+  // Vendor-uploaded storefront image, stored as a small resized data: URL
+  // (client downsizes to ~600px JPEG before upload). Shown on the public listing.
+  imageUrl        String?      @db.Text
+  status          VendorStatus @default(PENDING)
+
+  // Tokens issued before this instant are rejected. Signing out everywhere, or
+  // an admin disabling the account, bumps it — a JWT alone is no longer proof.
+  sessionsRevokedAt DateTime?
+
+  // Profile completion bookkeeping
+  profileCompletion Int       @default(20) // 0-100
+  claimedAt         DateTime?
+  approvedAt        DateTime?
+  rejectedReason    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Phase 3.1 — inverse relations
+  emailTokens    VendorEmailToken[]
+  reviewRequests ReviewRequest[]
+  reviews        Review[]
+
+  // Phase 4 — vendor commerce
+  services         Service[]
+  campaigns        MarketingCampaign[]
+  featuredListings FeaturedListing[]
+
+  // Phase 5 — nearby feed
+  deals  Deal[]
+  events Event[]
+
+  @@index([status])
+  @@index([country, city])
+  @@map("vendors")
+}
+
+enum VendorStatus {
+  PENDING // OTP verified, waiting for admin review (claim flow)
+  ACTIVE // approved, full dashboard access
+  SUSPENDED // admin-disabled (TOS violation etc.)
+  REJECTED // claim denied
+}
+
+// -----------------------------------------------------------
+// Admin staff
+// -----------------------------------------------------------
+model Admin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(OPS)
+  lastLoginAt  DateTime?
+
+  // Tokens issued before this instant are rejected. Signing out everywhere, or
+  // an admin disabling the account, bumps it — a JWT alone is no longer proof.
+  sessionsRevokedAt DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@map("admins")
+}
+
+enum AdminRole {
+  OWNER // full access incl. other admins
+  OPS // approve vendors, manage campaigns
+  READ_ONLY
+}
+
+// -----------------------------------------------------------
+// OTP codes (WhatsApp Cloud API delivery)
+// -----------------------------------------------------------
+model OtpCode {
+  id         String     @id @default(cuid())
+  phone      String
+  code       String // 6-digit; stored hashed (sha256) in production-ready impl
+  purpose    OtpPurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int        @default(0)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose, consumedAt])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+enum OtpPurpose {
+  VENDOR_CLAIM
+  PARENT_SIGNUP
+  PARENT_LOGIN
+}
+
+// -----------------------------------------------------------
+// Enquiries (form submissions captured by API — also still written to
+// the Google Sheet via Apps Script for now)
+// -----------------------------------------------------------
+model Enquiry {
+  id            String        @id @default(cuid())
+  petParentId   String?
+  parent        PetParent?    @relation(fields: [petParentId], references: [id])
+  // Listing this enquiry was about (frontend static id).
+  listingId     String?
+  listingName   String?
+  category      String?
+  city          String?
+  country       String?
+  name          String
+  phone         String
+  email         String?
+  petType       String?
+  preferredDate DateTime?
+  notes         String
+  source        String? // "listing_page" | "city_page" | "marketing_modal"
+  status        EnquiryStatus @default(NEW)
+  respondedAt   DateTime?
+  handledBy     String? // vendor id or admin id that actioned it
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
+
+  @@index([phone])
+  @@index([listingId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("enquiries")
+}
+
+enum EnquiryStatus {
+  NEW
+  RESPONDED
+  COMPLETED
+  ARCHIVED
+}
+
+// -----------------------------------------------------------
+// Audit log — every privileged action
+// -----------------------------------------------------------
+model AuditLog {
+  id        String    @id @default(cuid())
+  actorType ActorType
+  actorId   String
+  action    String // "vendor.approve", "vendor.reject", "admin.login", ...
+  meta      Json?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  @@index([actorType, actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum ActorType {
+  PET_PARENT
+  VENDOR
+  ADMIN
+  SYSTEM
+}
+
+// -----------------------------------------------------------
+// Memberships + Payments (Phase 2)
+// -----------------------------------------------------------
+
+// A purchasable plan. Editable from admin panel (Phase 2.1).
+// Multiple "billing periods" per tier handled via separate rows so each
+// has its own SKU and price (Bronze monthly vs Bronze annual).
+model MembershipPlan {
+  id              String         @id @default(cuid())
+  sku             String         @unique // "bronze_monthly", "silver_annual" ...
+  tier            MembershipTier
+  billingPeriod   BillingPeriod
+  // Display
+  name            String // "Bronze · Monthly"
+  tagline         String?
+  perks           Json // string[] of bullet points
+  // Headline member benefit, shown as a badge on service cards. Kept as a
+  // column rather than parsed out of `perks` so copy edits can't change pricing.
+  discountPercent Int            @default(0)
+  // Pricing (paise / cents — integers only, no floats)
+  priceMinor      Int
+  currency        String         @default("INR") // "INR" | "USD"
+  // Lifecycle
+  durationDays    Int // 30 for monthly, 365 for annual
+  active          Boolean        @default(true)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  memberships Membership[]
+
+  @@map("membership_plans")
+}
+
+enum MembershipTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum BillingPeriod {
+  MONTHLY
+  ANNUAL
+}
+
+// A purchase of a plan by a pet parent. One ACTIVE row per parent at a time.
+model Membership {
+  id                  String           @id @default(cuid())
+  parentId            String
+  parent              PetParent        @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  planId              String
+  plan                MembershipPlan   @relation(fields: [planId], references: [id])
+  // State
+  status              MembershipStatus @default(PENDING)
+  startsAt            DateTime?
+  endsAt              DateTime?
+  cancelledAt         DateTime?
+  autoRenew           Boolean          @default(false)
+  // Money snapshot — preserved even if plan price changes later
+  pricePaidMinor      Int
+  currency            String
+  // Link to the payment that activated this membership
+  activatingPaymentId String?          @unique
+  activatingPayment   Payment?         @relation("MembershipActivatingPayment", fields: [activatingPaymentId], references: [id])
+  // History of renewal/refund payments (Phase 3+)
+  payments            Payment[]        @relation("MembershipPayments")
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([parentId, status])
+  @@index([endsAt])
+  @@map("memberships")
+}
+
+enum MembershipStatus {
+  PENDING // checkout started, payment not confirmed
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+// One row per checkout attempt.
+// merchantTxnId is OUR id sent to the gateway; gatewayTxnId is what the gateway
+// returns after success. Both unique so we can look up either way.
+model Payment {
+  id                  String             @id @default(cuid())
+  // Buyer (we only have PetParent payers in Phase 2; vendors pay via separate flow later)
+  parentId            String?
+  parent              PetParent?         @relation(fields: [parentId], references: [id])
+  // Membership this payment is for (if any)
+  membershipId        String?
+  membership          Membership?        @relation("MembershipPayments", fields: [membershipId], references: [id])
+  // Inverse for Membership.activatingPaymentId (so Prisma can resolve)
+  activatesMembership Membership?        @relation("MembershipActivatingPayment")
+  // Phase 4 — non-membership purchases (vendor pays). Exactly one of
+  // membershipId / campaignId / featuredListingId is set; `purpose` says which.
+  purpose             PaymentPurpose     @default(MEMBERSHIP)
+  campaignId          String?            @unique
+  campaign            MarketingCampaign? @relation(fields: [campaignId], references: [id])
+  featuredListingId   String?            @unique
+  featuredListing     FeaturedListing?   @relation(fields: [featuredListingId], references: [id])
+  // Money
+  amountMinor         Int
+  currency            String             @default("INR")
+  // Gateway
+  gateway             PaymentGateway     @default(PHONEPE)
+  merchantTxnId       String             @unique // we generate; sent to gateway
+  gatewayTxnId        String?            @unique // gateway-issued (transactionId in PhonePe / payment_id in Razorpay)
+  providerOrderId     String?            @unique // Razorpay order_id (lookup key for the client verify call)
+  status              PaymentStatus      @default(INITIATED)
+  // Gateway round-trip data
+  redirectUrl         String?
+  callbackPayload     Json?
+  errorMessage        String?
+  // Audit
+  ipAddress           String?
+  userAgent           String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([parentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+enum PaymentGateway {
+  PHONEPE
+  RAZORPAY
+  STRIPE
+}
+
+enum PaymentStatus {
+  INITIATED // we created the order, sent to gateway, awaiting user
+  PENDING // gateway accepted but no terminal status yet
+  SUCCESS
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentPurpose {
+  MEMBERSHIP
+  CAMPAIGN
+  FEATURED
+}
+
+// -----------------------------------------------------------
+// Vendor commerce (Phase 4) — services, marketing campaigns, featured slots
+// -----------------------------------------------------------
+
+// A service a vendor offers (shown on their dashboard + admin services view).
+model Service {
+  id            String        @id @default(cuid())
+  vendorId      String
+  vendor        Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  priceMinor    Int // paise / cents
+  currency      String        @default("INR")
+  durationLabel String        @default("30 mins")
+  status        ServiceStatus @default(ACTIVE)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([vendorId, status])
+  @@map("services")
+}
+
+enum ServiceStatus {
+  ACTIVE
+  HIDDEN
+}
+
+// A paid marketing campaign a vendor buys (PhonePe checkout, admin approves/monitors).
+model MarketingCampaign {
+  id           String         @id @default(cuid())
+  vendorId     String
+  vendor       Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  goal         CampaignGoal
+  durationDays Int
+  priceMinor   Int
+  currency     String         @default("INR")
+  status       CampaignStatus @default(PENDING_PAYMENT)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  // Payment that activated it (inverse of Payment.campaignId)
+  payment      Payment?
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([vendorId, status])
+  @@index([status])
+  @@map("marketing_campaigns")
+}
+
+enum CampaignGoal {
+  WHATSAPP_ENQUIRIES
+  WEBSITE_LEADS
+  PROFILE_VISITS
+}
+
+enum CampaignStatus {
+  PENDING_PAYMENT // checkout started, awaiting PhonePe success
+  PENDING_REVIEW // paid, awaiting admin approval
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// A paid "Featured Listing" slot — boosts a claimed listing to the top of its
+// city + category pages for a fixed window.
+model FeaturedListing {
+  id           String         @id @default(cuid())
+  vendorId     String
+  vendor       Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  listingId    String // static listing id being boosted
+  city         String?
+  citySlug     String?
+  category     String?
+  categorySlug String?
+  priceMinor   Int
+  currency     String         @default("INR")
+  durationDays Int
+  status       FeaturedStatus @default(PENDING_PAYMENT)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  payment      Payment?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status, endsAt])
+  @@index([citySlug, categorySlug, status])
+  @@map("featured_listings")
+}
+
+enum FeaturedStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// -----------------------------------------------------------
+// Reviews (Phase 3.1)
+// -----------------------------------------------------------
+
+// Vendor sends WhatsApp review-request to a past customer.
+// Short-link /r/<code> tracks open + choice + completion.
+model ReviewRequest {
+  id                String        @id @default(cuid())
+  vendorId          String
+  vendor            Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  // 10-char URL-safe code that appears in the WA link (/r/<code>)
+  code              String        @unique
+  customerName      String?
+  customerPhone     String
+  // Lifecycle
+  sentAt            DateTime      @default(now())
+  openedAt          DateTime?
+  choiceMadeAt      DateTime?
+  choice            ReviewChoice?
+  reviewSubmittedAt DateTime?
+  // Tracking
+  ipAddress         String?
+  userAgent         String?
+  // Optional link to the Pets24x7-hosted review (only if choice = PETS24X7)
+  reviewId          String?       @unique
+  review            Review?       @relation(fields: [reviewId], references: [id])
+  // WA delivery
+  waMessageId       String?
+
+  @@index([vendorId, sentAt])
+  @@index([customerPhone])
+  @@map("review_requests")
+}
+
+enum ReviewChoice {
+  GOOGLE
+  PETS24X7
+}
+
+// Pets24x7-hosted review (independent of Google).
+// Vendor's listing page can render these (after admin moderation publishes them).
+model Review {
+  id               String         @id @default(cuid())
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  // Inverse — set when ReviewRequest.reviewId points here
+  request          ReviewRequest?
+  // Content
+  reviewerName     String
+  reviewerPhone    String? // captured from ReviewRequest if known; nullable for spontaneous reviews
+  rating           Int // 1-5
+  text             String
+  // Moderation
+  status           ReviewStatus   @default(PENDING)
+  moderatedBy      String?
+  moderatedAt      DateTime?
+  moderationReason String?
+  // Vendor's public reply
+  vendorReply      String?
+  vendorReplyAt    DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@index([vendorId, status])
+  @@index([status])
+  @@map("reviews")
+}
+
+enum ReviewStatus {
+  PENDING // awaits admin moderation
+  PUBLISHED
+  REJECTED
+  HIDDEN // admin un-published (TOS violation reported later)
+}
+
+// -----------------------------------------------------------
+// Deals + Events (Phase 5) — the "nearby feed" on the site and the
+// pet-parent dashboard.
+// -----------------------------------------------------------
+
+model Deal {
+  id          String     @id @default(cuid())
+  // Optional owning vendor (admin-created deals may have none).
+  vendorId    String?
+  vendor      Vendor?    @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  title       String
+  description String
+  // "20% off", "Free nail trim", ...
+  offerLabel  String
+  category    String?
+  city        String?
+  citySlug    String?
+  country     String?
+  listingId   String?
+  code        String? // optional coupon code shown to the parent
+  startsAt    DateTime   @default(now())
+  endsAt      DateTime?
+  status      DealStatus @default(ACTIVE)
+  createdBy   String? // admin id
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status, endsAt])
+  @@index([citySlug, status])
+  @@map("deals")
+}
+
+enum DealStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  ARCHIVED
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  vendorId    String?
+  vendor      Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  title       String
+  description String
+  venue       String?
+  city        String?
+  citySlug    String?
+  country     String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  rsvpUrl     String?
+  bannerUrl   String?
+  status      EventStatus @default(PUBLISHED)
+  createdBy   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, startsAt])
+  @@index([citySlug, status])
+  @@map("events")
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  PAST
+}
+
+// -----------------------------------------------------------
+// WhatsApp message log — delivery receipts + inbound messages
+// captured from the Meta webhook.
+// -----------------------------------------------------------
+model WaMessage {
+  id          String      @id @default(cuid())
+  waMessageId String?     @unique
+  direction   WaDirection
+  fromNumber  String?
+  toNumber    String?
+  type        String? // "template" | "text" | "status" ...
+  status      String? // "sent" | "delivered" | "read" | "failed" (for outbound receipts)
+  body        String?
+  payload     Json?
+  createdAt   DateTime    @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("wa_messages")
+}
+
+enum WaDirection {
+  INBOUND
+  OUTBOUND
+  STATUS
+}
+
+// -----------------------------------------------------------
+// Generic key/value settings edited from the admin panel.
+// -----------------------------------------------------------
+model Setting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("settings")
+}
+
+// ---------------------------------------------------------------------------
+// Admin bulk import — one row per import run, so every load is auditable and
+// the admin can see what a previous run actually did.
+// ---------------------------------------------------------------------------
+model ImportJob {
+  id        String   @id @default(cuid())
+  actorId   String // admin id that ran it
+  target    String // "vendors" | "parents" | "enquiries"
+  fileName  String?
+  dryRun    Boolean  @default(false)
+  totalRows Int      @default(0)
+  created   Int      @default(0)
+  updated   Int      @default(0)
+  skipped   Int      @default(0)
+  failed    Int      @default(0)
+  mapping   Json? // { dbField: sourceColumn }
+  errors    Json? // [{ row, message }] capped
+  createdAt DateTime @default(now())
+
+  @@index([target, createdAt])
+  @@map("import_jobs")
+}
+
+// -----------------------------------------------------------
+// Email suppression list
+// -----------------------------------------------------------
+// One row per address that must not receive non-transactional mail. Keyed by
+// address (not by parent/vendor id) so enquiry-only contacts — who have no
+// account — can opt out too, and so a single opt-out covers every role that
+// address is used in.
+model EmailOptOut {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  // "unsubscribe_link" | "list_unsubscribe" | "admin" | "bounce"
+  source    String   @default("unsubscribe_link")
+  createdAt DateTime @default(now())
+
+  @@map("email_opt_outs")
+}
+
+// Vendor counterpart of EmailVerificationToken. Same rules: only the SHA-256
+// hash is stored, single use, and consuming one voids every sibling token.
+model VendorEmailToken {
+  id        String    @id @default(cuid())
+  vendorId  String
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([vendorId])
+  @@map("vendor_email_tokens")
+}

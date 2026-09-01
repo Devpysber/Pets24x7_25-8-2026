@@ -1,0 +1,214 @@
+import { Router } from 'express';
+import { setAuthCookie, clearAuthCookie } from '../auth/jwt.js';
+import { env } from '../env.js';
+import { prisma } from '../db.js';
+import { getListingById, findListingByPhone } from '../listings/index.js';
+import { logger } from '../logger.js';
+import { applyPaymentResult } from '../payments/membership.routes.js';
+import { asyncHandler } from '../shared/async-handler.js';
+
+export const devRouter = Router();
+
+// Dev-only: mark a payment COMPLETED (used by the gateway bypass in
+// src/payments/checkout.ts) and bounce the user to the right return page.
+devRouter.get(
+  '/pay/:txn/complete',
+  asyncHandler(async (req, res) => {
+    if (env.NODE_ENV !== 'development') return res.sendStatus(404);
+    const site = env.PUBLIC_SITE_URL || 'http://localhost:8000';
+    const txn = req.params.txn ?? '';
+    const payment = await prisma.payment.findUnique({ where: { merchantTxnId: txn } });
+    if (!payment) return res.redirect(`${site}/dashboard/parent/`);
+
+    await applyPaymentResult(payment.id, 'COMPLETED', { gatewayTxnId: `DEV_${Date.now()}` });
+
+    if (payment.purpose === 'MEMBERSHIP') return res.redirect(`${site}/membership/return/?txn=${encodeURIComponent(txn)}`);
+    if (payment.purpose === 'CAMPAIGN') return res.redirect(`${site}/dashboard/vendor/?view=marketing&txn=${encodeURIComponent(txn)}`);
+    return res.redirect(`${site}/dashboard/vendor/?view=marketing&featured_txn=${encodeURIComponent(txn)}`);
+  }),
+);
+
+const DEV_PARENT_ID = 'dev-parent-id';
+const DEV_VENDOR_ID = 'dev-vendor-id';
+const DEV_ADMIN_ID = 'dev-admin-id';
+const DEV_VENDOR_PHONE = '+919930090487';
+const DEV_PARENT_PHONE = '+919876543210';
+
+// Ensure the fixed dev ids map to real rows so every write path (pets,
+// services, campaigns, featured, profile edits) works after a dev login.
+async function ensureDevRows(): Promise<void> {
+  const claimed = findListingByPhone(DEV_VENDOR_PHONE)[0];
+  const listing = claimed ?? getListingById('coco-s-pet-boarding-and-homestay-63035557');
+
+  await prisma.petParent.upsert({
+    where: { id: DEV_PARENT_ID },
+    update: {},
+    create: { id: DEV_PARENT_ID, phone: DEV_PARENT_PHONE, name: 'Dev Pet Parent', email: 'alex.parent@example.com', city: 'Mumbai', country: 'IN' },
+  });
+
+  // Self-heal the dev vendor's listing binding on every dev login so a stray
+  // /verify or earlier bad state can't leave it pointing at a non-existent id.
+  const vendorListing = {
+    businessName: listing?.name ?? 'Pawsome Pet Care & Clinic',
+    listingId: listing?.id ?? null,
+    city: listing?.city ?? 'Mumbai',
+    country: (listing?.country as string) ?? 'IN',
+    category: listing?.category ?? 'Veterinary Clinic',
+  };
+  await prisma.vendor.upsert({
+    where: { id: DEV_VENDOR_ID },
+    update: { status: 'ACTIVE', ...vendorListing },
+    create: {
+      id: DEV_VENDOR_ID,
+      phone: DEV_VENDOR_PHONE,
+      email: 'contact@pawsome.example.com',
+      status: 'ACTIVE',
+      claimedAt: new Date(),
+      approvedAt: new Date(),
+      ...vendorListing,
+    },
+  });
+
+  await prisma.admin.upsert({
+    where: { id: DEV_ADMIN_ID },
+    update: {},
+    create: { id: DEV_ADMIN_ID, email: 'dev-admin@pets24x7.com', name: 'Dev Admin', passwordHash: 'x', role: 'OWNER' },
+  });
+}
+
+async function devLogin(res: import('express').Response, id: string, role: 'admin' | 'pet_parent' | 'vendor') {
+  try {
+    await ensureDevRows();
+  } catch (err) {
+    logger.warn({ err }, 'dev login: ensureDevRows failed (DB offline?)');
+  }
+  setAuthCookie(res, { sub: id, role });
+}
+
+// Dedicated Dev Login Routes
+devRouter.get('/login/admin', async (_req, res) => {
+  await devLogin(res, DEV_ADMIN_ID, 'admin');
+  res.redirect('/admin/dashboard');
+});
+
+devRouter.get('/login/parent', async (_req, res) => {
+  await devLogin(res, DEV_PARENT_ID, 'pet_parent');
+  const siteUrl = env.NODE_ENV === 'development' ? 'http://localhost:8000' : env.PUBLIC_SITE_URL;
+  res.redirect(`${siteUrl}/dashboard/parent/`);
+});
+
+devRouter.get('/login/vendor', async (_req, res) => {
+  await devLogin(res, DEV_VENDOR_ID, 'vendor');
+  const siteUrl = env.NODE_ENV === 'development' ? 'http://localhost:8000' : env.PUBLIC_SITE_URL;
+  res.redirect(`${siteUrl}/dashboard/vendor/`);
+});
+
+devRouter.get('/logout-all', (_req, res) => {
+  clearAuthCookie(res, 'admin');
+  clearAuthCookie(res, 'pet_parent');
+  clearAuthCookie(res, 'vendor');
+  res.redirect('/dev');
+});
+
+// Dev Portal UI
+devRouter.get('/', (_req, res) => {
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pets24x7 — Dev Access Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; padding: 40px 20px; line-height: 1.5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .badge { display: inline-block; background: #3B82F6; color: white; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; margin-bottom: 12px; }
+    h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    p.sub { color: #94A3B8; font-size: 16px; margin-bottom: 32px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .card h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .card p { color: #94A3B8; font-size: 14px; margin-bottom: 20px; flex-grow: 1; }
+    .btn { display: inline-block; text-align: center; background: #2563EB; color: white; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 16px; border-radius: 8px; transition: background 0.2s; }
+    .btn:hover { background: #1D4ED8; }
+    .btn-green { background: #059669; } .btn-green:hover { background: #047857; }
+    .btn-purple { background: #7C3AED; } .btn-purple:hover { background: #6D28D9; }
+    .creds { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 24px; }
+    .creds h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #F1F5F9; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th { color: #94A3B8; padding: 8px 12px; border-bottom: 1px solid #334155; }
+    td { padding: 12px; border-bottom: 1px solid #334155; }
+    code { background: #0F172A; color: #38BDF8; font-family: monospace; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">DEVELOPMENT MODE</span>
+    <h1>Pets24x7 Dev Access Portal</h1>
+    <p class="sub">One-click temporary authentication to access all dashboards during development.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div>
+          <h2>🛡️ Admin Panel</h2>
+          <p>Access the EJS admin panel to manage vendors, pet parents, enquiries, memberships, and payments.</p>
+        </div>
+        <a href="/api/dev/login/admin" class="btn btn-purple">Launch Admin Panel</a>
+      </div>
+
+      <div class="card">
+        <div>
+          <h2>🐶 Pet Parent Dashboard</h2>
+          <p>Access the logged-in Pet Parent dashboard to manage pets, view enquiries, and check active memberships.</p>
+        </div>
+        <a href="/api/dev/login/parent" class="btn">Launch Parent Dashboard</a>
+      </div>
+
+      <div class="card">
+        <div>
+          <h2>🏪 Vendor Dashboard</h2>
+          <p>Access the logged-in Vendor dashboard to view listing claims, completion checklist, and reviews.</p>
+        </div>
+        <a href="/api/dev/login/vendor" class="btn btn-green">Launch Vendor Dashboard</a>
+      </div>
+    </div>
+
+    <div class="creds">
+      <h3>🔑 Quick Reference & Temporary Credentials</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Login URL / Mechanism</th>
+            <th>Dev Credentials / Bypass</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Admin</strong></td>
+            <td><code>http://localhost:4000/admin/login</code></td>
+            <td>Email: <code>founder@pets24x7.com</code><br>Password: <code>change-me-strong-password</code> (or any pass in dev mode)</td>
+          </tr>
+          <tr>
+            <td><strong>Pet Parent</strong></td>
+            <td><code>http://localhost:8000/parent-login/</code></td>
+            <td>Phone: Any phone (e.g. <code>+91 9876543210</code>)<br>Universal Dev OTP: <code>123456</code></td>
+          </tr>
+          <tr>
+            <td><strong>Vendor</strong></td>
+            <td><code>http://localhost:8000/vendor-login/</code></td>
+            <td>Phone: <code>+91 9930090487</code> (or any claimed listing phone)<br>Universal Dev OTP: <code>123456</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 16px; font-size: 13px; color: #94A3B8;">
+        Need to clear active sessions? <a href="/api/dev/logout-all" style="color: #F43F5E; text-decoration: none;">Clear all cookies</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+  res.send(html);
+});

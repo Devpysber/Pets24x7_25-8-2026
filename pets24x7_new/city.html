@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title id="pageTitle">Pet Services in your city | Pets24x7.com</title>
+<meta name="description" id="pageDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Real Google ratings. Direct WhatsApp enquiries." />
+<link rel="icon" type="image/png" href="pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #2563EB; --primary-dark: #1D4ED8; --primary-light: #EFF6FF;
+    --bg: #FFFFFF; --bg-alt: #F9FAFB;
+    --text: #1F2937; --text-muted: #6B7280; --text-light: #9CA3AF;
+    --success: #10B981; --whatsapp: #25D366; --whatsapp-dark: #1DA851;
+    --warning: #F59E0B; --border: #E5E7EB;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.10);
+    --radius: 10px; --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg-alt); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  img { max-width: 100%; display: block; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  .container { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+  .header { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+  .header-inner { display: flex; align-items: center; gap: 20px; height: 70px; }
+  .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; line-height: 1; }
+  .brand-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+  .brand-mark { display: flex; flex-direction: column; }
+  .brand-name { font-weight: 800; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
+  .brand-name .tld { color: var(--text); }
+  .brand-tag { font-size: 9px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+  .header-search { flex: 1; max-width: 720px; background: #fff; border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow-sm); display: flex; align-items: stretch; padding: 5px; gap: 4px; transition: box-shadow 0.2s; }
+  .header-search:hover { box-shadow: var(--shadow); }
+  .hs-field { flex: 1; padding: 6px 14px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .hs-field + .hs-field { border-left: 1px solid var(--border); }
+  .hs-field label { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .hs-field input, .hs-field select { border: none; outline: none; background: transparent; font-size: 13px; font-weight: 600; color: var(--text); width: 100%; font-family: inherit; padding: 0; }
+  .hs-btn { background: var(--warning); color: #1F2937; border-radius: 999px; padding: 0 22px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+  .hs-btn:hover { background: #FBBF24; }
+  .hs-btn svg { width: 16px; height: 16px; }
+  .header-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--whatsapp); color: #fff !important; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .header-cta svg { width: 16px; height: 16px; }
+
+  .city-hero { background: linear-gradient(120deg, #1E40AF, #2563EB); color: #fff; padding: 28px 0; }
+  .breadcrumb { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+  .breadcrumb a { color: rgba(255,255,255,0.85); }
+  .city-hero h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .city-hero p { font-size: 14px; opacity: 0.85; }
+
+  .main { padding: 24px 0 64px; }
+  .layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
+  .filters { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; height: fit-content; position: sticky; top: 90px; }
+  .filters h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+  .filter-group { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .filter-group:last-child { border-bottom: none; }
+  .filter-group h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+  .filter-group label { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; color: var(--text); cursor: pointer; }
+  .filter-group input[type="checkbox"], .filter-group input[type="radio"] { accent-color: var(--primary); width: 15px; height: 15px; }
+  .filter-clear { color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .cat-count { color: var(--text-light); font-size: 11px; margin-left: auto; }
+
+  .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .results-count { font-size: 14px; color: var(--text-muted); }
+  .results-count strong { color: var(--text); font-weight: 700; }
+  .sort-by { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+  .sort-by select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+
+  .biz-list { display: flex; flex-direction: column; gap: 16px; }
+  .biz-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: grid; grid-template-columns: 280px 1fr 220px; transition: box-shadow 0.2s, transform 0.2s; }
+  .biz-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .biz-img { background: linear-gradient(135deg, #DBEAFE, #93C5FD); position: relative; aspect-ratio: 4/3; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .biz-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  .biz-img .biz-icon { font-size: 46px; opacity: 0.9; position: absolute; z-index: 0; }
+  .biz-img .badge { position: absolute; top: 10px; left: 10px; background: var(--success); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; box-shadow: var(--shadow); }
+  .biz-img .cat-chip { position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.95); color: var(--text); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; box-shadow: var(--shadow-sm); }
+  .biz-info { padding: 18px 20px; display: flex; flex-direction: column; min-width: 0; }
+  .biz-info h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }
+  .biz-info h3 a { color: var(--text); }
+  .biz-info h3 a:hover { color: var(--primary); }
+  .biz-loc { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: flex-start; gap: 4px; }
+  .biz-loc svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+  .biz-rating { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .rating-pill { background: var(--success); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+  .rating-text { font-size: 12px; color: var(--text-muted); }
+  .google-badge { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--border); padding: 3px 8px 3px 4px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text); }
+  .google-badge .gscore { background: var(--success); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 11px; }
+  .google-badge .glogo { font-weight: 800; font-size: 11px; letter-spacing: -0.3px; }
+  .google-badge .glogo .gB{color:#4285F4}.google-badge .glogo .go1{color:#EA4335}.google-badge .glogo .go2{color:#FBBC04}.google-badge .glogo .gg{color:#4285F4}.google-badge .glogo .gl{color:#34A853}.google-badge .glogo .ge{color:#EA4335}
+  .google-badge a { color: var(--primary); font-weight: 600; }
+  .google-badge a:hover { text-decoration: underline; }
+  .amenities { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 8px; }
+  .amenity { background: var(--bg-alt); color: var(--text-muted); font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
+  .biz-action { padding: 18px 20px; background: linear-gradient(180deg, #F9FAFB, #fff); border-left: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .biz-phone { color: var(--text); font-size: 14px; font-weight: 700; text-align: center; padding: 6px 0; }
+  .biz-phone a { color: var(--primary); }
+  .open-btn { background: var(--primary); color: #fff !important; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; width: 100%; text-align: center; display: inline-block; transition: background 0.2s; }
+  .open-btn:hover { background: var(--primary-dark); }
+  .wa-btn { background: var(--whatsapp); color: #fff !important; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; width: 100%; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .wa-btn:hover { background: var(--whatsapp-dark); }
+  .wa-btn svg { width: 14px; height: 14px; }
+  .map-link { color: var(--primary); font-size: 12px; font-weight: 600; text-align: center; padding: 4px 0; }
+
+  .empty { background: #fff; border-radius: var(--radius-lg); padding: 60px 20px; text-align: center; color: var(--text-muted); }
+  .empty h3 { color: var(--text); font-size: 20px; margin-bottom: 8px; }
+
+  .float-wa { position: fixed; z-index: 90; bottom: 18px; right: 18px; width: 50px; height: 50px; border-radius: 50%; background: var(--whatsapp); color: #fff; box-shadow: 0 6px 18px rgba(37,211,102,0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+  .float-wa:hover { transform: scale(1.08); }
+  .float-wa svg { width: 26px; height: 26px; }
+  .float-wa span { display: none; }
+
+  footer { background: #0F172A; color: #94A3B8; padding: 36px 0 20px; font-size: 14px; margin-top: 40px; }
+  footer .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer a { color: #94A3B8; }
+  footer a:hover { color: #fff; }
+
+  .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  .pagination button { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); font-weight: 600; font-size: 13px; cursor: pointer; }
+  .pagination button:hover:not(:disabled) { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+  .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    .filters { position: static; }
+    .header-search { display: none; }
+  }
+  @media (max-width: 768px) {
+    .header-cta span { display: none; }
+    .biz-card { grid-template-columns: 1fr; }
+    .biz-img { aspect-ratio: 16/9; }
+    .biz-action { border-left: none; border-top: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; }
+    .biz-action > * { flex: 1; min-width: 130px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="index.html" class="brand">
+      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
+      <span class="brand-mark">
+        <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+        <span class="brand-tag">Pet Services Marketplace</span>
+      </span>
+    </a>
+
+    <form class="header-search" onsubmit="event.preventDefault(); jumpSearch();">
+      <div class="hs-field">
+        <label>City</label>
+        <input list="hsCityList" id="hsCity" placeholder="Mumbai, Dallas, Bengaluru…" autocomplete="off" />
+        <datalist id="hsCityList"></datalist>
+      </div>
+      <div class="hs-field">
+        <label>Service</label>
+        <select id="hsCat">
+          <option value="">Any pet service</option>
+          <option value="veterinary-clinics">Veterinary Clinics</option>
+          <option value="pet-grooming-spa">Grooming &amp; Spa</option>
+          <option value="pet-boarding-daycare">Boarding &amp; Daycare</option>
+          <option value="pet-walking">Pet Walking</option>
+          <option value="pet-training-obedience-behavior">Training</option>
+          <option value="pet-sitting-in-home-care">In-home Sitting</option>
+          <option value="emergency-animal-hospital">Emergency Vet</option>
+          <option value="vaccination-centers">Vaccination</option>
+          <option value="mobile-vet-services">Mobile Vet</option>
+          <option value="pet-dental-care">Dental Care</option>
+          <option value="pet-taxi-transport">Pet Taxi</option>
+          <option value="pet-relocation-services">Relocation</option>
+        </select>
+      </div>
+      <button class="hs-btn" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+      </button>
+    </form>
+
+    <a href="marketing.html" style="color:var(--text);font-weight:500;font-size:14px;padding:8px 12px;border-radius:8px;flex-shrink:0;">For Businesses</a>
+    <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=header" class="header-cta" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+      <span>List Business</span>
+    </a>
+  </div>
+</header>
+
+<section class="city-hero">
+  <div class="container">
+    <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;›&nbsp; <span id="bcCountry">India</span> &nbsp;›&nbsp; <span id="bcCity">Mumbai</span></div>
+    <h1 id="hCity">Pet services in Mumbai</h1>
+    <p id="hCount">Loading listings…</p>
+  </div>
+</section>
+
+<main class="main">
+  <div class="container">
+    <div class="layout">
+      <aside class="filters">
+        <h3>Filter by</h3>
+
+        <div class="filter-group" id="catGroup">
+          <h4>Service category</h4>
+          <label><input type="radio" name="cat" value="" checked> All categories <span class="cat-count" id="catAllCount"></span></label>
+          <!-- categories injected by JS -->
+        </div>
+
+        <div class="filter-group">
+          <h4>Guest rating</h4>
+          <label><input type="radio" name="rating" value="0" checked> Any rating</label>
+          <label><input type="radio" name="rating" value="4.7"> 4.7+ Exceptional</label>
+          <label><input type="radio" name="rating" value="4.5"> 4.5+ Excellent</label>
+          <label><input type="radio" name="rating" value="4.0"> 4.0+ Very Good</label>
+          <label><input type="radio" name="rating" value="3.5"> 3.5+ Good</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Reviews</h4>
+          <label><input type="radio" name="reviews" value="0" checked> Any review count</label>
+          <label><input type="radio" name="reviews" value="50"> 50+ Google reviews</label>
+          <label><input type="radio" name="reviews" value="100"> 100+ Google reviews</label>
+          <label><input type="radio" name="reviews" value="250"> 250+ Google reviews</label>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-clear" onclick="resetFilters()">↺ Clear all filters</span>
+        </div>
+      </aside>
+
+      <section>
+        <div class="results-bar">
+          <div class="results-count"><strong id="resCount">0</strong> businesses match</div>
+          <div class="sort-by">
+            Sort by
+            <select id="sortBy">
+              <option value="rating">Highest rated</option>
+              <option value="reviews">Most reviewed</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+        </div>
+        <div class="biz-list" id="bizList"></div>
+        <div class="pagination" id="pagination"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20need%20help%20finding%20a%20pet%20service..." class="float-wa" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp" title="Chat with us on WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
+  <span>Help on WhatsApp</span>
+</a>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 Pets24x7.com — Pet Services Marketplace.</span>
+    <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="marketing.html">For Businesses</a> · <a href="https://wa.me/919930090487">WhatsApp</a> · <a href="tel:+919930090487">+91 99300 90487</a></span>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="pets-data.js"></script>
+<script src="pets-loader.js"></script>
+<script src="/pet-images.js"></script>
+<script>
+  function qs(name) { var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; }
+  function titleCase(s) { return (s||'').replace(/(^|[\s-])(\w)/g, function(_,a,b){ return a + b.toUpperCase(); }); }
+  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function esc(s) { return (s||'').toString().replace(/[<>&"]/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+
+  function seedOf(s) { return (s || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
+  function mapEmbedSrc(b) {
+    if (b && b.google_cid) return 'https://www.google.com/maps?cid=' + encodeURIComponent(b.google_cid) + '&output=embed';
+    var q = (b && (b.address || [b.name, b.city, b.state, b.pincode].filter(Boolean).join(', '))) || '';
+    return q ? 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' : null;
+  }
+
+  // Category photos live in /pet-images.js so city, listing and the page
+  // builder all draw from one verified pool.
+  function cardImg(b) { return window.PetImages.cardImg(b, 560, 420); }
+
+  // ---- State ----
+  var country = (qs('country') || 'IN').toUpperCase();
+  var citySlug = (qs('city') || 'mumbai').toLowerCase();
+  var prefilledCat = qs('cat') || '';
+
+  // Legacy query-string visitors: 301-equivalent JS redirect to the clean URL
+  // (so any existing inbound links keep working but Google sees the canonical).
+  if (location.search) {
+    var cleanPath = '/' + country.toLowerCase() + '/' + encodeURIComponent(citySlug) + '/' +
+                    (prefilledCat ? encodeURIComponent(prefilledCat) + '/' : '');
+    if (location.pathname !== cleanPath) {
+      location.replace(cleanPath);
+    }
+  }
+  var allBiz = [];
+  var cityMeta = null;
+  var PAGE_SIZE = 20;
+  var currentPage = 1;
+
+  var API_BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) ||
+    ((location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '')
+      ? '' : 'https://api.pets24x7.com');
+
+  // Move currently-featured listings to the top and tag them.
+  function applyFeatured(list) {
+    return fetch(API_BASE + '/api/featured?city=' + encodeURIComponent(citySlug), { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var ids = (d && d.listingIds) || [];
+        if (!ids.length) return list;
+        var set = {};
+        ids.forEach(function(id){ set[id] = true; });
+        list.forEach(function(b){ if (set[b.id]) b._featured = true; });
+        return list.slice().sort(function(a, b){ return (b._featured ? 1 : 0) - (a._featured ? 1 : 0); });
+      })
+      .catch(function(){ return list; });
+  }
+
+  function loadCityData() {
+    var url = 'data/' + country.toLowerCase() + '-' + encodeURIComponent(citySlug) + '.json';
+    fetch(url, { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('city not found'); return r.json(); })
+      .then(function(data){ return applyFeatured(data); })
+      .then(function(data){ allBiz = data; afterLoad(); })
+      .catch(function(){
+        document.getElementById('bizList').innerHTML = '<div class="empty"><h3>No listings yet for this city</h3><p>We don\'t have verified pet businesses in <em>' + esc(titleCase(citySlug.replace(/-/g, ' '))) + '</em> just yet — but new businesses are added every week.</p><p style="margin-top:14px;"><a href="index.html" style="color:var(--primary);font-weight:600;">← Browse all cities</a></p></div>';
+        document.getElementById('resCount').textContent = '0';
+        document.getElementById('hCount').textContent = 'No listings yet';
+      });
+  }
+
+  function afterLoad() {
+    if (!allBiz.length) return;
+    var sample = allBiz[0];
+    var realCity = sample.city || titleCase(citySlug.replace(/-/g, ' '));
+    var stateLabel = country === 'US' ? (sample.state ? ', ' + sample.state : '') : '';
+    document.getElementById('hCity').textContent = 'Pet services in ' + realCity + stateLabel;
+    document.getElementById('bcCity').textContent = realCity;
+    document.getElementById('bcCountry').innerHTML = '<a href="index.html">' + (country === 'IN' ? 'India' : 'USA') + '</a>';
+    document.title = 'Pet Services in ' + realCity + stateLabel + ' | Pets24x7.com';
+    document.getElementById('pageDesc').setAttribute('content',
+      'Browse ' + allBiz.length + '+ verified pet businesses in ' + realCity + stateLabel +
+      ' — vets, groomers, boarders, walkers and trainers with real Google ratings.');
+    document.getElementById('hCount').textContent = allBiz.length + ' verified businesses · Real Google ratings · WhatsApp them direct';
+    document.getElementById('hsCity').value = realCity;
+
+    // Category filter chips
+    var cats = {};
+    allBiz.forEach(function(b){
+      var key = b.category_slug + '||' + b.category + '||' + (b.category_icon || '📍');
+      cats[key] = (cats[key] || 0) + 1;
+    });
+    var sorted = Object.keys(cats).sort(function(a,b){ return cats[b] - cats[a]; });
+    var grp = document.getElementById('catGroup');
+    sorted.forEach(function(k){
+      var parts = k.split('||');
+      var slug = parts[0], name = parts[1], icon = parts[2];
+      var lbl = document.createElement('label');
+      var checked = (slug === prefilledCat) ? ' checked' : '';
+      lbl.innerHTML = '<input type="radio" name="cat" value="' + slug + '"' + checked + '> ' + icon + ' ' + esc(name) + ' <span class="cat-count">' + cats[k] + '</span>';
+      grp.appendChild(lbl);
+    });
+    document.getElementById('catAllCount').textContent = allBiz.length;
+
+    // If a cat prefilled but didn't match anything, fall back to "all"
+    if (prefilledCat && !document.querySelector('input[name="cat"][value="' + prefilledCat + '"]')) {
+      var all = document.querySelector('input[name="cat"][value=""]');
+      if (all) all.checked = true;
+    }
+
+    document.querySelectorAll('input[name="cat"], input[name="rating"], input[name="reviews"]').forEach(function(el){
+      el.addEventListener('change', function(){ currentPage = 1; render(); });
+    });
+    document.getElementById('sortBy').addEventListener('change', render);
+    render();
+  }
+
+  // search datalist (populated from PETS_INDEX)
+  function populateCityDatalist() {
+    var idx = window.PETS_INDEX || [];
+    document.getElementById('hsCityList').innerHTML = idx.slice(0, 200).map(function(c){
+      return '<option value="' + c.city + (c.country === 'US' ? ', US' : '') + '"></option>';
+    }).join('');
+  }
+  populateCityDatalist();
+  window.addEventListener('petsUpdated', populateCityDatalist);
+
+  function getFilters() {
+    var cat = (document.querySelector('input[name="cat"]:checked') || {}).value || '';
+    var rating = parseFloat((document.querySelector('input[name="rating"]:checked') || {}).value || 0);
+    var reviews = parseInt((document.querySelector('input[name="reviews"]:checked') || {}).value || 0, 10);
+    return { cat: cat, rating: rating, reviews: reviews };
+  }
+
+  function applyFilters(list) {
+    var f = getFilters();
+    return list.filter(function(b){
+      if (f.cat && b.category_slug !== f.cat) return false;
+      if (f.rating && b.rating < f.rating) return false;
+      if (f.reviews && b.review_count < f.reviews) return false;
+      return true;
+    });
+  }
+  function applySort(list) {
+    var sb = document.getElementById('sortBy').value;
+    var arr = list.slice();
+    arr.sort(function(a,b){
+      if (sb === 'reviews') return b.review_count - a.review_count;
+      if (sb === 'name') return a.name.localeCompare(b.name);
+      return b.rating - a.rating;
+    });
+    return arr;
+  }
+
+  function whatsappLink(b) {
+    var msg = "Hi Pets24x7! I'm interested in '" + b.name + "' (" + b.category + ", " + b.city + "). Please share availability, services & pricing.";
+    return 'https://wa.me/919930090487?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing&utm_campaign=enquiry';
+  }
+
+  function renderPagination(total) {
+    var pages = Math.ceil(total / PAGE_SIZE);
+    var pag = document.getElementById('pagination');
+    if (pages <= 1) { pag.innerHTML = ''; return; }
+    var html = '<button onclick="goPage(' + (currentPage - 1) + ')"' + (currentPage === 1 ? ' disabled' : '') + '>← Prev</button>';
+    var start = Math.max(1, currentPage - 2);
+    var end = Math.min(pages, start + 4);
+    if (start > 1) html += '<button onclick="goPage(1)">1</button>' + (start > 2 ? '<span style="color:var(--text-light);">…</span>' : '');
+    for (var i = start; i <= end; i++) {
+      html += '<button class="' + (i === currentPage ? 'active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+    }
+    if (end < pages) html += (end < pages - 1 ? '<span style="color:var(--text-light);">…</span>' : '') + '<button onclick="goPage(' + pages + ')">' + pages + '</button>';
+    html += '<button onclick="goPage(' + (currentPage + 1) + ')"' + (currentPage === pages ? ' disabled' : '') + '>Next →</button>';
+    pag.innerHTML = html;
+  }
+
+  function goPage(p) {
+    currentPage = p;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.goPage = goPage;
+
+  function render() {
+    var filtered = applySort(applyFilters(allBiz));
+    document.getElementById('resCount').textContent = filtered.length;
+    var start = (currentPage - 1) * PAGE_SIZE;
+    var page = filtered.slice(start, start + PAGE_SIZE);
+    var list = document.getElementById('bizList');
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty"><h3>No businesses match your filters</h3><p>Try clearing filters or chat with us on WhatsApp for personalised recommendations.</p></div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    list.innerHTML = page.map(function(b, i){
+      var topBadge = b._featured ? '<span class="badge" style="background:var(--warning);color:#1F2937;">★ Featured</span>' :
+                     (b.rating >= 4.8 && b.review_count >= 100) ? '<span class="badge">Top Rated</span>' : '';
+      var phoneTxt = b.phone ? '📞 <a href="tel:' + escapeAttr(b.phone.replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '';
+      return '<article class="biz-card">' +
+        '<a class="biz-img" href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">' +
+          topBadge +
+          '<span class="cat-chip">' + (b.category_icon || '📍') + ' ' + esc(b.category) + '</span>' +
+          '<span class="biz-icon" aria-hidden="true">' + (b.category_icon || '🐾') + '</span>' +
+          '<img loading="lazy" src="' + escapeAttr(cardImg(b)) + '" alt="' + escapeAttr(b.category || 'Pet service') + '" onerror="this.remove()">' +
+        '</a>' +
+        '<div class="biz-info">' +
+          '<h3><a href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">' + esc(b.name) + '</a></h3>' +
+          '<div class="biz-loc">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+            esc(b.address || (b.city + (b.state ? ', ' + b.state : ''))) +
+          '</div>' +
+          '<div class="biz-rating">' +
+            '<span class="rating-pill">★ ' + b.rating.toFixed(1) + '</span>' +
+            (b.google_cid ?
+              '<span class="google-badge"><span class="gscore">' + b.rating.toFixed(1) + '/5</span>' +
+              '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
+              '<a href="https://www.google.com/maps?cid=' + b.google_cid + '" target="_blank" rel="noopener">' + b.review_count + ' reviews</a></span>'
+              : '<span class="rating-text">Verified listing</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="biz-action">' +
+          (phoneTxt ? '<div class="biz-phone">' + phoneTxt + '</div>' : '') +
+          '<a class="open-btn" href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">View Details</a>' +
+          '<a class="wa-btn" href="' + whatsappLink(b) + '" target="_blank" rel="noopener">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>' +
+            'WhatsApp →' +
+          '</a>' +
+          (b.google_cid ? '<a class="map-link" href="https://www.google.com/maps?cid=' + b.google_cid + '" target="_blank" rel="noopener">View on Google Maps ↗</a>' : '') +
+        '</div>' +
+      '</article>';
+    }).join('');
+    renderPagination(filtered.length);
+  }
+
+  function resetFilters() {
+    var all = document.querySelector('input[name="cat"][value=""]');
+    if (all) all.checked = true;
+    document.querySelectorAll('input[name="rating"]').forEach(function(r){r.checked = r.value === '0';});
+    document.querySelectorAll('input[name="reviews"]').forEach(function(r){r.checked = r.value === '0';});
+    currentPage = 1;
+    render();
+  }
+  window.resetFilters = resetFilters;
+
+  function jumpSearch() {
+    var raw = document.getElementById('hsCity').value.trim();
+    if (!raw) return;
+    var name = raw.replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
+    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    var co = /,\s*US|USA/i.test(raw) ? 'US' : '';
+    if (!co) {
+      var match = (window.PETS_INDEX || []).find(function(c){ return c.city_slug === slug; });
+      co = match ? match.country : country;
+    }
+    var cat = document.getElementById('hsCat').value;
+    var url = '/' + co.toLowerCase() + '/' + encodeURIComponent(slug) + '/' + (cat ? encodeURIComponent(cat) + '/' : '');
+    location.href = url;
+  }
+  window.jumpSearch = jumpSearch;
+
+  loadCityData();
+</script>
+<script src="/nav-auth.js" defer></script>
+</body>
+</html>

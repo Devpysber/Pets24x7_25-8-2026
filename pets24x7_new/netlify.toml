@@ -1,0 +1,24 @@
+# Pets24x7 — Netlify build config.
+# Drop this folder into Netlify (or `netlify deploy --prod --dir=.`).
+
+[build]
+  publish = "."
+
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = true        # serves /in/mumbai/ from /in/mumbai/index.html
+
+# Use the trailingSlash semantics Netlify auto-resolves for index.html
+[[redirects]]
+  from = "/in/:city"
+  to = "/in/:city/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/us/:city"
+  to = "/us/:city/"
+  status = 301
+  force = true

@@ -1,0 +1,60 @@
+<%- include('_head', { title: 'Reviews · Pets24x7 Admin', active: 'reviews' }) %>
+
+<div class="page-head"><h2>Reviews moderation</h2></div>
+
+<div class="stat-row">
+  <div class="stat-card"><div class="lbl">Awaiting moderation</div><div class="num"><%= counts.pending %></div></div>
+  <div class="stat-card"><div class="lbl">Published</div><div class="num"><%= counts.published %></div></div>
+  <div class="stat-card"><div class="lbl">Rejected</div><div class="num"><%= counts.rejected %></div></div>
+</div>
+
+<div class="filters">
+  <% ['PENDING','PUBLISHED','REJECTED','HIDDEN'].forEach(function(s){ %>
+    <a href="/admin/reviews?status=<%= s %>" class="<%= s === status ? 'active' : '' %>"><%= s.charAt(0) + s.slice(1).toLowerCase() %></a>
+  <% }); %>
+</div>
+
+<div class="card" style="padding:0">
+  <% if (!reviews.length) { %>
+    <div class="empty">No <%= status.toLowerCase() %> reviews.</div>
+  <% } else { %>
+    <table>
+      <thead><tr><th>When</th><th>Reviewer</th><th>Rating</th><th>Vendor</th><th>Text</th><th style="text-align:right">Actions</th></tr></thead>
+      <tbody>
+        <% reviews.forEach(function(r){ %>
+          <tr>
+            <td class="muted"><%= new Date(r.createdAt).toLocaleString('en-IN') %></td>
+            <td>
+              <strong><%= r.reviewerName %></strong>
+              <% if (r.reviewerPhone) { %><br/><a href="https://wa.me/<%= r.reviewerPhone.replace(/[^0-9]/g,'') %>" target="_blank" class="muted"><%= r.reviewerPhone %></a><% } %>
+            </td>
+            <td><strong style="color:#F59E0B;font-size:16px"><%= '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) %></strong></td>
+            <td>
+              <strong><%= r.vendor.businessName %></strong><br/>
+              <span class="muted"><%= r.vendor.city || '—' %></span>
+            </td>
+            <td style="max-width:380px"><%= r.text.slice(0, 240) %><% if (r.text.length > 240) { %>…<% } %></td>
+            <td style="text-align:right">
+              <% if (r.status === 'PENDING') { %>
+                <form class="inline" action="/admin/reviews/<%= r.id %>/publish" method="post">
+                  <button class="btn btn-success btn-sm" type="submit">Publish</button>
+                </form>
+                <form class="inline" action="/admin/reviews/<%= r.id %>/reject" method="post"
+                      onsubmit="this.reason.value = prompt('Reason for rejection?')||''; if(!this.reason.value) return false;">
+                  <input type="hidden" name="reason" value="">
+                  <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+                </form>
+              <% } else if (r.status === 'PUBLISHED') { %>
+                <span class="muted">Live</span>
+              <% } else if (r.status === 'REJECTED') { %>
+                <span class="muted" style="font-size:12px"><%= r.moderationReason || 'Rejected' %></span>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'reviews' }) %>

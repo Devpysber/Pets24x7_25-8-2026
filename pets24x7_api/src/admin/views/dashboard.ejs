@@ -1,0 +1,36 @@
+<%- include('_head', { title: 'Dashboard · Pets24x7 Admin', active: 'dashboard' }) %>
+
+<div class="page-head">
+  <h2>Dashboard</h2>
+  <div class="row"><a href="/admin/vendors?status=PENDING" class="btn btn-primary">Review vendor claims →</a></div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-card"><div class="lbl">Pending vendor claims</div><div class="num"><%= stats.pendingVendors %></div></div>
+  <div class="stat-card"><div class="lbl">Active vendors</div><div class="num"><%= stats.activeVendors %></div></div>
+  <div class="stat-card"><div class="lbl">Pet parents</div><div class="num"><%= stats.parentCount %></div></div>
+</div>
+
+<div class="card">
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">Recent enquiries</h3>
+  <% if (!recentEnquiries.length) { %>
+    <div class="empty">No enquiries yet. Forms on the static site write here once <code>config.js</code> wires the Apps Script + DB sink.</div>
+  <% } else { %>
+    <table>
+      <thead><tr><th>When</th><th>Customer</th><th>Phone</th><th>Listing</th><th>Note</th></tr></thead>
+      <tbody>
+        <% recentEnquiries.forEach(function(e){ %>
+          <tr>
+            <td class="muted"><%= e.createdAt.toLocaleString('en-IN') %></td>
+            <td><strong><%= e.name %></strong><br/><span class="muted"><%= e.petType || '' %></span></td>
+            <td><a href="https://wa.me/<%= e.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= e.phone %></a></td>
+            <td><%= e.listingName || e.listingId || '—' %><br/><span class="muted"><%= e.city || '' %></span></td>
+            <td style="max-width:340px"><%= (e.notes || '').slice(0, 140) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'dashboard' }) %>

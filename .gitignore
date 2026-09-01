@@ -1,0 +1,27 @@
+# Generated SEO pages — regenerate via pets24x7_new/build_pages.py
+pets24x7_new/in/
+pets24x7_new/us/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# OS / IDE / build junk
+.DS_Store
+*.log
+*.pyc
+__pycache__/
+.cache/
+.vscode/
+.idea/
+prisma/.cache/
+
+# Packer outputs
+pets24x7-deploy.zip
+pets24x7-handoff.zip

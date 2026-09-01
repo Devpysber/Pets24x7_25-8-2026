@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Sign in — Pets24x7.com</title>
+<meta name="description" content="Sign in to Pets24x7 — pet parents, business owners and staff." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--primary-light:#EFF6FF;--bg:#fff;--bg-alt:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--danger:#DC2626;--whatsapp:#25D366;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+  a{color:var(--primary);text-decoration:none}
+  .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
+  .brand{display:inline-flex;align-items:center;gap:10px}
+  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
+  .brand-name .tld{color:var(--text)}
+  main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:20px 20px 60px}
+  .card{background:#fff;max-width:520px;width:100%;border:1px solid var(--border);border-radius:18px;padding:0;box-shadow:0 24px 60px rgba(15,23,42,0.08);overflow:hidden}
+  .card-body{padding:32px 32px 34px}
+
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-alt)}
+  .tab{flex:1;padding:16px 8px;font-weight:700;font-size:13.5px;color:var(--text-muted);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .tab .ti{font-size:18px}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--primary);border-bottom-color:var(--primary);background:#fff}
+
+  h1{font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+  p.sub{color:var(--text-muted);font-size:14px;margin-bottom:22px;line-height:1.5}
+  label{display:block;font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;background:#fff;font-weight:500;color:var(--text)}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:18px}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.25)}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+  .btn-link{background:none;border:none;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;padding:8px 0;margin-top:10px;width:auto}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .err.show{display:block}
+  .ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+  .ok.show{display:block}
+  .pane{display:none}
+  .pane.active{display:block}
+  .step{display:none}
+  .step.active{display:block}
+
+  .methods{display:flex;gap:6px;background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:18px}
+  .method{flex:1;padding:9px 8px;border:none;background:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer}
+  .method.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0 4px;color:var(--text-muted);font-size:12px;font-weight:600}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  #gBtn{margin-top:14px;display:flex;justify-content:center;min-height:44px}
+  .info-note{background:#EFF6FF;color:#1E40AF;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px}
+  .match-list{margin-top:16px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .match{padding:13px 15px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:12px}
+  .match:last-child{border-bottom:none}
+  .match:hover{background:var(--primary-light)}
+  .match input[type=radio]{margin:0;width:17px;height:17px;flex-shrink:0}
+  .match .info{flex:1;min-width:0}
+  .match .info strong{display:block;font-size:14px;font-weight:700;line-height:1.3}
+  .match .info .meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .match .rating{font-size:12px;font-weight:700;color:var(--success);background:#DCFCE7;padding:2px 8px;border-radius:999px;flex-shrink:0}
+  .nomatch{padding:16px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:13.5px;margin-top:16px;line-height:1.5}
+  .nomatch strong{display:block;margin-bottom:6px}
+  .small{font-size:13px;color:var(--text-muted);margin-top:16px;text-align:center}
+  .devbar{background:#EFF6FF;border-bottom:1px solid #BFDBFE;padding:10px 16px;font-size:12.5px;color:#1E3A8A;text-align:center}
+  .devbar a{font-weight:700}
+  .signedbar{background:#ECFDF5;border-bottom:1px solid #A7F3D0;padding:10px 16px;font-size:13px;color:#065F46;text-align:center;display:none}
+  .signedbar.show{display:block}
+  .foot{text-align:center;color:var(--text-muted);font-size:13px;padding:20px}
+  .foot a{color:var(--text-muted);margin:0 8px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="brand">
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+  </a>
+</header>
+
+<main>
+  <div class="card">
+    <div class="signedbar" id="signedBar"></div>
+    <div class="devbar" id="devBar" hidden></div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="parent"><span class="ti">🐕</span>Pet Parent</button>
+      <button class="tab" data-tab="vendor"><span class="ti">🏪</span>Business</button>
+      <button class="tab" data-tab="admin"><span class="ti">🔐</span>Staff</button>
+    </div>
+
+    <div class="card-body">
+
+      <!-- ============ PET PARENT ============ -->
+      <section class="pane active" id="pane-parent">
+        <div class="methods" id="pMethods">
+          <button class="method active" data-method="otp" type="button">WhatsApp code</button>
+          <button class="method" data-method="email" type="button">Email &amp; password</button>
+        </div>
+        <div class="step active" id="p-step1">
+          <h1>Sign in as a pet parent</h1>
+          <p class="sub">We&rsquo;ll send a one-time code to your WhatsApp — no password.</p>
+          <label for="pName">Your name</label>
+          <input id="pName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
+          <label for="pPhone">WhatsApp number</label>
+          <input id="pPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+          <div class="err" id="pErr1"></div>
+          <button class="btn btn-primary" id="pSendBtn">Send code &rarr;</button>
+        </div>
+        <!-- Email + password -->
+        <div class="step" id="p-email">
+          <h1 id="peTitle">Sign in with email</h1>
+          <p class="sub" id="peSub">Use the email and password you signed up with.</p>
+          <div id="peNameWrap" hidden>
+            <label for="peName">Your name</label>
+            <input id="peName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
+          </div>
+          <label for="peEmail">Email</label>
+          <input id="peEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+          <label for="pePass">Password</label>
+          <input id="pePass" type="password" placeholder="At least 8 characters" autocomplete="current-password" />
+          <div id="pePhoneWrap" hidden>
+            <label for="pePhone">WhatsApp number (optional)</label>
+            <input id="pePhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+          </div>
+          <div class="err" id="peErr"></div>
+          <div class="ok" id="peOk"></div>
+          <button class="btn btn-primary" id="peBtn">Sign in</button>
+          <button class="btn-link" id="peSwap">New here? Create an account</button>
+          <button class="btn-link" id="peResend" hidden>Resend verification email</button>
+          <div class="divider" id="gDivider" hidden>or</div>
+          <div id="gBtn"></div>
+        </div>
+
+        <div class="step" id="p-step2">
+          <h1>Enter the code</h1>
+          <p class="sub" id="pSentTo">We sent a 6-digit code to your WhatsApp.</p>
+          <label for="pOtp">6-digit code</label>
+          <input id="pOtp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+          <div class="err" id="pErr2"></div>
+          <div class="ok" id="pOk2">Verified. Redirecting&hellip;</div>
+          <button class="btn btn-primary" id="pVerifyBtn">Verify &amp; sign in</button>
+          <button class="btn-link" id="pBack">&larr; Wrong number? Start over</button>
+        </div>
+      </section>
+
+      <!-- ============ BUSINESS / VENDOR ============ -->
+      <section class="pane" id="pane-vendor">
+        <div class="step active" id="v-step1">
+          <h1>Claim your business listing</h1>
+          <p class="sub">Enter the WhatsApp number on your Google listing. We match it, then send a code.</p>
+          <label for="vPhone">WhatsApp number</label>
+          <input id="vPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+          <div class="err" id="vErr1"></div>
+          <button class="btn btn-primary" id="vLookupBtn">Find my listing &rarr;</button>
+          <p class="small">New business? <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20add%20my%20business." target="_blank" rel="noopener">Message us to get listed</a></p>
+        </div>
+        <div class="step" id="v-step2">
+          <h1 id="vStep2H">Pick your listing</h1>
+          <p class="sub">Choose the business you own. We&rsquo;ll send a code to confirm.</p>
+          <div id="vMatchList" class="match-list"></div>
+          <div id="vNoMatch" class="nomatch" hidden>
+            <strong>No listing matches that number.</strong>
+            We couldn&rsquo;t find your business with that WhatsApp number.
+            <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20add%20my%20business." target="_blank" rel="noopener" style="color:#92400E;font-weight:700;text-decoration:underline">Message us to add it &rarr;</a>
+          </div>
+          <div class="err" id="vErr2"></div>
+          <button class="btn btn-primary" id="vSendOtpBtn" hidden>Send code &rarr;</button>
+          <button class="btn-link" id="vBack1">&larr; Try a different number</button>
+        </div>
+        <div class="step" id="v-step3">
+          <h1>Enter the code</h1>
+          <p class="sub" id="vSentTo">We sent a 6-digit code to your WhatsApp.</p>
+          <label for="vOtp">6-digit code</label>
+          <input id="vOtp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+          <label for="vEmail">Business email</label>
+          <input id="vEmail" type="email" placeholder="you@business.com" autocomplete="email" />
+          <p class="small">Every enquiry, review and payment receipt is emailed here. Without it you only get WhatsApp alerts.</p>
+          <div class="err" id="vErr3"></div>
+          <div class="ok" id="vOk3">Claimed. Redirecting&hellip;</div>
+          <button class="btn btn-primary" id="vClaimBtn">Verify &amp; claim listing</button>
+          <button class="btn-link" id="vBack2">&larr; Wrong listing? Go back</button>
+        </div>
+      </section>
+
+      <!-- ============ STAFF / ADMIN ============ -->
+      <section class="pane" id="pane-admin">
+        <h1>Pets24x7 staff sign in</h1>
+        <p class="sub">Admin panel — vendor approvals, campaigns, payments, moderation.</p>
+        <form id="aForm">
+          <label for="aEmail">Email</label>
+          <input id="aEmail" type="email" autocomplete="username" required />
+          <label for="aPass">Password</label>
+          <input id="aPass" type="password" autocomplete="current-password" required />
+          <div class="err" id="aErr"></div>
+          <div class="ok" id="aOk">Signed in. Opening admin&hellip;</div>
+          <button class="btn btn-primary" type="submit" id="aBtn">Sign in</button>
+        </form>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  &copy; 2026 Pets24x7.com &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var API_BASE = ((window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com')).replace(/\/$/, '');
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el){ el.classList.remove('show'); }
+  function busy(btn, on, label){ if(!btn) return; btn.disabled = on; if(on){ btn.dataset._l = btn.textContent; btn.textContent = label || 'Please wait…'; } else { btn.textContent = btn.dataset._l || label || btn.textContent; } }
+  function step(paneId, stepId){
+    document.querySelectorAll('#pane-' + paneId + ' .step').forEach(function(s){ s.classList.toggle('active', s.id === stepId); });
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll('#tabs .tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var name = this.getAttribute('data-tab');
+      document.querySelectorAll('#tabs .tab').forEach(function(x){ x.classList.toggle('active', x === t); });
+      document.querySelectorAll('.pane').forEach(function(p){ p.classList.toggle('active', p.id === 'pane-' + name); });
+      try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    });
+  });
+  (function initTab(){
+    var h = (location.hash || '').replace('#', '');
+    if (['parent','vendor','admin'].indexOf(h) !== -1) {
+      var t = document.querySelector('#tabs .tab[data-tab="' + h + '"]');
+      if (t) t.click();
+    }
+  })();
+
+  // ---- Already signed in? ----
+  api.me().then(function(r){
+    if (!r || !r.role) return;
+    var map = { pet_parent: ['/dashboard/parent/', 'pet parent'], vendor: ['/dashboard/vendor/', 'business'], admin: ['/dashboard/admin/', 'staff'] };
+    var m = map[r.role];
+    if (!m) return;
+    var bar = $('signedBar');
+    bar.innerHTML = 'You&rsquo;re signed in as ' + m[1] + '. <a href="' + m[0] + '">Go to your dashboard &rarr;</a>';
+    bar.classList.add('show');
+  }).catch(function(){});
+
+  // ---- Dev banner ----
+  if (isLocal) {
+    var db = $('devBar');
+    db.hidden = false;
+    db.innerHTML = 'Dev mode — one-tap: ' +
+      '<a href="' + API_BASE + '/api/dev/login/parent">Parent</a> · ' +
+      '<a href="' + API_BASE + '/api/dev/login/vendor">Vendor</a> · ' +
+      '<a href="' + API_BASE + '/api/dev/login/admin">Admin</a>';
+  }
+
+  /* ============ PET PARENT ============ */
+  var pPhone = '';
+  $('pSendBtn').addEventListener('click', function(){
+    clearErr($('pErr1'));
+    var n = $('pName').value.trim();
+    var p = $('pPhone').value.trim();
+    if (n.length < 2) return showErr($('pErr1'), 'Please enter your name.');
+    if (p.replace(/[^0-9]/g, '').length < 10) return showErr($('pErr1'), 'Enter a valid phone number.');
+    busy(this, true, 'Sending…');
+    var self = this;
+    api.parentRequestOtp({ name: n, phone: p }).then(function(r){
+      pPhone = r.phone || p;
+      $('pSentTo').textContent = 'We sent a 6-digit code to ' + pPhone + '.';
+      if (r.devMode) {
+        // Dev: try the universal code, fall back to the manual step if it fails.
+        return api.parentVerify(pPhone, '123456').then(function(){
+          location.href = '/dashboard/parent/';
+        }).catch(function(){ step('parent', 'p-step2'); busy(self, false, 'Send code →'); });
+      }
+      step('parent', 'p-step2');
+      busy(self, false, 'Send code →');
+    }).catch(function(e){
+      showErr($('pErr1'), fmtErr(e));
+      busy(self, false, 'Send code →');
+    });
+  });
+  $('pVerifyBtn').addEventListener('click', function(){
+    clearErr($('pErr2'));
+    var code = $('pOtp').value.trim();
+    if (code.length !== 6) return showErr($('pErr2'), 'Enter the 6-digit code.');
+    busy(this, true, 'Verifying…');
+    var self = this;
+    api.parentVerify(pPhone, code).then(function(){
+      $('pOk2').classList.add('show');
+      setTimeout(function(){ location.href = '/dashboard/parent/'; }, 400);
+    }).catch(function(e){
+      showErr($('pErr2'), fmtErr(e));
+      busy(self, false, 'Verify & sign in');
+    });
+  });
+  $('pBack').addEventListener('click', function(){ step('parent', 'p-step1'); clearErr($('pErr2')); $('pOtp').value = ''; });
+
+
+  /* ---- Email + password, and Google Sign-In ----
+     Manual signup starts unverified: the account only opens once the emailed
+     link is clicked. Google users skip that — Google already proved the
+     address. The Google button appears only when the server has a client id. */
+  var peMode = 'login';   // 'login' | 'signup'
+  var peLastEmail = '';
+
+  function peRender() {
+    var signup = peMode === 'signup';
+    $('peTitle').textContent = signup ? 'Create your account' : 'Sign in with email';
+    $('peSub').textContent = signup
+      ? 'We’ll email you a link to confirm the address. It expires in 10 minutes.'
+      : 'Use the email and password you signed up with.';
+    $('peNameWrap').hidden = !signup;
+    $('pePhoneWrap').hidden = !signup;
+    $('peBtn').textContent = signup ? 'Create account' : 'Sign in';
+    $('peSwap').textContent = signup ? '← I already have an account' : 'New here? Create an account';
+    $('pePass').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
+    $('pePass').placeholder = signup ? 'At least 8 characters' : 'Your password';
+    clearErr($('peErr'));
+    $('peOk').classList.remove('show');
+    $('peResend').hidden = true;
+  }
+
+  document.querySelectorAll('#pMethods .method').forEach(function (m) {
+    m.addEventListener('click', function () {
+      var name = this.getAttribute('data-method');
+      document.querySelectorAll('#pMethods .method').forEach(function (x) { x.classList.toggle('active', x === m); });
+      step('parent', name === 'email' ? 'p-email' : 'p-step1');
+    });
+  });
+
+  $('peSwap').addEventListener('click', function () {
+    peMode = peMode === 'signup' ? 'login' : 'signup';
+    peRender();
+  });
+
+  $('peResend').addEventListener('click', function () {
+    if (!peLastEmail) return;
+    var self = this;
+    busy(self, true, 'Sending…');
+    api.parentResend(peLastEmail).then(function (r) {
+      $('peOk').textContent = 'Link sent. It expires in ' + (r.expiresInMinutes || 10) + ' minutes.';
+      $('peOk').classList.add('show');
+    }).catch(function () {
+      $('peOk').textContent = 'Link sent if that address has an account.';
+      $('peOk').classList.add('show');
+    }).then(function () { busy(self, false, 'Resend verification email'); });
+  });
+
+  $('peBtn').addEventListener('click', function () {
+    clearErr($('peErr'));
+    $('peOk').classList.remove('show');
+    var email = $('peEmail').value.trim();
+    var pass = $('pePass').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr($('peErr'), 'Enter a valid email address.');
+    if (peMode === 'signup' && $('peName').value.trim().length < 2) return showErr($('peErr'), 'Please enter your name.');
+    if (peMode === 'signup' && pass.length < 8) return showErr($('peErr'), 'Password must be at least 8 characters.');
+    if (!pass) return showErr($('peErr'), 'Enter your password.');
+
+    peLastEmail = email;
+    var self = this;
+    var label = self.textContent;
+    busy(self, true, peMode === 'signup' ? 'Creating…' : 'Signing in…');
+
+    if (peMode === 'signup') {
+      var payload = { name: $('peName').value.trim(), email: email, password: pass };
+      var ph = $('pePhone').value.trim();
+      if (ph) payload.phone = ph;
+      api.parentSignup(payload).then(function (r) {
+        $('peOk').textContent = 'Check your inbox — we sent a verification link to ' + email +
+          '. It works once and expires in ' + (r.expiresInMinutes || 10) + ' minutes.';
+        $('peOk').classList.add('show');
+        $('peResend').hidden = false;
+        busy(self, false, label);
+      }).catch(function (e) {
+        showErr($('peErr'), fmtErr(e));
+        busy(self, false, label);
+      });
+      return;
+    }
+
+    api.parentLogin(email, pass).then(function () {
+      location.href = '/dashboard/parent/';
+    }).catch(function (e) {
+      if (e && e.data && e.data.needsVerification) {
+        $('peOk').textContent = e.data.error || 'Please verify your email. We just sent a fresh link.';
+        $('peOk').classList.add('show');
+        $('peResend').hidden = false;
+      } else {
+        showErr($('peErr'), fmtErr(e));
+      }
+      busy(self, false, label);
+    });
+  });
+
+  // Verification-link outcomes land back here as ?verified=...
+  (function verifiedBanner() {
+    var m = /[?&]verified=([a-z0-9]+)/i.exec(location.search);
+    if (!m) return;
+    var msg = {
+      expired: 'That verification link has expired. Send yourself a fresh one below.',
+      used: 'That link was already used. Just sign in below.',
+      invalid: 'That verification link is not valid. Request a new one below.'
+    }[m[1]];
+    if (!msg) return;
+    document.querySelector('#pMethods .method[data-method="email"]').click();
+    showErr($('peErr'), msg);
+    $('peResend').hidden = false;
+  })();
+
+  // Google Sign-In — only rendered when the server reports a client id.
+  api.siteConfig().then(function (cfg) {
+    if (!cfg || !cfg.googleClientId) return;
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = function () {
+      if (!window.google || !google.accounts || !google.accounts.id) return;
+      google.accounts.id.initialize({
+        client_id: cfg.googleClientId,
+        callback: function (resp) {
+          api.parentGoogle(resp.credential).then(function () {
+            location.href = '/dashboard/parent/';
+          }).catch(function (e) { showErr($('peErr'), fmtErr(e)); });
+        }
+      });
+      google.accounts.id.renderButton($('gBtn'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      $('gDivider').hidden = false;
+    };
+    document.head.appendChild(s);
+  }).catch(function () {});
+
+  peRender();
+
+  /* ============ BUSINESS / VENDOR ============ */
+  var vPhone = '', vMatches = [], vDevMode = false;
+  $('vLookupBtn').addEventListener('click', function(){
+    clearErr($('vErr1'));
+    var p = $('vPhone').value.trim();
+    if (p.replace(/[^0-9]/g, '').length < 10) return showErr($('vErr1'), 'Enter a valid phone number.');
+    busy(this, true, 'Searching…');
+    var self = this;
+    api.vendorRequestOtp(p).then(function(r){
+      vPhone = r.phone || p;
+      vMatches = r.matches || [];
+      vDevMode = !!r.devMode;
+      renderMatches();
+      step('vendor', 'v-step2');
+      busy(self, false, 'Find my listing →');
+    }).catch(function(e){
+      showErr($('vErr1'), fmtErr(e));
+      busy(self, false, 'Find my listing →');
+    });
+  });
+
+  function renderMatches(){
+    var list = $('vMatchList'), no = $('vNoMatch'), sendBtn = $('vSendOtpBtn');
+    if (!vMatches.length) { list.innerHTML = ''; no.hidden = false; sendBtn.hidden = true; return; }
+    no.hidden = true; sendBtn.hidden = false;
+    list.innerHTML = vMatches.map(function(m, i){
+      return '<label class="match">' +
+        '<input type="radio" name="vlisting" value="' + esc(m.id) + '"' + (i === 0 ? ' checked' : '') + '>' +
+        '<span class="info"><strong>' + esc(m.name) + '</strong>' +
+        '<span class="meta">' + esc(m.category || '') + (m.city ? ' · ' + esc(m.city) : '') + '</span></span>' +
+        (m.rating ? '<span class="rating">★ ' + m.rating + '</span>' : '') +
+        '</label>';
+    }).join('');
+  }
+
+  function vendorVerifyAndGo(code, btn, errEl){
+    var sel = $('vMatchList').querySelector('input[name=vlisting]:checked');
+    if (!sel) { showErr(errEl, 'Pick a listing first.'); return; }
+    var picked = vMatches.find(function(m){ return m.id === sel.value; });
+    busy(btn, true, 'Signing in…');
+    api.vendorVerify({
+      phone: vPhone, code: code,
+      listingId: sel.value,
+      businessName: picked ? picked.name : undefined,
+      email: ($('vEmail').value || '').trim() || undefined
+    }).then(function(){
+      location.href = '/dashboard/vendor/';
+    }).catch(function(e){
+      showErr(errEl, fmtErr(e));
+      busy(btn, false);
+    });
+  }
+
+  $('vSendOtpBtn').addEventListener('click', function(){
+    clearErr($('vErr2'));
+    var sel = $('vMatchList').querySelector('input[name=vlisting]:checked');
+    if (!sel) return showErr($('vErr2'), 'Pick a listing first.');
+    if (vDevMode) { vendorVerifyAndGo('123456', this, $('vErr2')); return; }
+    var picked = vMatches.find(function(m){ return m.id === sel.value; });
+    $('vSentTo').textContent = 'We sent a 6-digit code to ' + vPhone + (picked ? ' for ' + picked.name : '') + '.';
+    step('vendor', 'v-step3');
+  });
+  $('vClaimBtn').addEventListener('click', function(){
+    clearErr($('vErr3'));
+    var code = $('vOtp').value.trim();
+    if (code.length !== 6) return showErr($('vErr3'), 'Enter the 6-digit code.');
+    // Leads, review alerts and receipts all go by email — a claim without one
+    // silently loses them, so ask for it here rather than chasing it later.
+    var vem = $('vEmail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(vem)) {
+      return showErr($('vErr3'), 'Enter your business email so we can send you enquiries and receipts.');
+    }
+    vendorVerifyAndGo(code, this, $('vErr3'));
+  });
+  $('vBack1').addEventListener('click', function(){ step('vendor', 'v-step1'); clearErr($('vErr2')); });
+  $('vBack2').addEventListener('click', function(){ step('vendor', 'v-step2'); clearErr($('vErr3')); $('vOtp').value = ''; });
+
+  /* ============ STAFF / ADMIN ============ */
+  $('aForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    clearErr($('aErr'));
+    var email = $('aEmail').value.trim();
+    var pass = $('aPass').value;
+    if (!email || pass.length < 8) return showErr($('aErr'), 'Enter your email and password (8+ chars).');
+    busy($('aBtn'), true, 'Signing in…');
+    api.adminLogin(email, pass).then(function(){
+      $('aOk').classList.add('show');
+      setTimeout(function(){ location.href = '/dashboard/admin/'; }, 400);
+    }).catch(function(e){
+      showErr($('aErr'), e && e.status === 401 ? 'Invalid email or password.' : fmtErr(e));
+      busy($('aBtn'), false, 'Sign in');
+    });
+  });
+</script>
+
+</body>
+</html>

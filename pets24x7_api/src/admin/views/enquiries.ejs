@@ -1,0 +1,35 @@
+<%- include('_head', { title: 'Enquiries · Pets24x7 Admin', active: 'enquiries' }) %>
+
+<div class="page-head"><h2>Enquiries</h2><span class="muted">Last <%= enquiries.length %> · most recent first</span></div>
+
+<div class="card" style="padding:0">
+  <% if (!enquiries.length) { %>
+    <div class="empty">
+      No enquiries in the DB yet.<br/><br/>
+      <span class="muted">Once you POST form submissions to <code>/api/enquiries</code> from the static site, they'll land here as well as in your Google Sheet.</span>
+    </div>
+  <% } else { %>
+    <table>
+      <thead><tr><th>When</th><th>Customer</th><th>Phone</th><th>Listing</th><th>Pet</th><th>Note</th><th>Source</th></tr></thead>
+      <tbody>
+        <% enquiries.forEach(function(e){ %>
+          <tr>
+            <td class="muted"><%= new Date(e.createdAt).toLocaleString('en-IN') %></td>
+            <td><strong><%= e.name %></strong><br/><% if (e.email) { %><span class="muted"><%= e.email %></span><% } %></td>
+            <td><a href="https://wa.me/<%= e.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= e.phone %></a></td>
+            <td>
+              <% if (e.listingName) { %><strong><%= e.listingName %></strong><br/><% } %>
+              <% if (e.category) { %><span class="muted"><%= e.category %></span><br/><% } %>
+              <% if (e.city) { %><span class="muted"><%= e.city %><%= e.country ? (', ' + e.country) : '' %></span><% } %>
+            </td>
+            <td><%= e.petType || '—' %></td>
+            <td style="max-width:340px"><%= (e.notes || '').slice(0, 200) %></td>
+            <td><span class="muted"><%= e.source || '—' %></span></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('_foot', { active: 'enquiries' }) %>
