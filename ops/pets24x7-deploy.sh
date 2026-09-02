@@ -9,6 +9,10 @@ set -euo pipefail
 
 REPO=/opt/pets24x7/app
 BRANCH=main
+# Set by a self-reinstall re-exec (see below) so the second run still sees the
+# full set of changed files rather than concluding it is already up to date.
+FROM_OVERRIDE=""
+if [ "${1:-}" = "--from" ] && [ -n "${2:-}" ]; then FROM_OVERRIDE="$2"; fi
 APP=$REPO/pets24x7_api
 SITE_SRC=$REPO/pets24x7_new
 SITE_LINK=/var/www/pets24x7          # symlink nginx serves from
@@ -17,7 +21,7 @@ RELEASES=/var/www/pets24x7-releases
 # Everything touching the checkout runs as the app user, with nvm's node on PATH.
 as_app() { su pets24x7 -c ". ~/.nvm/nvm.sh; cd $REPO && $*"; }
 
-OLD=$(as_app 'git rev-parse HEAD')
+OLD=${FROM_OVERRIDE:-$(as_app 'git rev-parse HEAD')}
 as_app "git fetch -q origin $BRANCH"
 NEW=$(as_app "git rev-parse origin/$BRANCH")
 
@@ -29,6 +33,39 @@ fi
 echo "deploying ${OLD:0:7} -> ${NEW:0:7}"
 CHANGED=$(as_app "git diff --name-only $OLD $NEW")
 as_app "git reset -q --hard origin/$BRANCH"
+
+# This script runs from /usr/local/bin, which is a COPY of the one in the repo.
+# Without this, an edit to ops/ lands on GitHub and silently never takes effect
+# — that is how the membership plan seeding below sat undeployed. Re-install
+# ourselves and re-exec, so a change to this file applies on the same deploy
+# that delivers it.
+SELF=/usr/local/bin/pets24x7-deploy.sh
+if grep -q '^ops/pets24x7-deploy.sh$' <<<"$CHANGED"; then
+  if ! cmp -s "$REPO/ops/pets24x7-deploy.sh" "$SELF"; then
+    echo "-- deploy script changed, reinstalling and re-running"
+    install -m 700 "$REPO/ops/pets24x7-deploy.sh" "$SELF"
+    # The checkout already moved to $NEW, so the re-exec would see OLD == NEW
+    # and exit early. Hand it the previous revision so it still does the work.
+    exec "$SELF" --from "$OLD"
+  fi
+fi
+
+# Units and nginx config are copies too. They need a reload rather than a
+# re-exec, and nginx is only reloaded when its own config actually parses.
+if grep -q '^ops/.*\.\(service\|timer\)$' <<<"$CHANGED"; then
+  echo "-- systemd units changed, reinstalling"
+  install -m 644 "$REPO"/ops/*.service "$REPO"/ops/*.timer /etc/systemd/system/
+  systemctl daemon-reload
+fi
+# nginx configs are deliberately NOT auto-installed. The api vhost is
+# certbot-managed: certbot rewrites its listen-443 and certificate lines on
+# every renewal, so the repo copy is always behind and installing it would
+# revert TLS config and break HTTPS. Say something instead, and let a human
+# copy the parts that actually changed.
+if grep -q '^ops/nginx-' <<<"$CHANGED"; then
+  echo "!! nginx config changed in the repo — NOT installed automatically."
+  echo "!! Review and copy by hand; see ops/README.md for the target paths."
+fi
 
 if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
   echo "-- api changed, rebuilding"

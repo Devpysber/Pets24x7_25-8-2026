@@ -1,8 +1,15 @@
 # ops
 
 Copies of what is deployed on the VPS (`148.230.66.88`), kept here so the
-server is reproducible from the repo. Editing a file here does nothing on its
-own — copy it to the box and reload the service.
+server is reproducible from the repo.
+
+`pets24x7-deploy.sh` and the systemd units now install themselves: a deploy
+that carries a change to them reinstalls the copy under `/usr/local/bin` or
+`/etc/systemd/system` and, for the deploy script, re-executes so the change
+applies on the same run that delivers it. The nginx configs do **not**
+auto-install — the api vhost is certbot-managed and installing the repo copy
+would revert the TLS lines — so a deploy only prints a warning and leaves them
+to you.
 
 | File | Deployed to |
 | --- | --- |
@@ -25,7 +32,16 @@ not a dead server. Ship them off-box before that matters.
 
 ## Auto-deploy
 
-`pets24x7-deploy.timer` polls GitHub every 2 minutes and rolls out `main`. It rebuilds the API only when `pets24x7_api/`
+Two things start a deploy, and they do the same work:
+
+- `pets24x7-deploy.timer` polls GitHub every 2 minutes. This is the backstop
+  and the source of truth — it needs no credentials and no inbound access.
+- `.github/workflows/deploy.yml` SSHes in on every push to `main` and starts
+  `pets24x7-deploy.service` immediately, trading a dedicated deploy key for
+  removing the polling delay. Optional: delete the workflow and the timer still
+  covers everything, two minutes later.
+
+The rollout itself rebuilds the API only when `pets24x7_api/`
 changed and re-renders the site only when `pets24x7_new/` changed, since a full
 render is ~36k files.
 

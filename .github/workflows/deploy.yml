@@ -1,0 +1,52 @@
+# Push-triggered deploy. Nudges the VPS to run its existing deploy unit the
+# moment main moves, instead of waiting up to two minutes for the timer.
+#
+# This is a TRIGGER, not the deploy itself: all the logic stays in
+# ops/pets24x7-deploy.sh on the server. pets24x7-deploy.timer keeps running as
+# the backstop, so a GitHub Actions outage, a rotated key or a failed run here
+# delays a deploy by a couple of minutes rather than stopping it.
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # A burst of pushes should end at the newest commit, not queue one deploy per
+  # commit. Never cancel a run mid-flight though — that could leave a half-built
+  # release on the server.
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger the deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY"         || { echo "VPS_SSH_KEY secret is not set"; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "VPS_KNOWN_HOSTS secret is not set"; exit 1; }
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY"         > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+          # StrictHostKeyChecking stays on and the host key comes from a secret:
+          # accepting whatever key answers would let anyone who can intercept
+          # the connection collect this deploy key.
+          ssh -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o ConnectTimeout=15 \
+              "$SSH_USER@$SSH_HOST" 'sudo systemctl start pets24x7-deploy.service'
+
+          echo "Deploy triggered. Watch it with:"
+          echo "  journalctl -u pets24x7-deploy.service -f"
