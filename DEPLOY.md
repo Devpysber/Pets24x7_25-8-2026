@@ -268,12 +268,73 @@ systemctl restart pets24x7-api
 
 ---
 
+## 9. Static site on the same VPS
+
+The Hostinger shared host (`92.112.197.198`) started returning 403 on `/` with
+404 on every real file — an empty docroot — and its TLS stopped answering, so
+the site moved to this box.
+
+```bash
+# from the repo root, local:
+tar -czf /tmp/site.tgz -C pets24x7_new .
+scp /tmp/site.tgz root@148.230.66.88:/tmp/site.tgz
+
+# on the server:
+mkdir -p /var/www/pets24x7
+tar -xzf /tmp/site.tgz -C /var/www/pets24x7 && rm /tmp/site.tgz
+```
+
+### Pre-render the SEO pages — do not skip
+
+The repo ships templates and `data/*.json`, **not** the ~36k rendered pages.
+`sitemap.xml` lists 36,396 URLs, so without this step every city, category and
+listing URL 404s.
+
+```bash
+cd /var/www/pets24x7 && python3 build_pages.py   # ~36,392 pages, rewrites sitemap.xml
+chown -R www-data:www-data /var/www/pets24x7
+find /var/www/pets24x7 -type d -exec chmod 755 {} +
+find /var/www/pets24x7 -type f -exec chmod 644 {} +
+```
+
+Roughly 1.1 GB and 38k files when built. Re-run it after any data refresh.
+
+### nginx
+
+`/etc/nginx/sites-available/pets24x7.com` (apex + a `www` -> apex block) ports
+the `.htaccess` rules: legacy `city.html` / `listing.html` query-string 301s,
+`/IN/` -> `/in/`, trailing-slash 301, review short-links, `/r/<CODE>` -> API 302,
+pretty 404, cache headers, and the deny rules for dotfiles / `.py` / `.md` /
+`_headers`.
+
+Two nginx gotchas worth remembering:
+
+- Regexes containing `{n,m}` must be quoted, or nginx parses the brace as a
+  block delimiter.
+- `add_header` does not inherit into a `location` that sets its own. The four
+  security headers therefore live in `/etc/nginx/snippets/pets24x7-security.conf`
+  and are `include`d by every location, not declared once at server level.
+
+### DNS + TLS
+
+Point `pets24x7.com` and `www` at `148.230.66.88`, leaving `mail`, MX, SPF,
+DKIM and DMARC on Hostinger, then:
+
+```bash
+certbot --nginx -d pets24x7.com -d www.pets24x7.com --agree-tos -m <email> --redirect
+```
+
+---
+
 ## What is NOT done / needs a decision
 
 - **Real WhatsApp Cloud API creds** — OTP login is dead without them (dev bypass
   routes are disabled when `NODE_ENV=production`).
 - **PhonePe production creds** — optional; Razorpay is the primary gateway.
-- **Where `pets24x7.com` static hosting lives** — not identified. If it should
-  also move to this VPS, that is a second nginx block serving
-  `/opt/pets24x7/app/pets24x7_new` as static root; say so and it gets added here.
+- **`app.pets24x7.com`** — still pointed at the dead Hostinger origin and has
+  no vhost here. What it served was never established.
+- **Ports 5432 (postgres) and 5000 (`/var/www/carsindias`, running as root) are
+  open to the internet** on this box. Neither belongs to Pets24x7, so both were
+  left alone. Postgres `pg_hba.conf` only permits localhost and the docker
+  subnets, so remote auth fails, but the port is still reachable.
 - **DB backups** — add a nightly `mysqldump pets24x7` cron once live.
