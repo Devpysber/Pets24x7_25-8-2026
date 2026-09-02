@@ -126,7 +126,12 @@
     var list = allPlans.filter(function(p){ return p.billingPeriod === currentPeriod; });
     list.sort(function(a,b){ return a.sortOrder - b.sortOrder; });
     var grid = document.getElementById('planGrid');
-    if (!list.length) { grid.innerHTML = '<p style="color:var(--text-muted);text-align:center">No plans available right now.</p>'; return; }
+    if (!list.length) {
+      var other = allPlans.length ? 'Try the ' + (currentPeriod === 'MONTHLY' ? 'Annual' : 'Monthly') + ' tab.'
+                                  : 'Plans are being updated — <a href="https://wa.me/919930090487">message us on WhatsApp</a> and we’ll set you up.';
+      grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;grid-column:1/-1">No plans available right now. ' + other + '</p>';
+      return;
+    }
 
     var activePlanId = activeMembership && activeMembership.plan ? activeMembership.plan.id : null;
 
@@ -167,6 +172,7 @@
 
     // Wire buy buttons
     Array.prototype.forEach.call(grid.querySelectorAll('button[data-id]:not([disabled])'), function (btn) {
+      btn.dataset.label = btn.textContent;
       btn.addEventListener('click', function () { buy(btn.getAttribute('data-id'), btn); });
     });
   }
@@ -185,7 +191,10 @@
     var err = document.getElementById('err');
     err.textContent = msg;
     err.classList.add('show');
-    btn.disabled = false; btn.textContent = 'Subscribe →';
+    btn.disabled = false;
+    // Restore the button's own label — hard-coding 'Subscribe' relabelled an
+    // upgrade/downgrade button after any failed attempt.
+    btn.textContent = btn.dataset.label || 'Subscribe →';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -226,7 +235,7 @@
                 location.href = '/membership/return/?txn=' + encodeURIComponent(r.merchantTxnId);
               }).catch(function (e) { failBuy(btn, 'Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + r.merchantTxnId); });
             },
-            modal: { ondismiss: function () { btn.disabled = false; btn.textContent = 'Subscribe →'; } }
+            modal: { ondismiss: function () { btn.disabled = false; btn.textContent = btn.dataset.label || 'Subscribe →'; } }
           });
           rzp.on('payment.failed', function (e) { failBuy(btn, (e.error && e.error.description) || 'Payment failed'); });
           rzp.open();

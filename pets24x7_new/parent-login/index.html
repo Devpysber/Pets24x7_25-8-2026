@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
 <title>Pet Parent Sign in — Pets24x7.com</title>
-<meta name="description" content="Sign in to your Pets24x7 pet parent dashboard with a WhatsApp code." />
+<meta name="description" content="Sign in to your Pets24x7 pet parent dashboard with an emailed code." />
 <meta name="robots" content="noindex" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -55,36 +55,31 @@
 
 <main>
   <div class="card">
-    <!-- Dev Mode Banner -->
-    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;">
-      <div style="font-weight:700;color:#1E40AF;margin-bottom:4px;display:flex;align-items:center;gap:6px">⚡ Development Mode Active</div>
-      <div style="color:#1E3A8A;margin-bottom:8px;line-height:1.4">OTP system is paused for local dev. Use any phone number or click below:</div>
-      <a href="/api/dev/login/parent" style="display:inline-block;background:#2563EB;color:#fff;font-weight:700;padding:8px 14px;border-radius:6px;font-size:12px;text-decoration:none">Instant Pet Parent Sign In &rarr;</a>
-    </div>
-
-    <!-- Step 1: phone + name -->
+    <!-- Step 1: email -->
     <section id="step1">
       <div class="step-hint">Step 1 of 2</div>
       <h1>Sign in as a pet parent</h1>
-      <p class="sub">Enter your details to sign in. (Development Mode: OTP system paused)</p>
+      <p class="sub">Enter your email and we&rsquo;ll send you a 6-digit sign-in code. No password needed.</p>
 
-      <label for="pName">Your name</label>
-      <input id="pName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
-
-      <label for="pPhone">WhatsApp number</label>
-      <input id="pPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+      <label for="pEmail">Email address</label>
+      <input id="pEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email" />
 
       <div class="err" id="err1"></div>
-      <button class="btn btn-primary" id="sendBtn">Sign in as Pet Parent &rarr;</button>
+      <button class="btn btn-primary" id="sendBtn">Email me a code &rarr;</button>
 
       <p class="small">Business owner? <a href="/vendor-login/">Vendor sign in</a></p>
     </section>
 
-    <!-- Step 2: OTP -->
+    <!-- Step 2: code (+ name when the address is new) -->
     <section id="step2" hidden>
       <div class="step-hint">Step 2 of 2</div>
       <h1>Enter the code</h1>
-      <p class="sub" id="sentTo">We sent a 6-digit code to your WhatsApp.</p>
+      <p class="sub" id="sentTo">We sent a 6-digit code to your email.</p>
+
+      <div id="nameWrap" hidden>
+        <label for="pName">Your name</label>
+        <input id="pName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
+      </div>
 
       <label for="otp">6-digit code</label>
       <input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
@@ -92,7 +87,8 @@
       <div class="err" id="err2"></div>
       <div class="ok"  id="ok2">Verified. Redirecting&hellip;</div>
       <button class="btn btn-primary" id="verifyBtn">Verify &amp; sign in</button>
-      <button class="btn-link" id="backBtn">&larr; Wrong number? Start over</button>
+      <button class="btn-link" id="resendBtn">Resend code</button>
+      <button class="btn-link" id="backBtn">&larr; Wrong email? Start over</button>
     </section>
   </div>
 </main>
@@ -105,43 +101,58 @@
   var err1 = document.getElementById('err1');
   var err2 = document.getElementById('err2');
   var ok2  = document.getElementById('ok2');
-  var phone = '', name = '';
+  var email = '', isNew = false;
 
   function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
   function clearErr(el) { el.classList.remove('show'); }
 
+  function requestCode(btn, label) {
+    btn.disabled = true; btn.textContent = 'Sending…';
+    return api.parentEmailOtpRequest(email).then(function (r) {
+      isNew = !!r.isNewAccount;
+      document.getElementById('nameWrap').hidden = !isNew;
+      document.getElementById('sentTo').textContent =
+        'We sent a 6-digit code to ' + email + '. It expires in ' + (r.expiresInMinutes || 10) + ' minutes.';
+      // Dev only: the API echoes the code back when SMTP is not configured.
+      if (r.devCode) document.getElementById('otp').value = r.devCode;
+      s1.hidden = true; s2.hidden = false;
+      document.getElementById('otp').focus();
+      btn.disabled = false; btn.textContent = label;
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = label;
+      throw e;
+    });
+  }
+
   document.getElementById('sendBtn').addEventListener('click', function () {
     clearErr(err1);
-    var n = document.getElementById('pName').value.trim();
-    var p = document.getElementById('pPhone').value.trim();
-    if (n.length < 2) return showErr(err1, 'Please enter your name.');
-    if (p.replace(/[^0-9]/g, '').length < 10) return showErr(err1, 'Enter a valid phone number.');
+    var v = document.getElementById('pEmail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return showErr(err1, 'Enter a valid email address.');
+    email = v.toLowerCase();
+    requestCode(this, 'Email me a code →').catch(function (e) { showErr(err1, fmtErr(e)); });
+  });
 
-    this.disabled = true; this.textContent = 'Signing in...';
-    var self = this;
-    api.parentRequestOtp({ name: n, phone: p }).then(function (r) {
-      phone = r.phone || p;
-      name = n;
-      // Auto-verify with dev bypass code to skip manual OTP input
-      return api.parentVerify(phone, '123456');
-    }).then(function () {
-      location.href = '/dashboard/parent/';
-    }).catch(function (e) {
-      showErr(err1, fmtErr(e));
-      self.disabled = false; self.textContent = 'Sign in as Pet Parent →';
-    });
+  document.getElementById('resendBtn').addEventListener('click', function () {
+    clearErr(err2);
+    requestCode(this, 'Resend code').catch(function (e) { showErr(err2, fmtErr(e)); });
   });
 
   document.getElementById('verifyBtn').addEventListener('click', function () {
     clearErr(err2);
     var code = document.getElementById('otp').value.trim();
-    if (code.length !== 6) return showErr(err2, 'Enter the 6-digit code.');
+    if (!/^[0-9]{6}$/.test(code)) return showErr(err2, 'Enter the 6-digit code.');
+    var payload = { email: email, code: code };
+    if (isNew) {
+      var n = document.getElementById('pName').value.trim();
+      if (n.length < 2) return showErr(err2, 'Please enter your name.');
+      payload.name = n;
+    }
 
-    this.disabled = true; this.textContent = 'Verifying...';
+    this.disabled = true; this.textContent = 'Verifying…';
     var self = this;
-    api.parentVerify(phone, code).then(function () {
+    api.parentEmailOtpVerify(payload).then(function () {
       ok2.classList.add('show');
-      setTimeout(function () { location.href = '/dashboard/parent/'; }, 500);
+      setTimeout(function () { location.href = '/dashboard/parent/'; }, 400);
     }).catch(function (e) {
       showErr(err2, fmtErr(e));
       self.disabled = false; self.textContent = 'Verify & sign in';
@@ -153,6 +164,14 @@
     document.getElementById('otp').value = '';
     document.getElementById('verifyBtn').disabled = false;
     document.getElementById('verifyBtn').textContent = 'Verify & sign in';
+  });
+
+  // Enter submits whichever step is showing.
+  document.getElementById('pEmail').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('sendBtn').click();
+  });
+  document.getElementById('otp').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('verifyBtn').click();
   });
 
   // Auto-redirect if already signed in

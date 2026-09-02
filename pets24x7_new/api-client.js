@@ -66,6 +66,14 @@
     parentResend:     function (email)                   { return req('POST', '/api/parent/email/resend', { email: email }); },
     parentGoogle:     function (credential)              { return req('POST', '/api/parent/google',       { credential: credential }); },
 
+    // Email OTP sign-in (primary login path for all three roles)
+    parentEmailOtpRequest: function (email)              { return req('POST', '/api/parent/email/otp/request', { email: email }); },
+    parentEmailOtpVerify:  function (p)                  { return req('POST', '/api/parent/email/otp/verify',  p); },
+    vendorEmailOtpRequest: function (email)              { return req('POST', '/api/vendor/email/otp/request', { email: email }); },
+    vendorEmailOtpVerify:  function (email, code)        { return req('POST', '/api/vendor/email/otp/verify',  { email: email, code: code }); },
+    adminEmailOtpRequest:  function (email)              { return req('POST', '/api/admin/email/otp/request',  { email: email }); },
+    adminEmailOtpVerify:   function (email, code)        { return req('POST', '/api/admin/email/otp/verify',   { email: email, code: code }); },
+
     vendorRequestOtp: function (phone)                   { return req('POST', '/api/vendor/request-otp', { phone: phone }); },
     vendorVerify:     function (p)                       { return req('POST', '/api/vendor/verify',      p); },
 

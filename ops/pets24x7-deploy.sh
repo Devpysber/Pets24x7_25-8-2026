@@ -37,6 +37,10 @@ if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
   as_app "cd pets24x7_api && npm ci --silent"
   as_app "cd pets24x7_api && npx prisma generate"
   as_app "cd pets24x7_api && npx prisma db push --skip-generate"
+  # Membership plans are reference data, not user data: without this the
+  # /membership/ page renders an empty grid on a fresh or re-pushed DB. The
+  # seed upserts by sku, so re-running it on every deploy is a no-op.
+  as_app "cd pets24x7_api && npm run seed:plans"
   as_app "cd pets24x7_api && npm run build"
   systemctl restart pets24x7-api
   sleep 3

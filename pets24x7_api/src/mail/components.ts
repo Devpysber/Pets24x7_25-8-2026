@@ -111,6 +111,13 @@ export function InfoBox(rows: Array<[string, string]>): string {
   </td></tr>`;
 }
 
+/** Big monospaced one-time code, the focal point of a sign-in email. */
+export function CodeBlock(code: string): string {
+  return `<tr><td class="pad" align="center" style="padding:26px 44px 0">
+    <div style="display:inline-block;background:#fafaf9;border:1px solid #f1f2f4;border-radius:12px;padding:18px 34px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:${INK}">${esc(code)}</div>
+  </td></tr>`;
+}
+
 export function Button(label: string, url: string): string {
   return `<tr><td class="pad" align="left" style="padding:24px 44px 0">
     <table border="0" cellspacing="0" cellpadding="0"><tr>

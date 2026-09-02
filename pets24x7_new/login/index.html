@@ -102,10 +102,38 @@
       <!-- ============ PET PARENT ============ -->
       <section class="pane active" id="pane-parent">
         <div class="methods" id="pMethods">
-          <button class="method active" data-method="otp" type="button">WhatsApp code</button>
-          <button class="method" data-method="email" type="button">Email &amp; password</button>
+          <button class="method active" data-method="emailotp" type="button">Email code</button>
+          <button class="method" data-method="otp" type="button">WhatsApp code</button>
+          <button class="method" data-method="email" type="button">Password</button>
         </div>
-        <div class="step active" id="p-step1">
+
+        <!-- Email OTP: the default sign-in path. Passwordless, and a first-time
+             address is signed up on verify. -->
+        <div class="step active" id="p-emailotp">
+          <h1>Sign in as a pet parent</h1>
+          <p class="sub">Enter your email and we&rsquo;ll send a 6-digit code. No password needed.</p>
+          <label for="poEmail">Email</label>
+          <input id="poEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email" />
+          <div class="err" id="poErr1"></div>
+          <button class="btn btn-primary" id="poSendBtn">Email me a code &rarr;</button>
+        </div>
+        <div class="step" id="p-emailotp2">
+          <h1>Enter the code</h1>
+          <p class="sub" id="poSentTo">We sent a 6-digit code to your email.</p>
+          <div id="poNameWrap" hidden>
+            <label for="poName">Your name</label>
+            <input id="poName" type="text" placeholder="e.g. Priya Sharma" autocomplete="name" />
+          </div>
+          <label for="poOtp">6-digit code</label>
+          <input id="poOtp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+          <div class="err" id="poErr2"></div>
+          <div class="ok" id="poOk2">Verified. Redirecting&hellip;</div>
+          <button class="btn btn-primary" id="poVerifyBtn">Verify &amp; sign in</button>
+          <button class="btn-link" id="poResend">Resend code</button>
+          <button class="btn-link" id="poBack">&larr; Wrong email? Start over</button>
+        </div>
+
+        <div class="step" id="p-step1">
           <h1>Sign in as a pet parent</h1>
           <p class="sub">We&rsquo;ll send a one-time code to your WhatsApp — no password.</p>
           <label for="pName">Your name</label>
@@ -154,7 +182,34 @@
 
       <!-- ============ BUSINESS / VENDOR ============ -->
       <section class="pane" id="pane-vendor">
-        <div class="step active" id="v-step1">
+        <div class="methods" id="vMethods">
+          <button class="method active" data-method="emailotp" type="button">Email code</button>
+          <button class="method" data-method="claim" type="button">Claim by phone</button>
+        </div>
+
+        <!-- Email OTP: sign-in only. Claiming a listing still goes through the
+             phone match below, because that is what proves ownership. -->
+        <div class="step active" id="v-email">
+          <h1>Sign in to your dashboard</h1>
+          <p class="sub">Enter the email on your vendor account and we&rsquo;ll send a 6-digit code.</p>
+          <label for="voEmail">Business email</label>
+          <input id="voEmail" type="email" placeholder="you@business.com" autocomplete="email" inputmode="email" />
+          <div class="err" id="voErr1"></div>
+          <button class="btn btn-primary" id="voSendBtn">Email me a code &rarr;</button>
+        </div>
+        <div class="step" id="v-email2">
+          <h1>Enter the code</h1>
+          <p class="sub" id="voSentTo">We sent a 6-digit code to your email.</p>
+          <label for="voOtp">6-digit code</label>
+          <input id="voOtp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+          <div class="err" id="voErr2"></div>
+          <div class="ok" id="voOk2">Verified. Redirecting&hellip;</div>
+          <button class="btn btn-primary" id="voVerifyBtn">Verify &amp; sign in</button>
+          <button class="btn-link" id="voResend">Resend code</button>
+          <button class="btn-link" id="voBack">&larr; Wrong email? Start over</button>
+        </div>
+
+        <div class="step" id="v-step1">
           <h1>Claim your business listing</h1>
           <p class="sub">Enter the WhatsApp number on your Google listing. We match it, then send a code.</p>
           <label for="vPhone">WhatsApp number</label>
@@ -193,6 +248,32 @@
 
       <!-- ============ STAFF / ADMIN ============ -->
       <section class="pane" id="pane-admin">
+        <div class="methods" id="aMethods">
+          <button class="method active" data-method="emailotp" type="button">Email code</button>
+          <button class="method" data-method="password" type="button">Password</button>
+        </div>
+
+        <div class="step active" id="a-emailotp">
+          <h1>Pets24x7 staff sign in</h1>
+          <p class="sub">Enter your staff email and we&rsquo;ll send a 6-digit code.</p>
+          <label for="aoEmail">Email</label>
+          <input id="aoEmail" type="email" placeholder="you@pets24x7.com" autocomplete="username" inputmode="email" />
+          <div class="err" id="aoErr1"></div>
+          <button class="btn btn-primary" id="aoSendBtn">Email me a code &rarr;</button>
+        </div>
+        <div class="step" id="a-emailotp2">
+          <h1>Enter the code</h1>
+          <p class="sub" id="aoSentTo">If that address belongs to a staff account, a code is on its way.</p>
+          <label for="aoOtp">6-digit code</label>
+          <input id="aoOtp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+          <div class="err" id="aoErr2"></div>
+          <div class="ok" id="aoOk2">Signed in. Opening admin&hellip;</div>
+          <button class="btn btn-primary" id="aoVerifyBtn">Verify &amp; sign in</button>
+          <button class="btn-link" id="aoResend">Resend code</button>
+          <button class="btn-link" id="aoBack">&larr; Wrong email? Start over</button>
+        </div>
+
+        <div class="step" id="a-password">
         <h1>Pets24x7 staff sign in</h1>
         <p class="sub">Admin panel — vendor approvals, campaigns, payments, moderation.</p>
         <form id="aForm">
@@ -204,6 +285,7 @@
           <div class="ok" id="aOk">Signed in. Opening admin&hellip;</div>
           <button class="btn btn-primary" type="submit" id="aBtn">Sign in</button>
         </form>
+        </div>
       </section>
 
     </div>
@@ -335,12 +417,139 @@
     $('peResend').hidden = true;
   }
 
+  var P_METHOD_STEP = { emailotp: 'p-emailotp', otp: 'p-step1', email: 'p-email' };
   document.querySelectorAll('#pMethods .method').forEach(function (m) {
     m.addEventListener('click', function () {
       var name = this.getAttribute('data-method');
       document.querySelectorAll('#pMethods .method').forEach(function (x) { x.classList.toggle('active', x === m); });
-      step('parent', name === 'email' ? 'p-email' : 'p-step1');
+      step('parent', P_METHOD_STEP[name] || 'p-emailotp');
     });
+  });
+
+  var V_METHOD_STEP = { emailotp: 'v-email', claim: 'v-step1' };
+  document.querySelectorAll('#vMethods .method').forEach(function (m) {
+    m.addEventListener('click', function () {
+      var name = this.getAttribute('data-method');
+      document.querySelectorAll('#vMethods .method').forEach(function (x) { x.classList.toggle('active', x === m); });
+      step('vendor', V_METHOD_STEP[name] || 'v-email');
+    });
+  });
+
+  var A_METHOD_STEP = { emailotp: 'a-emailotp', password: 'a-password' };
+  document.querySelectorAll('#aMethods .method').forEach(function (m) {
+    m.addEventListener('click', function () {
+      var name = this.getAttribute('data-method');
+      document.querySelectorAll('#aMethods .method').forEach(function (x) { x.classList.toggle('active', x === m); });
+      step('admin', A_METHOD_STEP[name] || 'a-emailotp');
+    });
+  });
+
+  /* ============ EMAIL OTP — shared driver for all three roles ============
+     Every role runs the same two-step shape (request a code, verify it), so
+     one factory wires all three rather than three near-identical copies. */
+  function wireEmailOtp(cfg) {
+    var state = { email: '', isNew: false };
+
+    function request(btn, label) {
+      clearErr($(cfg.err1)); clearErr($(cfg.err2));
+      busy(btn, true, 'Sending…');
+      return cfg.request(state.email).then(function (r) {
+        busy(btn, false, label);
+        if (r && r.hint === 'no_account') throw new Error(cfg.noAccountMessage);
+        state.isNew = !!(r && r.isNewAccount);
+        if (cfg.nameWrap) $(cfg.nameWrap).hidden = !state.isNew;
+        $(cfg.sentTo).textContent = cfg.sentText(state.email, (r && r.expiresInMinutes) || 10);
+        // Dev only: the API echoes the code back when SMTP is not configured.
+        if (r && r.devCode) $(cfg.otp).value = r.devCode;
+        step(cfg.pane, cfg.step2);
+        $(cfg.otp).focus();
+      }).catch(function (e) {
+        busy(btn, false, label);
+        throw e;
+      });
+    }
+
+    $(cfg.sendBtn).addEventListener('click', function () {
+      var v = $(cfg.emailInput).value.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return showErr($(cfg.err1), 'Enter a valid email address.');
+      state.email = v.toLowerCase();
+      request(this, 'Email me a code →').catch(function (e) { showErr($(cfg.err1), fmtErr(e)); });
+    });
+
+    $(cfg.resendBtn).addEventListener('click', function () {
+      request(this, 'Resend code').catch(function (e) { showErr($(cfg.err2), fmtErr(e)); });
+    });
+
+    $(cfg.verifyBtn).addEventListener('click', function () {
+      clearErr($(cfg.err2));
+      var code = $(cfg.otp).value.trim();
+      if (!/^[0-9]{6}$/.test(code)) return showErr($(cfg.err2), 'Enter the 6-digit code.');
+      var extra = {};
+      if (cfg.nameWrap && state.isNew) {
+        var n = $(cfg.nameInput).value.trim();
+        if (n.length < 2) return showErr($(cfg.err2), 'Please enter your name.');
+        extra.name = n;
+      }
+      var self = this;
+      busy(self, true, 'Verifying…');
+      cfg.verify(state.email, code, extra).then(function () {
+        $(cfg.ok2).classList.add('show');
+        setTimeout(function () { location.href = cfg.dashboard; }, 400);
+      }).catch(function (e) {
+        showErr($(cfg.err2), fmtErr(e));
+        busy(self, false, 'Verify & sign in');
+      });
+    });
+
+    $(cfg.backBtn).addEventListener('click', function () {
+      step(cfg.pane, cfg.step1);
+      clearErr($(cfg.err1)); clearErr($(cfg.err2));
+      $(cfg.otp).value = '';
+      busy($(cfg.verifyBtn), false, 'Verify & sign in');
+    });
+
+    $(cfg.emailInput).addEventListener('keydown', function (e) { if (e.key === 'Enter') $(cfg.sendBtn).click(); });
+    $(cfg.otp).addEventListener('keydown', function (e) { if (e.key === 'Enter') $(cfg.verifyBtn).click(); });
+  }
+
+  wireEmailOtp({
+    pane: 'parent', step1: 'p-emailotp', step2: 'p-emailotp2', dashboard: '/dashboard/parent/',
+    emailInput: 'poEmail', otp: 'poOtp', sentTo: 'poSentTo', ok2: 'poOk2',
+    err1: 'poErr1', err2: 'poErr2',
+    sendBtn: 'poSendBtn', verifyBtn: 'poVerifyBtn', resendBtn: 'poResend', backBtn: 'poBack',
+    nameWrap: 'poNameWrap', nameInput: 'poName',
+    sentText: function (email, mins) { return 'We sent a 6-digit code to ' + email + '. It expires in ' + mins + ' minutes.'; },
+    request: function (email) { return api.parentEmailOtpRequest(email); },
+    verify: function (email, code, extra) {
+      var payload = { email: email, code: code };
+      if (extra.name) payload.name = extra.name;
+      return api.parentEmailOtpVerify(payload);
+    }
+  });
+
+  wireEmailOtp({
+    pane: 'vendor', step1: 'v-email', step2: 'v-email2', dashboard: '/dashboard/vendor/',
+    emailInput: 'voEmail', otp: 'voOtp', sentTo: 'voSentTo', ok2: 'voOk2',
+    err1: 'voErr1', err2: 'voErr2',
+    sendBtn: 'voSendBtn', verifyBtn: 'voVerifyBtn', resendBtn: 'voResend', backBtn: 'voBack',
+    noAccountMessage: 'No vendor account uses that email yet. Claim your listing by phone first.',
+    sentText: function (email, mins) { return 'We sent a 6-digit code to ' + email + '. It expires in ' + mins + ' minutes.'; },
+    request: function (email) { return api.vendorEmailOtpRequest(email); },
+    verify: function (email, code) { return api.vendorEmailOtpVerify(email, code); }
+  });
+
+  wireEmailOtp({
+    pane: 'admin', step1: 'a-emailotp', step2: 'a-emailotp2', dashboard: '/dashboard/admin/',
+    emailInput: 'aoEmail', otp: 'aoOtp', sentTo: 'aoSentTo', ok2: 'aoOk2',
+    err1: 'aoErr1', err2: 'aoErr2',
+    sendBtn: 'aoSendBtn', verifyBtn: 'aoVerifyBtn', resendBtn: 'aoResend', backBtn: 'aoBack',
+    // Deliberately non-committal: the API returns the same 200 whether or not
+    // the address belongs to a staff account, so the copy must not imply one.
+    sentText: function (email, mins) {
+      return 'If ' + email + ' belongs to a staff account, a 6-digit code is on its way. It expires in ' + mins + ' minutes.';
+    },
+    request: function (email) { return api.adminEmailOtpRequest(email); },
+    verify: function (email, code) { return api.adminEmailOtpVerify(email, code); }
   });
 
   $('peSwap').addEventListener('click', function () {
@@ -417,7 +626,8 @@
       invalid: 'That verification link is not valid. Request a new one below.'
     }[m[1]];
     if (!msg) return;
-    document.querySelector('#pMethods .method[data-method="email"]').click();
+    var emailMethod = document.querySelector('#pMethods .method[data-method="email"]');
+    if (emailMethod) emailMethod.click();
     showErr($('peErr'), msg);
     $('peResend').hidden = false;
   })();

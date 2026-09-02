@@ -25,6 +25,8 @@ import {
   consumeVendorVerificationToken,
   sendVendorVerificationEmail,
 } from './vendor-email-verification.js';
+import { EMAIL_OTP_TTL_MIN, issueEmailOtp, normEmail, verifyEmailOtp } from './email-otp.js';
+import { loginAlertEmail } from '../mail/action-templates.js';
 
 export const vendorAuthRouter = Router();
 
@@ -33,6 +35,110 @@ const otpLimiter = rateLimit({
   max: process.env.NODE_ENV === 'development' ? 10_000 : 4,
   standardHeaders: true,
 });
+
+// ---------------------------------------------------------------------------
+// Email OTP sign-in for an ALREADY-CLAIMED vendor.
+//   POST /api/vendor/email/otp/request { email }
+//   POST /api/vendor/email/otp/verify  { email, code }
+//
+// This is a sign-in path only, never a claim path: a listing is still claimed
+// by phone OTP (below), because that is what proves the caller owns the
+// business. An address with no vendor row gets `hint: 'no_account'` and no
+// mail — matching how /request-otp already reports an unmatched phone.
+// ---------------------------------------------------------------------------
+
+const emailOtpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: env.NODE_ENV === 'development' ? 10_000 : 5,
+  standardHeaders: true,
+});
+
+vendorAuthRouter.post(
+  '/email/otp/request',
+  emailOtpLimiter,
+  asyncHandler(async (req, res) => {
+    const { email: rawEmail } = z.object({ email: z.string().email() }).parse(req.body);
+    const email = normEmail(rawEmail);
+
+    // Vendor.email is not unique (two staff may share an address on different
+    // listings), so match the newest claimed row.
+    const vendor = await prisma.vendor.findFirst({
+      where: { email },
+      orderBy: { claimedAt: 'desc' },
+    });
+    if (!vendor) {
+      return res.json({ ok: true, email, hint: 'no_account' });
+    }
+
+    const issued = await issueEmailOtp(email, 'EMAIL_LOGIN_VENDOR', {
+      name: vendor.businessName,
+      ip: req.ip,
+      ua: req.headers['user-agent'] as string | undefined,
+    });
+
+    res.json({
+      ok: true,
+      email,
+      expiresInMinutes: EMAIL_OTP_TTL_MIN,
+      ...(issued.devCode ? { devCode: issued.devCode } : {}),
+    });
+  }),
+);
+
+vendorAuthRouter.post(
+  '/email/otp/verify',
+  emailOtpLimiter,
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({ email: z.string().email(), code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code') })
+      .parse(req.body);
+    const email = normEmail(body.email);
+
+    const ok = await verifyEmailOtp(email, body.code, 'EMAIL_LOGIN_VENDOR');
+    if (!ok) throw new UnauthorizedError('Incorrect code');
+
+    const vendor = await prisma.vendor.findFirst({ where: { email }, orderBy: { claimedAt: 'desc' } });
+    if (!vendor) throw new UnauthorizedError('No vendor account for this email');
+    // A suspended or rejected vendor must not get a session back.
+    if (vendor.status === 'SUSPENDED' || vendor.status === 'REJECTED') {
+      throw new UnauthorizedError('This vendor account is not active. Contact support.');
+    }
+
+    // The code proved the address, so a claim-time self-declared email is now
+    // verified — no separate link click needed.
+    const updated = await prisma.vendor.update({
+      where: { id: vendor.id },
+      data: {
+        emailVerified: true,
+        emailVerifiedAt: vendor.emailVerifiedAt ?? new Date(),
+      },
+    });
+    await prisma.vendorEmailToken
+      .updateMany({ where: { vendorId: vendor.id, usedAt: null }, data: { usedAt: new Date() } })
+      .catch(() => {});
+
+    setAuthCookie(res, { sub: updated.id, role: 'vendor' });
+    notifyIf(updated.email, (to) =>
+      loginAlertEmail(
+        to,
+        updated.businessName,
+        new Date(),
+        req.ip ?? null,
+        (req.headers['user-agent'] as string | undefined) ?? null,
+      ),
+    );
+    res.json({
+      ok: true,
+      vendor: {
+        id: updated.id,
+        status: updated.status,
+        businessName: updated.businessName,
+        listingId: updated.listingId,
+        emailVerified: updated.emailVerified,
+      },
+    });
+  }),
+);
 
 // ----- Step 1: phone match + OTP -----
 const RequestOtpBody = z.object({

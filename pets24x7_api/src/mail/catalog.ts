@@ -105,6 +105,15 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     build: (to, d) => verifyEmail(to, d.name, d.link, Number(d.ttlMinutes ?? 10)),
   },
   {
+    id: 'generic/login_code',
+    kind: 'transactional',
+    category: 'Generic',
+    label: 'Sign-in code (OTP)',
+    description: 'The 6-digit email code used to sign in as a parent, vendor or admin.',
+    sample: { name: PARENT, code: '482913', ttlMinutes: 10 },
+    build: (to, d) => T.loginCodeEmail(to, d.name ?? null, String(d.code ?? '000000'), Number(d.ttlMinutes ?? 10)),
+  },
+  {
     id: 'parent/login_alert',
     kind: 'transactional',
     category: 'Pet parent',

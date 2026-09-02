@@ -204,7 +204,10 @@ enum AdminRole {
 // -----------------------------------------------------------
 model OtpCode {
   id         String     @id @default(cuid())
-  phone      String
+  // Exactly one of phone / email is set: phone for WhatsApp OTP, email for the
+  // email-OTP login flow. Both nullable so one table serves both channels.
+  phone      String?
+  email      String?
   code       String // 6-digit; stored hashed (sha256) in production-ready impl
   purpose    OtpPurpose
   expiresAt  DateTime
@@ -215,6 +218,7 @@ model OtpCode {
   createdAt  DateTime   @default(now())
 
   @@index([phone, purpose, consumedAt])
+  @@index([email, purpose, consumedAt])
   @@index([expiresAt])
   @@map("otp_codes")
 }
@@ -223,6 +227,9 @@ enum OtpPurpose {
   VENDOR_CLAIM
   PARENT_SIGNUP
   PARENT_LOGIN
+  EMAIL_LOGIN_PARENT
+  EMAIL_LOGIN_VENDOR
+  EMAIL_LOGIN_ADMIN
 }
 
 // -----------------------------------------------------------

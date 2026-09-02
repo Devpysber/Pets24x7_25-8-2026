@@ -29,6 +29,7 @@ import {
 } from './email-verification.js';
 import { notifyIf } from '../mail/notify.js';
 import { loginAlertEmail } from '../mail/action-templates.js';
+import { EMAIL_OTP_TTL_MIN, issueEmailOtp, verifyEmailOtp } from './email-otp.js';
 
 export const parentEmailAuthRouter = Router();
 
@@ -42,6 +43,113 @@ const normEmail = (e: string) => e.trim().toLowerCase();
 function publicParent(p: { id: string; name: string; email: string | null; phone: string | null; emailVerified: boolean }) {
   return { id: p.id, name: p.name, email: p.email, phone: p.phone, emailVerified: p.emailVerified };
 }
+
+// ---------------------------------------------------------------------------
+// Email OTP sign-in (primary path)
+//   POST /api/parent/email/otp/request { email }        → mails a 6-digit code
+//   POST /api/parent/email/otp/verify  { email, code }  → cookie + parent row
+//
+// Passwordless: a first-time address is signed up on successful verification.
+// The code itself proves the address, so the account lands verified and skips
+// the mailed-link step entirely.
+// ---------------------------------------------------------------------------
+
+parentEmailAuthRouter.post(
+  '/email/otp/request',
+  limiter(5),
+  asyncHandler(async (req, res) => {
+    const { email: raw } = z.object({ email: z.string().email() }).parse(req.body);
+    const email = normEmail(raw);
+
+    const parent = await prisma.petParent.findUnique({ where: { email } });
+    const issued = await issueEmailOtp(email, 'EMAIL_LOGIN_PARENT', {
+      name: parent?.name ?? null,
+      ip: req.ip,
+      ua: req.headers['user-agent'] as string | undefined,
+    });
+
+    res.json({
+      ok: true,
+      email,
+      // A new address is signed up on verify; the UI uses this to ask for a name.
+      isNewAccount: !parent,
+      expiresInMinutes: EMAIL_OTP_TTL_MIN,
+      ...(issued.devCode ? { devCode: issued.devCode } : {}),
+    });
+  }),
+);
+
+const OtpVerifyBody = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'),
+  name: z.string().min(2).max(80).optional(),
+  phone: z.string().min(6).optional(),
+  city: z.string().max(80).optional(),
+  country: z.enum(['IN', 'US']).optional(),
+});
+
+parentEmailAuthRouter.post(
+  '/email/otp/verify',
+  limiter(10),
+  asyncHandler(async (req, res) => {
+    const body = OtpVerifyBody.parse(req.body);
+    const email = normEmail(body.email);
+
+    const ok = await verifyEmailOtp(email, body.code, 'EMAIL_LOGIN_PARENT');
+    if (!ok) throw new UnauthorizedError('Incorrect code');
+
+    const now = new Date();
+    const existing = await prisma.petParent.findUnique({ where: { email } });
+    const phone = body.phone ? normalizePhone(body.phone, body.country ?? 'IN') : null;
+
+    const parent = existing
+      ? await prisma.petParent.update({
+          where: { id: existing.id },
+          data: {
+            // The code proved the address — settle verification either way.
+            emailVerified: true,
+            emailVerifiedAt: existing.emailVerifiedAt ?? now,
+            ...(body.name && { name: body.name }),
+            ...(phone && { phone }),
+            ...(body.city && { city: body.city }),
+            ...(body.country && { country: body.country }),
+          },
+        })
+      : await prisma.petParent.create({
+          data: {
+            email,
+            name: body.name?.trim() || email.split('@')[0] || 'Pet Parent',
+            phone,
+            city: body.city ?? null,
+            country: body.country ?? null,
+            emailVerified: true,
+            emailVerifiedAt: now,
+          },
+        });
+
+    // Any pending verification link is moot now that the address is proven.
+    await prisma.emailVerificationToken.updateMany({
+      where: { parentId: parent.id, usedAt: null },
+      data: { usedAt: now },
+    });
+
+    const firstTime = await sendWelcomeEmailOnce(parent);
+    setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
+    // Welcome mail already covers a first sign-in; don't send both at once.
+    if (!firstTime) {
+      notifyIf(parent.email, (to) =>
+        loginAlertEmail(
+          to,
+          parent.name ?? 'there',
+          new Date(),
+          req.ip ?? null,
+          (req.headers['user-agent'] as string | undefined) ?? null,
+        ),
+      );
+    }
+    res.json({ ok: true, isNewAccount: !existing, parent: publicParent(parent) });
+  }),
+);
 
 // ----- Manual signup -----
 const SignupBody = z.object({

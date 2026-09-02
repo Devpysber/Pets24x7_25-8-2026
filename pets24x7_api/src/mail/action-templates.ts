@@ -6,7 +6,7 @@
 
 import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
-import { Button, InfoBox, Note, Quote, Text, day, dayTime, esc, h, money, page } from './components.js';
+import { Button, CodeBlock, InfoBox, Note, Quote, Text, day, dayTime, esc, h, money, page } from './components.js';
 import { campaignGoalLabel } from '../payments/pricing.js';
 
 const PARENT_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/parent/`;
@@ -16,6 +16,37 @@ const MEMBERSHIP = () => `${env.PUBLIC_SITE_URL}/membership/`;
 // ===========================================================================
 // Pet parent — account
 // ===========================================================================
+
+/**
+ * The one-time code for email-OTP sign-in. Used by pet parents, vendors and
+ * admins alike — the code is the credential, so the copy never names an
+ * account or says whether one exists.
+ */
+export function loginCodeEmail(to: string, name: string | null, code: string, ttlMinutes: number): MailInput {
+  const greeting = name ? `Hi ${name}` : 'Your sign-in code';
+  return {
+    to,
+    subject: `${code} is your Pets24x7 sign-in code`,
+    html: page({
+      eyebrow: 'Sign in',
+      heading: greeting,
+      intro: `Enter this code to finish signing in. It expires in ${ttlMinutes} minutes.`,
+      blocks: [
+        CodeBlock(code),
+        Note(`This code expires in ${ttlMinutes} minutes and can only be used once.`),
+        Note("Didn't try to sign in? Ignore this email — nobody can get in without the code."),
+      ],
+      preheader: `${code} — your Pets24x7 sign-in code.`,
+    }),
+    text: `${greeting},
+
+Your Pets24x7 sign-in code is ${code}.
+It expires in ${ttlMinutes} minutes and can only be used once.
+
+If you didn't try to sign in, ignore this email.
+`,
+  };
+}
 
 export function loginAlertEmail(
   to: string,
