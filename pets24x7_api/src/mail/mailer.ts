@@ -41,6 +41,12 @@ export interface MailInput {
    * opted-out addresses and carries unsubscribe headers.
    */
   kind?: MailKind;
+  /**
+   * The message carries a live credential in its subject or body — a one-time
+   * sign-in code. Keeps it out of the logs: a code hashed in the database is
+   * not secret if journalctl prints it in the clear for its whole lifetime.
+   */
+  sensitive?: boolean;
 }
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -82,13 +88,21 @@ export async function sendMail(input: MailInput): Promise<boolean> {
     }
   }
 
+  // A developer running without SMTP still needs the verification link, so the
+  // body is logged — except when it carries a credential. The OTP flow already
+  // surfaces its code separately in development.
+  const safeSubject = input.sensitive ? '[redacted — contains a sign-in code]' : input.subject;
+
   const tx = transporter();
   if (!tx) {
-    logger.warn({ to: input.to, subject: input.subject, text: input.text }, '[mail] SMTP not configured — message not sent');
+    logger.warn(
+      { to: input.to, subject: safeSubject, ...(input.sensitive ? {} : { text: input.text }) },
+      '[mail] SMTP not configured — message not sent',
+    );
     return false;
   }
   try {
-    const { kind: _kind, ...message } = input;
+    const { kind: _kind, sensitive: _sensitive, ...message } = input;
     if (kind === 'marketing') {
       const url = unsubscribeUrl(input.to);
       message.html = withUnsubscribeFooter(message.html, url);
@@ -105,10 +119,10 @@ Don't want these emails? Unsubscribe: ${url}
           }
         : undefined;
     const info = await tx.sendMail({ from: env.MAIL_FROM, ...message, ...(headers ? { headers } : {}) });
-    logger.info({ to: input.to, subject: input.subject, messageId: info.messageId }, '[mail] sent');
+    logger.info({ to: input.to, subject: safeSubject, messageId: info.messageId }, '[mail] sent');
     return true;
   } catch (err) {
-    logger.error({ err, to: input.to, subject: input.subject }, '[mail] send failed');
+    logger.error({ err, to: input.to, subject: safeSubject }, '[mail] send failed');
     return false;
   }
 }

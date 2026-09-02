@@ -26,6 +26,8 @@ export function loginCodeEmail(to: string, name: string | null, code: string, tt
   const greeting = name ? `Hi ${name}` : 'Your sign-in code';
   return {
     to,
+    // The subject carries the code itself, so this must never be logged verbatim.
+    sensitive: true,
     subject: `${code} is your Pets24x7 sign-in code`,
     html: page({
       eyebrow: 'Sign in',
