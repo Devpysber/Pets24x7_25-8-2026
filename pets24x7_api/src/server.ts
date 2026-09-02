@@ -185,8 +185,8 @@ async function ensureSeedAdmin(): Promise<void> {
   await initListingsIndex();   // load static-frontend listings into memory for phone lookups
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
   startExpiryJob();            // periodic membership/campaign/featured/deal/event lifecycle sweep
-  app.listen(env.PORT, () => {
-    logger.info(`pets24x7-api ready on http://localhost:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
+  app.listen(env.PORT, env.HOST, () => {
+    logger.info(`pets24x7-api ready on http://${env.HOST}:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
   });
 })().catch((err) => {
   logger.fatal({ err }, 'boot failure');

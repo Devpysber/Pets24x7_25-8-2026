@@ -4,6 +4,9 @@ import { z } from 'zod';
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
+  // Bind address. Defaults to loopback so the API is only reachable through the
+  // reverse proxy; set to 0.0.0.0 only when nothing fronts it.
+  HOST: z.string().default('127.0.0.1'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   PUBLIC_SITE_URL: z.string().url(),
