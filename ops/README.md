@@ -25,12 +25,11 @@ not a dead server. Ship them off-box before that matters.
 
 ## Auto-deploy
 
-`pets24x7-deploy.timer` polls GitHub every 2 minutes and rolls out the
-`deploy/vps-migration` branch. It rebuilds the API only when `pets24x7_api/`
+`pets24x7-deploy.timer` polls GitHub every 2 minutes and rolls out `main`. It rebuilds the API only when `pets24x7_api/`
 changed and re-renders the site only when `pets24x7_new/` changed, since a full
 render is ~36k files.
 
-`/opt/pets24x7/app` is a clone of the branch. `.env`, `node_modules` and `dist`
+`/opt/pets24x7/app` is a clone of the deploy branch. `.env`, `node_modules` and `dist`
 are gitignored, so a checkout never touches them. `schema.prisma` is rewritten
 to the MySQL provider on every API build, because the repo targets Postgres for
 local development.
@@ -54,6 +53,7 @@ mv -Tf /var/www/pets24x7.tmp /var/www/pets24x7
 Watch a deploy with `journalctl -u pets24x7-deploy.service -f`, or force one
 with `systemctl start pets24x7-deploy.service`.
 
-To deploy from `main` instead, change `BRANCH` at the top of the script.
+To deploy from a different branch, change `BRANCH` at the top of the script and
+run `git remote set-branches origin <branch>` in `/opt/pets24x7/app`.
 
 Full deploy steps are in `../DEPLOY.md`.

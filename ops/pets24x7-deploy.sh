@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO=/opt/pets24x7/app
-BRANCH=deploy/vps-migration
+BRANCH=main
 APP=$REPO/pets24x7_api
 SITE_SRC=$REPO/pets24x7_new
 SITE_LINK=/var/www/pets24x7          # symlink nginx serves from
