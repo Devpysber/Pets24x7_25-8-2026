@@ -68,6 +68,26 @@ export async function fetchPaymentStatus(paymentId: string): Promise<{ status: s
   return { status: data.status, order_id: data.order_id };
 }
 
+/**
+ * Every payment attempt made against an order. Needed to reconcile a checkout
+ * the payer abandoned mid-flight: we hold the order id, but never saw the
+ * payment id the client-side verify call would have handed us.
+ */
+export async function fetchOrderPayments(
+  orderId: string,
+): Promise<Array<{ id: string; status: string; amount: number }>> {
+  if (!isRazorpayConfigured()) return [];
+  const res = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}/payments`, {
+    headers: { Authorization: authHeader() },
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok || !Array.isArray(data.items)) {
+    logger.warn({ status: res.status, orderId }, 'razorpay.fetchOrderPayments failed');
+    return [];
+  }
+  return data.items as Array<{ id: string; status: string; amount: number }>;
+}
+
 function safeEqualHex(a: string, b: string): boolean {
   const ba = Buffer.from(a, 'utf8');
   const bb = Buffer.from(b, 'utf8');

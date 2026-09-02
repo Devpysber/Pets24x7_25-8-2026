@@ -12,9 +12,9 @@ import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../shared/errors.js';
-import { checkStatus, newMerchantTxnId } from '../payments/phonepe.js';
+import { newMerchantTxnId } from '../payments/phonepe.js';
 import { startCheckout } from '../payments/checkout.js';
-import { applyPaymentResult } from '../payments/membership.routes.js';
+import { applyPaymentResult, reconcilePayment } from '../payments/membership.routes.js';
 import { CAMPAIGN_OPTIONS, CAMPAIGN_GOALS, campaignOptionFor } from '../payments/pricing.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
@@ -158,17 +158,7 @@ vendorCampaignsRouter.get(
     if (!payment || !payment.campaign || payment.campaign.vendorId !== req.auth!.sub) {
       throw new NotFoundError('Payment not found');
     }
-    if (payment.status === 'INITIATED' || payment.status === 'PENDING') {
-      try {
-        const live = await checkStatus(txn);
-        await applyPaymentResult(payment.id, live.data?.state, {
-          gatewayTxnId: live.data?.transactionId,
-          callbackPayload: live as unknown as object,
-        });
-      } catch {
-        // fall through with current DB row
-      }
-    }
+    await reconcilePayment(payment);
     const fresh = await prisma.payment.findUnique({
       where: { id: payment.id },
       include: { campaign: true },

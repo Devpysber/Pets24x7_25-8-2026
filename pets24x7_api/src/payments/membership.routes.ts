@@ -13,6 +13,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError, ConflictError } from '../shared/errors.js';
 import { checkStatus, newMerchantTxnId } from './phonepe.js';
+import { fetchOrderPayments } from './razorpay.js';
 import { startCheckout } from './checkout.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
@@ -218,18 +219,8 @@ membershipRouter.get(
     });
     if (!payment || payment.parentId !== req.auth!.sub) throw new NotFoundError('Payment not found');
 
-    // If still pending in DB, ask PhonePe.
-    if (payment.status === 'INITIATED' || payment.status === 'PENDING') {
-      try {
-        const live = await checkStatus(txn);
-        await applyPaymentResult(payment.id, live.data?.state, {
-          gatewayTxnId: live.data?.transactionId,
-          callbackPayload: live as unknown as object,
-        });
-      } catch (err: any) {
-        // swallow — we'll still return the current DB row
-      }
-    }
+    // If still pending in DB, ask whichever gateway actually holds the order.
+    await reconcilePayment(payment);
     const fresh = await prisma.payment.findUnique({
       where: { id: payment.id },
       include: { membership: { include: { plan: true } } },
@@ -237,6 +228,57 @@ membershipRouter.get(
     res.json({ ok: true, payment: fresh });
   }),
 );
+
+// ---- Shared: re-ask the gateway about a payment we never saw settle ----
+// The client-side verify call is the happy path; this is the backstop for a
+// payer who closed the tab mid-checkout. It must ask the gateway that actually
+// holds the order — polling PhonePe about a Razorpay order silently reports
+// nothing, leaving the payment INITIATED and the membership never activated.
+//
+// Idempotent and best-effort: any gateway error leaves the DB row untouched.
+export async function reconcilePayment(payment: {
+  id: string;
+  status: string;
+  gateway: string;
+  merchantTxnId: string;
+  providerOrderId: string | null;
+}): Promise<void> {
+  if (payment.status !== 'INITIATED' && payment.status !== 'PENDING') return;
+
+  try {
+    if (payment.gateway === 'RAZORPAY') {
+      if (!payment.providerOrderId) return;
+      const attempts = await fetchOrderPayments(payment.providerOrderId);
+      // 'captured' is the only state that means the money is actually ours.
+      const captured = attempts.find((a) => a.status === 'captured');
+      if (captured) {
+        await applyPaymentResult(payment.id, 'COMPLETED', {
+          gatewayTxnId: captured.id,
+          callbackPayload: { source: 'reconcile', attempts } as object,
+        });
+        return;
+      }
+      // Every attempt failed and none is still in flight — record the failure so
+      // the payer is told, rather than leaving the row pending forever.
+      const inFlight = attempts.some((a) => a.status === 'created' || a.status === 'authorized');
+      if (attempts.length > 0 && !inFlight) {
+        await applyPaymentResult(payment.id, 'FAILED', {
+          callbackPayload: { source: 'reconcile', attempts } as object,
+        });
+      }
+      return;
+    }
+
+    const live = await checkStatus(payment.merchantTxnId);
+    await applyPaymentResult(payment.id, live.data?.state, {
+      gatewayTxnId: live.data?.transactionId,
+      callbackPayload: live as unknown as object,
+    });
+  } catch (err) {
+    // Best-effort: the caller still returns the current DB row.
+    logger.warn({ err, paymentId: payment.id, gateway: payment.gateway }, 'payment reconcile failed');
+  }
+}
 
 // ---- Shared: apply terminal state to Payment + whatever it funds ----
 // Handles all three purposes: MEMBERSHIP, CAMPAIGN, FEATURED. Idempotent —

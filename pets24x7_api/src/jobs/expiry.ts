@@ -7,6 +7,7 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
+import { reconcilePayment } from '../payments/membership.routes.js';
 import { notifyIf } from '../mail/notify.js';
 import {
   campaignCompletedEmail,
@@ -71,11 +72,27 @@ export async function runExpirySweep(): Promise<{
     notifyIf(f.vendor?.email, (to) => featuredEndedEmail(to, f.vendor.businessName));
   }
 
-  // Abandoned checkouts: a PENDING membership whose payment never landed would
-  // otherwise sit there forever and block nothing but confuse every report.
-  // Campaigns and Featured slots stall the same way: the vendor opens checkout,
-  // never pays, and the PENDING_PAYMENT row sits forever — showing up in the
-  // vendor's history and blocking nothing but confusing every report.
+  // Ask the gateway about every stale checkout BEFORE writing any of them off.
+  // A payer who completed payment but closed the tab before the client-side
+  // verify call landed leaves the row INITIATED. Failing that row unseen would
+  // take their money and cancel the membership it paid for, with nothing in the
+  // DB to show they ever paid — so reconcile first, and only write off what the
+  // gateway also says never settled.
+  const stale = await prisma.payment.findMany({
+    where: { status: 'INITIATED', createdAt: { lt: staleBefore } },
+    select: { id: true, status: true, gateway: true, merchantTxnId: true, providerOrderId: true },
+  });
+  let recovered = 0;
+  for (const p of stale) {
+    await reconcilePayment(p);
+    const after = await prisma.payment.findUnique({ where: { id: p.id }, select: { status: true } });
+    if (after?.status === 'SUCCESS') recovered++;
+  }
+  if (recovered > 0) logger.warn({ recovered, checked: stale.length }, 'recovered paid-but-unverified checkouts');
+
+  // Whatever is still INITIATED after that really was abandoned. The PENDING
+  // membership / PENDING_PAYMENT campaign and featured rows behind them would
+  // otherwise sit forever, confusing every report.
   const [abandonedMemberships, abandonedCampaigns, abandonedFeatured] = await Promise.all([
     prisma.membership.updateMany({
       where: { status: 'PENDING', createdAt: { lt: staleBefore } },
