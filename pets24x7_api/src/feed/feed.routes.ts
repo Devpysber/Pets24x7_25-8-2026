@@ -27,6 +27,12 @@ feedRouter.get(
     const limit = Math.min(60, Number(req.query.limit ?? 30) || 30);
     const now = new Date();
 
+    // `mode: 'insensitive'` is Postgres-only. Production runs MySQL, whose
+    // utf8mb4_unicode_ci collation already compares case-insensitively.
+    const ci = (process.env.DATABASE_URL ?? '').startsWith('postgres')
+      ? ({ mode: 'insensitive' } as const)
+      : {};
+
     let deals: any[] = [];
     try {
       deals = await prisma.deal.findMany({
@@ -34,7 +40,7 @@ feedRouter.get(
           status: 'ACTIVE',
           OR: [{ endsAt: null }, { endsAt: { gt: now } }],
           ...(city ? { citySlug: slugify(city) } : {}),
-          ...(category ? { category: { contains: category, mode: 'insensitive' } } : {}),
+          ...(category ? { category: { contains: category, ...ci } } : {}),
         },
         orderBy: [{ endsAt: 'asc' }, { createdAt: 'desc' }],
         take: limit,
