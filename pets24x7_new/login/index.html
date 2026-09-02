@@ -363,12 +363,6 @@
     api.parentRequestOtp({ name: n, phone: p }).then(function(r){
       pPhone = r.phone || p;
       $('pSentTo').textContent = 'We sent a 6-digit code to ' + pPhone + '.';
-      if (r.devMode) {
-        // Dev: try the universal code, fall back to the manual step if it fails.
-        return api.parentVerify(pPhone, '123456').then(function(){
-          location.href = '/dashboard/parent/';
-        }).catch(function(){ step('parent', 'p-step2'); busy(self, false, 'Send code →'); });
-      }
       step('parent', 'p-step2');
       busy(self, false, 'Send code →');
     }).catch(function(e){
@@ -657,7 +651,7 @@
   peRender();
 
   /* ============ BUSINESS / VENDOR ============ */
-  var vPhone = '', vMatches = [], vDevMode = false;
+  var vPhone = '', vMatches = [];
   $('vLookupBtn').addEventListener('click', function(){
     clearErr($('vErr1'));
     var p = $('vPhone').value.trim();
@@ -667,7 +661,6 @@
     api.vendorRequestOtp(p).then(function(r){
       vPhone = r.phone || p;
       vMatches = r.matches || [];
-      vDevMode = !!r.devMode;
       renderMatches();
       step('vendor', 'v-step2');
       busy(self, false, 'Find my listing →');
@@ -713,7 +706,6 @@
     clearErr($('vErr2'));
     var sel = $('vMatchList').querySelector('input[name=vlisting]:checked');
     if (!sel) return showErr($('vErr2'), 'Pick a listing first.');
-    if (vDevMode) { vendorVerifyAndGo('123456', this, $('vErr2')); return; }
     var picked = vMatches.find(function(m){ return m.id === sel.value; });
     $('vSentTo').textContent = 'We sent a 6-digit code to ' + vPhone + (picked ? ' for ' + picked.name : '') + '.';
     step('vendor', 'v-step3');
