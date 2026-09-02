@@ -181,6 +181,7 @@ async function ensureSeedAdmin(): Promise<void> {
 }
 
 // ---- Boot ----
+// Deployed by pets24x7-deploy.timer from the deploy branch; see ops/README.md.
 (async () => {
   await initListingsIndex();   // load static-frontend listings into memory for phone lookups
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
