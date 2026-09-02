@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll GitHub for pets24x7 deploys
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

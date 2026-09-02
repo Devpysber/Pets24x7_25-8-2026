@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy pets24x7 from the GitHub deploy branch
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# flock -n means a slow render never stacks up behind the next timer tick.
+ExecStart=/usr/bin/flock -n /run/pets24x7-deploy.lock /usr/local/bin/pets24x7-deploy.sh
+TimeoutStartSec=30min
