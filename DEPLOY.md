@@ -337,4 +337,7 @@ certbot --nginx -d pets24x7.com -d www.pets24x7.com --agree-tos -m <email> --red
   open to the internet** on this box. Neither belongs to Pets24x7, so both were
   left alone. Postgres `pg_hba.conf` only permits localhost and the docker
   subnets, so remote auth fails, but the port is still reachable.
-- **DB backups** — add a nightly `mysqldump pets24x7` cron once live.
+- **Off-box backups** — `pets24x7-backup.timer` dumps the DB nightly at 02:30
+  into `/var/backups/pets24x7` (gzipped, mode 600, 14-day retention), but that
+  is the same disk as the database. Copy them elsewhere to survive a dead
+  server. Hostinger's own VPS backups are weekly.

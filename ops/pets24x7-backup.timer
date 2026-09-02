@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the pets24x7 database backup nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
