@@ -46,13 +46,19 @@ const Env = z.object({
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
 
-  // ---- Email (Gmail SMTP via app password) ----
+  // ---- Email (any SMTP relay) ----
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.coerce.number().int().default(465),
   SMTP_SECURE: z.coerce.boolean().default(true),
-  SMTP_USER: z.string().email().optional(),
-  // Gmail 16-char app password (spaces are stripped at load time).
+  // Not an email address: Gmail uses one, but Resend's SMTP user is the literal
+  // string 'resend' and SES uses an IAM SMTP key. Requiring email format here
+  // made the API refuse to boot on any provider that authenticates properly.
+  SMTP_USER: z.string().min(1).optional(),
+  // Provider password or API key. Gmail app passwords are printed with spaces;
+  // those are stripped at load time below.
   SMTP_PASS: z.string().min(1).optional(),
+  // Must be an address on a domain you control and have signed with DKIM —
+  // sending as a free consumer mailbox lands transactional mail in spam.
   MAIL_FROM: z.string().default('Pets24x7 <pets24x7.com@gmail.com>'),
   // Verification links stay valid this long unless used sooner.
   EMAIL_VERIFY_TTL_MIN: z.coerce.number().int().min(1).default(10),
