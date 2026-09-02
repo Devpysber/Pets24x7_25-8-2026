@@ -12,7 +12,7 @@
         <% parents.forEach(function(p){ %>
           <tr>
             <td><strong><%= p.name %></strong></td>
-            <td><a href="https://wa.me/<%= p.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= p.phone %></a></td>
+            <td><% if (p.phone) { %><a href="https://wa.me/<%= p.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= p.phone %></a><% } else { %><span class="muted">—</span><% } %></td>
             <td><%= p.email || '—' %></td>
             <td><%= p.city || '—' %> <% if (p.country) { %><span class="muted">· <%= p.country %></span><% } %></td>
             <td><%= p._count.pets %></td>

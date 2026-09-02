@@ -31,7 +31,7 @@
             <td>
               <strong><%= m.parent ? m.parent.name : '—' %></strong><br/>
               <% if (m.parent) { %>
-                <a href="https://wa.me/<%= m.parent.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= m.parent.phone %></a>
+                <% if (m.parent.phone) { %><a href="https://wa.me/<%= m.parent.phone.replace(/[^0-9]/g,'') %>" target="_blank"><%= m.parent.phone %></a><% } else { %><span class="muted"><%= m.parent.email || '—' %></span><% } %>
               <% } %>
             </td>
             <td>
