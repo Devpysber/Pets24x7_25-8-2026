@@ -46,8 +46,8 @@ listingsRouter.get(
     // Merge in the claimed vendor's uploaded image + verified state, if any.
     let claimed: { imageUrl: string | null; status: string; businessName: string } | null = null;
     try {
-      claimed = await prisma.vendor.findUnique({
-        where: { listingId: r.id },
+      claimed = await prisma.vendor.findFirst({
+        where: { listingId: r.id, claimedAt: { not: null } },
         select: { imageUrl: true, status: true, businessName: true },
       });
     } catch {

@@ -306,3 +306,71 @@ vendorDashboardRouter.post(
     res.json({ ok: true, sent: true, email: v.email, expiresInMinutes: VENDOR_VERIFY_TTL_MIN });
   }),
 );
+
+// GET /my-business (returns vendor's full DB record and listing details)
+vendorDashboardRouter.get(
+  '/my-business',
+  asyncHandler(async (req, res) => {
+    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
+    if (!v) throw new NotFoundError('Vendor account not found');
+    const staticListing = v.listingId ? getListingById(v.listingId) : null;
+    res.json({
+      ok: true,
+      business: {
+        id: v.id,
+        listingId: v.listingId || v.id,
+        businessName: v.businessName,
+        category: v.category || staticListing?.category || 'Pet Service',
+        city: v.city || staticListing?.city || 'Mumbai',
+        locality: v.locality || '',
+        address: v.address || staticListing?.address || '',
+        pincode: v.pincode || staticListing?.pincode || '',
+        phone: v.phone || staticListing?.phone || '',
+        email: v.email || '',
+        website: v.website || staticListing?.website || '',
+        whatsapp: v.whatsapp || '',
+        about: v.about || '',
+        openingHours: v.openingHours || '',
+        servicesList: v.servicesList || '',
+        imageUrl: v.imageUrl || '',
+        status: v.status,
+        claimedAt: v.claimedAt,
+      },
+    });
+  }),
+);
+
+// PATCH /my-business (update vendor business info)
+const UpdateBusinessBody = z.object({
+  businessName: z.string().min(2).optional(),
+  category: z.string().optional(),
+  city: z.string().optional(),
+  locality: z.string().optional(),
+  address: z.string().optional(),
+  pincode: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  website: z.string().optional(),
+  whatsapp: z.string().optional(),
+  about: z.string().optional(),
+  openingHours: z.string().optional(),
+  servicesList: z.string().optional(),
+  imageUrl: z.string().optional(),
+});
+
+vendorDashboardRouter.patch(
+  '/my-business',
+  asyncHandler(async (req, res) => {
+    const data = UpdateBusinessBody.parse(req.body);
+    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
+    if (!v) throw new ForbiddenError();
+
+    const updated = await prisma.vendor.update({
+      where: { id: v.id },
+      data,
+    });
+
+    res.json({ ok: true, business: updated });
+  }),
+);
+

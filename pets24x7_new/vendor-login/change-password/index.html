@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Create Your Permanent Password — Pets24x7.com</title>
+<meta name="description" content="Set up your new password on your first login." />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --primary-light:#EFF6FF; --bg:#fff; --bg-alt:#F9FAFB; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; --success:#10B981; --danger:#DC2626; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+  a{color:var(--primary);text-decoration:none}
+  .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
+  .brand{display:inline-flex;align-items:center;gap:10px}
+  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
+  .brand-name .tld{color:var(--text)}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;max-width:440px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .step-hint{font-size:11px;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+  h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+  p.sub{color:var(--text-muted);font-size:14px;margin-bottom:24px;line-height:1.5}
+  label{display:block;font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;margin-top:14px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;background:#fff;font-weight:500;color:var(--text)}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:all 0.2s;margin-top:18px}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(37,99,235,0.25)}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+  .err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;margin-top:16px;display:none}
+  .err.show{display:block}
+  .ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:14px 16px;font-size:13.5px;font-weight:600;margin-top:16px;display:none}
+  .ok.show{display:block}
+  .foot{text-align:center;color:var(--text-muted);font-size:13px;padding:20px}
+  .foot a{color:var(--text-muted);margin:0 8px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="brand">
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+  </a>
+</header>
+
+<main>
+  <div class="card">
+    <div class="step-hint">First Login Setup</div>
+    <h1>Create Your New Password</h1>
+    <p class="sub">For security, please create a permanent password to access your Vendor Dashboard.</p>
+
+    <form id="passForm" onsubmit="handlePassSubmit(event)">
+      <label for="cEmail">Login Email *</label>
+      <input type="email" id="cEmail" placeholder="your@email.com" required autocomplete="email" />
+
+      <label for="cTemp">Temporary Password *</label>
+      <input type="text" id="cTemp" placeholder="e.g. P24x7#A8K9" required />
+
+      <label for="cNew">New Password (8+ chars) *</label>
+      <input type="password" id="cNew" placeholder="••••••••" required autocomplete="new-password" minlength="8" />
+
+      <label for="cConfirm">Confirm Password *</label>
+      <input type="password" id="cConfirm" placeholder="••••••••" required autocomplete="new-password" minlength="8" />
+
+      <div class="err" id="passErr"></div>
+      <div class="ok" id="passOk">Password updated. Redirecting to Vendor Dashboard…</div>
+
+      <button type="submit" class="btn btn-primary" id="passBtn">Create Password &rarr;</button>
+    </form>
+  </div>
+</main>
+
+<footer class="foot">
+  &copy; 2026 Pets24x7.com &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  function $(id){ return document.getElementById(id); }
+  function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el){ el.classList.remove('show'); }
+
+  // Parse query params for prefilled email
+  (function initEmailParam() {
+    var m = /[?&]email=([^&]+)/i.exec(location.search);
+    if (m && m[1]) {
+      $('cEmail').value = decodeURIComponent(m[1]);
+    }
+  })();
+
+  function handlePassSubmit(e) {
+    e.preventDefault();
+    clearErr($('passErr'));
+    var email = $('cEmail').value.trim();
+    var tempPass = $('cTemp').value.trim();
+    var newPass = $('cNew').value;
+    var confirmPass = $('cConfirm').value;
+
+    if (newPass !== confirmPass) {
+      return showErr($('passErr'), 'Passwords do not match.');
+    }
+    if (newPass.length < 8) {
+      return showErr($('passErr'), 'Password must be at least 8 characters long.');
+    }
+
+    $('passBtn').disabled = true; $('passBtn').textContent = 'Creating Password…';
+
+    api.claimFirstLoginPassword({
+      email: email,
+      tempPassword: tempPass,
+      newPassword: newPass,
+      confirmPassword: confirmPass
+    }).then(function(r) {
+      $('passOk').classList.add('show');
+      setTimeout(function() {
+        location.href = r.redirect || '/dashboard/vendor/';
+      }, 500);
+    }).catch(function(err) {
+      showErr($('passErr'), err.message || 'Could not update password. Please check your credentials.');
+      $('passBtn').disabled = false; $('passBtn').textContent = 'Create Password →';
+    });
+  }
+</script>
+</body>
+</html>

@@ -18,7 +18,7 @@ import { BadRequestError, ForbiddenError, NotFoundError, ConflictError } from '.
 import { newMerchantTxnId } from '../payments/phonepe.js';
 import { startCheckout } from '../payments/checkout.js';
 import { applyPaymentResult, reconcilePayment } from '../payments/membership.routes.js';
-import { FEATURED_OPTIONS, featuredOptionFor } from '../payments/pricing.js';
+import { getFeaturedOptions, featuredOptionFor } from '../payments/pricing.js';
 import { getListingById } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
@@ -71,7 +71,7 @@ vendorFeaturedRouter.get(
       orderBy: { createdAt: 'desc' },
       include: { payment: { select: { status: true, merchantTxnId: true } } },
     });
-    res.json({ ok: true, featured, catalogue: { options: FEATURED_OPTIONS } });
+    res.json({ ok: true, featured, catalogue: { options: getFeaturedOptions() } });
   }),
 );
 

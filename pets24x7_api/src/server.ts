@@ -19,6 +19,7 @@ import { whatsappRouter } from './whatsapp/webhook.routes.js';
 import { parentAuthRouter } from './auth/parent.routes.js';
 import { parentEmailAuthRouter } from './auth/email.routes.js';
 import { vendorAuthRouter } from './auth/vendor.routes.js';
+import { vendorClaimRegistrationRouter } from './auth/vendor-claim-registration.routes.js';
 import { adminAuthRouter } from './auth/admin.routes.js';
 import { adminApiRouter } from './admin/admin.api.routes.js';
 import { adminMailRouter } from './admin/mail.routes.js';
@@ -39,6 +40,7 @@ import { enquiryRouter } from './enquiries/enquiry.routes.js';
 import { vendorServicesRouter } from './vendors/service.routes.js';
 import { vendorCampaignsRouter } from './marketing/campaign.routes.js';
 import { featuredPublicRouter, vendorFeaturedRouter } from './featured/featured.routes.js';
+import { vendorSubscriptionsRouter } from './vendors/vendor.subscriptions.routes.js';
 import { recommendRouter } from './feed/recommend.routes.js';
 import { feedRouter } from './feed/feed.routes.js';
 import { unsubscribeRouter } from './mail/unsubscribe.routes.js';
@@ -67,11 +69,11 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({
-  limit: '64kb',
+  limit: '10mb',
   // Keep the raw bytes for HMAC-verified webhooks (Razorpay).
   verify: (req, _res, buf) => { (req as any).rawBody = buf; },
 }));
-app.use(express.urlencoded({ extended: true, limit: '64kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Aggressive default limit in production; relaxed in dev mode for testing.
@@ -87,7 +89,7 @@ app.get('/', (_req, res) => res.json({
   ok: true,
   service: 'pets24x7-api',
   frontend: 'http://localhost:8000',
-  admin: '/admin',
+  admin: '/dashboard/admin/',
   health: '/health',
 }));
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'pets24x7-api', ts: Date.now() }));
@@ -107,6 +109,8 @@ app.get('/api/config', (_req, res) =>
 app.use('/api/parent',  parentAuthRouter);
 app.use('/api/parent',  parentEmailAuthRouter);
 app.use('/api/vendor',  vendorAuthRouter);
+app.use('/api/vendor',  vendorClaimRegistrationRouter);
+app.use('/api/vendor/subscriptions', vendorSubscriptionsRouter);
 app.use('/api/admin',   adminAuthRouter);
 app.use('/api/admin',   adminApiRouter);
 app.use('/api/admin',   adminExtraRouter);

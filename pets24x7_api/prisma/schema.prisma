@@ -121,20 +121,29 @@ model Vendor {
   phone           String       @unique
   businessName    String
   email           String?
-  // Proven ownership of `email`. A vendor claims a listing by phone OTP, so the
-  // address is self-declared until they click the mailed link.
   emailVerified   Boolean      @default(false)
   emailVerifiedAt DateTime?
-  // The static listing id from frontend (../pets24x7_new/data/*.json -> item.id).
-  // Unique so two vendors can't claim the same listing.
   listingId       String?      @unique
   city            String?
   country         String? // "IN" | "US"
   category        String?
-  // Vendor-uploaded storefront image, stored as a small resized data: URL
-  // (client downsizes to ~600px JPEG before upload). Shown on the public listing.
   imageUrl        String?      @db.Text
   status          VendorStatus @default(PENDING)
+
+  // Auth & Password fields for Claim & Registration System
+  passwordHash       String?
+  mustChangePassword Boolean   @default(false)
+
+  // Listing Details
+  ownerName       String?
+  locality        String?
+  address         String?
+  pincode         String?
+  website         String?
+  whatsapp        String?
+  about           String?      @db.Text
+  openingHours    String?
+  servicesList    String?
 
   // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
@@ -149,6 +158,7 @@ model Vendor {
   updatedAt         DateTime  @updatedAt
 
   // Phase 3.1 — inverse relations
+  claims         ListingClaim[]
   emailTokens    VendorEmailToken[]
   reviewRequests ReviewRequest[]
   reviews        Review[]
@@ -170,8 +180,43 @@ model Vendor {
 enum VendorStatus {
   PENDING // OTP verified, waiting for admin review (claim flow)
   ACTIVE // approved, full dashboard access
+  CLAIMED // claimed listing, active vendor
   SUSPENDED // admin-disabled (TOS violation etc.)
   REJECTED // claim denied
+}
+
+// -----------------------------------------------------------
+// Listing Claims & Claim Tracking System
+// -----------------------------------------------------------
+model ListingClaim {
+  id               String      @id @default(cuid())
+  listingId        String
+  listingName      String?
+  ownerId          String?
+  owner            Vendor?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  email            String?
+  phone            String?
+  status           ClaimStatus @default(STARTED)
+  verificationCode String?
+  tempPasswordHash String?
+  failureReason    String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([listingId])
+  @@index([ownerId])
+  @@index([status])
+  @@map("listing_claims")
+}
+
+enum ClaimStatus {
+  STARTED
+  PHONE_VERIFIED
+  CREDENTIALS_SENT
+  FIRST_LOGIN
+  PASSWORD_CREATED
+  CLAIMED
+  VERIFICATION_FAILED
 }
 
 // -----------------------------------------------------------
@@ -731,19 +776,28 @@ model Setting {
 // the admin can see what a previous run actually did.
 // ---------------------------------------------------------------------------
 model ImportJob {
-  id        String   @id @default(cuid())
-  actorId   String // admin id that ran it
-  target    String // "vendors" | "parents" | "enquiries"
-  fileName  String?
-  dryRun    Boolean  @default(false)
-  totalRows Int      @default(0)
-  created   Int      @default(0)
-  updated   Int      @default(0)
-  skipped   Int      @default(0)
-  failed    Int      @default(0)
-  mapping   Json? // { dbField: sourceColumn }
-  errors    Json? // [{ row, message }] capped
-  createdAt DateTime @default(now())
+  id                      String   @id @default(cuid())
+  actorId                 String // admin id that ran it
+  target                  String // "vendors" | "parents" | "enquiries"
+  fileName                String?
+  dryRun                  Boolean  @default(false)
+  totalRows               Int      @default(0)
+  created                 Int      @default(0)
+  updated                 Int      @default(0)
+  skipped                 Int      @default(0)
+  failed                  Int      @default(0)
+  duplicateCount          Int      @default(0)
+  invalidCount            Int      @default(0)
+  excludedCityCount       Int      @default(0)
+  excludedCategoryCount   Int      @default(0)
+  googleSheetsSyncedCount Int      @default(0)
+  googleSheetsFailedCount Int      @default(0)
+  status                  String   @default("COMPLETED")
+  mapping                 Json? // { dbField: sourceColumn }
+  config                  Json? // Exact config used (exclusions, rules, category mappings)
+  errors                  Json? // [{ row, message }] capped
+  reportDetails           Json? // Detailed summary & row results
+  createdAt               DateTime @default(now())
 
   @@index([target, createdAt])
   @@map("import_jobs")

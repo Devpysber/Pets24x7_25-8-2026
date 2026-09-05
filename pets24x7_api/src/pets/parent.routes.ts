@@ -12,6 +12,7 @@ import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors
 import { sendVerificationEmail } from '../auth/email-verification.js';
 import { notifyIf } from '../mail/notify.js';
 import { listingsInCity } from '../listings/index.js';
+import { normalizePhone } from '../shared/phone.js';
 import { recommend } from '../feed/recommend.js';
 import {
   listingSavedEmail,
@@ -46,7 +47,7 @@ async function sendFirstPetRecommendations(
       where: { status: 'ACTIVE', endsAt: { gt: new Date() } },
       select: { listingId: true },
     }),
-    prisma.vendor.findMany({ where: { status: 'ACTIVE', listingId: { not: null } }, select: { listingId: true } }),
+    prisma.vendor.findMany({ where: { status: 'ACTIVE', listingId: { not: null }, claimedAt: { not: null } }, select: { listingId: true } }),
   ]);
 
   const picks = recommend(
@@ -212,6 +213,7 @@ parentDashboardRouter.get(
 const ProfileBody = z.object({
   name: z.string().min(1).max(80).optional(),
   email: z.string().email().max(160).optional().or(z.literal('')),
+  phone: z.string().max(30).optional().or(z.literal('')),
   city: z.string().max(80).optional(),
   country: z.enum(['IN', 'US']).optional(),
 });
@@ -222,13 +224,23 @@ parentDashboardRouter.patch(
     const body = ProfileBody.parse(req.body);
     const current = await prisma.petParent.findUnique({
       where: { id: req.auth!.sub },
-      select: { email: true },
+      select: { email: true, phone: true, country: true },
     });
 
     const data: Record<string, unknown> = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.city !== undefined) data.city = body.city;
     if (body.country !== undefined) data.country = body.country;
+
+    if (body.phone !== undefined) {
+      const rawPhone = body.phone.trim();
+      if (rawPhone) {
+        const country = (body.country || current?.country || 'IN') as 'IN' | 'US';
+        data.phone = normalizePhone(rawPhone, country);
+      } else {
+        data.phone = null;
+      }
+    }
 
     // A new address is unproven: drop the verified flag so nothing downstream
     // treats the old proof as covering it, and send a fresh link.
@@ -251,7 +263,11 @@ parentDashboardRouter.patch(
       });
     } catch (err) {
       if ((err as { code?: string }).code === 'P2002') {
-        throw new BadRequestError('That email address is already used by another Pets24x7 account');
+        const target = (err as { meta?: { target?: string[] } }).meta?.target;
+        if (target && target.includes('phone')) {
+          throw new BadRequestError('That phone number is already registered to another account');
+        }
+        throw new BadRequestError('That email address or phone number is already used by another Pets24x7 account');
       }
       throw err;
     }

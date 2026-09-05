@@ -1076,3 +1076,76 @@ export function importFinishedEmail(
     text: `Hi ${name},\n\n${job.target} import finished.\nFile: ${job.fileName || 'pasted data'}\nRows: ${job.totalRows}\nCreated: ${job.created}\nUpdated: ${job.updated}\nSkipped: ${job.skipped}\nFailed: ${job.failed}\n`,
   };
 }
+
+export function claimCredentialsEmail(
+  to: string,
+  businessName: string,
+  tempPassword: string,
+): MailInput {
+  const loginUrl = `${env.PUBLIC_SITE_URL}/vendor-login/`;
+  return {
+    to,
+    sensitive: true,
+    subject: `Welcome to Pets24x7! Temporary Credentials for ${businessName}`,
+    html: page({
+      eyebrow: 'Listing Claimed',
+      heading: `Welcome to Pets24x7!`,
+      intro: h`Your business owner account for ${businessName} has been created.`,
+      blocks: [
+        InfoBox([
+          ['Login Email', to],
+          ['Temporary Password', tempPassword],
+        ]),
+        Button('Login to Pets24x7', loginUrl),
+        Note('For security, you will be required to create a new password after your first login.'),
+      ],
+      preheader: `Temporary login credentials for ${businessName} on Pets24x7.`,
+    }),
+    text: `Welcome to Pets24x7!
+
+Your business owner account for ${businessName} has been created.
+
+Login Email: ${to}
+Temporary Password: ${tempPassword}
+
+Login to Pets24x7: ${loginUrl}
+
+For security, you will be required to create a new password after your first login.
+`,
+  };
+}
+
+export function businessRegisteredEmail(
+  to: string,
+  businessName: string,
+  city: string,
+): MailInput {
+  const dashboardUrl = `${env.PUBLIC_SITE_URL}/dashboard/vendor/`;
+  return {
+    to,
+    subject: `Your Pets24x7 business has been registered successfully`,
+    html: page({
+      eyebrow: 'Business Registered',
+      heading: `Congratulations!`,
+      intro: h`Your business listing for ${businessName} in ${city} has been created successfully.`,
+      blocks: [
+        InfoBox([
+          ['Business Name', businessName],
+          ['City', city],
+          ['Login Email', to],
+        ]),
+        Button('Go to Vendor Dashboard', dashboardUrl),
+        Note('You can now log in to manage your business listing, update contact details, and view customer enquiries.'),
+      ],
+      preheader: `Your business ${businessName} is registered on Pets24x7.`,
+    }),
+    text: `Your Pets24x7 business has been registered successfully.
+
+Business: ${businessName}
+City: ${city}
+
+You can now log in to manage your business listing: ${dashboardUrl}
+`,
+  };
+}
+

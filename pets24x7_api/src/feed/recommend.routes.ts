@@ -77,7 +77,7 @@ recommendRouter.get(
         select: { listingId: true },
       }),
       prisma.vendor.findMany({
-        where: { status: 'ACTIVE', listingId: { not: null } },
+        where: { status: 'ACTIVE', listingId: { not: null }, claimedAt: { not: null } },
         select: { listingId: true },
       }),
     ]);

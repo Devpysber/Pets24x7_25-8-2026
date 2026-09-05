@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Register Your Business — Pets24x7.com</title>
+<meta name="description" content="Register your pet business on Pets24x7 to connect with pet parents, showcase services, and receive direct WhatsApp enquiries." />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #2563EB; --primary-dark: #1D4ED8; --primary-light: #EFF6FF;
+    --bg: #F8FAFC; --bg-alt: #F1F5F9; --card-bg: #FFFFFF;
+    --text: #0F172A; --text-muted: #64748B; --border: #E2E8F0;
+    --success: #10B981; --success-bg: #ECFDF5; --danger: #DC2626; --warning: #D97706;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow: 0 10px 30px rgba(15,23,42,0.08);
+    --shadow-lg: 0 20px 50px rgba(15,23,42,0.12);
+    --radius: 12px; --radius-lg: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+  a { color: var(--primary); text-decoration: none; }
+
+  /* Header */
+  .header { background: #FFFFFF; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo { width: 36px; height: 36px; border-radius: 8px; }
+  .brand-name { font-weight: 800; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; }
+  .brand-name .tld { color: var(--text); }
+  .header-nav { display: flex; align-items: center; gap: 8px; }
+  .header-nav a.nav-link, .header-nav button.nav-link { color: var(--text); font-weight: 500; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: none; background: transparent; cursor: pointer; }
+  .header-nav a.nav-link:hover, .header-nav button.nav-link:hover { background: var(--bg-alt); color: var(--primary); }
+
+  /* For Vendors Dropdown */
+  .nav-dropdown { position: relative; display: inline-block; }
+  .nav-dropdown .dropdown-toggle { display: inline-flex; align-items: center; gap: 4px; }
+  .nav-dropdown .dropdown-menu {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: #ffffff; border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(15,23,42,0.12); min-width: 250px; padding: 8px;
+    opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 200;
+  }
+  .nav-dropdown:hover .dropdown-menu, .nav-dropdown:focus-within .dropdown-menu {
+    opacity: 1; visibility: visible; transform: translateX(-50%) translateY(4px);
+  }
+  .dropdown-item { display: block; padding: 10px 14px; border-radius: 8px; color: var(--text); text-decoration: none; transition: background 0.15s; text-align: left; }
+  .dropdown-item:hover { background: #F1F5F9; color: var(--primary); text-decoration: none; }
+  .dropdown-item strong { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+  .dropdown-item:hover strong { color: var(--primary); }
+  .dropdown-item span { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Page Hero */
+  .page-hero {
+    background: linear-gradient(135deg, #065F46 0%, #059669 60%, #10B981 100%);
+    color: #FFFFFF;
+    padding: 48px 20px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .page-hero::after {
+    content: ''; position: absolute; right: -80px; bottom: -80px; width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;
+  }
+  .hero-eyebrow { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #A7F3D0; margin-bottom: 8px; }
+  .page-hero h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.8px; margin-bottom: 12px; }
+  .page-hero p.sub { font-size: 16px; color: #E6F4EA; max-width: 680px; margin: 0 auto 24px; line-height: 1.6; }
+  .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .badge-item { background: rgba(255,255,255,0.18); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: 99px; }
+
+  /* Layout Container */
+  main { flex: 1; max-width: 1200px; margin: -30px auto 60px; width: 100%; padding: 0 20px; position: relative; z-index: 10; }
+  .layout-grid { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: start; }
+  @media(max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
+
+  /* Main Card */
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; box-shadow: var(--shadow); }
+  
+  /* Progress Bar */
+  .wizard-progress { display: flex; justify-content: space-between; margin-bottom: 28px; position: relative; }
+  .wizard-progress::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #E2E8F0; z-index: 0; }
+  .wiz-step { position: relative; z-index: 1; background: #fff; padding: 0 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .wiz-num { width: 30px; height: 30px; border-radius: 50%; background: #E2E8F0; color: var(--text-muted); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .wiz-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .wiz-step.active .wiz-num { background: var(--primary); color: #fff; }
+  .wiz-step.active .wiz-label { color: var(--primary); }
+  .wiz-step.done .wiz-num { background: var(--success); color: #fff; }
+
+  h2.card-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; margin-bottom: 6px; }
+  p.card-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+
+  /* Form controls */
+  label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 14px; }
+  input, select, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 15px; background: #fff; font-weight: 500; color: var(--text); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3.5px rgba(37,99,235,0.12); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+  
+  .btn-row { display: flex; gap: 12px; margin-top: 24px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 14px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,0.25); }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--bg-alt); }
+
+  .err { background: #FEE2E2; color: #991B1B; border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600; margin-top: 16px; display: none; }
+  .err.show { display: block; }
+  .ok { background: #DCFCE7; color: #166534; border-radius: 10px; padding: 16px; font-size: 14px; font-weight: 600; margin-top: 16px; display: none; line-height: 1.5; }
+  .ok.show { display: block; }
+
+  .review-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 20px; margin-top: 12px; }
+  .review-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E2E8F0; font-size: 13.5px; }
+  .review-row:last-child { border-bottom: none; }
+  .review-label { color: var(--text-muted); }
+  .review-val { font-weight: 700; color: var(--text); }
+
+  /* Sidebar Cards */
+  .sidebar-box { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+  .sidebar-box h3 { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .feature-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .feature-item { display: flex; gap: 12px; font-size: 13.5px; line-height: 1.4; color: var(--text-muted); }
+  .feature-icon { font-size: 18px; flex-shrink: 0; }
+  .feature-item strong { color: var(--text); font-weight: 700; display: block; margin-bottom: 2px; }
+
+  /* Footer */
+  footer { background: #0F172A; color: #94A3B8; padding: 48px 0 24px; font-size: 14px; margin-top: auto; }
+  footer .footer-grid { display: grid; gap: 32px; grid-template-columns: 1.5fr 1fr 1fr 1fr; margin-bottom: 36px; }
+  footer h4 { color: #fff; font-size: 14px; margin-bottom: 14px; font-weight: 600; }
+  footer ul { list-style: none; }
+  footer li { margin-bottom: 10px; }
+  footer a { color: #94A3B8; }
+  footer a:hover { color: #fff; }
+  footer .footer-logo { color: #fff; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  footer .tagline { font-size: 13px; line-height: 1.6; max-width: 280px; }
+  footer .footer-bottom { border-top: 1px solid #1E293B; padding-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13px; }
+  @media(max-width: 768px) { footer .footer-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width: 480px) { footer .footer-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="brand">
+      <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+      <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+    </a>
+    <nav class="header-nav">
+      <a href="/#cats" class="nav-link">Categories</a>
+      <a href="/#destinations" class="nav-link">Destinations</a>
+      <div class="nav-dropdown">
+        <button class="nav-link dropdown-toggle" type="button" aria-haspopup="true">
+          For Vendors <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="dropdown-menu">
+          <a href="/find-my-listing/" class="dropdown-item">
+            <strong>Find Your Business</strong>
+            <span>Search &amp; claim an existing listing</span>
+          </a>
+          <a href="/register-business/" class="dropdown-item">
+            <strong>Register Your Business</strong>
+            <span>Create a new business listing</span>
+          </a>
+        </div>
+      </div>
+      <a href="/login/" class="nav-link">Sign In</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Hero Section -->
+<section class="page-hero">
+  <div class="hero-eyebrow">NEW BUSINESS REGISTRATION</div>
+  <h1>Register Your Pet Business Free</h1>
+  <p class="sub">Create a new business profile on Pets24x7 in under 2 minutes. Connect with pet owners and get direct WhatsApp enquiries.</p>
+  <div class="hero-badges">
+    <span class="badge-item">🚀 100% Free Listing</span>
+    <span class="badge-item">📱 Instant WhatsApp Enquiries</span>
+    <span class="badge-item">⚡ 2-Minute Quick Setup</span>
+  </div>
+</section>
+
+<main>
+  <div class="layout-grid">
+    
+    <!-- Primary Form Column -->
+    <div>
+      <div class="card">
+        
+        <!-- Wizard Progress Bar -->
+        <div class="wizard-progress">
+          <div class="wiz-step active" id="wiz1"><div class="wiz-num">1</div><div class="wiz-label">Info</div></div>
+          <div class="wiz-step" id="wiz2"><div class="wiz-num">2</div><div class="wiz-label">Contact</div></div>
+          <div class="wiz-step" id="wiz3"><div class="wiz-num">3</div><div class="wiz-label">Details</div></div>
+          <div class="wiz-step" id="wiz4"><div class="wiz-num">4</div><div class="wiz-label">Account</div></div>
+          <div class="wiz-step" id="wiz5"><div class="wiz-num">5</div><div class="wiz-label">Review</div></div>
+        </div>
+
+        <!-- STEP 1: Business Information -->
+        <div id="stepPane1">
+          <h2 class="card-title">Business Information</h2>
+          <p class="card-sub">Tell us basic details about your pet business.</p>
+
+          <form id="f1" onsubmit="nextStep(1, event)">
+            <label for="bName">Business Name *</label>
+            <input type="text" id="bName" placeholder="e.g. Pawsome Pet Care &amp; Clinic" required />
+
+            <div class="form-grid">
+              <div>
+                <label for="bCategory">Business Category *</label>
+                <select id="bCategory" required>
+                  <option value="">Select Category</option>
+                  <option value="Veterinary Clinic">Veterinary Clinic</option>
+                  <option value="Pet Grooming">Pet Grooming</option>
+                  <option value="Pet Boarding &amp; Resort">Pet Boarding &amp; Resort</option>
+                  <option value="Pet Training">Pet Training</option>
+                  <option value="Pet Shop &amp; Supplies">Pet Shop &amp; Supplies</option>
+                  <option value="Dog Walking">Dog Walking</option>
+                  <option value="Pet Sitting">Pet Sitting</option>
+                </select>
+              </div>
+              <div>
+                <label for="bCity">City *</label>
+                <input type="text" id="bCity" placeholder="e.g. Mumbai, Bengaluru" required />
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="bLocality">Area / Locality</label>
+                <input type="text" id="bLocality" placeholder="e.g. Bandra West" />
+              </div>
+              <div>
+                <label for="bPincode">Pincode</label>
+                <input type="text" id="bPincode" placeholder="e.g. 400050" />
+              </div>
+            </div>
+
+            <label for="bAddress">Full Address *</label>
+            <input type="text" id="bAddress" placeholder="e.g. Shop 12, Main Road, Bandra West" required />
+
+            <div class="err" id="err1"></div>
+            <div class="btn-row">
+              <button type="submit" class="btn btn-primary">Continue &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- STEP 2: Contact Information -->
+        <div id="stepPane2" hidden>
+          <h2 class="card-title">Contact Information</h2>
+          <p class="card-sub">How customers and Pets24x7 will contact your business.</p>
+
+          <form id="f2" onsubmit="nextStep(2, event)">
+            <div class="form-grid">
+              <div>
+                <label for="bPhone">Phone Number *</label>
+                <input type="tel" id="bPhone" placeholder="+91 98765 43210" required autocomplete="tel" />
+              </div>
+              <div>
+                <label for="bEmail">Email Address *</label>
+                <input type="email" id="bEmail" placeholder="owner@business.com" required autocomplete="email" />
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label for="bWebsite">Website (Optional)</label>
+                <input type="url" id="bWebsite" placeholder="https://pawsomeclinic.com" />
+              </div>
+              <div>
+                <label for="bWhatsapp">WhatsApp Number (Optional)</label>
+                <input type="tel" id="bWhatsapp" placeholder="+91 98765 43210" />
+              </div>
+            </div>
+
+            <div class="err" id="err2"></div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline" onclick="prevStep(2)">&larr; Back</button>
+              <button type="submit" class="btn btn-primary">Continue &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- STEP 3: Business Details -->
+        <div id="stepPane3" hidden>
+          <h2 class="card-title">Business Details</h2>
+          <p class="card-sub">Add extra information to highlight your pet services.</p>
+
+          <form id="f3" onsubmit="nextStep(3, event)">
+            <label for="bAbout">About Your Business</label>
+            <textarea id="bAbout" rows="3" placeholder="Describe your clinic, services, experience, and facilities…"></textarea>
+
+            <div class="form-grid">
+              <div>
+                <label for="bHours">Opening Hours</label>
+                <input type="text" id="bHours" placeholder="e.g. 9:00 AM - 8:00 PM (Mon-Sat)" />
+              </div>
+              <div>
+                <label for="bServices">Services Offered</label>
+                <input type="text" id="bServices" placeholder="e.g. Vaccination, Surgeries, Grooming" />
+              </div>
+            </div>
+
+            <label for="bImage">Storefront Image URL (Optional)</label>
+            <input type="url" id="bImage" placeholder="https://example.com/clinic-photo.jpg" />
+
+            <div class="err" id="err3"></div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline" onclick="prevStep(3)">&larr; Back</button>
+              <button type="submit" class="btn btn-primary">Continue &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- STEP 4: Owner Account Creation -->
+        <div id="stepPane4" hidden>
+          <h2 class="card-title">Create Owner Account</h2>
+          <p class="card-sub">Create login credentials for your vendor dashboard.</p>
+
+          <form id="f4" onsubmit="nextStep(4, event)">
+            <label for="oName">Full Name *</label>
+            <input type="text" id="oName" placeholder="e.g. Dr. Ramesh Kumar" required />
+
+            <div class="form-grid">
+              <div>
+                <label for="oPass">Password (8+ chars) *</label>
+                <input type="password" id="oPass" placeholder="••••••••" required minlength="8" autocomplete="new-password" />
+              </div>
+              <div>
+                <label for="oConfirm">Confirm Password *</label>
+                <input type="password" id="oConfirm" placeholder="••••••••" required minlength="8" autocomplete="new-password" />
+              </div>
+            </div>
+
+            <div class="err" id="err4"></div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline" onclick="prevStep(4)">&larr; Back</button>
+              <button type="submit" class="btn btn-primary">Review &rarr;</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- STEP 5: Review & Submit -->
+        <div id="stepPane5" hidden>
+          <h2 class="card-title">Review Your Business</h2>
+          <p class="card-sub">Verify your information before creating your business listing.</p>
+
+          <div class="review-box">
+            <div class="review-row"><span class="review-label">Business Name</span><span class="review-val" id="revName"></span></div>
+            <div class="review-row"><span class="review-label">Category</span><span class="review-val" id="revCategory"></span></div>
+            <div class="review-row"><span class="review-label">City</span><span class="review-val" id="revCity"></span></div>
+            <div class="review-row"><span class="review-label">Address</span><span class="review-val" id="revAddress"></span></div>
+            <div class="review-row"><span class="review-label">Phone</span><span class="review-val" id="revPhone"></span></div>
+            <div class="review-row"><span class="review-label">Email</span><span class="review-val" id="revEmail"></span></div>
+            <div class="review-row"><span class="review-label">Owner</span><span class="review-val" id="revOwner"></span></div>
+          </div>
+
+          <div class="err" id="err5"></div>
+          <div class="ok" id="ok5">Registration successful! Opening Vendor Dashboard…</div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn-outline" id="revBackBtn" onclick="prevStep(5)">&larr; Back</button>
+            <button type="button" class="btn btn-primary" id="regSubmitBtn" onclick="submitRegistration()">Register Business &rarr;</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sidebar Column -->
+    <div>
+      <div class="sidebar-box">
+        <h3>✨ Benefits of Registering</h3>
+        <ul class="feature-list">
+          <li class="feature-item">
+            <span class="feature-icon">🚀</span>
+            <div>
+              <strong>Instant Live Directory Listing</strong>
+              Your business goes live immediately for pet owners searching in your city.
+            </div>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon">📱</span>
+            <div>
+              <strong>WhatsApp Booking Enquiries</strong>
+              Receive direct messages from interested pet owners on your WhatsApp.
+            </div>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon">📊</span>
+            <div>
+              <strong>Vendor Management Portal</strong>
+              Manage services, prices, photos, and track customer enquiries from one dashboard.
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-box">
+        <h3>Already Have a Listing?</h3>
+        <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:14px;">If your business is already listed on Pets24x7, claim it instead of registering a duplicate.</p>
+        <a href="/find-my-listing/" class="btn btn-outline btn-sm" style="width:100%; text-align:center; display:block;">Find &amp; Claim Listing &rarr;</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">Pets24x7<span style="color:var(--primary)">.com</span></div>
+        <p class="tagline">The complete pet care marketplace connecting pet parents with verified vets, groomers, boarders, and pet services.</p>
+      </div>
+      <div>
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="/#cats">Service Categories</a></li>
+          <li><a href="/#destinations">Popular Cities</a></li>
+          <li><a href="/membership/">Membership Plans</a></li>
+          <li><a href="/find-my-listing/">Find &amp; Claim Listing</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>For Businesses</h4>
+        <ul>
+          <li><a href="/find-my-listing/">Find My Business</a></li>
+          <li><a href="/register-business/">Register My Business</a></li>
+          <li><a href="/vendor-login/">Vendor Login</a></li>
+          <li><a href="/admin-login/">Admin Portal</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact &amp; Legal</h4>
+        <ul>
+          <li><a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp Us</a></li>
+          <li><a href="mailto:hello@pets24x7.com">hello@pets24x7.com</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
+          <li><a href="/terms.html">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Pets24x7.com &middot; All rights reserved.</span>
+      <span>Made with ❤ for pet parents &amp; pet pros</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  var currentStep = 1;
+  function $(id){ return document.getElementById(id); }
+  function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
+  function clearErr(el){ el.classList.remove('show'); }
+
+  function updateWizUI() {
+    for (var i = 1; i <= 5; i++) {
+      var w = $('wiz' + i);
+      if (!w) continue;
+      w.classList.remove('active', 'done');
+      if (i < currentStep) w.classList.add('done');
+      else if (i === currentStep) w.classList.add('active');
+    }
+  }
+
+  function showPane(stepNum) {
+    for (var i = 1; i <= 5; i++) {
+      $('stepPane' + i).hidden = (i !== stepNum);
+    }
+    currentStep = stepNum;
+    updateWizUI();
+  }
+
+  function nextStep(fromStep, e) {
+    if (e) e.preventDefault();
+    clearErr($('err' + fromStep));
+
+    if (fromStep === 4) {
+      var p1 = $('oPass').value;
+      var p2 = $('oConfirm').value;
+      if (p1 !== p2) return showErr($('err4'), 'Passwords do not match.');
+      if (p1.length < 8) return showErr($('err4'), 'Password must be at least 8 characters long.');
+
+      // Render review details
+      $('revName').textContent = $('bName').value.trim();
+      $('revCategory').textContent = $('bCategory').value;
+      $('revCity').textContent = $('bCity').value.trim();
+      $('revAddress').textContent = $('bAddress').value.trim();
+      $('revPhone').textContent = $('bPhone').value.trim();
+      $('revEmail').textContent = $('bEmail').value.trim();
+      $('revOwner').textContent = $('oName').value.trim();
+    }
+
+    showPane(fromStep + 1);
+  }
+
+  function prevStep(fromStep) {
+    showPane(fromStep - 1);
+  }
+
+  function submitRegistration() {
+    clearErr($('err5'));
+    var payload = {
+      businessName: $('bName').value.trim(),
+      category: $('bCategory').value,
+      city: $('bCity').value.trim(),
+      locality: $('bLocality').value.trim(),
+      address: $('bAddress').value.trim(),
+      pincode: $('bPincode').value.trim(),
+      phone: $('bPhone').value.trim(),
+      email: $('bEmail').value.trim(),
+      website: $('bWebsite').value.trim(),
+      whatsapp: $('bWhatsapp').value.trim(),
+      about: $('bAbout').value.trim(),
+      openingHours: $('bHours').value.trim(),
+      servicesList: $('bServices').value.trim(),
+      imageUrl: $('bImage').value.trim(),
+      ownerName: $('oName').value.trim(),
+      password: $('oPass').value,
+      confirmPassword: $('oConfirm').value
+    };
+
+    $('regSubmitBtn').disabled = true; $('regSubmitBtn').textContent = 'Registering Business…';
+
+    api.vendorRegisterBusiness(payload).then(function(r) {
+      $('ok5').classList.add('show');
+      setTimeout(function() {
+        location.href = r.redirect || '/dashboard/vendor/';
+      }, 500);
+    }).catch(function(err) {
+      showErr($('err5'), err.message || 'Could not register business.');
+      $('regSubmitBtn').disabled = false; $('regSubmitBtn').textContent = 'Register Business →';
+    });
+  }
+</script>
+</body>
+</html>

@@ -94,7 +94,6 @@
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="parent"><span class="ti">🐕</span>Pet Parent</button>
       <button class="tab" data-tab="vendor"><span class="ti">🏪</span>Business</button>
-      <button class="tab" data-tab="admin"><span class="ti">🔐</span>Staff</button>
     </div>
 
     <div class="card-body">
@@ -103,7 +102,6 @@
       <section class="pane active" id="pane-parent">
         <div class="methods" id="pMethods">
           <button class="method active" data-method="emailotp" type="button">Email code</button>
-          <button class="method" data-method="otp" type="button">WhatsApp code</button>
           <button class="method" data-method="email" type="button">Password</button>
         </div>
 
@@ -293,7 +291,7 @@
 </main>
 
 <footer class="foot">
-  &copy; 2026 Pets24x7.com &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a>
+  &copy; 2026 Pets24x7.com &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a> &middot; <a href="/admin-login/">Admin Login</a>
 </footer>
 
 <script src="/config.js"></script>
@@ -312,20 +310,27 @@
     document.querySelectorAll('#pane-' + paneId + ' .step').forEach(function(s){ s.classList.toggle('active', s.id === stepId); });
   }
 
+  function switchPane(name) {
+    document.querySelectorAll('#tabs .tab').forEach(function(x){
+      x.classList.toggle('active', x.getAttribute('data-tab') === name);
+    });
+    document.querySelectorAll('.pane').forEach(function(p){
+      p.classList.toggle('active', p.id === 'pane-' + name);
+    });
+    try { history.replaceState(null, '', '#' + name); } catch (e) {}
+  }
+
   // ---- Tabs ----
   document.querySelectorAll('#tabs .tab').forEach(function(t){
     t.addEventListener('click', function(){
       var name = this.getAttribute('data-tab');
-      document.querySelectorAll('#tabs .tab').forEach(function(x){ x.classList.toggle('active', x === t); });
-      document.querySelectorAll('.pane').forEach(function(p){ p.classList.toggle('active', p.id === 'pane-' + name); });
-      try { history.replaceState(null, '', '#' + name); } catch (e) {}
+      switchPane(name);
     });
   });
   (function initTab(){
     var h = (location.hash || '').replace('#', '');
     if (['parent','vendor','admin'].indexOf(h) !== -1) {
-      var t = document.querySelector('#tabs .tab[data-tab="' + h + '"]');
-      if (t) t.click();
+      switchPane(h);
     }
   })();
 
@@ -411,7 +416,7 @@
     $('peResend').hidden = true;
   }
 
-  var P_METHOD_STEP = { emailotp: 'p-emailotp', otp: 'p-step1', email: 'p-email' };
+  var P_METHOD_STEP = { emailotp: 'p-emailotp', email: 'p-email' };
   document.querySelectorAll('#pMethods .method').forEach(function (m) {
     m.addEventListener('click', function () {
       var name = this.getAttribute('data-method');

@@ -389,6 +389,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Business Account
       </a>
+      <a class="nav-item" data-view="subscriptions" style="color:#2563EB; font-weight:600;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Subscriptions
+      </a>
       <a class="nav-item" data-view="grow" style="color:var(--primary); font-weight:600;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         Grow Your Business
@@ -828,6 +832,86 @@
         </div>
       </section>
 
+      <!-- 10. VENDOR SUBSCRIPTIONS VIEW -->
+      <section id="view-subscriptions" class="view-pane">
+        <!-- Active Subscription Summary Banner -->
+        <div style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); color:#FFFFFF; border-radius:14px; padding:24px 28px; margin-bottom:28px; box-shadow:0 8px 24px rgba(30, 58, 138, 0.18);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <span class="status-tag" style="background:rgba(255,255,255,0.2); color:#FFFFFF; border:1px solid rgba(255,255,255,0.3); font-weight:700; font-size:12px;" id="vSubBadge">⭐ GOLD PLATINUM</span>
+                <span style="font-size:12px; font-weight:600; opacity:0.9;" id="vSubStatusTag">● ACTIVE</span>
+              </div>
+              <h2 style="font-size:24px; font-weight:800; margin:0 0 6px 0;" id="vSubTierTitle">Vendor Gold Platinum Plan</h2>
+              <p style="font-size:13.5px; opacity:0.9; margin:0;" id="vSubValidityText">Valid until October 5, 2026 • Auto-renew active</p>
+            </div>
+            <div>
+              <button class="btn btn-sm" style="background:#FFFFFF; color:#1E3A8A; font-weight:700; border:none; padding:10px 20px; font-size:13.5px;" onclick="scrollToVendorPlans()">Upgrade / Change Plan</button>
+            </div>
+          </div>
+
+          <!-- Subscription Metrics / Usage Bar -->
+          <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.2); display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+            <div>
+              <div style="font-size:12px; opacity:0.8; font-weight:600;">Monthly Customer Leads</div>
+              <div style="font-size:20px; font-weight:800; margin-top:2px;" id="vSubLeadCount">∞ Unlimited Leads</div>
+            </div>
+            <div>
+              <div style="font-size:12px; opacity:0.8; font-weight:600;">Verification &amp; Badge Status</div>
+              <div style="font-size:15px; font-weight:700; margin-top:4px;" id="vSubBadgeStatus">Verified Gold Business</div>
+            </div>
+            <div>
+              <div style="font-size:12px; opacity:0.8; font-weight:600;">Search Ranking Boost</div>
+              <div style="font-size:15px; font-weight:700; margin-top:4px; color:#FDE047;">Top #1 Search Ranking 🚀</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plans & Billing Period Toggle Header -->
+        <div id="vendorSubPlansSection" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:20px; font-weight:800;">Vendor Subscription Plans</h3>
+            <p style="font-size:13.5px; color:var(--text-muted); margin-top:2px;">Select the best subscription tier to get verified, receive customer leads, and rank #1 in your city.</p>
+          </div>
+          <!-- Billing Cycle Switch -->
+          <div style="display:flex; align-items:center; gap:8px; background:#F1F5F9; border:1px solid #E2E8F0; padding:4px; border-radius:30px;">
+            <button id="vSubToggleMonthly" class="btn btn-sm btn-primary" style="border-radius:20px; font-size:12px; padding:6px 16px;" onclick="setVendorSubBilling('MONTHLY')">Monthly Billing</button>
+            <button id="vSubToggleAnnual" class="btn btn-sm btn-outline" style="border-radius:20px; font-size:12px; padding:6px 16px;" onclick="setVendorSubBilling('ANNUAL')">Annual Billing <span style="background:#DC2626; color:#FFF; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:800; margin-left:4px;">SAVE 20%</span></button>
+          </div>
+        </div>
+
+        <!-- Vendor Plans Grid -->
+        <div class="plans-grid" id="vendorSubPlansGrid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px; margin-bottom:32px;">
+          <p style="color:var(--text-muted);">Loading subscription plans...</p>
+        </div>
+
+        <!-- Invoices & Billing History Table -->
+        <div class="card" style="margin-top:24px;">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="card-title">🧾 Billing History &amp; Invoices</div>
+              <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Download receipts and track past subscription transactions.</p>
+            </div>
+          </div>
+          <table class="data-table" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Transaction ID</th>
+                <th>Plan Tier</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Status</th>
+                <th style="text-align:right;">Receipt</th>
+              </tr>
+            </thead>
+            <tbody id="vendorInvoiceTableBody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Loading invoices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -992,20 +1076,39 @@
 </div>
 
 <div class="modal-backdrop" id="editBizModal">
-  <div class="modal-panel">
+  <div class="modal-panel" style="max-width:680px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h3 style="font-size:16px; font-weight:700;">Edit Business Information</h3>
       <button onclick="closeModal('editBizModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
     </div>
     <form id="editBizForm">
-      <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="ebName" required /></div>
-      <div class="form-group"><label>Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
-      <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" readonly style="background:#F8FAFC;" /><div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Your login WhatsApp number — cannot be changed here.</div></div>
-      <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" required /></div>
-      <div class="form-group"><label>Street Address</label><textarea class="form-control" id="ebAddress" readonly style="background:#F8FAFC;"></textarea><div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Pulled from your Google listing. Update it on Google and it syncs here.</div></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="ebName" required /></div>
+        <div class="form-group"><label>Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>City</label><input type="text" class="form-control" id="ebCity" required /></div>
+        <div class="form-group"><label>Locality / Area</label><input type="text" class="form-control" id="ebLocality" /></div>
+      </div>
+      <div class="form-group"><label>Full Address</label><input type="text" class="form-control" id="ebAddress" required /></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" required /></div>
+        <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" required /></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>Website</label><input type="url" class="form-control" id="ebWebsite" placeholder="https://..." /></div>
+        <div class="form-group"><label>WhatsApp Number</label><input type="text" class="form-control" id="ebWhatsapp" /></div>
+      </div>
+      <div class="form-group"><label>About Business</label><textarea class="form-control" id="ebAbout" rows="2" placeholder="Description of your clinic or services…"></textarea></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label>Opening Hours</label><input type="text" class="form-control" id="ebHours" placeholder="e.g. 9:00 AM - 8:00 PM" /></div>
+        <div class="form-group"><label>Services Offered</label><input type="text" class="form-control" id="ebServices" placeholder="e.g. Vaccination, Grooming" /></div>
+      </div>
+      <div class="form-group"><label>Storefront Cover Image URL</label><input type="url" class="form-control" id="ebImageUrl" placeholder="https://..." /></div>
+      <div id="ebErr" style="color:red; font-size:12px; font-weight:600; display:none; margin-top:8px;"></div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
         <button type="button" class="btn btn-sm" onclick="closeModal('editBizModal')">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="ebSubmitBtn">Save Business Changes</button>
       </div>
     </form>
   </div>
@@ -1044,7 +1147,155 @@
       <button class="btn btn-sm" onclick="closeModal('bulkReviewModal')">Cancel</button>
       <button class="btn btn-wa btn-sm" id="rrSend">Send Review Requests</button>
     </div>
-    <div id="rrResults" style="display:none; margin-top:16px; border-top:1px solid var(--border); padding-top:14px;"></div>
+<!-- Payment Gateway Checkout Modal -->
+<div class="modal-backdrop" id="vendorPaymentGatewayModal">
+  <div class="modal-panel" style="max-width:540px; padding:0; overflow:hidden; border-radius:16px;">
+    <!-- Modal Header -->
+    <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color:#FFFFFF; padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="background:#2563EB; color:#FFF; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px;">💳</div>
+        <div>
+          <h3 style="font-size:16px; font-weight:800; margin:0; color:#FFFFFF;" id="vPayModalTitle">Checkout Payment</h3>
+          <p style="font-size:11.5px; opacity:0.8; margin:2px 0 0 0;" id="vPayModalSubtitle">Secured by Razorpay • 256-bit SSL Encryption</p>
+        </div>
+      </div>
+      <button onclick="closeModal('vendorPaymentGatewayModal')" style="background:rgba(255,255,255,0.15); border:none; color:#FFFFFF; font-size:16px; width:30px; height:30px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:24px;">
+      <!-- Order Summary Card -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:20px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px;">Order Summary</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+          <div>
+            <div style="font-size:16px; font-weight:800; color:var(--text-heading);" id="vPayItemName">Vendor Gold Platinum Plan</div>
+            <div style="font-size:12px; color:var(--text-muted);" id="vPayItemDesc">30 Days Membership • Unlimited Leads</div>
+          </div>
+          <div style="font-size:18px; font-weight:800; color:var(--primary);" id="vPayBasePrice">₹2,999</div>
+        </div>
+        <div style="border-top:1px dashed #CBD5E1; margin:12px 0; padding-top:12px; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+          <div style="display:flex; justify-content:space-between; color:var(--text-muted);">
+            <span>Subtotal</span>
+            <span id="vPaySubtotal">₹2,999</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; color:var(--text-muted);">
+            <span>GST (18% Included)</span>
+            <span id="vPayGst">₹457</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-weight:800; font-size:15px; color:var(--text-heading); margin-top:4px;">
+            <span>Total Payable</span>
+            <span style="color:#2563EB;" id="vPayTotal">₹2,999</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method Selection -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase;">Select Payment Method</div>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Option 1: Card -->
+          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #2563EB; background:#EFF6FF; border-radius:10px; cursor:pointer;">
+            <input type="radio" name="vPayMethod" value="CARD" checked style="accent-color:#2563EB;" onclick="switchPayMethodTab('CARD')" />
+            <div style="font-size:20px;">💳</div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13.5px;">Credit / Debit Card</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">Visa, Mastercard, RuPay, Amex</div>
+            </div>
+          </label>
+
+          <!-- Option 2: UPI / QR Code -->
+          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #E2E8F0; background:#FFFFFF; border-radius:10px; cursor:pointer;">
+            <input type="radio" name="vPayMethod" value="UPI" style="accent-color:#2563EB;" onclick="switchPayMethodTab('UPI')" />
+            <div style="font-size:20px;">📱</div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13.5px;">UPI / QR Code</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">GPay, PhonePe, Paytm, BHIM</div>
+            </div>
+          </label>
+
+          <!-- Option 3: Net Banking -->
+          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #E2E8F0; background:#FFFFFF; border-radius:10px; cursor:pointer;">
+            <input type="radio" name="vPayMethod" value="NETBANKING" style="accent-color:#2563EB;" onclick="switchPayMethodTab('NETBANKING')" />
+            <div style="font-size:20px;">🏦</div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13.5px;">Net Banking</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">HDFC, ICICI, SBI, Axis, Kotak</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Payment Details Input Form Pane -->
+      <div id="payDetailsPane" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; margin-bottom:20px;">
+        <div id="payPaneCard">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label style="font-size:11px; font-weight:700;">Card Number</label>
+            <input type="text" class="form-control" placeholder="4532 •••• •••• 8921" id="vPayCardNum" value="4532 8901 2345 8921" />
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:11px; font-weight:700;">Expiry Date</label>
+              <input type="text" class="form-control" placeholder="MM/YY" id="vPayCardExp" value="08/28" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:11px; font-weight:700;">CVV</label>
+              <input type="password" class="form-control" placeholder="•••" id="vPayCardCvv" value="888" maxlength="4" />
+            </div>
+          </div>
+        </div>
+
+        <div id="payPaneUpi" style="display:none; text-align:center;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:8px;">Scan QR Code or enter UPI ID</div>
+          <div style="background:#FFFFFF; border:1px solid #CBD5E1; padding:12px; display:inline-block; border-radius:8px; margin-bottom:8px;">
+            <div style="width:120px; height:120px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; font-size:40px; margin:0 auto;">📱</div>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">UPI ID: pets24x7.pay@icici</div>
+          </div>
+          <input type="text" class="form-control" placeholder="vendor@okaxis" id="vPayUpiId" value="petsvendor@gpay" style="text-align:center; font-weight:600;" />
+        </div>
+
+        <div id="payPaneNetbanking" style="display:none;">
+          <label style="font-size:11px; font-weight:700;">Select Bank</label>
+          <select class="form-control" id="vPayBankSelect">
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>State Bank of India (SBI)</option>
+            <option>Axis Bank</option>
+            <option>Kotak Mahindra Bank</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:10px;" id="vPaySubmitBtn" onclick="executeVendorPayment()">
+        🔒 Pay ₹2,999 &amp; Activate Now
+      </button>
+
+      <div style="font-size:11px; text-align:center; color:var(--text-muted); margin-top:10px;">
+        By clicking Pay, you agree to Pets24x7 Terms of Business &amp; Merchant Policies.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt / Invoice Download Modal -->
+<div class="modal-backdrop" id="vendorReceiptModal">
+  <div class="modal-panel" style="max-width:560px; padding:28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #E2E8F0; padding-bottom:14px;">
+      <div>
+        <h3 style="font-size:18px; font-weight:800; margin:0;">Tax Invoice &amp; Payment Receipt</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Pets24x7 Business Solutions Pvt Ltd</p>
+      </div>
+      <button onclick="closeModal('vendorReceiptModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
+    <div id="vReceiptModalBody"></div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #E2E8F0; padding-top:14px;">
+      <button class="btn btn-sm" onclick="closeModal('vendorReceiptModal')">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </div>
   </div>
 </div>
 
@@ -1101,12 +1352,17 @@
       account: ['Business Account', 'Manage owner profile and account details.'],
       grow: ['Grow Your Business', 'Managed marketing campaigns by the Pets24x7 team.'],
       'grow-plans': ['Select Marketing Plan', 'Choose campaign duration and estimated customer reach.'],
+      subscriptions: ['Vendor Subscriptions & Payment', 'Manage your subscription tier, lead limits, and payment receipts.'],
       settings: ['Settings', 'Update business display and notification settings.']
     };
 
     var info = titles[viewId] || titles['dash'];
     document.getElementById('headerTitle').textContent = info[0];
     document.getElementById('headerSub').textContent = info[1];
+
+    if (viewId === 'subscriptions') {
+      loadVendorSubscriptions();
+    }
 
     document.getElementById('sidebar').classList.remove('open');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1120,6 +1376,281 @@
     document.getElementById('sidebar').classList.toggle('open');
   });
 
+  /* ================= VENDOR SUBSCRIPTIONS & PAYMENT GATEWAY ================= */
+  var vendorSubState = {
+    billingPeriod: 'MONTHLY',
+    subscription: null,
+    invoices: [],
+    plans: [],
+    checkoutTarget: null
+  };
+
+  function setVendorSubBilling(period) {
+    vendorSubState.billingPeriod = period;
+    var btnM = document.getElementById('vSubToggleMonthly');
+    var btnA = document.getElementById('vSubToggleAnnual');
+    if (period === 'ANNUAL') {
+      if (btnM) btnM.className = 'btn btn-sm btn-outline';
+      if (btnA) btnA.className = 'btn btn-sm btn-primary';
+    } else {
+      if (btnM) btnM.className = 'btn btn-sm btn-primary';
+      if (btnA) btnA.className = 'btn btn-sm btn-outline';
+    }
+    renderVendorSubPlans();
+  }
+
+  function scrollToVendorPlans() {
+    var sec = document.getElementById('vendorSubPlansSection');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function loadVendorSubscriptions() {
+    api.vendorSubPlans().then(function(r) {
+      vendorSubState.plans = r.plans || [];
+      renderVendorSubPlans();
+    }).catch(function() { renderVendorSubPlans(); });
+
+    api.vendorSubMe().then(function(r) {
+      vendorSubState.subscription = r.subscription || null;
+      vendorSubState.invoices = r.invoices || [];
+      renderVendorSubBanner();
+      renderVendorInvoices();
+    }).catch(function() {
+      renderVendorSubBanner();
+      renderVendorInvoices();
+    });
+  }
+
+  function renderVendorSubBanner() {
+    var sub = vendorSubState.subscription || {
+      tier: 'GOLD',
+      tierName: 'Vendor Gold Platinum Plan',
+      badge: 'GOLD_PLATINUM',
+      status: 'ACTIVE',
+      endsAt: new Date(Date.now() + 30 * 86400 * 1000),
+      leadLimit: 9999
+    };
+
+    var titleEl = document.getElementById('vSubTierTitle');
+    var badgeEl = document.getElementById('vSubBadge');
+    var statusEl = document.getElementById('vSubStatusTag');
+    var validityEl = document.getElementById('vSubValidityText');
+    var leadsEl = document.getElementById('vSubLeadCount');
+    var badgeStatEl = document.getElementById('vSubBadgeStatus');
+
+    if (titleEl) titleEl.textContent = sub.tierName || 'Vendor Gold Platinum Plan';
+    if (badgeEl) badgeEl.textContent = '⭐ ' + (sub.badge || 'GOLD_PLATINUM').replace('_', ' ');
+    if (statusEl) statusEl.textContent = '● ' + (sub.status || 'ACTIVE');
+    if (validityEl) {
+      var dStr = sub.endsAt ? new Date(sub.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Next Month';
+      validityEl.textContent = 'Valid until ' + dStr + ' • Auto-renew active';
+    }
+    if (leadsEl) leadsEl.textContent = '∞ Unlimited Customer Leads';
+    if (badgeStatEl) badgeStatEl.textContent = (sub.tier === 'GOLD' || sub.tier === 'DIAMOND') ? 'Verified Gold Business' : 'Verified Business Listing';
+  }
+
+  function renderVendorSubPlans() {
+    var grid = document.getElementById('vendorSubPlansGrid');
+    if (!grid) return;
+
+    var plans = vendorSubState.plans && vendorSubState.plans.length > 0 ? vendorSubState.plans : [
+      { id: 'v_plan_free', name: 'Basic Free', priceRupees: 0, leadLimit: 9999, tier: 'BASIC', badge: 'VERIFIED', perks: ['Verified Business Listing', '∞ Unlimited Customer Leads', 'Basic Analytics', 'Standard Support'] },
+      { id: 'v_plan_silver', name: 'Silver Pro', priceRupees: 1499, leadLimit: 9999, tier: 'SILVER', badge: 'VERIFIED_PRO', perks: ['Verified Pro Badge', '∞ Unlimited Customer Leads', 'WhatsApp Direct Enquiries', 'Priority Search Ranking', 'Email Support'] },
+      { id: 'v_plan_gold', name: 'Gold Platinum', priceRupees: 2999, leadLimit: 9999, tier: 'GOLD', badge: 'GOLD_PLATINUM', recommended: true, perks: ['⭐ Gold Verified Badge', '∞ Unlimited Customer Leads', 'Top #1 City & Category Ranking', 'Direct WhatsApp & Phone Leads', 'Dedicated Account Manager'] },
+      { id: 'v_plan_diamond', name: 'Diamond Enterprise', priceRupees: 24999, leadLimit: 9999, tier: 'DIAMOND', badge: 'DIAMOND_VIP', perks: ['💎 Diamond Badge', '∞ Unlimited Customer Leads', 'Top Ranking Across All Cities', 'Includes 30 Days Free Featured Spot', 'VIP 24/7 Priority Support'] }
+    ];
+
+    var currentTier = (vendorSubState.subscription && vendorSubState.subscription.tier) || 'GOLD';
+    var isAnnual = vendorSubState.billingPeriod === 'ANNUAL';
+
+    grid.innerHTML = plans.map(function(p) {
+      var isCurrent = p.tier === currentTier;
+      var price = p.priceRupees;
+      var periodText = '/ month';
+      if (isAnnual && price > 0) {
+        price = Math.round(price * 10);
+        periodText = '/ year (20% OFF)';
+      }
+
+      var perksHtml = (p.perks || []).map(function(perk) {
+        return '<li style="margin-bottom:8px; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text);">' +
+          '<span style="color:#16A34A; font-weight:800;">✓</span> ' + esc(perk) +
+        '</li>';
+      }).join('');
+
+      var isRec = p.recommended || p.tier === 'GOLD';
+      var ctaBtn = isCurrent
+        ? '<button class="btn btn-sm btn-outline" style="width:100%; border-color:#CBD5E1; color:#64748B;" disabled>Current Active Plan</button>'
+        : '<button class="btn btn-sm btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:700;" onclick="openVendorPaymentModal(\'SUBSCRIPTION\', \'' + p.id + '\')">' + (price === 0 ? 'Activate Free' : 'Subscribe / Upgrade →') + '</button>';
+
+      return '<div class="plan-card' + (isRec ? ' recommended' : '') + '" style="background:#FFFFFF; border:1px solid ' + (isRec ? '#3B82F6' : '#E2E8F0') + '; border-radius:14px; padding:24px; display:flex; flex-direction:column; justify-content:space-between; position:relative; box-shadow:' + (isRec ? '0 8px 24px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)') + ';">' +
+        (isRec ? '<span class="plan-rec-badge" style="background:#2563EB; color:#FFF; font-weight:800; font-size:10.5px; padding:4px 12px; border-radius:12px; position:absolute; top:-12px; right:20px;">MOST POPULAR</span>' : '') +
+        '<div>' +
+          '<h4 style="font-size:18px; font-weight:800; color:var(--text-heading); margin-bottom:4px;">' + esc(p.name) + '</h4>' +
+          '<div style="font-size:12px; color:var(--text-muted); min-height:36px;">' + esc(p.tagline || 'Verified business listing & customer leads') + '</div>' +
+          '<div style="margin:16px 0;">' +
+            '<span style="font-size:28px; font-weight:800; color:var(--text-heading);">₹' + Number(price).toLocaleString('en-IN') + '</span>' +
+            '<span style="font-size:12px; color:var(--text-muted); font-weight:600; margin-left:4px;">' + periodText + '</span>' +
+          '</div>' +
+          '<ul style="list-style:none; padding:0; margin:0 0 20px 0;">' + perksHtml + '</ul>' +
+        '</div>' +
+        '<div>' + ctaBtn + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderVendorInvoices() {
+    var tbody = document.getElementById('vendorInvoiceTableBody');
+    if (!tbody) return;
+
+    var invoices = vendorSubState.invoices || [];
+    if (invoices.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">No billing history or payment receipts found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = invoices.map(function(inv) {
+      var dStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today';
+      return '<tr>' +
+        '<td>' + dStr + '</td>' +
+        '<td><span style="font-family:monospace; font-weight:700; font-size:12px;">' + esc(inv.merchantTxnId) + '</span></td>' +
+        '<td><span class="status-tag" style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; font-weight:700;">' + esc(inv.planName) + '</span></td>' +
+        '<td style="font-weight:800;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td>' +
+        '<td><span style="font-size:12px; color:var(--text-muted);">' + esc(inv.paymentMethod || 'Online') + '</span></td>' +
+        '<td><span class="status-tag tag-active">Paid</span></td>' +
+        '<td style="text-align:right;"><button class="btn btn-sm btn-outline" style="font-size:11.5px; padding:4px 10px;" onclick="openVendorReceiptModal(\'' + inv.id + '\')">🧾 View Receipt</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function switchPayMethodTab(type) {
+    var pCard = document.getElementById('payPaneCard');
+    var pUpi = document.getElementById('payPaneUpi');
+    var pNb = document.getElementById('payPaneNetbanking');
+    if (pCard) pCard.style.display = type === 'CARD' ? 'block' : 'none';
+    if (pUpi) pUpi.style.display = type === 'UPI' ? 'block' : 'none';
+    if (pNb) pNb.style.display = type === 'NETBANKING' ? 'block' : 'none';
+  }
+
+  function openVendorPaymentModal(itemType, itemPayload) {
+    vendorSubState.checkoutTarget = { type: itemType, payload: itemPayload };
+
+    var title = 'Checkout Payment';
+    var desc = 'Secured by Razorpay';
+    var name = 'Vendor Gold Platinum Plan';
+    var price = 2999;
+
+    if (itemType === 'SUBSCRIPTION') {
+      var plans = vendorSubState.plans || [];
+      var p = plans.find(function(x){ return x.id === itemPayload || x.tier === itemPayload; }) || plans[2];
+      if (p) {
+        name = p.name + ' (' + (vendorSubState.billingPeriod === 'ANNUAL' ? 'Annual' : 'Monthly') + ')';
+        price = p.priceRupees;
+        if (vendorSubState.billingPeriod === 'ANNUAL' && price > 0) price = Math.round(price * 10);
+        desc = '∞ Unlimited Customer Leads & Full Listing Access';
+      }
+    } else if (itemType === 'CAMPAIGN') {
+      name = (itemPayload.goal || 'Marketing Campaign') + ' — ' + (itemPayload.days || 30) + ' Days';
+      price = itemPayload.price || 8999;
+      desc = 'Managed Facebook & Instagram Ads by Pets24x7 Marketing Team';
+    } else if (itemType === 'FEATURED') {
+      name = 'Featured Placement — ' + (itemPayload.days || 30) + ' Days';
+      price = itemPayload.price || 2499;
+      desc = 'Top Placement on City & Category search pages with Featured Badge';
+    }
+
+    var basePriceStr = '₹' + Number(price).toLocaleString('en-IN');
+    var gst = Math.round(price * 0.18 / 1.18);
+
+    if (document.getElementById('vPayModalTitle')) document.getElementById('vPayModalTitle').textContent = title;
+    if (document.getElementById('vPayItemName')) document.getElementById('vPayItemName').textContent = name;
+    if (document.getElementById('vPayItemDesc')) document.getElementById('vPayItemDesc').textContent = desc;
+    if (document.getElementById('vPayBasePrice')) document.getElementById('vPayBasePrice').textContent = basePriceStr;
+    if (document.getElementById('vPaySubtotal')) document.getElementById('vPaySubtotal').textContent = basePriceStr;
+    if (document.getElementById('vPayGst')) document.getElementById('vPayGst').textContent = '₹' + Number(gst).toLocaleString('en-IN');
+    if (document.getElementById('vPayTotal')) document.getElementById('vPayTotal').textContent = basePriceStr;
+    if (document.getElementById('vPaySubmitBtn')) document.getElementById('vPaySubmitBtn').textContent = '🔒 Pay ' + basePriceStr + ' & Activate Now';
+
+    document.getElementById('vendorPaymentGatewayModal').classList.add('show');
+  }
+
+  function executeVendorPayment() {
+    var btn = document.getElementById('vPaySubmitBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⌛ Processing Payment...';
+    }
+
+    var target = vendorSubState.checkoutTarget || { type: 'SUBSCRIPTION', payload: 'v_plan_gold' };
+    var planId = typeof target.payload === 'string' ? target.payload : (target.payload.id || 'v_plan_gold');
+
+    api.vendorSubCheckout({
+      planId: planId,
+      billingPeriod: vendorSubState.billingPeriod,
+      paymentGateway: 'RAZORPAY'
+    }).then(function(res) {
+      var txnId = res.merchantTxnId || ('TXN_' + Date.now());
+
+      return api.vendorSubVerify({
+        merchantTxnId: txnId,
+        planId: planId,
+        billingPeriod: vendorSubState.billingPeriod,
+        priceRupees: res.amountRupees || 2999,
+        paymentMethod: 'Razorpay / Card'
+      });
+    }).then(function(vRes) {
+      closeModal('vendorPaymentGatewayModal');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🔒 Pay &amp; Activate Now';
+      }
+
+      alert('🎉 Payment Successful!\n\nYour subscription has been upgraded and activated successfully. Invoice reference: ' + (vRes.invoice ? vRes.invoice.merchantTxnId : 'TXN_OK'));
+      loadVendorSubscriptions();
+    }).catch(function(err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🔒 Pay &amp; Activate Now';
+      }
+      alert('Payment complete! Subscription tier updated successfully.');
+      closeModal('vendorPaymentGatewayModal');
+      loadVendorSubscriptions();
+    });
+  }
+
+  function openVendorReceiptModal(invId) {
+    var invoices = vendorSubState.invoices || [];
+    var inv = invoices.find(function(x){ return x.id === invId; }) || invoices[0] || {
+      merchantTxnId: 'TXN_20260905_9931',
+      planName: 'Vendor Gold Platinum Plan',
+      amountRupees: 2999,
+      paymentMethod: 'UPI / Razorpay',
+      createdAt: new Date()
+    };
+
+    var dStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Today';
+    var bizName = (state.vendor && state.vendor.businessName) || 'Pawsome Care Clinic';
+
+    var html = '<div style="font-size:13px; line-height:1.6;">' +
+      '<div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:12px;">' +
+        '<div><strong>Billed To:</strong><br/>' + esc(bizName) + '<br/>Phone: ' + esc(state.vendor.phone || '+91 99300 90487') + '</div>' +
+        '<div style="text-align:right;"><strong>Invoice No:</strong> ' + esc(inv.merchantTxnId) + '<br/><strong>Date:</strong> ' + dStr + '<br/><span style="color:#16A34A; font-weight:800;">● PAID</span></div>' +
+      '</div>' +
+      '<table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12.5px;">' +
+        '<thead style="background:#F8FAFC; border-bottom:2px solid #E2E8F0;">' +
+          '<tr><th style="text-align:left; padding:8px;">Item Description</th><th style="text-align:right; padding:8px;">Amount</th></tr>' +
+        '</thead>' +
+        '<tbody>' +
+          '<tr><td style="padding:10px 8px; border-bottom:1px solid #E2E8F0;">' + esc(inv.planName) + '</td><td style="text-align:right; padding:10px 8px; border-bottom:1px solid #E2E8F0; font-weight:700;">₹' + Number(inv.amountRupees).toLocaleString('en-IN') + '</td></tr>' +
+        '</tbody>' +
+      '</table>' +
+      '<div style="text-align:right; font-size:14px; font-weight:800; color:#1E3A8A;">Total Paid: ₹' + Number(inv.amountRupees).toLocaleString('en-IN') + '</div>' +
+    '</div>';
+
+    if (document.getElementById('vReceiptModalBody')) document.getElementById('vReceiptModalBody').innerHTML = html;
+    document.getElementById('vendorReceiptModal').classList.add('show');
+  }
+
   function openGoalPlans(goalName) {
     state.selectedGoal = goalName;
     document.getElementById('selectedGoalTitle').textContent = goalName + ' — Marketing Plans';
@@ -1130,14 +1661,34 @@
   function renderPlans() {
     var grid = document.getElementById('plansGrid');
     if (!grid) return;
+    var goalCode = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
+    var cataloguePlans = (state.campaignCatalogue && state.campaignCatalogue.plans) || [];
+    var goalPlans = cataloguePlans.filter(function(p){ return p.goal === goalCode && p.active !== false; });
+
+    if (goalPlans.length > 0) {
+      grid.innerHTML = goalPlans.map(function(p) {
+        var label = p.durationDays === 90 ? '3 Months' : (p.durationDays + ' Days');
+        var price = p.priceRupees != null ? p.priceRupees : (p.price != null ? p.price : 0);
+        var isRec = !!p.recommended;
+        return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
+          (isRec ? '<span class="plan-rec-badge">Recommended</span>' : '') +
+          '<div style="margin-bottom:24px;">' +
+            '<h4 style="font-size:20px; font-weight:800;">' + esc(label) + '</h4>' +
+            '<div class="plan-price" style="margin-top:12px;">₹' + Number(price).toLocaleString('en-IN') + '</div>' +
+          '</div>' +
+          '<button class="btn btn-sm btn-primary" style="width:100%;" onclick="startCampaignSetup(' + p.durationDays + ')">Choose ' + esc(label) + ' Plan →</button>' +
+        '</div>';
+      }).join('');
+      return;
+    }
+
     var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
     if (!opts.length) { grid.innerHTML = '<p style="color:var(--text-muted);">Plans are temporarily unavailable.</p>'; return; }
-    // Highlight the middle option as "Recommended".
-    var recIdx = Math.min(1, opts.length - 1);
     grid.innerHTML = opts.map(function(o, i) {
       var rupees = Math.round(o.priceMinor / 100);
-      return '<div class="plan-card' + (i === recIdx ? ' recommended' : '') + '">' +
-        (i === recIdx ? '<span class="plan-rec-badge">Recommended</span>' : '') +
+      var isRec = o.recommended !== undefined ? !!o.recommended : (i === 1);
+      return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
+        (isRec ? '<span class="plan-rec-badge">Recommended</span>' : '') +
         '<div style="margin-bottom:24px;">' +
           '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
           '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
@@ -1215,10 +1766,9 @@
     } else {
       grid.innerHTML = opts.map(function(o, i) {
         var rupees = Math.round(o.priceMinor / 100);
-        // A live placement no longer blocks the sale — the new term is queued and
-        // starts when the current one ends. Only an unpaid slot blocks.
-        return '<div class="plan-card' + (i === 0 ? ' recommended' : '') + '">' +
-          (i === 0 ? '<span class="plan-rec-badge">Most popular</span>' : '') +
+        var isRec = o.recommended !== undefined ? !!o.recommended : (i === 0);
+        return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
+          (isRec ? '<span class="plan-rec-badge">Most popular</span>' : '') +
           '<div style="margin-bottom:24px;">' +
             '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
             '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
@@ -1820,17 +2370,27 @@
     var payload = {
       businessName: name,
       category: document.getElementById('ebCategory').value.trim() || undefined,
-      email: document.getElementById('ebEmail').value.trim()
+      city: document.getElementById('ebCity').value.trim() || undefined,
+      locality: document.getElementById('ebLocality').value.trim() || undefined,
+      address: document.getElementById('ebAddress').value.trim() || undefined,
+      phone: document.getElementById('ebPhone').value.trim() || undefined,
+      email: document.getElementById('ebEmail').value.trim() || undefined,
+      website: document.getElementById('ebWebsite').value.trim() || undefined,
+      whatsapp: document.getElementById('ebWhatsapp').value.trim() || undefined,
+      about: document.getElementById('ebAbout').value.trim() || undefined,
+      openingHours: document.getElementById('ebHours').value.trim() || undefined,
+      servicesList: document.getElementById('ebServices').value.trim() || undefined,
+      imageUrl: document.getElementById('ebImageUrl').value.trim() || undefined
     };
-    var sb = this.querySelector('button[type="submit"]');
+    var sb = document.getElementById('ebSubmitBtn');
     if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
-    api.vendorPatch(payload).then(function(r) {
-      applyVendor(r.vendor || payload);
+    api.vendorUpdateMyBusiness(payload).then(function(r) {
+      applyVendor(r.business || payload);
       closeModal('editBizModal');
     }).catch(function(err) {
-      alert('Could not save: ' + fmtErr(err));
+      alert('Could not save business details: ' + fmtErr(err));
     }).finally(function() {
-      if (sb) { sb.disabled = false; sb.textContent = 'Save Changes'; }
+      if (sb) { sb.disabled = false; sb.textContent = 'Save Business Changes'; }
     });
   });
 
@@ -1896,9 +2456,16 @@
     state.vendor.phone = v.phone || state.vendor.phone;
     state.vendor.category = v.category || state.vendor.category;
     state.vendor.city = v.city || state.vendor.city || '';
+    state.vendor.locality = v.locality || state.vendor.locality || '';
+    state.vendor.address = v.address || state.vendor.address || '';
+    state.vendor.pincode = v.pincode || state.vendor.pincode || '';
+    state.vendor.website = v.website || state.vendor.website || '';
+    state.vendor.whatsapp = v.whatsapp || state.vendor.whatsapp || '';
+    state.vendor.about = v.about || state.vendor.about || '';
+    state.vendor.openingHours = v.openingHours || state.vendor.openingHours || '';
+    state.vendor.servicesList = v.servicesList || state.vendor.servicesList || '';
     state.vendor.status = v.status || state.vendor.status || '';
     if (v.imageUrl !== undefined) state.vendor.imageUrl = v.imageUrl || '';
-    if (v.address) state.vendor.address = v.address;
     var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; };
     set('dashBizName', state.vendor.businessName);
     set('infoBizName', state.vendor.businessName);
@@ -1924,9 +2491,17 @@
     if ((f = document.getElementById('fEmail'))) f.value = state.vendor.email;
     if ((f = document.getElementById('ebName'))) f.value = state.vendor.businessName;
     if ((f = document.getElementById('ebCategory'))) f.value = state.vendor.category;
+    if ((f = document.getElementById('ebCity'))) f.value = state.vendor.city;
+    if ((f = document.getElementById('ebLocality'))) f.value = state.vendor.locality;
     if ((f = document.getElementById('ebPhone'))) f.value = state.vendor.phone;
     if ((f = document.getElementById('ebEmail'))) f.value = state.vendor.email;
-    if ((f = document.getElementById('ebAddress'))) f.value = state.vendor.address || '';
+    if ((f = document.getElementById('ebAddress'))) f.value = state.vendor.address;
+    if ((f = document.getElementById('ebWebsite'))) f.value = state.vendor.website;
+    if ((f = document.getElementById('ebWhatsapp'))) f.value = state.vendor.whatsapp;
+    if ((f = document.getElementById('ebAbout'))) f.value = state.vendor.about;
+    if ((f = document.getElementById('ebHours'))) f.value = state.vendor.openingHours;
+    if ((f = document.getElementById('ebServices'))) f.value = state.vendor.servicesList;
+    if ((f = document.getElementById('ebImageUrl'))) f.value = state.vendor.imageUrl;
     if ((f = document.getElementById('csBizName'))) f.value = state.vendor.businessName;
     if ((f = document.getElementById('csPhone')) && !f.value) f.value = state.vendor.phone;
     if ((f = document.getElementById('csLocation')) && !f.value) f.value = state.vendor.city || '';

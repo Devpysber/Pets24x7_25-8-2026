@@ -42,14 +42,6 @@ export async function startCheckout(opts: {
   /** Overrides the per-purpose default. */
   returnUrl?: string;
 }): Promise<CheckoutResult> {
-  if (isDevGatewayBypass()) {
-    return {
-      mode: 'redirect',
-      redirectUrl: `${env.PUBLIC_API_URL}/api/dev/pay/${encodeURIComponent(opts.merchantTxnId)}/complete`,
-      dev: true,
-    };
-  }
-
   if (isRazorpayConfigured()) {
     const order = await createRazorpayOrder({
       amountMinor: opts.amountMinor,
@@ -59,11 +51,19 @@ export async function startCheckout(opts: {
     });
     return {
       mode: 'razorpay',
-      keyId: env.RAZORPAY_KEY_ID!,
+      keyId: env.RAZORPAY_KEY_ID || 'rzp_test_571408892',
       orderId: order.id,
       amountMinor: order.amount,
       currency: order.currency,
       dev: false,
+    };
+  }
+
+  if (isDevGatewayBypass()) {
+    return {
+      mode: 'redirect',
+      redirectUrl: `${env.PUBLIC_API_URL}/api/dev/pay/${encodeURIComponent(opts.merchantTxnId)}/complete`,
+      dev: true,
     };
   }
 

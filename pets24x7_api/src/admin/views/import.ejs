@@ -1,0 +1,604 @@
+<%- include('_head', { title: 'Listing Import — Pets24x7 Admin', active: 'import' }) %>
+
+<style>
+  .import-container { max-width: 1100px; }
+  .import-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .step-header { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  
+  /* Dropzone */
+  .dropzone { border: 2px dashed #CBD5E1; border-radius: 12px; padding: 32px; text-align: center; background: #F8FAFC; cursor: pointer; transition: all 0.2s; }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: #EFF6FF; }
+  .dropzone-icon { font-size: 32px; margin-bottom: 8px; color: var(--primary); }
+  .dropzone-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; color: var(--text); }
+  .dropzone-sub { font-size: 12.5px; color: var(--muted); }
+
+  /* Mapping Grid */
+  .mapping-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 14px; }
+  .mapping-item { background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .mapping-item label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .mapping-item select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+
+  /* City Exclusion Chips */
+  .city-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; margin-bottom: 12px; }
+  .city-chip { background: #E2E8F0; color: #1E293B; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; display: inline-flex; align-items: center; gap: 6px; }
+  .city-chip button { border: none; background: transparent; cursor: pointer; color: #64748B; font-weight: 800; font-size: 12px; }
+  .city-chip button:hover { color: #DC2626; }
+
+  /* Settings Checkboxes */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .setting-option { display: flex; align-items: flex-start; gap: 10px; background: #F8FAFC; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+  .setting-option input { margin-top: 3px; cursor: pointer; }
+  .setting-option strong { display: block; font-weight: 700; color: var(--text); }
+  .setting-option span { color: var(--muted); font-size: 12px; }
+
+  /* Preview Table */
+  .preview-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .preview-stat { background: #F8FAFC; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .preview-stat .num { font-size: 20px; font-weight: 800; color: var(--text); }
+  .preview-stat .lbl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+
+  .filter-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-tab { padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text); }
+  .filter-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* Progress Bar */
+  .progress-box { background: #F1F5F9; border-radius: 99px; height: 16px; overflow: hidden; margin: 16px 0; border: 1px solid var(--border); }
+  .progress-fill { background: var(--primary); height: 100%; width: 0%; transition: width 0.3s ease; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal-body { background: #fff; border-radius: 16px; width: 90%; max-width: 750px; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+</style>
+
+<div class="import-container">
+  <div class="page-head">
+    <div>
+      <h2>Listing Import</h2>
+      <p class="muted">Upload CSV business listings, analyze duplicates, exclude cities, and sync to Google Sheets.</p>
+    </div>
+  </div>
+
+  <!-- STEP 1: Upload CSV & Configure -->
+  <div class="import-card" id="stepUpload">
+    <div class="step-header">
+      <span>1. Upload Listing CSV &amp; Exclusion List</span>
+      <span class="pill active">Step 1 of 3</span>
+    </div>
+
+    <!-- Dropzone -->
+    <div class="dropzone" id="csvDropzone" onclick="document.getElementById('csvFileInput').click()">
+      <div class="dropzone-icon">📁</div>
+      <div class="dropzone-title">Click to select CSV or drag &amp; drop file here</div>
+      <div class="dropzone-sub">Supports .csv files up to 10MB (max 10,000 listings per import)</div>
+      <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvSelect(event)" />
+    </div>
+    <div id="fileInfoBox" style="margin-top:10px; font-weight:700; color:var(--primary); font-size:13px; display:none;"></div>
+
+    <!-- Excluded Cities Section -->
+    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+      <label>City Exclusion List</label>
+      <div class="muted" style="font-size:12.5px; margin-bottom:8px;">Listings from excluded cities will be flagged and skipped automatically.</div>
+      
+      <div class="city-chips" id="cityChipsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center; max-width:480px;">
+        <input type="text" id="addCityInput" placeholder="Enter city name (e.g. Mumbai)" style="flex:1" onkeypress="if(event.key==='Enter'){event.preventDefault();addExcludedCity();}" />
+        <button type="button" class="btn btn-sm" onclick="addExcludedCity()">+ Add City</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('cityCsvFileInput').click()">Upload City CSV</button>
+        <input type="file" id="cityCsvFileInput" accept=".csv" style="display:none" onchange="handleCityCsvUpload(event)" />
+      </div>
+    </div>
+
+    <!-- Column Mapping Section (Visible after CSV loaded) -->
+    <div id="mappingSection" style="display:none; margin-top:24px; border-top:1px solid var(--border); padding-top:16px;">
+      <label>CSV Column Mapping</label>
+      <div class="muted" style="font-size:12.5px; margin-bottom:12px;">Review and map headers from your CSV to Pets24x7 database fields.</div>
+      <div class="mapping-grid" id="mappingGrid"></div>
+    </div>
+
+    <!-- Import Rule Settings -->
+    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+      <label>Import Rules &amp; Settings</label>
+      <div class="settings-grid">
+        <label class="setting-option">
+          <input type="checkbox" id="ruleSkipDuplicates" checked />
+          <div>
+            <strong>Skip CSV Duplicates</strong>
+            <span>Do not import duplicate rows within the CSV itself</span>
+          </div>
+        </label>
+        <label class="setting-option">
+          <input type="checkbox" id="ruleSkipExisting" checked />
+          <div>
+            <strong>Skip Existing DB Listings</strong>
+            <span>Skip businesses that already exist in the database</span>
+          </div>
+        </label>
+        <label class="setting-option">
+          <input type="checkbox" id="ruleSkipInvalid" checked />
+          <div>
+            <strong>Skip Invalid Records</strong>
+            <span>Skip rows with missing business name or phone number</span>
+          </div>
+        </label>
+        <label class="setting-option">
+          <input type="checkbox" id="ruleApplyCityExclusions" checked />
+          <div>
+            <strong>Apply City Exclusion List</strong>
+            <span>Automatically filter out listings from excluded cities</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; text-align:right;">
+      <button type="button" class="btn btn-primary" id="analyzeBtn" onclick="analyzeCsvData()" disabled>Analyze &amp; Generate Preview &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Preview & Filter -->
+  <div class="import-card" id="stepPreview" style="display:none;">
+    <div class="step-header">
+      <span>2. Import Preview &amp; Audit</span>
+      <span class="pill active">Step 2 of 3</span>
+    </div>
+
+    <div class="preview-stats">
+      <div class="preview-stat"><div class="num" id="statTotal">0</div><div class="lbl">Total Rows</div></div>
+      <div class="preview-stat" style="border-color:#BBF7D0; background:#F0FDF4;"><div class="num" style="color:#166534" id="statNew">0</div><div class="lbl">New Listings</div></div>
+      <div class="preview-stat" style="border-color:#FED7AA; background:#FFF7ED;"><div class="num" style="color:#C2410C" id="statExisting">0</div><div class="lbl">Existing DB</div></div>
+      <div class="preview-stat" style="border-color:#FDE68A; background:#FEFCE8;"><div class="num" style="color:#854D0E" id="statDuplicate">0</div><div class="lbl">Duplicates</div></div>
+      <div class="preview-stat" style="border-color:#FECACA; background:#FEF2F2;"><div class="num" style="color:#991B1B" id="statInvalid">0</div><div class="lbl">Invalid</div></div>
+      <div class="preview-stat" style="border-color:#E9D5FF; background:#FAF5FF;"><div class="num" style="color:#6B21A8" id="statExcluded">0</div><div class="lbl">Excluded City</div></div>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button type="button" class="filter-tab active" onclick="filterPreview('ALL', this)">All (0)</button>
+      <button type="button" class="filter-tab" onclick="filterPreview('NEW', this)">New (0)</button>
+      <button type="button" class="filter-tab" onclick="filterPreview('EXISTING', this)">Existing (0)</button>
+      <button type="button" class="filter-tab" onclick="filterPreview('DUPLICATE', this)">Duplicate (0)</button>
+      <button type="button" class="filter-tab" onclick="filterPreview('INVALID', this)">Invalid (0)</button>
+      <button type="button" class="filter-tab" onclick="filterPreview('EXCLUDED_CITY', this)">Excluded City (0)</button>
+    </div>
+
+    <div style="max-height:380px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:60px">Row</th>
+            <th>Business Name</th>
+            <th>City</th>
+            <th>Phone</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Reason</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="previewTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn btn-outline" onclick="backToUpload()">&larr; Back to Upload &amp; Settings</button>
+      <button type="button" class="btn btn-success" id="confirmImportBtn" onclick="confirmAndExecuteImport()">Confirm &amp; Execute Import &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Progress & Results -->
+  <div class="import-card" id="stepProgress" style="display:none;">
+    <div class="step-header">
+      <span>3. Executing Import &amp; Google Sheets Sync</span>
+      <span class="pill active" id="importStatusPill">Processing…</span>
+    </div>
+
+    <div class="progress-box">
+      <div class="progress-fill" id="progressFillBar"></div>
+    </div>
+
+    <div class="stat-row" style="margin-top:20px;">
+      <div class="stat-card"><div class="lbl">Imported to DB</div><div class="num" style="color:var(--success)" id="liveCreated">0</div></div>
+      <div class="stat-card"><div class="lbl">Google Sheets Synced</div><div class="num" style="color:#2563EB" id="liveSheetsSynced">0</div></div>
+      <div class="stat-card"><div class="lbl">Skipped Rows</div><div class="num" style="color:var(--warning)" id="liveSkipped">0</div></div>
+      <div class="stat-card"><div class="lbl">Failed Rows</div><div class="num" style="color:var(--danger)" id="liveFailed">0</div></div>
+    </div>
+
+    <div id="finalReportBox" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; padding:20px; margin-top:20px;">
+      <h3 style="color:#166534; font-size:18px; margin-bottom:8px;">Import Completed Successfully ✓</h3>
+      <p style="color:#15803D; font-size:14px; margin-bottom:14px;" id="finalReportSummary"></p>
+      <button type="button" class="btn btn-primary" onclick="resetImportForm()">Import Another CSV File</button>
+    </div>
+  </div>
+
+  <!-- Import History Section -->
+  <div class="import-card">
+    <div class="step-header">
+      <span>Import History &amp; Audit Logs</span>
+    </div>
+
+    <% if (jobs && jobs.length) { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Date &amp; Time</th>
+            <th>File Name</th>
+            <th>Total</th>
+            <th>Imported</th>
+            <th>Skipped</th>
+            <th>Duplicates</th>
+            <th>Invalid</th>
+            <th>Excluded</th>
+            <th>Google Sheets</th>
+            <th>Status</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% jobs.forEach(function(j) { %>
+            <tr>
+              <td><%= new Date(j.createdAt).toLocaleString() %></td>
+              <td><strong><%= j.fileName || 'import.csv' %></strong></td>
+              <td><%= j.totalRows %></td>
+              <td><span class="pill active">+<%= j.created + j.updated %></span></td>
+              <td><%= j.skipped %></td>
+              <td><%= j.duplicateCount || 0 %></td>
+              <td><%= j.invalidCount || 0 %></td>
+              <td><%= j.excludedCityCount || 0 %></td>
+              <td><span class="pill" style="background:#DBEAFE;color:#1E40AF"><%= j.googleSheetsSyncedCount || 0 %> Synced</span></td>
+              <td><span class="pill success"><%= j.status %></span></td>
+              <td><button type="button" class="btn btn-sm btn-outline" onclick="viewJobDetails('<%= j.id %>')">View Audit</button></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <div class="empty">No past imports recorded yet.</div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Audit Details Modal -->
+<div class="modal-overlay" id="auditModal">
+  <div class="modal-body">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+      <h3 style="font-size:18px; font-weight:800;" id="modalTitle">Import Audit Details</h3>
+      <button type="button" class="btn btn-sm" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div id="modalContent">
+      <!-- Loaded dynamically -->
+    </div>
+  </div>
+</div>
+
+<script>
+  var state = {
+    csvContent: '',
+    fileName: '',
+    columns: [],
+    sample: [],
+    mapping: {},
+    excludedCities: ['Mumbai', 'Delhi', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai'],
+    analysisResults: null,
+    currentFilter: 'ALL'
+  };
+
+  const TARGET_FIELDS = [
+    { key: 'businessName', label: 'Business Name', required: true },
+    { key: 'city', label: 'City' },
+    { key: 'phone', label: 'Phone Number', required: true },
+    { key: 'address', label: 'Address' },
+    { key: 'category', label: 'Category' },
+    { key: 'email', label: 'Email Address' },
+    { key: 'website', label: 'Website URL' },
+    { key: 'whatsapp', label: 'WhatsApp Number' },
+    { key: 'locality', label: 'Locality / Area' },
+    { key: 'pincode', label: 'Pincode' },
+    { key: 'about', label: 'About Business' },
+    { key: 'openingHours', label: 'Opening Hours' },
+    { key: 'servicesList', label: 'Services List' }
+  ];
+
+  function renderCityChips() {
+    const container = document.getElementById('cityChipsContainer');
+    container.innerHTML = state.excludedCities.map((c, i) => `
+      <span class="city-chip">
+        ${esc(c)}
+        <button type="button" onclick="removeExcludedCity(${i})">✕</button>
+      </span>
+    `).join('');
+  }
+  renderCityChips();
+
+  function addExcludedCity() {
+    const input = document.getElementById('addCityInput');
+    const city = input.value.trim();
+    if (city && !state.excludedCities.includes(city)) {
+      state.excludedCities.push(city);
+      input.value = '';
+      renderCityChips();
+    }
+  }
+
+  function removeExcludedCity(index) {
+    state.excludedCities.splice(index, 1);
+    renderCityChips();
+  }
+
+  function handleCityCsvUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const text = evt.target.result || '';
+      const lines = text.split(/\r?\n/);
+      lines.forEach(line => {
+        const c = line.replace(/["']/g, '').trim();
+        if (c && c.toLowerCase() !== 'city' && !state.excludedCities.includes(c)) {
+          state.excludedCities.push(c);
+        }
+      });
+      renderCityChips();
+      alert(`Loaded cities from CSV! Total excluded cities: ${state.excludedCities.length}`);
+    };
+    reader.readAsText(file);
+  }
+
+  // File Dropzone handlers
+  const dropzone = document.getElementById('csvDropzone');
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+  });
+
+  function handleCsvSelect(e) {
+    if (e.target.files.length) processFile(e.target.files[0]);
+  }
+
+  function processFile(file) {
+    if (!file.name.endsWith('.csv')) return alert('Please select a valid .csv file.');
+    state.fileName = file.name;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      state.csvContent = evt.target.result || '';
+      document.getElementById('fileInfoBox').style.display = 'block';
+      document.getElementById('fileInfoBox').textContent = `Loaded CSV File: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+      
+      // Request mapping suggestions
+      fetch('/api/admin/import/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: state.fileName, content: state.csvContent, target: 'vendors' })
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) throw new Error(d.message || 'Could not parse CSV.');
+        state.columns = d.columns || [];
+        state.sample = d.sample || [];
+        state.mapping = d.suggestedMapping?.vendors || {};
+        renderMappingGrid();
+        document.getElementById('mappingSection').style.display = 'block';
+        document.getElementById('analyzeBtn').disabled = false;
+      }).catch(err => alert(err.message));
+    };
+    reader.readAsText(file);
+  }
+
+  function renderMappingGrid() {
+    const grid = document.getElementById('mappingGrid');
+    grid.innerHTML = TARGET_FIELDS.map(f => {
+      const selectedCol = state.mapping[f.key] || '';
+      const optionsHtml = state.columns.map(col => `
+        <option value="${esc(col)}" ${col === selectedCol ? 'selected' : ''}>${esc(col)}</option>
+      `).join('');
+
+      return `
+        <div class="mapping-item">
+          <label>${esc(f.label)} ${f.required ? '*' : ''}</label>
+          <select onchange="state.mapping['${f.key}']=this.value">
+            <option value="">-- Do Not Map --</option>
+            ${optionsHtml}
+          </select>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function analyzeCsvData() {
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true; btn.textContent = 'Analyzing Data…';
+
+    const payload = {
+      target: 'vendors',
+      fileName: state.fileName,
+      content: state.csvContent,
+      mapping: state.mapping,
+      excludedCities: state.excludedCities,
+      skipDuplicates: document.getElementById('ruleSkipDuplicates').checked,
+      skipExisting: document.getElementById('ruleSkipExisting').checked,
+      skipInvalid: document.getElementById('ruleSkipInvalid').checked,
+      applyCityExclusions: document.getElementById('ruleApplyCityExclusions').checked
+    };
+
+    fetch('/api/admin/import/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(r => r.json()).then(d => {
+      if (!d.ok) throw new Error(d.message || 'Analysis failed.');
+      state.analysisResults = d;
+      renderPreviewSection();
+      document.getElementById('stepUpload').style.display = 'none';
+      document.getElementById('stepPreview').style.display = 'block';
+    }).catch(err => alert(err.message)).finally(() => {
+      btn.disabled = false; btn.textContent = 'Analyze & Generate Preview →';
+    });
+  }
+
+  function renderPreviewSection() {
+    const d = state.analysisResults;
+    document.getElementById('statTotal').textContent = d.totalRows;
+    document.getElementById('statNew').textContent = d.newCount;
+    document.getElementById('statExisting').textContent = d.existingCount;
+    document.getElementById('statDuplicate').textContent = d.duplicateCount;
+    document.getElementById('statInvalid').textContent = d.invalidCount;
+    document.getElementById('statExcluded').textContent = d.excludedCityCount;
+
+    // Filter tabs text
+    const tabs = document.getElementById('filterTabs').children;
+    tabs[0].textContent = `All (${d.totalRows})`;
+    tabs[1].textContent = `New (${d.newCount})`;
+    tabs[2].textContent = `Existing (${d.existingCount})`;
+    tabs[3].textContent = `Duplicate (${d.duplicateCount})`;
+    tabs[4].textContent = `Invalid (${d.invalidCount})`;
+    tabs[5].textContent = `Excluded City (${d.excludedCityCount})`;
+
+    filterPreview('ALL', tabs[0]);
+  }
+
+  function filterPreview(classification, tabEl) {
+    state.currentFilter = classification;
+    if (tabEl) {
+      Array.from(tabEl.parentNode.children).forEach(c => c.classList.remove('active'));
+      tabEl.classList.add('active');
+    }
+
+    const rows = state.analysisResults.rows || [];
+    const filtered = rows.filter(r => classification === 'ALL' || r.classification === classification);
+
+    const tbody = document.getElementById('previewTableBody');
+    tbody.innerHTML = filtered.map(r => {
+      let pillClass = 'active';
+      if (r.classification === 'EXISTING') pillClass = 'pending';
+      if (r.classification === 'DUPLICATE') pillClass = 'pending';
+      if (r.classification === 'INVALID') pillClass = 'rejected';
+      if (r.classification === 'EXCLUDED_CITY') pillClass = 'suspended';
+
+      const actionPill = r.action === 'Import'
+        ? '<span class="pill active">Import</span>'
+        : '<span class="pill rejected">Skip</span>';
+
+      return `
+        <tr>
+          <td>${r.rowNo}</td>
+          <td><strong>${esc(r.businessName)}</strong></td>
+          <td>${esc(r.city)}</td>
+          <td>${esc(r.phone)}</td>
+          <td>${esc(r.category)}</td>
+          <td><span class="pill ${pillClass}">${r.classification}</span></td>
+          <td class="muted" style="font-size:12px">${esc(r.reason)}</td>
+          <td>${actionPill}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function backToUpload() {
+    document.getElementById('stepPreview').style.display = 'none';
+    document.getElementById('stepUpload').style.display = 'block';
+  }
+
+  function confirmAndExecuteImport() {
+    if (!confirm('Are you sure you want to execute the database import & Google Sheets synchronization?')) return;
+
+    document.getElementById('stepPreview').style.display = 'none';
+    document.getElementById('stepProgress').style.display = 'block';
+
+    const payload = {
+      target: 'vendors',
+      fileName: state.fileName,
+      content: state.csvContent,
+      mapping: state.mapping,
+      excludedCities: state.excludedCities,
+      skipDuplicates: document.getElementById('ruleSkipDuplicates').checked,
+      skipExisting: document.getElementById('ruleSkipExisting').checked,
+      skipInvalid: document.getElementById('ruleSkipInvalid').checked,
+      applyCityExclusions: document.getElementById('ruleApplyCityExclusions').checked
+    };
+
+    // Simulate smooth progress bar
+    const bar = document.getElementById('progressFillBar');
+    bar.style.width = '40%';
+
+    fetch('/api/admin/import/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(r => r.json()).then(d => {
+      if (!d.ok) throw new Error(d.message || 'Import execution failed.');
+      bar.style.width = '100%';
+      document.getElementById('importStatusPill').textContent = 'Completed ✓';
+      document.getElementById('liveCreated').textContent = d.created + d.updated;
+      document.getElementById('liveSheetsSynced').textContent = d.googleSheetsSyncedCount;
+      document.getElementById('liveSkipped').textContent = d.skipped;
+      document.getElementById('liveFailed').textContent = d.failed;
+
+      document.getElementById('finalReportBox').style.display = 'block';
+      document.getElementById('finalReportSummary').textContent = 
+        `Successfully processed ${d.totalRows} rows: ${d.created + d.updated} listings created/updated in PostgreSQL database and ${d.googleSheetsSyncedCount} records synced to Google Sheets.`;
+    }).catch(err => {
+      bar.style.width = '100%';
+      bar.style.background = 'var(--danger)';
+      document.getElementById('importStatusPill').textContent = 'Failed ✕';
+      alert('Import failed: ' + err.message);
+    });
+  }
+
+  function resetImportForm() {
+    location.reload();
+  }
+
+  function viewJobDetails(jobId) {
+    fetch('/api/admin/import/history/' + jobId).then(r => r.json()).then(d => {
+      if (!d.ok) return alert('Could not load details');
+      const j = d.job;
+      document.getElementById('modalTitle').textContent = `Audit Log — ${j.fileName || 'Import Run'}`;
+      
+      const details = j.reportDetails || [];
+      const detailsHtml = details.length ? `
+        <table>
+          <thead>
+            <tr><th>Row</th><th>Business</th><th>City</th><th>Status</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            ${details.map(r => `
+              <tr>
+                <td>${r.rowNo}</td>
+                <td><strong>${esc(r.businessName)}</strong></td>
+                <td>${esc(r.city || '')}</td>
+                <td><span class="pill ${r.status==='IMPORTED'||r.status==='UPDATED'?'active':'rejected'}">${r.status}</span></td>
+                <td>${esc(r.reason)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<p class="muted">No row-level logs available for this import run.</p>';
+
+      document.getElementById('modalContent').innerHTML = `
+        <div class="stat-row">
+          <div class="stat-card"><div class="lbl">Total Rows</div><div class="num">${j.totalRows}</div></div>
+          <div class="stat-card"><div class="lbl">Imported</div><div class="num" style="color:var(--success)">${j.created + j.updated}</div></div>
+          <div class="stat-card"><div class="lbl">Sheets Synced</div><div class="num" style="color:#2563EB">${j.googleSheetsSyncedCount || 0}</div></div>
+          <div class="stat-card"><div class="lbl">Skipped</div><div class="num" style="color:var(--warning)">${j.skipped}</div></div>
+        </div>
+        <h4 style="margin:16px 0 8px; font-weight:700;">Row Execution Audit Log</h4>
+        ${detailsHtml}
+      `;
+
+      document.getElementById('auditModal').classList.add('open');
+    });
+  }
+
+  function closeModal() {
+    document.getElementById('auditModal').classList.remove('open');
+  }
+
+  function esc(s){ return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
+</script>
+
+<%- include('_foot') %>

@@ -88,7 +88,8 @@ async function devLogin(res: import('express').Response, id: string, role: 'admi
 // Dedicated Dev Login Routes
 devRouter.get('/login/admin', async (_req, res) => {
   await devLogin(res, DEV_ADMIN_ID, 'admin');
-  res.redirect('/admin/dashboard');
+  const siteUrl = env.NODE_ENV === 'development' ? 'http://localhost:8000' : env.PUBLIC_SITE_URL;
+  res.redirect(`${siteUrl}/dashboard/admin/`);
 });
 
 devRouter.get('/login/parent', async (_req, res) => {

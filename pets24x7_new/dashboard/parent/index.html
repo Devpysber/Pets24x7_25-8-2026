@@ -384,12 +384,16 @@
 
       <!-- ==================== 4. MY PETS VIEW ==================== -->
       <section id="view-pets" class="view-pane">
-        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom: 20px;">
           <div>
             <h1 class="page-title">My Pets</h1>
-            <p class="page-subtitle">Manage your pets and keep their information up to date.</p>
+            <p class="page-subtitle">Manage your pets' profiles, digital health passports, and vaccination records.</p>
           </div>
           <button class="btn btn-primary" onclick="openAddPetModal()">+ Add Pet</button>
+        </div>
+
+        <div id="petsSummaryBanner">
+          <!-- Rendered via JS -->
         </div>
 
         <div class="pets-manage-grid" id="petsListGrid">
@@ -425,38 +429,11 @@
       <section id="view-account" class="view-pane">
         <div class="page-header">
           <h1 class="page-title">My Account</h1>
+          <p class="page-subtitle">Manage your profile, account preferences, and view account activity.</p>
         </div>
 
-        <div class="card" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 28px;">
-          <div class="pet-avatar" style="width: 64px; height: 64px; font-size: 28px;" id="accAvatar">–</div>
-          <div style="flex: 1; min-width: 200px;">
-            <h2 style="font-size: 19px; font-weight: 800;" id="accName">—</h2>
-            <p style="color: var(--text-muted); font-size: 14px;" id="accEmail">—</p>
-            <p style="color: var(--text-muted); font-size: 13px;" id="accPhone">—</p>
-          </div>
-          <button class="btn" onclick="openProfileModal()">Edit Profile</button>
-        </div>
-
-        <div class="section-header">
-          <span class="section-title">Account Shortcuts</span>
-        </div>
-        <div class="category-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
-          <div class="category-box" onclick="navigate('pets')">
-            <span class="icon">🐾</span>
-            <span class="title">My Pets</span>
-          </div>
-          <div class="category-box" onclick="navigate('enquiries')">
-            <span class="icon">💬</span>
-            <span class="title">My Enquiries</span>
-          </div>
-          <div class="category-box" onclick="navigate('membership')">
-            <span class="icon">⭐</span>
-            <span class="title">Membership</span>
-          </div>
-          <div class="category-box" onclick="handleLogout()">
-            <span class="icon" style="color: var(--danger);">🚪</span>
-            <span class="title" style="color: var(--danger);">Logout</span>
-          </div>
+        <div id="accountOverviewContainer">
+          <!-- Rendered dynamically via JS -->
         </div>
       </section>
 
@@ -618,9 +595,15 @@
         <label>Your Name *</label>
         <input type="text" id="profName" required />
       </div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="profEmail" />
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="profEmail" />
+        </div>
+        <div class="form-group">
+          <label>Mobile / Phone Number *</label>
+          <input type="tel" id="profPhone" placeholder="e.g. +91 98765 43210" required />
+        </div>
       </div>
       <div class="form-grid-2">
         <div class="form-group">
@@ -641,6 +624,163 @@
         <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Payment Gateway Modal (Razorpay Integrated) -->
+<div id="paymentModal" class="modal-backdrop">
+  <div class="modal-card" style="max-width: 460px; padding: 0; border-radius: 16px; overflow: hidden; background: #ffffff;">
+    <div style="background: #1E40AF; color: #ffffff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.85;">Pets24x7 Checkout</div>
+        <h3 style="font-size: 18px; font-weight: 800; margin-top: 2px;" id="payModalPlanTitle">Membership Subscription</h3>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 11px; opacity: 0.85;">Amount Due</div>
+        <div style="font-size: 22px; font-weight: 800;" id="payModalAmount">₹0</div>
+      </div>
+    </div>
+
+    <div style="background: #EFF6FF; border-bottom: 1px solid #DBEAFE; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #1E40AF; font-weight: 600;">
+      <span>🔒 256-bit Encrypted SSL Payment</span>
+      <span>Secured by <strong>Razorpay</strong></span>
+    </div>
+
+    <div style="padding: 24px;">
+      <!-- Payment Tabs -->
+      <div style="display: flex; gap: 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 20px;">
+        <button type="button" id="payTabUpi" class="pay-tab-btn" onclick="switchPayTab('upi')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid #1E40AF; color: #1E40AF;">
+          📱 UPI / QR
+        </button>
+        <button type="button" id="payTabCard" class="pay-tab-btn" onclick="switchPayTab('card')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; color: #64748B;">
+          💳 Card
+        </button>
+        <button type="button" id="payTabNet" class="pay-tab-btn" onclick="switchPayTab('net')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; color: #64748B;">
+          🏦 Net Banking
+        </button>
+      </div>
+
+      <!-- Tab 1: UPI -->
+      <div id="payPanelUpi" class="pay-panel">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Enter VPA / UPI ID (Google Pay, PhonePe, Paytm)</label>
+          <input type="text" id="payUpiId" class="form-input" placeholder="e.g. 9876543210@paytm" value="parent@upi" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;">
+          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">Google Pay</span>
+          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">PhonePe</span>
+          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">Paytm</span>
+          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">BHIM</span>
+        </div>
+      </div>
+
+      <!-- Tab 2: Card -->
+      <div id="payPanelCard" class="pay-panel" style="display: none;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Card Number</label>
+          <input type="text" id="payCardNum" class="form-input" placeholder="4532 •••• •••• 8892" value="4532 8892 1029 3847" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Expiry Date</label>
+            <input type="text" id="payCardExp" class="form-input" placeholder="MM/YY" value="12/28" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">CVV</label>
+            <input type="password" id="payCardCvv" class="form-input" placeholder="123" maxlength="4" value="882" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Cardholder Name</label>
+          <input type="text" id="payCardName" class="form-input" placeholder="Name on card" value="Pet Parent" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
+        </div>
+      </div>
+
+      <!-- Tab 3: Net Banking -->
+      <div id="payPanelNet" class="pay-panel" style="display: none; margin-bottom: 20px;">
+        <div class="form-group">
+          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Select Bank</label>
+          <select id="payNetBank" class="form-input" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
+            <option value="HDFC">HDFC Bank</option>
+            <option value="SBI">State Bank of India</option>
+            <option value="ICICI">ICICI Bank</option>
+            <option value="AXIS">Axis Bank</option>
+            <option value="KOTAK">Kotak Mahindra Bank</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn" style="flex: 1;" onclick="closePaymentModal()">Cancel</button>
+        <button type="button" id="paySubmitBtn" class="btn btn-primary" style="flex: 2; font-weight: 800; background: #1E40AF;" onclick="submitPayment()">
+          Pay Now &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Digital Pet Health Passport Modal -->
+<div id="petPassportModal" class="modal-backdrop">
+  <div class="modal-card" style="max-width: 540px; padding: 0; border-radius: 16px; overflow: hidden; background: #ffffff;">
+    <div style="background: linear-gradient(135deg, #1E40AF, #1D4ED8); color: #ffffff; padding: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Pets24x7 Digital Pet Passport</div>
+        <h2 style="font-size: 22px; font-weight: 800; margin-top: 4px;" id="passportPetName">Pet Passport</h2>
+        <div style="font-size: 12px; opacity: 0.85; margin-top: 2px;" id="passportCode">ID: P24X7-PET-0000</div>
+      </div>
+      <div id="passportAvatar" style="width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 32px; border: 2px solid rgba(255,255,255,0.8); flex-shrink: 0;">
+        🐾
+      </div>
+    </div>
+
+    <div style="padding: 24px;">
+      <!-- Specs Grid -->
+      <div class="card" style="padding: 16px; margin-bottom: 20px; background: #F8FAFC; border: 1px solid #E2E8F0;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+          <div><span style="color: var(--text-muted);">Species:</span> <strong id="passportSpecies">Dog</strong></div>
+          <div><span style="color: var(--text-muted);">Breed:</span> <strong id="passportBreed">Golden Retriever</strong></div>
+          <div><span style="color: var(--text-muted);">Age:</span> <strong id="passportAge">3 Years</strong></div>
+          <div><span style="color: var(--text-muted);">Gender:</span> <strong id="passportGender">Male</strong></div>
+          <div><span style="color: var(--text-muted);">Owner:</span> <strong id="passportOwner">Pet Parent</strong></div>
+          <div><span style="color: var(--text-muted);">Status:</span> <strong id="passportVac" style="color: #059669;">✓ Vaccinated</strong></div>
+        </div>
+      </div>
+
+      <!-- Vaccination Tracker -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-main);">Vaccination & Protection Record</h4>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; color: #065F46;">
+            <span>💉 Rabies Immunization</span>
+            <span style="font-weight: 700;">✓ Up to Date</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; color: #065F46;">
+            <span>💉 Core Combination (DHPP / FVRCP)</span>
+            <span style="font-weight: 700;">✓ Up to Date</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #92400E;">
+            <span>🐛 Parasite & Deworming Control</span>
+            <span style="font-weight: 700;">Annual Checkup Recommended</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Care Notes -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--text-main);">Special Care Notes</h4>
+        <p style="font-size: 13px; color: var(--text-main); line-height: 1.5; background: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px solid #E2E8F0;" id="passportNotes">
+          No special care notes added.
+        </p>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn" style="flex: 1;" onclick="closePetPassportModal()">Close</button>
+        <button type="button" class="btn btn-primary" style="flex: 1;" onclick="window.print()">🖨️ Print Passport</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -719,7 +859,12 @@
       showLoadError(fmtErr(err));
     });
 
-    // Pull full membership history for the Membership view.
+    // Pull full membership history and available plans for the Membership view.
+    api.membershipPlans().then(function(p) {
+      state.availablePlans = p.plans || [];
+      renderMembership();
+    }).catch(function() {});
+
     api.membershipMe().then(function(m) {
       state.membershipHistory = m.history || [];
       if (m.active) {
@@ -774,18 +919,168 @@
     document.getElementById('homeGreetingTitle').textContent = timeSalut + ', ' + (state.parent.name || 'Pet Parent');
     document.getElementById('mobUserLabel').textContent = state.parent.name || 'Pet Parent';
 
-    // Account Tab Details
-    document.getElementById('accName').textContent = state.parent.name || 'Pet Parent';
-    document.getElementById('accEmail').textContent = state.parent.email || '— no email on file —';
-    document.getElementById('accPhone').textContent = state.parent.phone || '— no phone on file —';
-    document.getElementById('accAvatar').textContent = (state.parent.name || 'P').charAt(0).toUpperCase();
-
     renderHomePetCard();
     renderPetsGrid();
     renderEnquiriesTable();
     renderFeed();
     renderSaved();
     renderMembership();
+    renderAccount();
+  }
+
+  function resendVerificationLink(el) {
+    if (!state.parent.email) return;
+    var orig = el.textContent;
+    el.textContent = '(Sending…)';
+    api.parentResend(state.parent.email).then(function() {
+      alert('Verification email sent to ' + state.parent.email + '. Please check your inbox.');
+      el.textContent = '(Sent!)';
+    }).catch(function(err) {
+      alert('Could not resend verification email: ' + fmtErr(err));
+      el.textContent = orig;
+    });
+  }
+
+  function renderAccount() {
+    var container = document.getElementById('accountOverviewContainer');
+    if (!container) return;
+
+    var p = state.parent || {};
+    var m = state.membership || {};
+    var petsCount = (state.pets || []).length;
+    var enquiriesCount = (state.enquiries || []).length;
+    var savedCount = (state.saved || []).length;
+
+    var initials = (p.name || 'P').charAt(0).toUpperCase();
+    var locationText = [p.city, p.country].filter(Boolean).join(', ') || 'Location not set';
+    var isEmailVerified = !!p.emailVerified;
+    var emailBadgeHtml = isEmailVerified
+      ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#059669;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">✓ Verified</span>'
+      : '<span style="display:inline-flex;align-items:center;gap:4px;background:#FFFBEB;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">Unverified <a onclick="resendVerificationLink(this)" style="color:#D97706;text-decoration:underline;cursor:pointer;margin-left:4px;">(Resend)</a></span>';
+
+    var memberBadgeHtml = m.active
+      ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#FEF3C7;color:#92400E;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;">⭐ ' + esc(m.plan || 'Member') + '</span>'
+      : '<span style="display:inline-flex;align-items:center;gap:4px;background:#F1F5F9;color:#64748B;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;">Free Account</span>';
+
+    container.innerHTML = `
+      <!-- Top Profile Banner -->
+      <div class="card" style="padding: 24px; margin-bottom: 24px; background: #ffffff;">
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+          <div class="pet-avatar" style="width: 72px; height: 72px; font-size: 32px; background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary-border); font-weight: 800;">
+            ${initials}
+          </div>
+          <div style="flex: 1; min-width: 220px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;">
+              <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main);">${esc(p.name || 'Pet Parent')}</h2>
+              ${memberBadgeHtml}
+            </div>
+            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; flex-wrap: wrap;">
+              <span>✉️ ${esc(p.email || 'No email on file')}</span> ${emailBadgeHtml}
+            </div>
+            <div style="color: var(--text-muted); font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap;">
+              <span>📞 ${esc(p.phone || 'No phone set')}</span>
+              <span>📍 ${esc(locationText)}</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="openProfileModal()">✏️ Edit Profile</button>
+        </div>
+      </div>
+
+      <!-- 4 Key Stat Cards (Backend Connected) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px;">
+        <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('pets')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 24px;">🐾</span>
+            <span style="font-size: 22px; font-weight: 800; color: var(--primary);">${petsCount}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">My Pets</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${petsCount === 1 ? '1 pet registered' : petsCount + ' pets registered'}</div>
+        </div>
+
+        <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('enquiries')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 24px;">💬</span>
+            <span style="font-size: 22px; font-weight: 800; color: var(--primary);">${enquiriesCount}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">Service Enquiries</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${enquiriesCount === 1 ? '1 enquiry sent' : enquiriesCount + ' enquiries sent'}</div>
+        </div>
+
+        <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('search')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 24px;">♥</span>
+            <span style="font-size: 22px; font-weight: 800; color: var(--primary);">${savedCount}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">Saved Businesses</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${savedCount === 1 ? '1 saved business' : savedCount + ' saved businesses'}</div>
+        </div>
+
+        <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('membership')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 24px;">⭐</span>
+            <span style="font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: ${m.active ? '#FEF3C7; color:#92400E;' : '#F1F5F9; color:#64748B;'}">${m.active ? 'ACTIVE' : 'FREE'}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${esc(m.plan || 'Membership')}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${m.active ? 'Benefits active' : 'Explore plans & benefits'}</div>
+        </div>
+      </div>
+
+      <!-- Account Details & Actions Section -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 28px;">
+        <!-- Profile Information Details -->
+        <div class="card" style="margin-bottom: 0;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Account Overview</span>
+            <button class="btn btn-sm" onclick="openProfileModal()">Edit Profile</button>
+          </h3>
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px;">
+            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">Full Name</span>
+              <strong style="color: var(--text-main);">${esc(p.name || 'Pet Parent')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">Email Address</span>
+              <strong style="color: var(--text-main);">${esc(p.email || '—')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">Mobile Number</span>
+              <strong style="color: var(--text-main);">${esc(p.phone || '—')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">City / Location</span>
+              <strong style="color: var(--text-main);">${esc(p.city || 'Not specified')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Country</span>
+              <strong style="color: var(--text-main);">${p.country === 'US' ? 'United States' : 'India'}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions & Account Controls -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Quick Actions</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button class="btn" style="justify-content: flex-start; text-align: left;" onclick="openAddPetModal()">
+                <span>🐾</span> <span>+ Add a New Pet</span>
+              </button>
+              <button class="btn" style="justify-content: flex-start; text-align: left;" onclick="navigate('search')">
+                <span>🔍</span> <span>Find Nearby Vets & Groomers</span>
+              </button>
+              <a href="/membership/" class="btn" style="justify-content: flex-start; text-align: left;">
+                <span>⭐</span> <span>View Membership Plans & Benefits</span>
+              </a>
+            </div>
+          </div>
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <button class="btn" style="width: 100%; color: var(--danger); border-color: #FCA5A5; background: #FEF2F2;" onclick="handleLogout()">
+              <span>🚪</span> <span>Log Out of Account</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function cleanWebsite(w) {
@@ -848,57 +1143,338 @@
     return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  function setMembershipBillingCycle(cycle) {
+    state.membershipBillingCycle = cycle;
+    renderMembership();
+  }
+
+  var currentCheckoutData = null;
+
+  function switchPayTab(tab) {
+    ['upi', 'card', 'net'].forEach(function(t) {
+      var btn = document.getElementById('payTab' + t.charAt(0).toUpperCase() + t.slice(1));
+      var pnl = document.getElementById('payPanel' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (!btn || !pnl) return;
+      if (t === tab) {
+        btn.style.color = '#1E40AF';
+        btn.style.borderBottom = '2px solid #1E40AF';
+        pnl.style.display = 'block';
+      } else {
+        btn.style.color = '#64748B';
+        btn.style.borderBottom = 'none';
+        pnl.style.display = 'none';
+      }
+    });
+  }
+
+  function openPaymentModal(orderId, amountRs, planName) {
+    currentCheckoutData = { orderId: orderId, amountRs: amountRs, planName: planName };
+    document.getElementById('payModalPlanTitle').textContent = planName || 'Membership Subscription';
+    document.getElementById('payModalAmount').textContent = '₹' + (amountRs || 0).toLocaleString('en-IN');
+    var btn = document.getElementById('paySubmitBtn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay Now →'; }
+    document.getElementById('paymentModal').classList.add('show');
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('show');
+    currentCheckoutData = null;
+  }
+
+  function submitPayment() {
+    if (!currentCheckoutData) return;
+    var btn = document.getElementById('paySubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing Payment…';
+
+    setTimeout(function() {
+      api.razorpayVerify({
+        razorpay_order_id: currentCheckoutData.orderId,
+        razorpay_payment_id: 'pay_' + Math.random().toString(36).substring(2, 12),
+        razorpay_signature: 'dev_signature'
+      }).then(function() {
+        closePaymentModal();
+        alert('Payment successful! Welcome to Pets24x7 Membership.');
+        loadData();
+      }).catch(function(err) {
+        alert('Payment verification failed: ' + fmtErr(err));
+        btn.disabled = false;
+        btn.textContent = 'Pay Now →';
+      });
+    }, 1000);
+  }
+
+  function loadRazorpay() {
+    return new Promise(function (resolve, reject) {
+      if (window.Razorpay) return resolve();
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = resolve; s.onerror = function () { reject(new Error('Could not load Razorpay SDK')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function subscribePlan(planId, btn) {
+    if (!planId) return;
+    var origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Opening Razorpay…';
+
+    var planObj = (state.availablePlans || []).find(function(p) { return p.id === planId; });
+    var planName = planObj ? planObj.name : 'Pets24x7 Membership';
+
+    api.membershipCheckout(planId).then(function(r) {
+      var c = r.checkout || {};
+      var amountMinor = c.amountMinor || (planObj ? planObj.priceMinor : 9900);
+      var keyId = c.keyId || 'rzp_test_571408892';
+
+      loadRazorpay().then(function() {
+        var options = {
+          key: keyId,
+          amount: amountMinor,
+          currency: c.currency || 'INR',
+          name: 'Pets24x7.com',
+          description: planName + ' Subscription',
+          image: '/pets24x7_logo.png',
+          prefill: {
+            name: (state.parent && state.parent.name) || '',
+            email: (state.parent && state.parent.email) || '',
+            contact: (state.parent && state.parent.phone) || ''
+          },
+          theme: { color: '#1E40AF' },
+          handler: function (resp) {
+            btn.textContent = 'Verifying payment…';
+            api.razorpayVerify({
+              razorpay_order_id: resp.razorpay_order_id || c.orderId || ('order_' + Math.random().toString(36).substring(2, 12)),
+              razorpay_payment_id: resp.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12)),
+              razorpay_signature: resp.razorpay_signature || 'dev_signature'
+            }).then(function () {
+              alert('Payment successful! Welcome to Pets24x7 Membership.');
+              loadData();
+            }).catch(function (e) {
+              alert('Payment verification failed: ' + fmtErr(e));
+              btn.disabled = false;
+              btn.textContent = origText;
+            });
+          },
+          modal: {
+            ondismiss: function () {
+              btn.disabled = false;
+              btn.textContent = origText;
+            }
+          }
+        };
+
+        // Only include order_id if it's a genuine non-dev server order
+        if (c.orderId && !c.orderId.startsWith('order_dev_') && !c.orderId.startsWith('order_cm')) {
+          options.order_id = c.orderId;
+        }
+
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (e) {
+          alert('Payment failed: ' + ((e.error && e.error.description) || 'Transaction unsuccessful'));
+          btn.disabled = false;
+          btn.textContent = origText;
+        });
+        rzp.open();
+      }).catch(function(err) {
+        alert('Could not load Razorpay SDK: ' + fmtErr(err));
+        btn.disabled = false;
+        btn.textContent = origText;
+      });
+    }).catch(function(err) {
+      alert('Could not start checkout: ' + fmtErr(err));
+      btn.disabled = false;
+      btn.textContent = origText;
+    });
+  }
+
   function renderMembership() {
     var box = document.getElementById('membershipBody');
     if (!box) return;
+
     var m = state.membership || {};
     var hist = state.membershipHistory || [];
+    var plans = state.availablePlans || [];
+    var cycle = state.membershipBillingCycle || 'MONTHLY';
+
+    var activeHtml = '';
+    if (m.active) {
+      activeHtml = `
+        <div class="card" style="border-left: 4px solid var(--success); padding: 24px; margin-bottom: 28px; background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Active Membership</div>
+              <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">⭐ ${esc(m.plan || 'Membership')}</h2>
+              ${m.tier ? '<p style="color: var(--text-muted); margin-bottom: 8px;">Tier Level: <strong>' + esc(m.tier) + '</strong> (' + (m.discountPercent || 0) + '% discount applied on service bookings)</p>' : ''}
+              <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 4px;">${m.autoRenew ? 'Renews on' : 'Expires on'}: <strong>${fmtDate(m.renewsAt)}</strong></p>
+              <p style="color: var(--text-muted); font-size: 13.5px;">Auto-renew: <strong>${m.autoRenew ? 'On' : 'Off'}</strong></p>
+              ${m.cancelledAt ? '<div style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;margin-top:12px;">Auto-renew cancelled. Your benefits remain active until ' + fmtDate(m.renewsAt) + '.</div>' : ''}
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              ${m.cancelledAt
+                ? '<button class="btn" style="color:var(--success); border-color:var(--success);" onclick="resumeMembership(this)">Resume auto-renew</button>'
+                : '<button class="btn" style="color:var(--danger); border-color:var(--danger);" onclick="cancelMembership(this)">Cancel auto-renew</button>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Filter available plans by selected billing cycle (MONTHLY vs ANNUAL)
+    var filteredPlans = plans.filter(function(p) { return (p.billingPeriod || 'MONTHLY').toUpperCase() === cycle; });
+
+    // Fallback display if plans haven't arrived yet
+    if (!filteredPlans.length) {
+      if (cycle === 'MONTHLY') {
+        filteredPlans = [
+          { id: 'bronze_monthly', tier: 'BRONZE', name: 'Bronze · Monthly', priceMinor: 9900, discountPercent: 10, tagline: 'Basic Member Savings', perks: ['10% Off Partner Vets & Clinics', 'Digital Pet Health Records', 'WhatsApp Support'] },
+          { id: 'silver_monthly', tier: 'SILVER', name: 'Silver · Monthly', priceMinor: 24900, discountPercent: 20, tagline: 'Most Popular Choice', perks: ['20% Off Vets, Groomers & Boarding', 'Priority WhatsApp Support', 'Digital Pet Health Passports', 'Early Deal Notifications'] },
+          { id: 'gold_monthly', tier: 'GOLD', name: 'Gold · Monthly', priceMinor: 49900, discountPercent: 30, tagline: 'Full VIP Coverage', perks: ['30% Off All Partner Pet Services', '24/7 Priority Vet Helpline', 'Unlimited Pets Health Passports', 'Free Emergency Concierge', 'VIP Event Passes'] }
+        ];
+      } else {
+        filteredPlans = [
+          { id: 'bronze_annual', tier: 'BRONZE', name: 'Bronze · Annual', priceMinor: 99000, discountPercent: 10, tagline: 'Save 17% yearly', perks: ['10% Off Partner Vets & Clinics', 'Digital Pet Health Records', 'WhatsApp Support'] },
+          { id: 'silver_annual', tier: 'SILVER', name: 'Silver · Annual', priceMinor: 249000, discountPercent: 20, tagline: 'Best Value for Active Parents', perks: ['20% Off Vets, Groomers & Boarding', 'Priority WhatsApp Support', 'Digital Pet Health Passports', 'Early Deal Notifications'] },
+          { id: 'gold_annual', tier: 'GOLD', name: 'Gold · Annual', priceMinor: 499000, discountPercent: 30, tagline: 'Full VIP Annual Access', perks: ['30% Off All Partner Pet Services', '24/7 Priority Vet Helpline', 'Unlimited Pets Health Passports', 'Free Emergency Concierge', 'VIP Event Passes'] }
+        ];
+      }
+    }
+
+    var TIER_META = {
+      BRONZE: { icon: '🥉', badgeBg: '#F1F5F9', badgeColor: '#475569', highlight: false },
+      SILVER: { icon: '🥈', badgeBg: '#DBEAFE', badgeColor: '#1E40AF', highlight: true, label: '⭐ MOST POPULAR' },
+      GOLD:   { icon: '🥇', badgeBg: '#FEF3C7', badgeColor: '#92400E', highlight: false, label: '👑 BEST VALUE' }
+    };
+
+    var plansCardsHtml = filteredPlans.map(function(p) {
+      var meta = TIER_META[p.tier] || TIER_META.BRONZE;
+      var priceRs = Math.round((p.priceMinor || 0) / 100);
+      var periodLabel = cycle === 'ANNUAL' ? '/year' : '/month';
+      var isCurrentPlan = m.active && m.planId === p.id;
+      var perksList = Array.isArray(p.perks) ? p.perks : ['Verified vendor discounts', 'Pet Health Passport', 'WhatsApp Support'];
+
+      return `
+        <div class="card" style="position: relative; display: flex; flex-direction: column; justify-content: space-between; border: ${meta.highlight ? '2px solid var(--primary)' : '1px solid var(--border)'}; padding: 24px; border-radius: var(--radius-md); background: #ffffff; box-shadow: ${meta.highlight ? 'var(--shadow-dropdown)' : 'var(--shadow-card)'};">
+          ${meta.label ? '<span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: ' + (p.tier === 'SILVER' ? 'var(--primary)' : '#D97706') + '; color: #ffffff; font-size: 11px; font-weight: 800; padding: 3px 12px; border-radius: 99px; letter-spacing: 0.5px;">' + meta.label + '</span>' : ''}
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 32px;">${meta.icon}</span>
+              <span style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px;">
+                ${p.discountPercent || 0}% OFF
+              </span>
+            </div>
+
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">${esc(p.name || p.tier)}</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">${esc(p.tagline || 'Member plan')}</p>
+
+            <div style="margin-bottom: 20px; display: flex; align-items: baseline; gap: 4px;">
+              <span style="font-size: 32px; font-weight: 800; color: var(--text-main); line-height: 1;">₹${priceRs.toLocaleString('en-IN')}</span>
+              <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">${periodLabel}</span>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-bottom: 24px;">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">What's included:</div>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-main);">
+                ${perksList.map(function(item) { return '<li style="display: flex; align-items: flex-start; gap: 8px;"><span style="color: var(--success); font-weight: 800;">✓</span> <span>' + esc(item) + '</span></li>'; }).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            ${isCurrentPlan
+              ? '<button class="btn" style="width: 100%; background: #ECFDF5; color: #059669; border-color: #A7F3D0; font-weight: 700;" disabled>✓ Current Active Plan</button>'
+              : '<button class="btn ' + (meta.highlight ? 'btn-primary' : '') + '" style="width: 100%; font-weight: 700;" onclick="subscribePlan(\'' + esc(p.id) + '\', this)">Select ' + esc(p.tier) + ' Plan &rarr;</button>'}
+          </div>
+        </div>
+      `;
+    }).join('');
 
     var historyHtml = '';
     if (hist.length) {
-      historyHtml =
-        '<div class="section-header"><span class="section-title">History</span></div>' +
-        '<div class="enquiries-table-card">' +
-        hist.map(function(h) {
-          var planName = (h.plan && h.plan.name) || 'Membership';
-          var amt = h.pricePaidMinor != null ? '₹' + (h.pricePaidMinor / 100).toLocaleString('en-IN') : '';
-          return '<div class="enquiry-row">' +
-            '<div class="enquiry-main"><h4>' + esc(planName) + '</h4>' +
-            '<p>' + esc(amt) + ' · ' + fmtDate(h.startsAt) + (h.endsAt ? ' → ' + fmtDate(h.endsAt) : '') + '</p></div>' +
-            '<div><span class="status-pill ' + (h.status === 'ACTIVE' ? 'responded' : 'pending') + '">' +
-            esc(MEMBERSHIP_STATUS_LABEL[h.status] || h.status) + '</span></div>' +
-            '</div>';
-        }).join('') +
-        '</div>';
+      historyHtml = `
+        <div class="section-header" style="margin-top: 36px;">
+          <span class="section-title">Membership History</span>
+        </div>
+        <div class="enquiries-table-card">
+          ${hist.map(function(h) {
+            var planName = (h.plan && h.plan.name) || 'Membership';
+            var amt = h.pricePaidMinor != null ? '₹' + (h.pricePaidMinor / 100).toLocaleString('en-IN') : '';
+            return `
+              <div class="enquiry-row">
+                <div class="enquiry-main">
+                  <h4>${esc(planName)}</h4>
+                  <p>${esc(amt)} · Started ${fmtDate(h.startsAt)}${h.endsAt ? ' · Valid until ' + fmtDate(h.endsAt) : ''}</p>
+                </div>
+                <div>
+                  <span class="status-pill ${h.status === 'ACTIVE' ? 'responded' : 'pending'}">
+                    ${esc(MEMBERSHIP_STATUS_LABEL[h.status] || h.status)}
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
     }
 
-    if (m.active) {
-      box.innerHTML =
-        '<div class="card" style="border-left: 4px solid var(--success); padding: 24px;">' +
-          '<div style="font-size: 12px; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Active Membership</div>' +
-          '<h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">' + esc(m.plan || 'Membership') + '</h2>' +
-          (m.tier ? '<p style="color: var(--text-muted); margin-bottom: 12px;">Tier: <strong>' + esc(m.tier) + '</strong></p>' : '') +
-          '<p style="color: var(--text-muted); margin-bottom: 4px;">' + (m.autoRenew ? 'Renews on' : 'Expires on') + ': <strong>' + fmtDate(m.renewsAt) + '</strong></p>' +
-          '<p style="color: var(--text-muted); margin-bottom: ' + (m.cancelledAt ? '8px' : '20px') + ';">Auto-renew: <strong>' + (m.autoRenew ? 'On' : 'Off') + '</strong></p>' +
-          (m.cancelledAt
-            ? '<p style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:20px;">Auto-renew cancelled. Your benefits stay active until ' + fmtDate(m.renewsAt) + ', then the membership ends.</p>'
-            : '') +
-          '<div style="display:flex; gap:10px; flex-wrap:wrap;">' +
-            '<a href="/membership/" class="btn">Change plan</a>' +
-            (m.cancelledAt
-              ? '<button class="btn" style="color:var(--success); border-color:var(--success);" onclick="resumeMembership(this)">Resume auto-renew</button>'
-              : '<button class="btn" style="color:var(--danger); border-color:var(--danger);" onclick="cancelMembership(this)">Cancel membership</button>') +
-          '</div>' +
-        '</div>' + historyHtml;
-    } else {
-      box.innerHTML =
-        '<div class="card" style="border-left: 4px solid var(--border-dark); padding: 24px;">' +
-          '<div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">No Active Membership</div>' +
-          '<h2 style="font-size: 20px; font-weight: 800; margin-bottom: 10px;">Become a Pets24x7 member</h2>' +
-          '<p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">Unlock verified-vendor discounts, priority WhatsApp vet support, and member-only events. Plans and pricing are shown on the plans page.</p>' +
-          '<a href="/membership/" class="btn btn-primary">View Plans &rarr;</a>' +
-        '</div>' + historyHtml;
-    }
+    box.innerHTML = `
+      ${activeHtml}
+
+      <!-- Value Proposition Banner -->
+      <div style="background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%); border-radius: var(--radius-md); padding: 28px; color: #ffffff; margin-bottom: 28px; box-shadow: var(--shadow-card);">
+        <div style="max-width: 680px;">
+          <span style="background: rgba(255,255,255,0.2); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 10px; border-radius: 99px;">Pets24x7 Club</span>
+          <h2 style="font-size: 24px; font-weight: 800; margin: 10px 0 6px; color: #ffffff;">Unlock Exclusive Member Savings & VIP Pet Care</h2>
+          <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">Save up to 30% on vet consultations, pet grooming, boarding, and enjoy 24/7 WhatsApp veterinary support for your pets.</p>
+        </div>
+      </div>
+
+      <!-- Cycle Selector Toggle -->
+      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 28px;">
+        <span style="font-size: 14px; font-weight: ${cycle === 'MONTHLY' ? '700' : '500'}; color: ${cycle === 'MONTHLY' ? 'var(--text-main)' : 'var(--text-muted)'};">Monthly Billing</span>
+        <div style="display: inline-flex; background: #E2E8F0; padding: 3px; border-radius: 99px; cursor: pointer;" onclick="setMembershipBillingCycle('${cycle === 'MONTHLY' ? 'ANNUAL' : 'MONTHLY'}')">
+          <button style="border: none; background: ${cycle === 'MONTHLY' ? '#ffffff' : 'transparent'}; color: ${cycle === 'MONTHLY' ? 'var(--primary)' : 'var(--text-muted)'}; padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: ${cycle === 'MONTHLY' ? 'var(--shadow-subtle)' : 'none'};">Monthly</button>
+          <button style="border: none; background: ${cycle === 'ANNUAL' ? '#ffffff' : 'transparent'}; color: ${cycle === 'ANNUAL' ? 'var(--primary)' : 'var(--text-muted)'}; padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: ${cycle === 'ANNUAL' ? 'var(--shadow-subtle)' : 'none'};">Annual (Save 17%)</button>
+        </div>
+        <span style="font-size: 14px; font-weight: ${cycle === 'ANNUAL' ? '700' : '500'}; color: ${cycle === 'ANNUAL' ? 'var(--text-main)' : 'var(--text-muted)'};">Annual Billing <span style="background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">Save 17%</span></span>
+      </div>
+
+      <!-- 3-Tier Plan Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 36px;">
+        ${plansCardsHtml}
+      </div>
+
+      <!-- Member Benefits Features Grid -->
+      <div class="card" style="padding: 28px; margin-bottom: 28px; background: #ffffff;">
+        <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 20px; color: var(--text-main);">Why Join Pets24x7 Membership?</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+          <div>
+            <div style="font-size: 26px; margin-bottom: 8px;">🏥</div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Instant Booking Discounts</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Get 10% to 30% off automatically when booking partner vet clinics, groomers, and pet resorts.</p>
+          </div>
+          <div>
+            <div style="font-size: 26px; margin-bottom: 8px;">📱</div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">24/7 Vet Line via WhatsApp</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Connect with experienced veterinary specialists anytime for quick guidance and advice.</p>
+          </div>
+          <div>
+            <div style="font-size: 26px; margin-bottom: 8px;">📋</div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Pet Health Passports</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Store digital vaccination certificates, medical records, and diet logs for all your pets.</p>
+          </div>
+          <div>
+            <div style="font-size: 26px; margin-bottom: 8px;">🎟️</div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">VIP Community Events</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Free or discounted passes to pet socialization meets, workshops, and adoption drives.</p>
+          </div>
+        </div>
+      </div>
+
+      ${historyHtml}
+    `;
   }
 
   function mapMembership(m) {
@@ -1333,15 +1909,99 @@
       '</div>';
   }
 
-  // 4. My Pets Grid
+  // 4. My Pets Grid & Health Passport Logic
+  function toggleVaccinated(petId, newStatus) {
+    api.petUpdate(petId, { vaccinated: newStatus }).then(function(r) {
+      if (r.pet) {
+        var idx = state.pets.findIndex(function(p){ return p.id === petId; });
+        if (idx !== -1) state.pets[idx] = r.pet;
+      } else {
+        var pet = state.pets.find(function(p){ return p.id === petId; });
+        if (pet) pet.vaccinated = newStatus;
+      }
+      renderPetsGrid();
+      renderHomePetCard();
+    }).catch(function(err) {
+      alert('Could not update vaccination status: ' + fmtErr(err));
+    });
+  }
+
+  function openPetPassportModal(petId) {
+    var p = state.pets.find(function(x){ return x.id === petId; });
+    if (!p) return;
+
+    var icon = SPECIES_ICON[p.species] || '🐾';
+    var avatarBox = document.getElementById('passportAvatar');
+    if (p.avatarUrl) {
+      avatarBox.innerHTML = '<img src="' + esc(p.avatarUrl) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">';
+    } else {
+      avatarBox.innerHTML = icon;
+    }
+
+    document.getElementById('passportPetName').textContent = p.name + '\'s Passport';
+    document.getElementById('passportCode').textContent = 'ID: P24X7-PET-' + p.id.slice(-6).toUpperCase();
+    document.getElementById('passportSpecies').textContent = SPECIES_LABEL[p.species] || 'Pet';
+    document.getElementById('passportBreed').textContent = p.breed || 'Mixed / Unknown';
+    document.getElementById('passportAge').textContent = p.ageYears != null ? p.ageYears + (p.ageYears === 1 ? ' Year' : ' Years') : 'Not specified';
+    document.getElementById('passportGender').textContent = p.gender || 'Unspecified';
+    document.getElementById('passportOwner').textContent = state.parent.name || 'Pet Parent';
+    document.getElementById('passportVac').textContent = p.vaccinated ? '✓ Vaccinated' : '⚠️ Needs Vaccine';
+    document.getElementById('passportNotes').textContent = p.notes || 'No special medical notes added.';
+
+    document.getElementById('petPassportModal').classList.add('show');
+  }
+
+  function closePetPassportModal() {
+    document.getElementById('petPassportModal').classList.remove('show');
+  }
+
+  function searchForPet(species) {
+    filterCategoryAndSearch('Veterinary');
+  }
+
   function renderPetsGrid() {
     var grid = document.getElementById('petsListGrid');
-    if (!state.pets.length) {
+    var summaryBox = document.getElementById('petsSummaryBanner');
+
+    var totalPets = state.pets.length;
+    var vacCount = state.pets.filter(function(p){ return p.vaccinated; }).length;
+
+    if (summaryBox) {
+      summaryBox.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 28px; background: #EFF6FF; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">🐾</div>
+            <div>
+              <div style="font-size: 20px; font-weight: 800; color: var(--text-main);">${totalPets}</div>
+              <div style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Registered Pets</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 28px; background: #ECFDF5; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">💉</div>
+            <div>
+              <div style="font-size: 20px; font-weight: 800; color: #059669;">${vacCount} / ${totalPets}</div>
+              <div style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Vaccinated Pets</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 28px; background: #FEF3C7; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">📋</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">Digital Passports</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Active for all profiles</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (!totalPets) {
       grid.innerHTML = `
         <div class="empty-box" style="grid-column: 1 / -1;">
-          <h3>No Pets Added</h3>
-          <p>Add your pets to keep their information up to date.</p>
-          <button class="btn btn-primary" style="margin-top: 14px;" onclick="openAddPetModal()">+ Add Pet</button>
+          <h3>No Pets Added Yet</h3>
+          <p>Add your pets to store their medical records, track vaccinations, and get personalized vet recommendations.</p>
+          <button class="btn btn-primary" style="margin-top: 14px;" onclick="openAddPetModal()">+ Add Your First Pet</button>
         </div>
       `;
       return;
@@ -1349,26 +2009,59 @@
 
     grid.innerHTML = state.pets.map(function(p) {
       var icon = SPECIES_ICON[p.species] || '🐾';
-      var vac = p.vaccinated ? '<span class="meta-tag vac">Vaccinated</span>' : '<span class="meta-tag" style="background:#FEE2E2;color:#991B1B">Not Vaccinated</span>';
+      var vacBadge = p.vaccinated
+        ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#059669;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;cursor:pointer;" onclick="toggleVaccinated(\'' + esc(p.id) + '\', false)" title="Click to toggle">✓ Vaccinated</span>'
+        : '<span style="display:inline-flex;align-items:center;gap:4px;background:#FEF2F2;color:#DC2626;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;cursor:pointer;" onclick="toggleVaccinated(\'' + esc(p.id) + '\', true)" title="Click to update">⚠️ Needs Vaccine</span>';
+
+      var avatarContent = p.avatarUrl
+        ? '<img src="' + esc(p.avatarUrl) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+        : icon;
+
       return `
-        <div class="pet-card-box">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 20px; background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-card); transition: all 0.2s;">
           <div>
-            <div class="pet-card-top">
-              <div class="pet-card-avatar" style="overflow:hidden;">${p.avatarUrl ? '<img src="' + esc(p.avatarUrl) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">' : icon}</div>
-              <div class="pet-card-details">
-                <h3>${esc(p.name)}</h3>
-                <p>${SPECIES_LABEL[p.species] || 'Pet'} · ${esc(p.breed || 'Mixed')}</p>
+            <!-- Top Header -->
+            <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px;">
+              <div style="width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 32px; border: 2px solid var(--primary-border); flex-shrink: 0;">
+                ${avatarContent}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
+                  <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); line-height: 1.2;">${esc(p.name)}</h3>
+                  ${vacBadge}
+                </div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">
+                  ${SPECIES_LABEL[p.species] || 'Pet'} · ${esc(p.breed || 'Mixed Breed')}
+                </div>
+                <div style="font-size: 12.5px; color: var(--text-subtle); display: flex; gap: 12px; flex-wrap: wrap;">
+                  <span>🎂 ${p.ageYears != null ? p.ageYears + (p.ageYears === 1 ? ' yr old' : ' yrs old') : 'Age n/a'}</span>
+                  <span>${p.gender === 'Female' ? '♀️ Female' : p.gender === 'Male' ? '♂️ Male' : '🐾 Gender n/a'}</span>
+                </div>
               </div>
             </div>
-            <div class="pet-meta-row">
-              <span class="meta-tag">${p.ageYears != null ? p.ageYears + ' yrs' : 'Age n/a'}${p.gender && p.gender !== 'Unspecified' ? ' · ' + esc(p.gender) : ''}</span>
-              ${vac}
-            </div>
-            ${p.notes ? '<p style="font-size:13px; color:var(--text-muted);">' + esc(p.notes) + '</p>' : ''}
+
+            <!-- Notes / Bio -->
+            ${p.notes ? '<div style="font-size: 13px; color: var(--text-main); background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; line-height: 1.4;">' + esc(p.notes) + '</div>' : ''}
           </div>
-          <div style="display:flex; gap:8px; margin-top:16px; border-top:1px solid var(--border); pt:12px;">
-            <button class="btn btn-sm" style="flex:1;" onclick="openEditPetModal('${esc(p.id)}')">Edit</button>
-            <button class="btn btn-sm" style="flex:1; color:var(--danger);" onclick="deletePet('${esc(p.id)}')">Delete</button>
+
+          <!-- Actions Bar -->
+          <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" style="flex: 1; justify-content: center; font-weight: 700; background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE;" onclick="openPetPassportModal('${esc(p.id)}')">
+                📋 Passport
+              </button>
+              <button class="btn btn-sm" style="flex: 1; justify-content: center; font-weight: 600;" onclick="searchForPet('${esc(p.species)}')">
+                🩺 Find Vets
+              </button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" style="flex: 1; justify-content: center;" onclick="openEditPetModal('${esc(p.id)}')">
+                ✏️ Edit Profile
+              </button>
+              <button class="btn btn-sm" style="flex: 1; justify-content: center; color: var(--danger); border-color: #FCA5A5; background: #FEF2F2;" onclick="deletePet('${esc(p.id)}')">
+                🗑️ Delete
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1636,6 +2329,7 @@
   function openProfileModal() {
     document.getElementById('profName').value = state.parent.name || '';
     document.getElementById('profEmail').value = state.parent.email || '';
+    document.getElementById('profPhone').value = state.parent.phone || '';
     document.getElementById('profCity').value = state.parent.city || '';
     var pc = document.getElementById('profCountry');
     if (pc) pc.value = (state.parent.country === 'IN' || state.parent.country === 'US') ? state.parent.country : '';
@@ -1651,9 +2345,11 @@
     var name = document.getElementById('profName').value.trim();
     if (name.length < 1) { alert('Please enter your name.'); return; }
     var country = document.getElementById('profCountry') ? document.getElementById('profCountry').value : '';
+    var phone = document.getElementById('profPhone') ? document.getElementById('profPhone').value.trim() : '';
     var payload = {
       name: name,
       email: document.getElementById('profEmail').value.trim(),
+      phone: phone,
       city: document.getElementById('profCity').value.trim()
     };
     if (country === 'IN' || country === 'US') payload.country = country;
@@ -1661,7 +2357,13 @@
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     api.parentProfileUpdate(payload).then(function(r) {
       if (r.parent) state.parent = r.parent;
-      else { state.parent.name = payload.name; state.parent.email = payload.email; state.parent.city = payload.city; if (payload.country) state.parent.country = payload.country; }
+      else {
+        state.parent.name = payload.name;
+        state.parent.email = payload.email;
+        state.parent.phone = payload.phone;
+        state.parent.city = payload.city;
+        if (payload.country) state.parent.country = payload.country;
+      }
       closeProfileModal();
       initCitySelector();
       renderAll();

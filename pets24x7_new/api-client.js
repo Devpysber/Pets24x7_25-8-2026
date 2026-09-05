@@ -87,10 +87,14 @@
 
     // Admin data import
     adminImportTargets: function ()                      { return req('GET',  '/api/admin/import/targets'); },
+    adminImportCategories: function ()                   { return req('GET',  '/api/admin/import/categories'); },
     adminImportStats:   function ()                      { return req('GET',  '/api/admin/import/stats'); },
     adminImportHistory: function ()                      { return req('GET',  '/api/admin/import/history'); },
     adminImportPreview: function (p)                     { return req('POST', '/api/admin/import/preview', p); },
+    adminImportAnalyze: function (p)                     { return req('POST', '/api/admin/import/analyze', p); },
     adminImportCommit:  function (p)                     { return req('POST', '/api/admin/import/commit', p); },
+    adminImportHistoryJob: function (id)                 { return req('GET',  '/api/admin/import/history/' + encodeURIComponent(id)); },
+    adminImportRetrySheets: function (id)                { return req('POST', '/api/admin/import/retry-sheets/' + encodeURIComponent(id)); },
 
     // Dashboards
     recommendations:  function (p) {
@@ -119,6 +123,16 @@
     vendorPatch:      function (p)                       { return req('PATCH','/api/vendor/profile', p); },
     vendorEmailResend:function ()                        { return req('POST', '/api/vendor/email/resend'); },
 
+    // Business Claim + Registration System API helpers
+    claimSearch:                function (p)             { return req('POST', '/api/vendor/claim/search', p); },
+    claimVerifyPhone:           function (p)             { return req('POST', '/api/vendor/claim/verify-phone', p); },
+    claimSubmitEmail:           function (p)             { return req('POST', '/api/vendor/claim/submit-email', p); },
+    claimFirstLoginPassword:    function (p)             { return req('POST', '/api/vendor/claim/first-login-change-password', p); },
+    vendorRegisterBusiness:     function (p)             { return req('POST', '/api/vendor/register-business', p); },
+    vendorPasswordLogin:        function (loginKey, pass){ return req('POST', '/api/vendor/login', { loginKey: loginKey, password: pass }); },
+    vendorMyBusiness:           function ()              { return req('GET',  '/api/vendor/my-business'); },
+    vendorUpdateMyBusiness:     function (p)             { return req('PATCH', '/api/vendor/my-business', p); },
+
     // Vendor services
     vendorServices:       function ()        { return req('GET',    '/api/vendor/services'); },
     vendorServiceCreate:  function (p)       { return req('POST',   '/api/vendor/services', p); },
@@ -134,6 +148,12 @@
     vendorFeatured:         function ()      { return req('GET',  '/api/vendor/featured'); },
     vendorFeaturedCreate:   function (p)     { return req('POST', '/api/vendor/featured', p); },
     vendorFeaturedStatus:   function (txn)   { return req('GET',  '/api/vendor/featured/payment/' + encodeURIComponent(txn)); },
+
+    // Vendor subscriptions & checkout
+    vendorSubPlans:    function ()           { return req('GET',  '/api/vendor/subscriptions/plans'); },
+    vendorSubMe:       function ()           { return req('GET',  '/api/vendor/subscriptions/me'); },
+    vendorSubCheckout: function (p)          { return req('POST', '/api/vendor/subscriptions/checkout', p); },
+    vendorSubVerify:   function (p)          { return req('POST', '/api/vendor/subscriptions/verify', p); },
 
     // Vendor reviews (Phase 3.1)
     vendorReviewRequests:     function ()              { return req('GET',  '/api/vendor/reviews/requests'); },
@@ -191,6 +211,25 @@
     adminReviewPublish: function (id)        { return req('POST', '/api/admin/reviews/' + encodeURIComponent(id) + '/publish', {}); },
     adminReviewReject:  function (id, reason){ return req('POST', '/api/admin/reviews/' + encodeURIComponent(id) + '/reject', { reason: reason || '' }); },
     adminReports:       function ()          { return req('GET',  '/api/admin/reports'); },
+    adminGrowPlans:       function ()          { return req('GET',  '/api/admin/grow-plans'); },
+    adminGrowPlanSave:    function (body)      { return req('POST', '/api/admin/grow-plans', body); },
+    adminGrowPlanUpdate:  function (id, body)  { return req('PUT',  '/api/admin/grow-plans/' + encodeURIComponent(id), body); },
+    adminGrowBuyers:      function ()          { return req('GET',  '/api/admin/grow-buyers'); },
+    adminGrowBuyerStatus: function (id, status){ return req('POST', '/api/admin/grow-buyers/' + encodeURIComponent(id) + '/status', { status: status }); },
+
+    // Subscriptions API
+    adminParentSubPlans:      function ()          { return req('GET',  '/api/admin/subscriptions/parent-plans'); },
+    adminParentSubPlanSave:   function (body)      { return req('POST', '/api/admin/subscriptions/parent-plans', body); },
+    adminParentSubPlanUpdate: function (id, body)  { return req('PUT',  '/api/admin/subscriptions/parent-plans/' + encodeURIComponent(id), body); },
+    adminParentSubscribers:   function ()          { return req('GET',  '/api/admin/subscriptions/parent-subscribers'); },
+    adminParentSubStatus:     function (id, status){ return req('POST', '/api/admin/subscriptions/parent-subscribers/' + encodeURIComponent(id) + '/status', { status: status }); },
+
+    adminVendorSubPlans:      function ()          { return req('GET',  '/api/admin/subscriptions/vendor-plans'); },
+    adminVendorSubPlanSave:   function (body)      { return req('POST', '/api/admin/subscriptions/vendor-plans', body); },
+    adminVendorSubPlanUpdate: function (id, body)  { return req('PUT',  '/api/admin/subscriptions/vendor-plans/' + encodeURIComponent(id), body); },
+    adminVendorSubscribers:   function ()          { return req('GET',  '/api/admin/subscriptions/vendor-subscribers'); },
+    adminVendorSubStatus:     function (id, status){ return req('POST', '/api/admin/subscriptions/vendor-subscribers/' + encodeURIComponent(id) + '/status', { status: status }); },
+
     adminEnquiryStatus:function (id, status){ return req('POST', '/api/admin/enquiries/' + encodeURIComponent(id) + '/status', { status: status }); },
     adminServiceStatus:function (id, status){ return req('POST', '/api/admin/services/' + encodeURIComponent(id) + '/status', { status: status }); },
     adminVendorCreate: function (body)      { return req('POST', '/api/admin/vendors', body); },

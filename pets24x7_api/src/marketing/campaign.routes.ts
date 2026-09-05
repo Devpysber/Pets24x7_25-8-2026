@@ -15,10 +15,12 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '.
 import { newMerchantTxnId } from '../payments/phonepe.js';
 import { startCheckout } from '../payments/checkout.js';
 import { applyPaymentResult, reconcilePayment } from '../payments/membership.routes.js';
-import { CAMPAIGN_OPTIONS, CAMPAIGN_GOALS, campaignOptionFor } from '../payments/pricing.js';
+import { getCampaignOptions, CAMPAIGN_GOALS, campaignOptionFor } from '../payments/pricing.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { campaignCreatedEmail } from '../mail/action-templates.js';
+
+import { getActiveGrowPlans } from '../admin/admin.api.routes.js';
 
 export const vendorCampaignsRouter = Router();
 vendorCampaignsRouter.use(requireAuth('vendor'));
@@ -31,10 +33,11 @@ vendorCampaignsRouter.get(
       orderBy: { createdAt: 'desc' },
       include: { payment: { select: { status: true, merchantTxnId: true } } },
     });
+    const activePlans = getActiveGrowPlans().filter((p) => p.type === 'CAMPAIGN');
     res.json({
       ok: true,
       campaigns,
-      catalogue: { options: CAMPAIGN_OPTIONS, goals: CAMPAIGN_GOALS },
+      catalogue: { options: getCampaignOptions(), goals: CAMPAIGN_GOALS, plans: activePlans },
     });
   }),
 );
