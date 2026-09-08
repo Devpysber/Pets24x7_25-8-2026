@@ -29,6 +29,14 @@ RELEASES=/var/www/pets24x7-releases
 # Everything touching the checkout runs as the app user, with nvm's node on PATH.
 as_app() { su pets24x7 -c ". ~/.nvm/nvm.sh; cd $REPO && $*"; }
 
+# --from is handed over by a re-exec from the previous copy of this script,
+# which derived it from HEAD. Without recorded state that is precisely the
+# value that cannot be trusted, so drop it and fall through to a full deploy.
+if [ -n "$FROM_OVERRIDE" ] && [ ! -f "$STATE" ]; then
+  echo "ignoring --from ${FROM_OVERRIDE:0:7}: no recorded state, so HEAD is not evidence of what is deployed"
+  FROM_OVERRIDE=""
+fi
+
 OLD=${FROM_OVERRIDE:-$(cat "$STATE" 2>/dev/null || true)}
 # No state file means we genuinely do not know what is on this box, and the old
 # fallback -- git rev-parse HEAD -- was wrong exactly when it mattered: the
@@ -45,6 +53,25 @@ fi
 as_app "git fetch -q origin $BRANCH"
 NEW=$(as_app "git rev-parse origin/$BRANCH")
 
+# Reinstall BEFORE the up-to-date check, not after. This script runs from
+# /usr/local/bin, which is a COPY: with the check first, a box already sitting
+# at origin/$BRANCH exited "up to date" before ever reaching the reinstall, so
+# a fix to this file could never deploy itself — the stale copy kept deciding
+# there was nothing to do. Compare against origin rather than the working tree,
+# so a run that died before the reset still sees the authoritative version.
+SELF=/usr/local/bin/pets24x7-deploy.sh
+if ! as_app "git show origin/$BRANCH:ops/pets24x7-deploy.sh" | cmp -s - "$SELF"; then
+  echo "-- deploy script changed, reinstalling and re-running"
+  as_app "git show origin/$BRANCH:ops/pets24x7-deploy.sh" > "$SELF.new"
+  chmod 700 "$SELF.new"
+  mv -f "$SELF.new" "$SELF"
+  # Re-exec into the new copy. Hand over --from only when it is trustworthy;
+  # the new copy decides for itself what to do when it is not.
+  REEXEC=()
+  if [ -n "$FROM_OVERRIDE" ]; then REEXEC=(--from "$FROM_OVERRIDE"); fi
+  exec "$SELF" ${REEXEC[@]+"${REEXEC[@]}"}
+fi
+
 if [ -z "$FULL" ] && [ "$OLD" = "$NEW" ]; then
   echo "up to date at ${OLD:0:7}"
   exit 0
@@ -59,22 +86,6 @@ else
   echo "deploying ${OLD:0:7} -> ${NEW:0:7}"
 fi
 as_app "git reset -q --hard origin/$BRANCH"
-
-# This script runs from /usr/local/bin, which is a COPY of the one in the repo.
-# Without this, an edit to ops/ lands on GitHub and silently never takes effect
-# — that is how the membership plan seeding below sat undeployed. Re-install
-# ourselves and re-exec, so a change to this file applies on the same deploy
-# that delivers it.
-SELF=/usr/local/bin/pets24x7-deploy.sh
-if grep -q '^ops/pets24x7-deploy.sh$' <<<"$CHANGED"; then
-  if ! cmp -s "$REPO/ops/pets24x7-deploy.sh" "$SELF"; then
-    echo "-- deploy script changed, reinstalling and re-running"
-    install -m 700 "$REPO/ops/pets24x7-deploy.sh" "$SELF"
-    # The checkout already moved to $NEW, so the re-exec would see OLD == NEW
-    # and exit early. Hand it the previous revision so it still does the work.
-    exec "$SELF" --from "$OLD"
-  fi
-fi
 
 # Units and nginx config are copies too. They need a reload rather than a
 # re-exec, and nginx is only reloaded when its own config actually parses.
