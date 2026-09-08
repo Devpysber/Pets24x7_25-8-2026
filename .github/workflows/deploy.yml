@@ -43,10 +43,36 @@ jobs:
           # StrictHostKeyChecking stays on and the host key comes from a secret:
           # accepting whatever key answers would let anyone who can intercept
           # the connection collect this deploy key.
-          ssh -o StrictHostKeyChecking=yes \
-              -o UserKnownHostsFile=~/.ssh/known_hosts \
-              -o ConnectTimeout=15 \
-              "$SSH_USER@$SSH_HOST" 'sudo systemctl start pets24x7-deploy.service'
+          ssh_vps() {
+            ssh -o StrictHostKeyChecking=yes \
+                -o UserKnownHostsFile=~/.ssh/known_hosts \
+                -o ConnectTimeout=15 \
+                "$SSH_USER@$SSH_HOST" "$@"
+          }
 
-          echo "Deploy triggered. Watch it with:"
+          # pets24x7-deploy.service is Type=oneshot, so `systemctl start` blocks
+          # until the deploy finishes and its exit status is the deploy's. The
+          # only thing it prints on failure is "the control process exited with
+          # error code", which says nothing about what actually broke — every
+          # failure then costs a round trip to the box to read the journal by
+          # hand. Take the status, then pull the journal back into this log.
+          rc=0
+          ssh_vps 'sudo systemctl start pets24x7-deploy.service' || rc=$?
+
+          echo "::group::pets24x7-deploy.service - last 200 journal lines"
+          ssh_vps 'sudo journalctl -u pets24x7-deploy.service -n 200 --no-pager' \
+            || echo "(could not read the journal as $SSH_USER)"
+          echo "::endgroup::"
+
+          if [ "$rc" -ne 0 ]; then
+            # A rendered release is ~950MB and the site build writes 36k files,
+            # so running out of room is a likely cause worth having on record.
+            echo "::group::disk"
+            ssh_vps 'df -h /var/www /opt; du -sh /var/www/pets24x7-releases/* 2>/dev/null | tail -20' || true
+            echo "::endgroup::"
+            echo "::error::Deploy failed on the VPS (exit $rc) - see the journal above."
+            exit "$rc"
+          fi
+
+          echo "Deploy finished. Follow a run live with:"
           echo "  journalctl -u pets24x7-deploy.service -f"
