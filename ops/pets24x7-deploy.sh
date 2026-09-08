@@ -5,10 +5,18 @@
 # Rebuilds the API only when pets24x7_api/ changed, and re-renders the static
 # site only when pets24x7_new/ changed, because a full page render is ~36k
 # files and takes a couple of minutes.
-set -euo pipefail
+set -Eeuo pipefail
 
 REPO=/opt/pets24x7/app
 BRANCH=main
+# The revision we last deployed end to end. Deliberately NOT `git rev-parse
+# HEAD`: the checkout is reset to origin before anything is built, so a build
+# that fails afterwards still leaves HEAD at the new commit. Keying off HEAD
+# meant the next run computed OLD == NEW, printed "up to date" and exited 0 —
+# a failed deploy turned into a permanent silent skip. That is how the static
+# site sat 22 commits behind for a week while every timer tick reported
+# success. Only a run that reaches the end writes this file.
+STATE=/var/lib/pets24x7/deployed-rev
 # Set by a self-reinstall re-exec (see below) so the second run still sees the
 # full set of changed files rather than concluding it is already up to date.
 FROM_OVERRIDE=""
@@ -21,7 +29,9 @@ RELEASES=/var/www/pets24x7-releases
 # Everything touching the checkout runs as the app user, with nvm's node on PATH.
 as_app() { su pets24x7 -c ". ~/.nvm/nvm.sh; cd $REPO && $*"; }
 
-OLD=${FROM_OVERRIDE:-$(as_app 'git rev-parse HEAD')}
+OLD=${FROM_OVERRIDE:-$(cat "$STATE" 2>/dev/null || true)}
+# No state file yet (first run after this change): fall back to the checkout.
+[ -n "$OLD" ] || OLD=$(as_app 'git rev-parse HEAD')
 as_app "git fetch -q origin $BRANCH"
 NEW=$(as_app "git rev-parse origin/$BRANCH")
 
@@ -92,6 +102,30 @@ if grep -q '^pets24x7_new/' <<<"$CHANGED"; then
   # site never serves a half-rendered tree. Rendering in place would 404
   # every city URL for the couple of minutes build_pages.py takes.
   REL=$RELEASES/${NEW:0:7}
+
+  # Prune BEFORE building, not after. A rendered release is ~950 MB, and the
+  # cleanup used to sit on the last line of the block: it only ran when
+  # everything succeeded, so every failed deploy abandoned a full release on
+  # disk and left the next build with less room than the last. One failure
+  # snowballs into a full disk that then fails every deploy after it.
+  # Keep the two newest, and never delete whatever the symlink points at.
+  LIVE=$(readlink -f "$SITE_LINK" 2>/dev/null || true)
+  ls -1dt "$RELEASES"/*/ 2>/dev/null | tail -n +3 | while read -r d; do
+    if [ "$(readlink -f "$d")" != "$LIVE" ]; then rm -rf "$d"; fi
+  done
+
+  # Die with a legible message rather than halfway through a 36k-file render
+  # with a bare ENOSPC.
+  FREE_MB=$(df -Pm "$RELEASES" | awk 'NR==2 {print $4}')
+  if [ "$FREE_MB" -lt 2500 ]; then
+    echo "FAILED: ${FREE_MB}MB free under $RELEASES; a release needs ~950MB"
+    df -h "$RELEASES"
+    exit 1
+  fi
+
+  # A half-built release is dead weight. Drop it if any step below fails, so a
+  # failure costs nothing on disk and the next run starts clean.
+  trap 'rm -rf "$REL"' ERR
   rm -rf "$REL"
   mkdir -p "$REL"
   rsync -a "$SITE_SRC/" "$REL/"
@@ -100,12 +134,15 @@ if grep -q '^pets24x7_new/' <<<"$CHANGED"; then
   find "$REL" -type d -exec chmod 755 {} +
   find "$REL" -type f -exec chmod 644 {} +
 
+  # Clear the cleanup trap BEFORE the swap: past this line $REL is the live
+  # site, and a trap that deletes it would take the site down with it.
+  trap - ERR
   ln -sfn "$REL" "$SITE_LINK.tmp" && mv -Tf "$SITE_LINK.tmp" "$SITE_LINK"
   curl -fsS -m 10 -o /dev/null -H 'Host: pets24x7.com' http://127.0.0.1/ || { echo "FAILED: site check"; exit 1; }
   echo "-- site ok ($(find "$REL" -type f | wc -l) files)"
-
-  # Keep the current release plus one to roll back to.
-  ls -1dt "$RELEASES"/*/ 2>/dev/null | tail -n +3 | xargs -r rm -rf
 fi
 
+mkdir -p "$(dirname "$STATE")"
+printf '%s
+' "$NEW" > "$STATE"
 echo "deployed ${NEW:0:7}"
