@@ -166,16 +166,51 @@ adminImportRouter.get(
 adminImportRouter.get(
   '/import/stats',
   asyncHandler(async (_req, res) => {
-    const [vendors, activeVendors, parents, enquiries, imports] = await Promise.all([
+    // Cumulative totals come from the import_jobs ledger, not from live row
+    // counts: vendors can be deleted or created outside an import, so
+    // vendor.count() is not "how much we imported since day one".
+    // Dry runs are never persisted today, but filter them anyway.
+    const realJobs = { dryRun: false };
+
+    const [vendors, activeVendors, parents, enquiries, imports, totals] = await Promise.all([
       prisma.vendor.count(),
       prisma.vendor.count({ where: { status: 'ACTIVE' } }),
       prisma.petParent.count(),
       prisma.enquiry.count(),
-      prisma.importJob.count(),
+      prisma.importJob.count({ where: realJobs }),
+      prisma.importJob.aggregate({
+        where: realJobs,
+        _sum: {
+          totalRows: true,
+          created: true,
+          updated: true,
+          skipped: true,
+          googleSheetsSyncedCount: true,
+          googleSheetsFailedCount: true,
+        },
+      }),
     ]);
+
+    const sum = totals._sum;
+    const totalImported = (sum.created ?? 0) + (sum.updated ?? 0);
+
     res.json({
       ok: true,
-      stats: { vendors, activeVendors, parents, enquiries, imports },
+      stats: {
+        vendors,
+        activeVendors,
+        parents,
+        enquiries,
+        imports,
+        // Lifetime import ledger.
+        totalImported,
+        totalCreated: sum.created ?? 0,
+        totalUpdated: sum.updated ?? 0,
+        totalRowsProcessed: sum.totalRows ?? 0,
+        totalSkipped: sum.skipped ?? 0,
+        sheetsSynced: sum.googleSheetsSyncedCount ?? 0,
+        sheetsFailed: sum.googleSheetsFailedCount ?? 0,
+      },
     });
   }),
 );

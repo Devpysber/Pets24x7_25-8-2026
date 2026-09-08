@@ -349,7 +349,7 @@
   /* Import Metrics Grid Layout */
   #importStats {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 14px;
     margin-bottom: 24px;
   }
@@ -4463,9 +4463,9 @@
     return api.adminImportStats().then(function(r) {
       var s = r.stats || {};
       var cards = [
-        { lbl: 'TOTAL DB LISTINGS', val: s.vendors, icon: '📊', color: '#1E40AF', bg: '#EFF6FF' },
-        { lbl: 'ACTIVE VENDORS', val: s.activeVendors, icon: '🏪', color: '#15803D', bg: '#F0FDF4' },
-        { lbl: 'SHEETS SYNCED', val: s.vendors, icon: '🟢', color: '#047857', bg: '#ECFDF5' },
+        // Lifetime ledger totals from import_jobs, not live vendor row counts.
+        { lbl: 'TOTAL IMPORTED (ALL TIME)', val: s.totalImported, icon: '📊', color: '#1E40AF', bg: '#EFF6FF' },
+        { lbl: 'SHEETS SYNCED', val: s.sheetsSynced, icon: '🟢', color: '#047857', bg: '#ECFDF5' },
         { lbl: 'EXCLUDED CITIES', val: impState.excludedCities.length, icon: '🏙️', color: '#B45309', bg: '#FFFBEB' },
         { lbl: 'EXCLUDED CATEGORIES', val: impState.excludedCategories.length, icon: '🏷️', color: '#B91C1C', bg: '#FEF2F2' },
         { lbl: 'IMPORTS EXECUTED', val: s.imports, icon: '⚡', color: '#6366F1', bg: '#EEF2FF' }
@@ -4510,7 +4510,7 @@
 
   window.impRetrySheets = function(jobId) {
     api.adminImportRetrySheets(jobId).then(function(r) {
-      alert('Google Sheets Sync Retry completed! Synced: ' + (r.syncedCount || 0) + ' listings.');
+      alert('Google Sheets Sync Retry completed! Synced: ' + (r.synced || 0) + ' listings.');
       importRefreshHistory();
     }).catch(function(e) { alert('Sheets sync failed: ' + fmtErr(e)); });
   };
