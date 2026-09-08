@@ -30,18 +30,34 @@ RELEASES=/var/www/pets24x7-releases
 as_app() { su pets24x7 -c ". ~/.nvm/nvm.sh; cd $REPO && $*"; }
 
 OLD=${FROM_OVERRIDE:-$(cat "$STATE" 2>/dev/null || true)}
-# No state file yet (first run after this change): fall back to the checkout.
-[ -n "$OLD" ] || OLD=$(as_app 'git rev-parse HEAD')
+# No state file means we genuinely do not know what is on this box, and the old
+# fallback -- git rev-parse HEAD -- was wrong exactly when it mattered: the
+# checkout is reset to origin before anything is built, so after a failed build
+# HEAD names a revision that was never deployed. Believing it is what left the
+# static site 22 commits behind while every run reported success. Deploy
+# everything instead. It costs one full render (~2 min) and converges the box.
+FULL=""
+if [ -z "$OLD" ]; then
+  echo "no deploy state recorded -- treating this as a full deploy"
+  FULL=1
+fi
+
 as_app "git fetch -q origin $BRANCH"
 NEW=$(as_app "git rev-parse origin/$BRANCH")
 
-if [ "$OLD" = "$NEW" ]; then
+if [ -z "$FULL" ] && [ "$OLD" = "$NEW" ]; then
   echo "up to date at ${OLD:0:7}"
   exit 0
 fi
 
-echo "deploying ${OLD:0:7} -> ${NEW:0:7}"
-CHANGED=$(as_app "git diff --name-only $OLD $NEW")
+if [ -n "$FULL" ]; then
+  # Every tracked path, so each `grep -q` below matches and every stage runs.
+  CHANGED=$(as_app "git ls-tree -r --name-only $NEW")
+  echo "deploying everything at ${NEW:0:7}"
+else
+  CHANGED=$(as_app "git diff --name-only $OLD $NEW")
+  echo "deploying ${OLD:0:7} -> ${NEW:0:7}"
+fi
 as_app "git reset -q --hard origin/$BRANCH"
 
 # This script runs from /usr/local/bin, which is a COPY of the one in the repo.
