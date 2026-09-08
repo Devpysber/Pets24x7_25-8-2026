@@ -164,6 +164,18 @@ if grep -q '^pets24x7_new/' <<<"$CHANGED"; then
   # Clear the cleanup trap BEFORE the swap: past this line $REL is the live
   # site, and a trap that deletes it would take the site down with it.
   trap - ERR
+  # One-time migration. DEPLOY.md builds $SITE_LINK as a real directory
+  # (mkdir -p, untar into it, render in place); this script has always assumed
+  # it is a symlink into $RELEASES. `mv -T` a symlink onto a non-empty
+  # directory fails with "Directory not empty", so the swap below failed on
+  # every single run -- after rendering the whole ~950MB release -- and the
+  # directory from the original manual deploy kept serving. That is why the
+  # site stayed on its first-deploy content while the API updated normally.
+  if [ -e "$SITE_LINK" ] && [ ! -L "$SITE_LINK" ]; then
+    echo "-- $SITE_LINK is a directory, not a release symlink; migrating"
+    mv "$SITE_LINK" "$SITE_LINK.pre-releases.$(date +%Y%m%d%H%M%S)"
+    echo "-- previous tree kept alongside it; delete it by hand to reclaim the space"
+  fi
   ln -sfn "$REL" "$SITE_LINK.tmp" && mv -Tf "$SITE_LINK.tmp" "$SITE_LINK"
   curl -fsS -m 10 -o /dev/null -H 'Host: pets24x7.com' http://127.0.0.1/ || { echo "FAILED: site check"; exit 1; }
   echo "-- site ok ($(find "$REL" -type f | wc -l) files)"

@@ -279,9 +279,16 @@ the site moved to this box.
 tar -czf /tmp/site.tgz -C pets24x7_new .
 scp /tmp/site.tgz root@148.230.66.88:/tmp/site.tgz
 
-# on the server:
-mkdir -p /var/www/pets24x7
-tar -xzf /tmp/site.tgz -C /var/www/pets24x7 && rm /tmp/site.tgz
+# on the server: build into a release directory, then point the docroot at it.
+# /var/www/pets24x7 MUST end up a symlink, not a directory — pets24x7-deploy.sh
+# rolls out by swapping that symlink onto a new release, and `mv -T` a symlink
+# onto a real directory fails with "Directory not empty". Setting it up as a
+# plain directory is what silently pinned the site to its first deploy while
+# every later render was built and then thrown away.
+REL=/var/www/pets24x7-releases/$(date +%Y%m%d%H%M%S)
+mkdir -p "$REL"
+tar -xzf /tmp/site.tgz -C "$REL" && rm /tmp/site.tgz
+ln -sfn "$REL" /var/www/pets24x7
 ```
 
 ### Pre-render the SEO pages — do not skip
@@ -291,10 +298,10 @@ The repo ships templates and `data/*.json`, **not** the ~36k rendered pages.
 listing URL 404s.
 
 ```bash
-cd /var/www/pets24x7 && python3 build_pages.py   # ~36,392 pages, rewrites sitemap.xml
-chown -R www-data:www-data /var/www/pets24x7
-find /var/www/pets24x7 -type d -exec chmod 755 {} +
-find /var/www/pets24x7 -type f -exec chmod 644 {} +
+cd "$REL" && python3 build_pages.py              # ~36,392 pages, rewrites sitemap.xml
+chown -R www-data:www-data "$REL"
+find "$REL" -type d -exec chmod 755 {} +
+find "$REL" -type f -exec chmod 644 {} +
 ```
 
 Roughly 1.1 GB and 38k files when built. Re-run it after any data refresh.
