@@ -64,6 +64,8 @@
     parentSignup:     function (p)                       { return req('POST', '/api/parent/email/signup', p); },
     parentLogin:      function (email, password)         { return req('POST', '/api/parent/email/login',  { email: email, password: password }); },
     parentResend:     function (email)                   { return req('POST', '/api/parent/email/resend', { email: email }); },
+    parentForgot:     function (email)                   { return req('POST', '/api/parent/email/forgot', { email: email }); },
+    parentResetPassword: function (token, password)      { return req('POST', '/api/parent/email/reset',  { token: token, password: password }); },
     parentGoogle:     function (credential)              { return req('POST', '/api/parent/google',       { credential: credential }); },
 
     // Email OTP sign-in (primary login path for all three roles)

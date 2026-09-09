@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Choose a new password — Pets24x7.com</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--bg:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--danger:#DC2626;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+  a{color:var(--primary);text-decoration:none}
+  .card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:40px 36px;max-width:440px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,0.10)}
+  .brand{display:block;text-align:center;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text);margin-bottom:22px}
+  .brand span{color:#ff6b35}
+  h1{font-size:22px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+  p.sub{color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:20px}
+  label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;margin-bottom:14px}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+  .btn{width:100%;padding:13px 20px;border-radius:10px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;border:1px solid var(--primary);background:var(--primary);color:#fff}
+  .btn:disabled{opacity:.6;cursor:default}
+  .btn-link{display:block;width:100%;margin-top:14px;background:none;border:none;color:var(--primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:center}
+  .msg{display:none;font-size:13.5px;line-height:1.5;padding:11px 13px;border-radius:9px;margin-bottom:14px}
+  .msg.show{display:block}
+  .err{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+  .ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+  .hint{font-size:12.5px;color:var(--text-muted);margin-top:-6px;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <a class="brand" href="/">Pets<span>24x7</span></a>
+
+  <h1 id="title">Choose a new password</h1>
+  <p class="sub" id="sub">Pick something you don&rsquo;t use anywhere else. You&rsquo;ll be signed in straight after.</p>
+
+  <div class="msg err" id="err"></div>
+  <div class="msg ok" id="ok"></div>
+
+  <div id="form">
+    <label for="pw">New password</label>
+    <input id="pw" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+    <label for="pw2">Confirm password</label>
+    <input id="pw2" type="password" autocomplete="new-password" placeholder="Type it again" />
+    <p class="hint">Minimum 8 characters. Longer beats complicated.</p>
+    <button class="btn" id="saveBtn">Set my password</button>
+  </div>
+
+  <button class="btn-link" id="backLink" onclick="location.href='/login/#parent'">Back to sign in</button>
+</div>
+
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  function $(id) { return document.getElementById(id); }
+  function show(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function hide(el) { el.classList.remove('show'); }
+  function fmtErr(e) {
+    return (e && (e.message || (e.data && e.data.message) || (e.data && e.data.error))) || 'Something went wrong.';
+  }
+
+  var token = (/[?&]token=([^&]+)/.exec(location.search) || [])[1] || '';
+  if (token) token = decodeURIComponent(token);
+
+  // No token means the link was mangled in transit, or someone opened the page
+  // directly. There is nothing to reset, so send them back to ask for a link.
+  if (!token) {
+    $('form').style.display = 'none';
+    $('title').textContent = 'This link is incomplete';
+    $('sub').textContent = 'Request a fresh password reset from the sign-in page.';
+    show($('err'), 'The reset link is missing its token. Links expire after 30 minutes, and each one works only once.');
+  }
+
+  $('saveBtn').addEventListener('click', function () {
+    hide($('err')); hide($('ok'));
+    var pw = $('pw').value;
+    var pw2 = $('pw2').value;
+    if (pw.length < 8) return show($('err'), 'Password must be at least 8 characters.');
+    if (pw !== pw2) return show($('err'), 'The two passwords do not match.');
+
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    api.parentResetPassword(token, pw).then(function () {
+      $('form').style.display = 'none';
+      $('title').textContent = 'Password updated';
+      $('sub').textContent = 'You are signed in. Taking you to your dashboard…';
+      show($('ok'), 'Your new password is saved. We emailed you a confirmation.');
+      setTimeout(function () { location.href = '/dashboard/parent/'; }, 900);
+    }).catch(function (e) {
+      show($('err'), fmtErr(e));
+      btn.disabled = false;
+      btn.textContent = 'Set my password';
+    });
+  });
+
+  $('pw2').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('saveBtn').click(); });
+</script>
+
+</body>
+</html>

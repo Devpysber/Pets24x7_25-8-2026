@@ -41,6 +41,7 @@ model PetParent {
   updatedAt DateTime @updatedAt
 
   emailTokens EmailVerificationToken[]
+  resetTokens PasswordResetToken[]
 
   pets        Pet[]
   enquiries   Enquiry[]
@@ -65,6 +66,22 @@ model EmailVerificationToken {
 
   @@index([parentId])
   @@map("email_verification_tokens")
+}
+
+// One-time password-reset links. Same shape as EmailVerificationToken: only the
+// SHA-256 hash is stored, issuing a new one voids the rest, and consuming one
+// marks it used.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  parentId  String
+  parent    PetParent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([parentId])
+  @@map("password_reset_tokens")
 }
 
 // A pet parent's bookmarked business listings (static frontend ids).

@@ -2,6 +2,8 @@
 //   POST /api/parent/email/signup  { name, email, password, phone?, city?, country? }
 //   POST /api/parent/email/login   { email, password }
 //   POST /api/parent/email/resend  { email }
+//   POST /api/parent/email/forgot  { email }               → mails a reset link
+//   POST /api/parent/email/reset   { token, password }     → sets the new password
 //   GET  /api/parent/email/verify?token=...       → redirects back to the site
 //   POST /api/parent/google        { credential }   (Google ID token)
 //
@@ -30,6 +32,8 @@ import {
 import { notifyIf } from '../mail/notify.js';
 import { loginAlertEmail } from '../mail/action-templates.js';
 import { EMAIL_OTP_TTL_MIN, issueEmailOtp, verifyEmailOtp } from './email-otp.js';
+import { RESET_TTL_MIN, consumeResetToken, sendPasswordResetEmail } from './password-reset.js';
+import { passwordChangedEmail } from '../mail/lifecycle-templates.js';
 
 export const parentEmailAuthRouter = Router();
 
@@ -268,6 +272,67 @@ parentEmailAuthRouter.post(
     }
     // Same response either way, so this cannot be used to enumerate accounts.
     res.json({ ok: true, expiresInMinutes: VERIFY_TTL_MIN });
+  }),
+);
+
+// ----- Forgot password -----
+// Answers the same way whether or not the address exists, so the endpoint
+// cannot be used to find out who has an account.
+parentEmailAuthRouter.post(
+  '/email/forgot',
+  limiter(3),
+  asyncHandler(async (req, res) => {
+    const { email: raw } = z.object({ email: z.string().email() }).parse(req.body);
+    const email = normEmail(raw);
+
+    const parent = await prisma.petParent.findUnique({ where: { email } });
+    // Only an account that actually has a password can reset one. A passwordless
+    // account signs in with a code instead, and mailing it a reset link would
+    // just confuse the owner.
+    if (parent?.passwordHash) {
+      await sendPasswordResetEmail({ id: parent.id, name: parent.name, email }).catch((err) =>
+        req.log.warn({ err }, 'password reset send failed'),
+      );
+    }
+    res.json({ ok: true, expiresInMinutes: RESET_TTL_MIN });
+  }),
+);
+
+// ----- Set a new password from a reset link -----
+const ResetBody = z.object({
+  token: z.string().min(10),
+  password: z.string().min(8).max(200),
+});
+
+parentEmailAuthRouter.post(
+  '/email/reset',
+  limiter(10),
+  asyncHandler(async (req, res) => {
+    const body = ResetBody.parse(req.body);
+
+    const result = await consumeResetToken(body.token);
+    if (!result.ok) {
+      throw new BadRequestError(
+        result.reason === 'expired'
+          ? 'That reset link has expired. Please request a new one.'
+          : 'That reset link is no longer valid. Please request a new one.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(body.password, 12);
+    const parent = await prisma.petParent.update({
+      where: { id: result.parentId },
+      // Reaching the mailed link proves the address, so an account that was
+      // still unverified becomes verified here.
+      data: { passwordHash, emailVerified: true, emailVerifiedAt: new Date() },
+    });
+
+    notifyIf(parent.email, (to) => passwordChangedEmail(to, parent.name, new Date(), req.ip ?? null));
+
+    // Signing them in immediately is the whole point of the flow: they have
+    // just proved both the address and a fresh password.
+    setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
+    res.json({ ok: true, parent: publicParent(parent) });
   }),
 );
 

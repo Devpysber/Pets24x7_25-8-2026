@@ -161,6 +161,7 @@
           <div class="ok" id="peOk"></div>
           <button class="btn btn-primary" id="peBtn">Sign in</button>
           <button class="btn-link" id="peSwap">New here? Create an account</button>
+          <button class="btn-link" id="peForgot">Forgot your password?</button>
           <button class="btn-link" id="peResend" hidden>Resend verification email</button>
           <div class="divider" id="gDivider" hidden>or</div>
           <div id="gBtn"></div>
@@ -414,6 +415,7 @@
     clearErr($('peErr'));
     $('peOk').classList.remove('show');
     $('peResend').hidden = true;
+    $('peForgot').hidden = signup;
   }
 
   var P_METHOD_STEP = { emailotp: 'p-emailotp', email: 'p-email' };
@@ -554,6 +556,24 @@
   $('peSwap').addEventListener('click', function () {
     peMode = peMode === 'signup' ? 'login' : 'signup';
     peRender();
+  });
+
+  // Forgot password — the reply is deliberately the same whether or not the
+  // address has an account, so the button can't be used to probe for members.
+  $('peForgot').addEventListener('click', function () {
+    clearErr($('peErr'));
+    var email = $('peEmail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr($('peErr'), 'Enter your email address first.');
+    var self = this;
+    busy(self, true, 'Sending…');
+    api.parentForgot(email).then(function (r) {
+      $('peOk').textContent = 'If that address has a password, a reset link is on its way. It expires in ' +
+        (r.expiresInMinutes || 30) + ' minutes.';
+      $('peOk').classList.add('show');
+    }).catch(function () {
+      $('peOk').textContent = 'If that address has a password, a reset link is on its way.';
+      $('peOk').classList.add('show');
+    }).then(function () { busy(self, false, 'Forgot your password?'); });
   });
 
   $('peResend').addEventListener('click', function () {
