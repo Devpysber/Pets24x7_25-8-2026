@@ -5,7 +5,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { memoryVendorSubPlans } from '../admin/admin.api.routes.js';
 import { prisma } from '../db.js';
 import { startCheckout } from '../payments/checkout.js';
-import { newMerchantTxnId } from '../payments/phonepe.js';
+import { newMerchantTxnId } from '../payments/checkout.js';
 import { verifyPaymentSignature } from '../payments/razorpay.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
 
