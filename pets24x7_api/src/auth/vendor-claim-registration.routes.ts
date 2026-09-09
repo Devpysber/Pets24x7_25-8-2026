@@ -55,11 +55,19 @@ vendorClaimRegistrationRouter.post(
     // Search in-memory static listing index
     const staticResults = searchListings({ q, city, limit: 60 });
     
+    // `mode: 'insensitive'` is Postgres-only, and production runs MySQL, where
+    // the generated types do not carry the field at all — passing it there is a
+    // compile error, which is what broke the deploy build. MySQL's
+    // utf8mb4_unicode_ci collation already compares case-insensitively.
+    const ci = (process.env.DATABASE_URL ?? '').startsWith('postgres')
+      ? ({ mode: 'insensitive' } as const)
+      : {};
+
     // Search database custom vendors
     const dbVendors = await prisma.vendor.findMany({
       where: {
-        ...(q ? { businessName: { contains: q, mode: 'insensitive' } } : {}),
-        ...(city && city !== 'all' ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...(q ? { businessName: { contains: q, ...ci } } : {}),
+        ...(city && city !== 'all' ? { city: { contains: city, ...ci } } : {}),
       },
       take: 60,
     });
