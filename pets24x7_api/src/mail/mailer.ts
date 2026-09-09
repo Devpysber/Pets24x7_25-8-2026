@@ -47,6 +47,11 @@ export interface MailInput {
    * not secret if journalctl prints it in the clear for its whole lifetime.
    */
   sensitive?: boolean;
+  /**
+   * Send even when the development guard would suppress it. Only the explicit
+   * `npm run mail:check` test message sets this.
+   */
+  force?: boolean;
 }
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -93,6 +98,18 @@ export async function sendMail(input: MailInput): Promise<boolean> {
   // surfaces its code separately in development.
   const safeSubject = input.sensitive ? '[redacted — contains a sign-in code]' : input.subject;
 
+  // Outside production, mail is logged rather than sent: dev databases carry
+  // real-looking addresses that belong to other people, and jobs run on a timer.
+  if (env.NODE_ENV !== 'production' && !env.MAIL_ALLOW_DEV_SEND && !input.force) {
+    // The body is logged so a developer can still click a verification link
+    // offline — except when it carries a credential.
+    logger.info(
+      { to: input.to, subject: safeSubject, ...(input.sensitive ? {} : { text: input.text }) },
+      '[mail] not sent — NODE_ENV is not production (set MAIL_ALLOW_DEV_SEND=true to override)',
+    );
+    return false;
+  }
+
   const tx = transporter();
   if (!tx) {
     logger.warn(
@@ -102,7 +119,7 @@ export async function sendMail(input: MailInput): Promise<boolean> {
     return false;
   }
   try {
-    const { kind: _kind, sensitive: _sensitive, ...message } = input;
+    const { kind: _kind, sensitive: _sensitive, force: _force, ...message } = input;
     if (kind === 'marketing') {
       const url = unsubscribeUrl(input.to);
       message.html = withUnsubscribeFooter(message.html, url);

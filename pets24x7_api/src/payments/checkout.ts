@@ -12,7 +12,10 @@ import { env } from './../env.js';
 import { createRazorpayOrder, isRazorpayConfigured } from './razorpay.js';
 
 export function isDevGatewayBypass(): boolean {
-  return env.NODE_ENV === 'development' && !isRazorpayConfigured();
+  if (env.NODE_ENV !== 'development') return false;
+  // A live key on a developer's machine would open real orders against the real
+  // merchant account, so only a test key is honoured here.
+  return !isRazorpayConfigured() || !env.RAZORPAY_KEY_ID!.startsWith('rzp_test_');
 }
 
 /**

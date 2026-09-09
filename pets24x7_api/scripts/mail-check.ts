@@ -45,6 +45,7 @@ async function main(): Promise<void> {
       message: `Sent from ${env.SMTP_HOST} at ${new Date().toISOString()}.\n\nIf you can read this, transactional email is configured correctly.`,
     }),
     kind: 'transactional',
+    force: true,
   });
   console.log(ok ? `test email sent to ${to}` : `send failed for ${to} — see the log above`);
   if (!ok) process.exit(1);

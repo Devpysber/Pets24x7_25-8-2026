@@ -43,6 +43,7 @@ import { vendorSubscriptionsRouter } from './vendors/vendor.subscriptions.routes
 import { recommendRouter } from './feed/recommend.routes.js';
 import { feedRouter } from './feed/feed.routes.js';
 import { unsubscribeRouter } from './mail/unsubscribe.routes.js';
+import { startReminderJob } from './jobs/reminders.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
 
@@ -187,7 +188,8 @@ async function ensureSeedAdmin(): Promise<void> {
 (async () => {
   await initListingsIndex();   // load static-frontend listings into memory for phone lookups
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
-  startExpiryJob();            // periodic membership/campaign/featured/deal/event lifecycle sweep
+  startExpiryJob();         // periodic membership/campaign/featured/deal/event lifecycle sweep
+  startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
   app.listen(env.PORT, env.HOST, () => {
     logger.info(`pets24x7-api ready on http://${env.HOST}:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
   });

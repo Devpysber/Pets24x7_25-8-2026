@@ -54,6 +54,11 @@ const Env = z.object({
   // Must be an address on a domain you control and have signed with DKIM —
   // sending as a free consumer mailbox lands transactional mail in spam.
   MAIL_FROM: z.string().default('Pets24x7 <pets24x7.com@gmail.com>'),
+  // A development database is full of seeded and abandoned test addresses, and
+  // a background job that mails all of them from the live relay both bounces
+  // and burns sender reputation. Sending is therefore off outside production
+  // unless this is explicitly set.
+  MAIL_ALLOW_DEV_SEND: z.coerce.boolean().default(false),
   // Verification links stay valid this long unless used sooner.
   EMAIL_VERIFY_TTL_MIN: z.coerce.number().int().min(1).default(10),
 

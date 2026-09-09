@@ -21,6 +21,7 @@ import { BadRequestError, ConflictError, UnauthorizedError } from '../shared/err
 import { env } from '../env.js';
 import { notifyIf } from '../mail/notify.js';
 import { vendorWelcomeEmail } from '../mail/action-templates.js';
+import { vendorEmailVerifiedEmail } from '../mail/lifecycle-templates.js';
 import {
   consumeVendorVerificationToken,
   sendVendorVerificationEmail,
@@ -239,8 +240,13 @@ vendorAuthRouter.post(
       const now = new Date();
       // Welcome mail goes out on the first claim only, never on a re-login.
       const priorClaim = await prisma.vendor
-        .findUnique({ where: { phone }, select: { claimedAt: true } })
+        .findUnique({ where: { phone }, select: { claimedAt: true, email: true } })
         .catch(() => null);
+      // An address typed into the claim form is self-declared. If it differs
+      // from the one already on file, the proof that came with the old address
+      // no longer applies — clear it, or a vendor could swap in someone else's
+      // address and inherit a verified badge.
+      const emailChanged = (body.email ?? null) !== (priorClaim?.email ?? null);
       const vendor = await prisma.vendor.upsert({
         where: { phone },
         update: {
@@ -252,6 +258,7 @@ vendorAuthRouter.post(
           category: listing.category,
           status: 'ACTIVE',
           claimedAt: now,
+          ...(emailChanged ? { emailVerified: false, emailVerifiedAt: null } : {}),
         },
         create: {
           phone,
@@ -321,6 +328,12 @@ vendorAuthRouter.get(
     if (!result.ok) return res.redirect(back(result.reason));
 
     req.log.info({ vendorId: result.vendorId }, 'vendor email verified');
+    // Confirm to the address that was just proven, so a vendor who verified a
+    // typo'd address sees nothing arrive and knows to fix it.
+    const verified = await prisma.vendor
+      .findUnique({ where: { id: result.vendorId }, select: { email: true, businessName: true } })
+      .catch(() => null);
+    notifyIf(verified?.email, (to) => vendorEmailVerifiedEmail(to, verified?.businessName ?? 'there'));
     res.redirect(back('ok'));
   }),
 );
