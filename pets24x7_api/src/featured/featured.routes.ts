@@ -15,7 +15,7 @@ import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ForbiddenError, NotFoundError, ConflictError } from '../shared/errors.js';
-import { newMerchantTxnId } from '../payments/phonepe.js';
+import { newMerchantTxnId } from '../payments/checkout.js';
 import { startCheckout } from '../payments/checkout.js';
 import { applyPaymentResult, reconcilePayment } from '../payments/membership.routes.js';
 import { getFeaturedOptions, featuredOptionFor } from '../payments/pricing.js';
@@ -134,7 +134,7 @@ vendorFeaturedRouter.post(
         featuredListingId: featured.id,
         amountMinor: option.priceMinor,
         currency: 'INR',
-        gateway: 'PHONEPE',
+        gateway: 'RAZORPAY',
         merchantTxnId,
         status: 'INITIATED',
         ipAddress: req.ip,

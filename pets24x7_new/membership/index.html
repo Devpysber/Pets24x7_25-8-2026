@@ -241,7 +241,7 @@
           rzp.open();
         });
       }
-      // redirect gateway (PhonePe / dev bypass)
+      // redirect flow (local dev bypass only — Razorpay opens in a modal)
       if (r.redirectUrl) { location.href = r.redirectUrl; return; }
       throw new Error('No checkout method returned');
     }).catch(function (e) { failBuy(btn, fmtErr(e)); });

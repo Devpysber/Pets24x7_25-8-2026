@@ -111,14 +111,10 @@ PUBLIC_SHORTLINK_BASE="https://pets24x7.com"
 
 STATIC_DATA_DIR="/opt/pets24x7/app/pets24x7_new/data"
 
-# PhonePe — keep sandbox values unless you have prod PhonePe creds.
-# Razorpay is preferred and takes priority when configured, so these can stay as-is.
-PHONEPE_MODE="sandbox"
-PHONEPE_MERCHANT_ID="PGTESTPAYUAT"
-PHONEPE_SALT_KEY="099eb0cd-02cf-4e2a-8aca-3e6c6aff0399"
-PHONEPE_SALT_INDEX=1
-PHONEPE_REDIRECT_URL="https://pets24x7.com/membership/return/"
-PHONEPE_CALLBACK_URL="https://api.pets24x7.com/api/payments/phonepe/callback"
+# Razorpay — dashboard.razorpay.com -> Settings -> API Keys.
+RAZORPAY_KEY_ID="rzp_live_xxxxxxxxxxxxx"
+RAZORPAY_KEY_SECRET="xxxxxxxxxxxxxxxxxxxxxxxx"
+RAZORPAY_WEBHOOK_SECRET="xxxxxxxxxxxxxxxxxxxxxxxx"
 
 SEED_ADMIN_EMAIL="founder@pets24x7.com"
 SEED_ADMIN_PASSWORD="___strong___"
@@ -236,7 +232,7 @@ Account `Shah.antriksh@gmail.com`, zone `pets24x7.com`
    - Security Level: Essentially Off, **or**
    - at minimum skip Managed Challenge for
      `http.host eq "api.pets24x7.com" and starts_with(http.request.uri.path, "/api/payments/")`
-   Otherwise `/api/payments/razorpay/webhook` and `/api/payments/phonepe/callback`
+   Otherwise `/api/payments/razorpay/webhook`
    will 403/challenge.
 3. SSL/TLS mode: **Full (strict)** once certbot has issued the cert in step 5.
 
@@ -337,7 +333,7 @@ certbot --nginx -d pets24x7.com -d www.pets24x7.com --agree-tos -m <email> --red
 
 - **Real WhatsApp Cloud API creds** — OTP login is dead without them (dev bypass
   routes are disabled when `NODE_ENV=production`).
-- **PhonePe production creds** — optional; Razorpay is the primary gateway.
+- **Razorpay live keys** — required; Razorpay is the only gateway.
 - **`app.pets24x7.com`** — still pointed at the dead Hostinger origin and has
   no vhost here. What it served was never established.
 - **Ports 5432 (postgres) and 5000 (`/var/www/carsindias`, running as root) are

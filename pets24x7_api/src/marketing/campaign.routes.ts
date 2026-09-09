@@ -12,7 +12,7 @@ import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../shared/errors.js';
-import { newMerchantTxnId } from '../payments/phonepe.js';
+import { newMerchantTxnId } from '../payments/checkout.js';
 import { startCheckout } from '../payments/checkout.js';
 import { applyPaymentResult, reconcilePayment } from '../payments/membership.routes.js';
 import { getCampaignOptions, CAMPAIGN_GOALS, campaignOptionFor } from '../payments/pricing.js';
@@ -103,7 +103,7 @@ vendorCampaignsRouter.post(
         campaignId: campaign.id,
         amountMinor: option.priceMinor,
         currency: 'INR',
-        gateway: 'PHONEPE',
+        gateway: 'RAZORPAY',
         merchantTxnId,
         status: 'INITIATED',
         ipAddress: req.ip,

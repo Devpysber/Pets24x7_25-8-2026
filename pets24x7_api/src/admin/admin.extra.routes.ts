@@ -12,6 +12,8 @@ import { BadRequestError, NotFoundError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { getListingById } from '../listings/index.js';
 import { notifyIf } from '../mail/notify.js';
+import { logger } from '../logger.js';
+import { createRefund } from '../payments/razorpay.js';
 import {
   enquiryStatusEmail,
   featuredEndedEmail,
@@ -108,8 +110,39 @@ adminExtraRouter.post(
     if (!p) throw new NotFoundError('Payment not found');
     if (p.status !== 'SUCCESS') throw new BadRequestError('Only successful payments can be refunded');
 
+    // Move the money first. Marking the row REFUNDED without calling the
+    // gateway told the payer their refund was on its way while the money never
+    // left our account — so a gateway failure must abort the whole thing.
+    const reason = String(req.body?.reason ?? 'admin refund').slice(0, 200);
+    let refundId: string | null = null;
+    if (p.gateway === 'RAZORPAY') {
+      if (!p.gatewayTxnId) throw new BadRequestError('This payment has no Razorpay payment id to refund');
+      try {
+        const refund = await createRefund({
+          paymentId: p.gatewayTxnId,
+          amountMinor: p.amountMinor,
+          notes: { merchantTxnId: p.merchantTxnId, reason },
+          // Same payment, same refund — a double click cannot pay out twice.
+          idempotencyKey: `refund_${p.id}`,
+        });
+        refundId = refund.id;
+      } catch (err: any) {
+        logger.warn({ err, paymentId: p.id }, 'admin refund: gateway refused');
+        throw new BadRequestError(`Refund failed at Razorpay: ${err?.message ?? 'unknown error'}`);
+      }
+    } else {
+      // Retired gateway (PhonePe). Nothing to call — the money has to be sent
+      // back by hand, so say so instead of silently marking it refunded.
+      throw new BadRequestError(
+        'This payment was taken on the retired PhonePe integration. Refund it in the PhonePe dashboard, then mark it here.',
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
-      await tx.payment.update({ where: { id }, data: { status: 'REFUNDED', errorMessage: String(req.body?.reason ?? 'admin refund') } });
+      await tx.payment.update({
+        where: { id },
+        data: { status: 'REFUNDED', errorMessage: refundId ? `${reason} (refund ${refundId})` : reason },
+      });
       // A refunded membership must actually stop: leaving endsAt in the future
       // kept every benefit live after the money went back.
       const refundedAt = new Date();
@@ -149,8 +182,8 @@ adminExtraRouter.post(
     notifyIf(payerEmail, (to) =>
       paymentRefundedEmail(to, payerName, what, p.amountMinor, p.currency, p.merchantTxnId),
     );
-    await audit(req, 'payment.refund', { paymentId: id });
-    res.json({ ok: true, id, status: 'REFUNDED' });
+    await audit(req, 'payment.refund', { paymentId: id, refundId, reason });
+    res.json({ ok: true, id, status: 'REFUNDED', refundId });
   }),
 );
 

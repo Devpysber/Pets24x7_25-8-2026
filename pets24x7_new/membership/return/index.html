@@ -58,7 +58,7 @@
   <section id="sFail" hidden>
     <div class="icon fail">✗</div>
     <h1>Payment didn&rsquo;t complete</h1>
-    <p id="failMsg">PhonePe reported the payment was not successful. You haven&rsquo;t been charged.</p>
+    <p id="failMsg">The payment was not completed. You haven&rsquo;t been charged.</p>
     <div class="actions">
       <a href="/membership/" class="btn btn-primary">Try again →</a>
       <a href="/dashboard/parent/" class="btn">Back to dashboard</a>
@@ -118,7 +118,7 @@
       }
       if (p.status === 'FAILED' || p.status === 'CANCELLED') {
         show('sFail');
-        document.getElementById('failMsg').textContent = p.errorMessage || 'PhonePe reported the payment was not successful. You haven’t been charged.';
+        document.getElementById('failMsg').textContent = p.errorMessage || 'The payment was not completed. You haven’t been charged.';
         return;
       }
       // INITIATED / PENDING — keep polling up to ~30s

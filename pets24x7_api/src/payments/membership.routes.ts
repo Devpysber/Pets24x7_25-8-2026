@@ -12,7 +12,7 @@ import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError, ConflictError } from '../shared/errors.js';
-import { checkStatus, newMerchantTxnId } from './phonepe.js';
+import { newMerchantTxnId } from './checkout.js';
 import { fetchOrderPayments } from './razorpay.js';
 import { startCheckout } from './checkout.js';
 import { logger } from '../logger.js';
@@ -92,7 +92,7 @@ membershipRouter.post(
         parentId,
         amountMinor: plan.priceMinor,
         currency: plan.currency,
-        gateway: 'PHONEPE',
+        gateway: 'RAZORPAY',
         merchantTxnId,
         status: 'INITIATED',
         ipAddress: req.ip,
@@ -249,7 +249,13 @@ export async function reconcilePayment(payment: {
   const expectedAmountMinor = payment.amountMinor ?? 0;
 
   try {
-    if (payment.gateway === 'RAZORPAY') {
+    // Razorpay is the only live gateway. Rows written by the retired PhonePe
+    // integration can no longer be reconciled — leave them for an admin.
+    if (payment.gateway !== 'RAZORPAY') {
+      logger.warn({ paymentId: payment.id, gateway: payment.gateway }, 'reconcile skipped: retired gateway');
+      return;
+    }
+    {
       if (!payment.providerOrderId) return;
       const attempts = await fetchOrderPayments(payment.providerOrderId);
       // 'captured' is the only state that means the money is actually ours.
@@ -271,12 +277,6 @@ export async function reconcilePayment(payment: {
       }
       return;
     }
-
-    const live = await checkStatus(payment.merchantTxnId);
-    await applyPaymentResult(payment.id, live.data?.state, {
-      gatewayTxnId: live.data?.transactionId,
-      callbackPayload: live as unknown as object,
-    });
   } catch (err) {
     // Best-effort: the caller still returns the current DB row.
     logger.warn({ err, paymentId: payment.id, gateway: payment.gateway }, 'payment reconcile failed');

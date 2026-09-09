@@ -448,9 +448,9 @@ model Payment {
   amountMinor         Int
   currency            String             @default("INR")
   // Gateway
-  gateway             PaymentGateway     @default(PHONEPE)
+  gateway             PaymentGateway     @default(RAZORPAY)
   merchantTxnId       String             @unique // we generate; sent to gateway
-  gatewayTxnId        String?            @unique // gateway-issued (transactionId in PhonePe / payment_id in Razorpay)
+  gatewayTxnId        String?            @unique // gateway-issued Razorpay payment_id (PhonePe transactionId on retired rows)
   providerOrderId     String?            @unique // Razorpay order_id (lookup key for the client verify call)
   status              PaymentStatus      @default(INITIATED)
   // Gateway round-trip data

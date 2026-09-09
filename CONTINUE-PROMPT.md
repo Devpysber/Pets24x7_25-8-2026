@@ -9,7 +9,7 @@ You are continuing work on **Pets24x7**, a pet services marketplace + SaaS for I
 
 ## Project in 1 paragraph
 
-Static SEO frontend (Hostinger) at `pets24x7.com` showing ~35,000 pre-rendered pet-business listing pages built from CSV scrapes. Node + Express + Prisma backend (Railway) at `api.pets24x7.com` backed by Supabase Postgres. Three user roles: **Pet Parent** (saves pets, buys memberships), **Vendor** (claims one of the 34k listings by WhatsApp-OTP phone match, then improves their profile + collects reviews + runs ads), **Admin** (approves vendor claims, manages memberships + payments). WhatsApp OTP via Meta Cloud API. Payments via PhonePe Standard Checkout.
+Static SEO frontend (Hostinger) at `pets24x7.com` showing ~35,000 pre-rendered pet-business listing pages built from CSV scrapes. Node + Express + Prisma backend (Railway) at `api.pets24x7.com` backed by Supabase Postgres. Three user roles: **Pet Parent** (saves pets, buys memberships), **Vendor** (claims one of the 34k listings by WhatsApp-OTP phone match, then improves their profile + collects reviews + runs ads), **Admin** (approves vendor claims, manages memberships + payments). WhatsApp OTP via Meta Cloud API. Payments via Razorpay Standard Checkout.
 
 ## Repo layout
 
@@ -36,7 +36,7 @@ CONTINUE-PROMPT.md   This file
 | Errors | `src/shared/errors.ts` typed classes → central middleware in `server.ts` → JSON `{ok:false, error, message}` |
 | Logging | pino + pino-http (auto request logs) |
 | WhatsApp | Direct REST calls to Meta Graph API in `src/whatsapp/cloud-api.ts`. Approved template `pets24x7_otp`. |
-| Payments | PhonePe Standard Checkout in `src/payments/phonepe.ts`. SHA256 X-VERIFY = `sha256(base64Payload + endpoint + saltKey) + "###" + saltIndex`. |
+| Payments | Razorpay Standard Checkout in `src/payments/razorpay.ts`. Checkout signature = `HMAC_SHA256(order_id + "|" + payment_id, key_secret)`; webhook signature = `HMAC_SHA256(rawBody, webhook_secret)`. |
 | Admin panel | EJS server-rendered at `/admin`, cookie auth, no separate SPA. Sidebar in `src/admin/views/_head.ejs`. |
 | Frontend integration | `pets24x7_new/api-client.js` wraps `fetch` with `credentials: 'include'`. Auto-resolves `localhost:4000` in dev / `api.pets24x7.com` in prod. |
 | Config | `pets24x7_new/config.js` is single-source for `LEADS_WEBAPP_URL` (Apps Script for form sheet) and `CSV_URL` (live listings sheet). |
@@ -50,12 +50,12 @@ CONTINUE-PROMPT.md   This file
 - Admin EJS panel at `/admin` with vendors, parents, enquiries
 - Static frontend: `/login/`, `/parent-login/`, `/vendor-login/`, `/dashboard/parent/`, `/dashboard/vendor/`
 
-### Phase 2 — Memberships + PhonePe
+### Phase 2 — Memberships + Razorpay
 - Schema additions: `MembershipPlan`, `Membership`, `Payment` + enums (`MembershipTier`, `BillingPeriod`, `MembershipStatus`, `PaymentGateway`, `PaymentStatus`)
 - 6 seeded plans: Bronze/Silver/Gold × Monthly/Annual (`prisma/seed-plans.ts`)
-- Endpoints: `/api/memberships/{plans,me,checkout}`, `/api/memberships/payment/:txn` (poll), `/api/payments/phonepe/callback` (S2S webhook with X-VERIFY signature check)
+- Endpoints: `/api/memberships/{plans,me,checkout}`, `/api/memberships/payment/:txn` (poll), `/api/payments/razorpay/verify` and `/api/payments/razorpay/webhook` (HMAC-verified)
 - State machine in `src/payments/membership.routes.ts` → `applyPaymentResult()`. Idempotent: callback retries safe.
-- Static frontend: `/membership/` (plans + checkout), `/membership/return/` (polls status post-PhonePe redirect)
+- Static frontend: `/membership/` (plans + checkout), `/membership/return/` (polls status after checkout)
 - Admin views: `/admin/memberships`, `/admin/payments` with status filters + totals
 
 ### Conventions to follow
@@ -110,7 +110,7 @@ Endpoints to add:
 ## Open product decisions (ask the user)
 
 1. **Review-request copy** — do we want the WhatsApp template to push them to Google Reviews OR a Pets24x7-hosted review form (so we own the review data)?
-2. **Membership refund window** — currently `TermsOfService` says "7 days, only if no benefit redeemed". Need to wire actual refund logic to PhonePe `POST /pg/v1/refund` endpoint.
+2. **Membership refund window** — currently `TermsOfService` says "7 days, only if no benefit redeemed". Wired to Razorpay `POST /v1/payments/:id/refund` from the admin payments view.
 3. **Vendor multi-listing** — chains have multiple listings under one phone. Currently `Vendor.listingId` is one-to-one. Should we add a `VendorLocation` junction table now or defer?
 4. **GA4 / analytics** — not wired yet. Add via `<script async src="...gtag/js?id=G-XXX">` injection through `build_pages.py` template.
 
@@ -122,8 +122,8 @@ cd pets24x7_api
 cp .env.example .env
 # Fill: DATABASE_URL (Supabase pooler), JWT_SECRET (96 random hex),
 #       ADMIN_SESSION_SECRET, WA_PHONE_NUMBER_ID, WA_ACCESS_TOKEN,
-#       WA_BUSINESS_ACCOUNT_ID, WA_VERIFY_TOKEN, PHONEPE_MERCHANT_ID,
-#       PHONEPE_SALT_KEY, PHONEPE_SALT_INDEX, SEED_ADMIN_*
+#       WA_BUSINESS_ACCOUNT_ID, WA_VERIFY_TOKEN, RAZORPAY_KEY_ID,
+#       RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, SEED_ADMIN_*
 npm install
 npm run prisma:gen
 npm run prisma:migrate
@@ -150,7 +150,7 @@ End-to-end test in `HANDOFF.md` §5.
 - Never log secrets (`.env` values, JWT tokens, OTP codes, payment keys)
 - Never echo `.env` contents in PR diffs
 - Always SHA256-hash OTP codes before DB write (`src/whatsapp/otp.ts` does this — follow the pattern)
-- Always verify PhonePe callback `X-VERIFY` header before trusting payload (`src/payments/phonepe.ts → verifyCallback()` does this)
+- Always verify the Razorpay webhook `X-Razorpay-Signature` header before trusting payload (`src/payments/razorpay.ts → verifyWebhookSignature()` does this)
 - Always use Prisma parameterized queries — never raw string interpolation in `$queryRaw`
 - Always use `bcrypt.compare` (constant time) for password checks
 - Always rate-limit new auth endpoints (`express-rate-limit` already imported in `server.ts`)
@@ -186,9 +186,9 @@ pets24x7_api/src/
 ├── vendors/
 │   └── dashboard.routes.ts             Vendor dashboard + profile patch
 ├── payments/
-│   ├── phonepe.ts                      PhonePe REST client + signing
+│   ├── razorpay.ts                     Razorpay REST client + signature verify
 │   ├── membership.routes.ts            plans, checkout, status, applyPaymentResult()
-│   └── phonepe.routes.ts               S2S callback handler
+│   └── razorpay.routes.ts              verify + webhook handlers
 └── admin/
     ├── panel.routes.ts                 EJS-rendered /admin
     └── views/                          7 EJS templates
@@ -202,7 +202,7 @@ pets24x7_new/
 ├── city.html, listing.html             Legacy fallbacks (JS-redirect to clean URLs)
 ├── login/, parent-login/, vendor-login/  Auth UI
 ├── dashboard/parent/, dashboard/vendor/  Dashboards
-├── membership/, membership/return/     PhonePe checkout pages
+├── membership/, membership/return/     Razorpay checkout pages
 ├── api-client.js                       Shared fetch wrapper (window.api.*)
 ├── config.js                           Single-source: API base, sheet URLs
 ├── styles.css                          Shared CSS for pre-rendered pages

@@ -32,14 +32,8 @@ const Env = z.object({
   PUBLIC_SHORTLINK_BASE: z.string().url().default('https://pets24x7.com'),
 
   // ---- PhonePe Payment Gateway ----
-  PHONEPE_MODE: z.enum(['sandbox', 'production']).default('sandbox'),
-  PHONEPE_MERCHANT_ID: z.string().min(1),
-  PHONEPE_SALT_KEY: z.string().min(1),
-  PHONEPE_SALT_INDEX: z.coerce.number().int().min(1).default(1),
   // Where PhonePe redirects the user after pay (browser navigation).
-  PHONEPE_REDIRECT_URL: z.string().url().default('https://pets24x7.com/membership/return/'),
   // Server-to-server callback (must be reachable by PhonePe — production hostname).
-  PHONEPE_CALLBACK_URL: z.string().url().default('https://api.pets24x7.com/api/payments/phonepe/callback'),
 
   // ---- Razorpay Payment Gateway (preferred when configured) ----
   RAZORPAY_KEY_ID: z.string().min(1).optional(),

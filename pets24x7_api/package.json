@@ -2,7 +2,7 @@
   "name": "pets24x7-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Pets24x7.com — Node + Express + Prisma + Postgres backend for pet parents, vendors, and admins.",
+  "description": "Pets24x7.com \u2014 Node + Express + Prisma + Postgres backend for pet parents, vendors, and admins.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -20,7 +20,8 @@
     "seed:admin": "tsx prisma/seed-admin.ts",
     "seed:plans": "tsx prisma/seed-plans.ts",
     "seed:demo": "tsx prisma/seed-demo.ts",
-    "lint": "tsc -p . --noEmit"
+    "lint": "tsc -p . --noEmit",
+    "mail:check": "tsx scripts/mail-check.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

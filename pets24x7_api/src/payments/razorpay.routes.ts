@@ -83,6 +83,21 @@ razorpayRouter.post(
 
     const event = req.body?.event as string | undefined;
     const entity = req.body?.payload?.payment?.entity;
+    const refund = req.body?.payload?.refund?.entity;
+
+    // A refund raised straight from the Razorpay dashboard never passes through
+    // our admin route, so the webhook is the only place we learn about it.
+    if (refund?.payment_id && (event === 'refund.processed' || event === 'refund.created')) {
+      const payment = await prisma.payment.findUnique({ where: { gatewayTxnId: refund.payment_id } });
+      if (payment && payment.status !== 'REFUNDED') {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: 'REFUNDED', errorMessage: `refunded at gateway (refund ${refund.id})` },
+        });
+        logger.info({ paymentId: payment.id, refundId: refund.id }, 'razorpay.webhook: payment refunded');
+      }
+      return res.json({ ok: true });
+    }
     logger.info({ event, orderId: entity?.order_id, status: entity?.status }, 'razorpay.webhook');
 
     if (entity?.order_id && (event === 'payment.captured' || event === 'order.paid')) {

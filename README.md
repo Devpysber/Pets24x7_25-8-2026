@@ -17,7 +17,7 @@ Pets24x7_AI/
 |---|---|---|
 | 1   | ✅ shipped | 35k pre-rendered SEO pages · schema.org markup · static-listing JSON index · admin EJS panel · WhatsApp OTP auth (parent + vendor claim) |
 | 1.5 | ✅ shipped | `/login/`, `/parent-login/`, `/vendor-login/`, `/dashboard/parent/`, `/dashboard/vendor/` |
-| 2   | ✅ shipped | Bronze/Silver/Gold memberships · PhonePe Standard Checkout · admin memberships + payments views |
+| 2   | ✅ shipped | Bronze/Silver/Gold memberships · Razorpay Standard Checkout · admin memberships + payments views |
 | 3   | ⏳ next    | Review-request flow (vendor → past customers via WhatsApp) · Google Places reviews import · review dashboards |
 | 4   | ⏳ later   | FB / IG / GMB OAuth · Meta Marketing API ad drafts → admin approve → publish |
 | 5   | ⏳ later   | Deals + events tables · nearby feed · email/WhatsApp digest |
@@ -31,7 +31,7 @@ Pets24x7_AI/
 | Database | MySQL 8 in production; the schema targets Postgres for local dev and is rewritten to the MySQL provider at deploy time |
 | Auth | JWT in httpOnly cookies, 3 cookies (parent/vendor/admin), scoped to `.pets24x7.com` |
 | WA OTP | Meta WhatsApp Cloud API (template `pets24x7_otp`) |
-| Payments | PhonePe Standard Checkout (SHA256 X-VERIFY, base64 payload) |
+| Payments | Razorpay Standard Checkout (HMAC-SHA256 signature verify + webhook) |
 | Forms | Google Apps Script → Google Sheet (legacy) + DB (in progress) |
 
 ## Quick start
@@ -39,7 +39,7 @@ Pets24x7_AI/
 ```bash
 # Backend
 cd pets24x7_api
-cp .env.example .env             # fill DATABASE_URL, JWT_SECRET, WA_*, PHONEPE_*
+cp .env.example .env             # fill DATABASE_URL, JWT_SECRET, WA_*, RAZORPAY_*
 npm install
 npm run prisma:migrate
 npm run seed:admin

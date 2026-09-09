@@ -146,3 +146,48 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
   const expected = createHmac('sha256', env.RAZORPAY_WEBHOOK_SECRET).update(rawBody).digest('hex');
   return safeEqualHex(expected, signature);
 }
+
+export interface RzpRefund {
+  id: string;
+  payment_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  speed_processed?: string;
+}
+
+/**
+ * Send the money back. Amount is optional — omitting it refunds the payment in
+ * full. `speed: 'normal'` settles in 5-7 working days at no extra fee.
+ *
+ * Razorpay rejects a second refund beyond the captured amount, so a duplicate
+ * admin click surfaces as an error rather than paying twice.
+ */
+export async function createRefund(opts: {
+  paymentId: string;
+  amountMinor?: number;
+  notes?: Record<string, string>;
+  /** Our own key, so a retried request cannot refund twice. */
+  idempotencyKey?: string;
+}): Promise<RzpRefund> {
+  if (!isRazorpayConfigured()) throw new Error('Razorpay is not configured');
+  const res = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(opts.paymentId)}/refund`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader(),
+      ...(opts.idempotencyKey ? { 'X-Razorpay-Idempotency-Key': opts.idempotencyKey } : {}),
+    },
+    body: JSON.stringify({
+      ...(opts.amountMinor ? { amount: opts.amountMinor } : {}),
+      speed: 'normal',
+      notes: opts.notes ?? {},
+    }),
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok || !data.id) {
+    logger.warn({ status: res.status, paymentId: opts.paymentId, data }, 'razorpay.createRefund failed');
+    throw new Error(data?.error?.description || `Razorpay refund ${res.status}`);
+  }
+  return data as RzpRefund;
+}

@@ -13,7 +13,7 @@ Desktop/
 │   ├── city.html, listing.html              (legacy fallbacks, JS-redirect to clean URLs)
 │   ├── login/, parent-login/, vendor-login/ (auth pages)
 │   ├── dashboard/parent/, dashboard/vendor/ (logged-in dashboards)
-│   ├── membership/, membership/return/      (PhonePe checkout pages)
+│   ├── membership/, membership/return/      (Razorpay checkout pages)
 │   ├── api-client.js                        (shared fetch wrapper for backend)
 │   ├── config.js                            (single-source: API base, sheet URLs)
 │   ├── styles.css                           (shared CSS for pre-rendered pages)
@@ -46,7 +46,7 @@ Desktop/
         ├── listings/                        (in-memory phone-match index, lookup routes)
         ├── pets/                            (parent dashboard + pet CRUD)
         ├── vendors/                         (vendor dashboard + profile patch)
-        ├── payments/                        (phonepe client, membership routes, callback)
+        ├── payments/                        (razorpay client, membership routes, webhook)
         └── admin/                           (EJS panel: login + 7 views)
 ```
 
@@ -60,7 +60,7 @@ Source data CSVs live OUTSIDE this hand-off, at `Desktop/Pets24x7_DATA/`. Only n
 |---|---|---|
 | 1   | ✅ shipped | Static frontend (35k SEO pages, schema.org, sitemap), backend (auth: parent + vendor with claim flow + admin), 3 dashboards, admin EJS panel |
 | 1.5 | ✅ shipped | Frontend auth pages (login chooser, parent-login, vendor-login), dashboards (parent + vendor) |
-| 2   | ✅ shipped | Memberships + PhonePe checkout + admin views for memberships + payments |
+| 2   | ✅ shipped | Memberships + Razorpay checkout + admin views for memberships + payments |
 | 3   | ⏳ next    | Vendor → customer review-request flow, Google reviews API import, reviews dashboard |
 | 4   | ⏳ later   | Facebook / Instagram / GMB OAuth, FB ad draft → admin approve → publish via Meta Marketing API |
 | 5   | ⏳ later   | Deals, events, nearby feed for parents |
@@ -74,7 +74,7 @@ Source data CSVs live OUTSIDE this hand-off, at `Desktop/Pets24x7_DATA/`. Only n
 | Database | PostgreSQL | Supabase (managed) |
 | Auth | JWT in httpOnly cookies, scoped per role | — |
 | WhatsApp OTP | Meta WhatsApp Cloud API | api.facebook.com |
-| Payments | PhonePe Standard Checkout | api.phonepe.com / sandbox |
+| Payments | Razorpay Standard Checkout | api.razorpay.com |
 | Form leads | Google Apps Script → Google Sheet | sheets.google.com |
 | Admin panel | EJS server-rendered at `/admin` | Railway (same Node process) |
 
@@ -86,7 +86,7 @@ Source data CSVs live OUTSIDE this hand-off, at `Desktop/Pets24x7_DATA/`. Only n
 |---|---|---|
 | Supabase | https://supabase.com | `DATABASE_URL` (pooler URI, port 6543) |
 | Meta WhatsApp Cloud API | https://business.facebook.com → WhatsApp → API Setup | `WA_PHONE_NUMBER_ID`, `WA_BUSINESS_ACCOUNT_ID`, `WA_ACCESS_TOKEN`, approved `pets24x7_otp` template |
-| PhonePe | https://business.phonepe.com → Developer Settings | `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX` (sandbox creds in `.env.example`) |
+| Razorpay | https://dashboard.razorpay.com → Settings → API Keys | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
 | Hostinger | hpanel.hostinger.com | FTP or File Manager access |
 | Railway | https://railway.app | Project → env vars + custom domain `api.pets24x7.com` |
 | Google Workspace | sheets.google.com | Apps Script web-app URL for `LEADS_WEBAPP_URL` |
@@ -119,7 +119,7 @@ python build_pages.py   # regenerates in/, us/, sitemap.xml
 
 ```
 cd Desktop/pets24x7_api
-cp .env.example .env       # fill DATABASE_URL, JWT_SECRET, WA_*, PHONEPE_*
+cp .env.example .env       # fill DATABASE_URL, JWT_SECRET, WA_*, RAZORPAY_*
 npm install                # 217 packages
 npm run prisma:gen
 npm run prisma:migrate     # creates tables on Supabase
@@ -138,7 +138,7 @@ Admin panel: http://localhost:4000/admin/login → log in with `SEED_ADMIN_EMAIL
 2. Front: http://localhost:8000/vendor-login/ → enter a phone present in `data/*.json` → match → OTP → dashboard (PENDING status).
 3. Admin: http://localhost:4000/admin/vendors?status=PENDING → click **Approve**.
 4. Front: refresh vendor dashboard → banner flips to ACTIVE.
-5. Front: http://localhost:8000/membership/ → pick a plan → redirected to PhonePe sandbox → pay with test card → land on `/membership/return/` → success → membership shown on parent dashboard.
+5. Front: http://localhost:8000/membership/ → pick a plan → Razorpay checkout modal → pay with a test card → land on `/membership/return/` → success → membership shown on parent dashboard.
 6. Admin: `/admin/memberships` and `/admin/payments` rows visible.
 
 ---
@@ -234,7 +234,7 @@ Pros: zero infra needed. Cons: no version history, must re-zip on every update.
 
 ## 11. Open questions for colleague
 
-- Decide who owns the Meta Business Manager + PhonePe merchant account.
+- Decide who owns the Meta Business Manager + Razorpay merchant account.
 - Decide single-region (India only) vs multi-region (India + US Stripe) for payments.
 - Phase 3 priority: review collection first, OR FB ad drafts first?
 - Need a Google Sheet of current pet parents + vendors? Export from admin panel (Phase 3 polish).

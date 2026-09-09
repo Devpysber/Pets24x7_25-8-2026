@@ -2736,7 +2736,7 @@
 
     // A featured-placement return must be polled against the featured endpoint,
     // not the campaign one — they are separate payments.
-    // The dev bypass names it featured_txn; PhonePe appends a plain txn and we
+    // The dev bypass names it featured_txn; the Razorpay return appends a plain txn and we
     // tag the return URL with featured=1 to tell the two payments apart.
     var featuredTxn = params.get('featured_txn') || params.get('ftxn') ||
       (params.get('featured') === '1' ? params.get('txn') : null);
