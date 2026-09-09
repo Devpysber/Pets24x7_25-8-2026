@@ -50,6 +50,15 @@ razorpayRouter.post(
       if (!live || live.order_id !== body.razorpay_order_id || (live.status !== 'captured' && live.status !== 'authorized')) {
         throw new BadRequestError('Payment could not be verified');
       }
+      // Never credit an order for less than it cost. Razorpay enforces this on
+      // its side too, but the fallback path trusts a value we did not sign.
+      if (typeof live.amount === 'number' && live.amount < payment.amountMinor) {
+        logger.warn(
+          { paymentId: payment.id, paid: live.amount, expected: payment.amountMinor },
+          'razorpay.verify: amount mismatch',
+        );
+        throw new BadRequestError('Payment amount does not match the order');
+      }
     }
 
     await applyPaymentResult(payment.id, 'COMPLETED', { gatewayTxnId: body.razorpay_payment_id });
@@ -79,6 +88,17 @@ razorpayRouter.post(
     if (entity?.order_id && (event === 'payment.captured' || event === 'order.paid')) {
       const payment = await prisma.payment.findUnique({ where: { providerOrderId: entity.order_id } });
       if (payment) {
+        // A signed webhook still carries a gateway-supplied amount. Credit the
+        // purchase only when it covers what we charged, in the same currency.
+        const amountOk = typeof entity.amount !== 'number' || entity.amount >= payment.amountMinor;
+        const currencyOk = !entity.currency || entity.currency === payment.currency;
+        if (!amountOk || !currencyOk) {
+          logger.warn(
+            { paymentId: payment.id, paid: entity.amount, currency: entity.currency, expected: payment.amountMinor },
+            'razorpay.webhook: amount/currency mismatch — not crediting',
+          );
+          return res.json({ ok: true, ignored: 'amount_mismatch' });
+        }
         await applyPaymentResult(payment.id, 'COMPLETED', {
           gatewayTxnId: entity.id,
           callbackPayload: req.body,

@@ -242,15 +242,18 @@ export async function reconcilePayment(payment: {
   gateway: string;
   merchantTxnId: string;
   providerOrderId: string | null;
+  amountMinor?: number;
 }): Promise<void> {
   if (payment.status !== 'INITIATED' && payment.status !== 'PENDING') return;
+  // A short-paid attempt must not activate the purchase.
+  const expectedAmountMinor = payment.amountMinor ?? 0;
 
   try {
     if (payment.gateway === 'RAZORPAY') {
       if (!payment.providerOrderId) return;
       const attempts = await fetchOrderPayments(payment.providerOrderId);
       // 'captured' is the only state that means the money is actually ours.
-      const captured = attempts.find((a) => a.status === 'captured');
+      const captured = attempts.find((a) => a.status === 'captured' && a.amount >= expectedAmountMinor);
       if (captured) {
         await applyPaymentResult(payment.id, 'COMPLETED', {
           gatewayTxnId: captured.id,

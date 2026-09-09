@@ -80,7 +80,7 @@ export async function runExpirySweep(): Promise<{
   // gateway also says never settled.
   const stale = await prisma.payment.findMany({
     where: { status: 'INITIATED', createdAt: { lt: staleBefore } },
-    select: { id: true, status: true, gateway: true, merchantTxnId: true, providerOrderId: true },
+    select: { id: true, status: true, gateway: true, merchantTxnId: true, providerOrderId: true, amountMinor: true },
   });
   let recovered = 0;
   for (const p of stale) {

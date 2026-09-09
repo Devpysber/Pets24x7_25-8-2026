@@ -92,14 +92,16 @@ export async function createRazorpayOrder(opts: {
 
 // Poll a payment's status (used as defence-in-depth when the client verify call
 // is missed). Returns 'captured' | 'authorized' | 'failed' | ... or null.
-export async function fetchPaymentStatus(paymentId: string): Promise<{ status: string; order_id?: string } | null> {
+export async function fetchPaymentStatus(
+  paymentId: string,
+): Promise<{ status: string; order_id?: string; amount?: number; currency?: string } | null> {
   if (!isRazorpayConfigured() || !env.RAZORPAY_KEY_ID) return null;
   const res = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: { Authorization: authHeader() },
   });
   const data: any = await res.json().catch(() => ({}));
   if (!res.ok || !data.id) return null;
-  return { status: data.status, order_id: data.order_id };
+  return { status: data.status, order_id: data.order_id, amount: data.amount, currency: data.currency };
 }
 
 /**
