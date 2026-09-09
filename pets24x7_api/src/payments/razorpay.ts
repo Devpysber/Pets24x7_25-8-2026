@@ -132,10 +132,11 @@ function safeEqualHex(a: string, b: string): boolean {
 
 // checkout handler signature: HMAC_SHA256(order_id + "|" + payment_id, key_secret)
 export function verifyPaymentSignature(orderId: string, paymentId: string, signature: string): boolean {
-  if (env.NODE_ENV === 'development' && (!env.RAZORPAY_KEY_SECRET || signature.length > 0)) {
-    return true;
-  }
-  if (!env.RAZORPAY_KEY_SECRET) return false;
+  // Development with no key secret has nothing to check against: the checkout
+  // there is the local bypass, which never produces a real signature. Any other
+  // case — including development with real keys — is verified for real, so a
+  // forged signature cannot walk through the door marked "dev".
+  if (!env.RAZORPAY_KEY_SECRET) return env.NODE_ENV === 'development';
   const expected = createHmac('sha256', env.RAZORPAY_KEY_SECRET).update(`${orderId}|${paymentId}`).digest('hex');
   return safeEqualHex(expected, signature);
 }

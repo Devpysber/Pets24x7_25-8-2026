@@ -6,7 +6,7 @@ import { memoryVendorSubPlans } from '../admin/admin.api.routes.js';
 import { prisma } from '../db.js';
 import { startCheckout } from '../payments/checkout.js';
 import { newMerchantTxnId } from '../payments/checkout.js';
-import { verifyPaymentSignature } from '../payments/razorpay.js';
+import { fetchPaymentStatus, verifyPaymentSignature } from '../payments/razorpay.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
 
 export const vendorSubscriptionsRouter = Router();
@@ -297,8 +297,19 @@ vendorSubscriptionsRouter.post(
     const plan: VendorSubPlan = foundPlan ?? (allPlans[0] ?? DEFAULT_PLANS[0]!);
     const duration = (body.billingPeriod === 'ANNUAL' || plan.durationDays === 365) ? 365 : 30;
 
-    if (body.razorpay_order_id && body.razorpay_payment_id && body.razorpay_signature) {
-      verifyPaymentSignature(body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature);
+    // The signature is what proves the vendor actually paid. Calling the check
+    // and discarding its answer — or skipping it when the fields are absent —
+    // handed an ACTIVE subscription and a PAID invoice to anyone who could POST
+    // here, so both are now hard failures.
+    if (!body.razorpay_order_id || !body.razorpay_payment_id || !body.razorpay_signature) {
+      throw new BadRequestError('Payment details are missing');
+    }
+    if (!verifyPaymentSignature(body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature)) {
+      // Fall back to asking Razorpay directly, in case the client mangled the
+      // signature but the money really did arrive.
+      const live = await fetchPaymentStatus(body.razorpay_payment_id).catch(() => null);
+      const captured = live && live.order_id === body.razorpay_order_id && (live.status === 'captured' || live.status === 'authorized');
+      if (!captured) throw new BadRequestError('Payment could not be verified');
     }
 
     const updatedSub = {
@@ -306,7 +317,9 @@ vendorSubscriptionsRouter.post(
       vendorId,
       tier: plan.tier || body.tier || 'GOLD',
       tierName: plan.name || body.planName || 'Vendor Subscription Plan',
-      pricePaidRupees: body.priceRupees ?? plan.priceRupees,
+      // Priced from the plan, not the request: a client-sent amount would let a
+      // vendor invoice themselves one rupee for a year of Gold.
+      pricePaidRupees: plan.priceRupees,
       leadLimit: plan.leadLimit || 9999,
       leadsUsed: 0,
       badge: plan.badge || 'GOLD_PLATINUM',
