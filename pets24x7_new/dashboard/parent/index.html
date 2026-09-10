@@ -1409,10 +1409,11 @@
                   <h4>${esc(planName)}</h4>
                   <p>${esc(amt)} · Started ${fmtDate(h.startsAt)}${h.endsAt ? ' · Valid until ' + fmtDate(h.endsAt) : ''}</p>
                 </div>
-                <div>
+                <div style="text-align:right">
                   <span class="status-pill ${h.status === 'ACTIVE' ? 'responded' : 'pending'}">
                     ${esc(MEMBERSHIP_STATUS_LABEL[h.status] || h.status)}
                   </span>
+                  ${h.invoiceUrl ? '<div style="margin-top:6px"><a href="' + esc(h.invoiceUrl) + '" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:600">Invoice ↓</a></div>' : ''}
                 </div>
               </div>
             `;

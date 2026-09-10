@@ -48,16 +48,31 @@ membershipRouter.get(
   requireAuth('pet_parent'),
   asyncHandler(async (req, res) => {
     const parentId = req.auth!.sub;
-    // PENDING rows are abandoned or in-flight checkouts, not history — showing
-    // them made the dashboard list plans the parent never actually bought.
+    // History means memberships that actually existed. A checkout that was never
+    // paid for leaves a row behind — PENDING while it is in flight, then
+    // CANCELLED once the sweep writes it off — and neither ever had a start
+    // date. Listing those showed the parent three "Silver · Monthly ·
+    // Cancelled" entries for plans they never bought and were never charged
+    // for. Keying off startsAt rather than status catches both shapes: a real
+    // cancellation was active first, so it has one.
     const memberships = await prisma.membership.findMany({
-      where: { parentId, status: { not: 'PENDING' } },
+      where: { parentId, status: { not: 'PENDING' }, startsAt: { not: null } },
       orderBy: { createdAt: 'desc' },
-      include: { plan: true },
+      // activatingPayment carries the reference the invoice is addressed by, so
+      // the dashboard can link to it without a second round trip per row.
+      include: { plan: true, activatingPayment: { select: { merchantTxnId: true, status: true } } },
       take: 10,
     });
-    const active = memberships.find((m) => m.status === 'ACTIVE' && (!m.endsAt || m.endsAt > new Date()));
-    res.json({ ok: true, active, history: memberships });
+    // Attach the invoice URL to every row that was actually paid for. Built
+    // here rather than in the page so the API stays the single source of the
+    // route's shape.
+    const withInvoice = memberships.map((m) => ({
+      ...m,
+      invoiceUrl:
+        m.activatingPayment?.status === 'SUCCESS' ? invoiceUrl(m.activatingPayment.merchantTxnId) : null,
+    }));
+    const active = withInvoice.find((m) => m.status === 'ACTIVE' && (!m.endsAt || m.endsAt > new Date()));
+    res.json({ ok: true, active, history: withInvoice });
   }),
 );
 
