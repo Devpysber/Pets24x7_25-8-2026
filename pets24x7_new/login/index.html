@@ -384,6 +384,106 @@
   // gives the same read for about two kilobytes.
   var PAW = String.fromCodePoint(0x1F43E);
 
+  // ---- Three.js, fetched lazily -----------------------------------------
+  // Requested explicitly, so the warp transition below is real WebGL. The cost
+  // is kept off the critical path in three ways: the request starts only once
+  // the page is idle, it is marked low priority so it queues behind anything
+  // the form needs, and goTo() never waits for it — if the library has not
+  // arrived by the time someone signs in, the canvas fallback runs instead and
+  // the sign-in is not delayed by a single frame.
+  var THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js';
+  var threeReady = false;
+
+  function loadThree() {
+    if (window.THREE || document.getElementById('threeLib')) return;
+    var sc = document.createElement('script');
+    sc.id = 'threeLib';
+    sc.src = THREE_URL;
+    sc.async = true;
+    if ('fetchPriority' in sc) sc.fetchPriority = 'low';
+    sc.onload = function () { threeReady = true; };
+    // A CDN failure is silent by design: the fallback already covers it.
+    sc.onerror = function () { threeReady = false; };
+    document.head.appendChild(sc);
+  }
+
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(loadThree, { timeout: 3000 });
+  } else {
+    window.addEventListener('load', function () { setTimeout(loadThree, 1200); });
+  }
+
+  /**
+   * The warp: a field of paw-print sprites rushing past the camera, so the
+   * redirect reads as travelling somewhere rather than waiting. Returns false
+   * when WebGL is unavailable, which hands control back to the canvas version.
+   */
+  function pawWarp(canvas) {
+    if (!window.THREE || !canvas) return false;
+    var renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    } catch (e) {
+      return false;   // no WebGL context on this device
+    }
+
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(70, w / h, 0.1, 1000);
+    camera.position.z = 5;
+
+    // The paw glyph drawn once into a texture, then instanced as sprites —
+    // cheaper than geometry, and it keeps the brand mark rather than a
+    // generic particle.
+    var tex = (function () {
+      var c = document.createElement('canvas');
+      c.width = c.height = 128;
+      var g = c.getContext('2d');
+      g.font = '96px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(PAW, 64, 68);
+      var t = new THREE.CanvasTexture(c);
+      t.needsUpdate = true;
+      return t;
+    })();
+
+    var sprites = [];
+    for (var i = 0; i < 90; i++) {
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.9 }));
+      sp.position.set((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 10, -Math.random() * 60);
+      var sc2 = 0.35 + Math.random() * 0.7;
+      sp.scale.set(sc2, sc2, 1);
+      sp.userData.speed = 0.35 + Math.random() * 0.5;
+      scene.add(sp);
+      sprites.push(sp);
+    }
+
+    var start = performance.now();
+    (function tick(now) {
+      var t = (now - start) / 1000;
+      // Accelerates, so the last moments feel like arrival rather than a loop.
+      var boost = 1 + t * 2.4;
+      for (var j = 0; j < sprites.length; j++) {
+        var s2 = sprites[j];
+        s2.position.z += s2.userData.speed * boost * 0.28;
+        s2.material.rotation += 0.01;
+        if (s2.position.z > 6) s2.position.z = -60;   // recycle rather than allocate
+      }
+      camera.rotation.z = Math.sin(t * 0.7) * 0.05;
+      renderer.render(scene, camera);
+      if (t < 1.2) requestAnimationFrame(tick);
+      else renderer.dispose();
+    })(start);
+
+    return true;
+  }
+
+
   function pawStorm(canvas) {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var ctx = canvas && canvas.getContext && canvas.getContext('2d');
@@ -450,7 +550,11 @@
     if (title) document.getElementById('leavingTitle').textContent = title;
     if (sub) document.getElementById('leavingSub').textContent = sub;
     el.classList.add('show');
-    pawStorm(document.getElementById('pawCanvas'));
+    // WebGL when the library made it in time, the 2D canvas otherwise. Neither
+    // path is awaited, so the redirect timing is identical either way.
+    var cv = document.getElementById('pawCanvas');
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduced && !(threeReady && pawWarp(cv))) pawStorm(cv);
     setTimeout(function () { location.href = url; }, 950);
   };
 
