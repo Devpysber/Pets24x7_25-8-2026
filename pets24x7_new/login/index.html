@@ -21,8 +21,51 @@
   .brand-logo{width:32px;height:32px;border-radius:8px}
   .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
   .brand-name .tld{color:var(--text)}
-  main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:20px 20px 60px}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px 20px 60px}
+  /* Two columns on a desktop, one on a phone. The hero is decorative, so it is
+     the half that disappears when there is no room for both. */
+  .shell{display:grid;grid-template-columns:1fr 520px;gap:40px;align-items:center;max-width:1120px;width:100%}
   .card{background:#fff;max-width:520px;width:100%;border:1px solid var(--border);border-radius:18px;padding:0;box-shadow:0 24px 60px rgba(15,23,42,0.08);overflow:hidden}
+
+  /* ---- hero panel ---- */
+  .hero{position:relative;border-radius:22px;overflow:hidden;min-height:540px;display:flex;flex-direction:column;justify-content:flex-end;padding:40px;color:#fff;isolation:isolate;background:#0F172A}
+  .hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;opacity:0;transition:opacity .8s ease}
+  .hero-img.loaded{opacity:1}
+  /* Sits over the photo so the copy keeps its contrast whatever the image is. */
+  .hero::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(15,23,42,.15) 0%,rgba(15,23,42,.55) 45%,rgba(15,23,42,.88) 100%)}
+  .hero h2{font-size:34px;line-height:1.18;font-weight:800;letter-spacing:-1px;margin-bottom:14px}
+  .hero p{font-size:15.5px;line-height:1.6;opacity:.92;max-width:42ch}
+  .hero-stats{display:flex;gap:28px;margin-top:28px;padding-top:22px;border-top:1px solid rgba(255,255,255,.22);flex-wrap:wrap}
+  .hero-stat b{display:block;font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .hero-stat span{font-size:12.5px;opacity:.85;font-weight:500}
+  .hero-badge{position:absolute;top:28px;left:40px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700}
+
+  /* ---- sign-in transition ---- */
+  /* Covers the page while the browser navigates, so the redirect reads as a
+     step forward rather than a blank flash. Canvas and CSS only: a 3D library
+     on a sign-in page would cost more than the animation returns, especially on
+     the mobile connections most of this traffic arrives on. */
+  .leaving{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 55%,#0F172A 100%);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s ease}
+  .leaving.show{opacity:1;pointer-events:auto}
+  #pawCanvas{position:absolute;inset:0;width:100%;height:100%}
+  .leaving-inner{position:relative;text-align:center;color:#fff}
+  .leaving-mark{width:74px;height:74px;border-radius:20px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 18px;animation:markPop .5s cubic-bezier(.16,1,.3,1)}
+  .leaving-title{font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .leaving-sub{font-size:13.5px;opacity:.8;margin-top:6px}
+  .leaving-bar{width:190px;height:3px;border-radius:99px;background:rgba(255,255,255,.22);margin:20px auto 0;overflow:hidden}
+  .leaving-bar i{display:block;height:100%;width:40%;border-radius:99px;background:#fff;animation:slide 1s ease-in-out infinite}
+  @keyframes markPop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
+
+  @media (max-width:960px){
+    .shell{grid-template-columns:1fr;gap:24px;max-width:520px}
+    .hero{display:none}
+  }
+  /* Someone who has asked for less motion gets the overlay without the movement. */
+  @media (prefers-reduced-motion:reduce){
+    .leaving-mark,.leaving-bar i{animation:none}
+    #pawCanvas{display:none}
+  }
   .card-body{padding:32px 32px 34px}
 
   .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-alt)}
@@ -85,6 +128,22 @@
 </header>
 
 <main>
+ <div class="shell">
+
+  <!-- Decorative half. Hidden below 960px, so nothing here is load-bearing:
+       every control lives in the card beside it. -->
+  <aside class="hero" aria-hidden="true">
+    <img class="hero-img" id="heroImg" alt="" />
+    <span class="hero-badge">Trusted across India &amp; the USA</span>
+    <h2>The people who look after your pet, all in one place.</h2>
+    <p>Vets, groomers, boarding, walkers and trainers &mdash; with real Google ratings, and a direct WhatsApp line to every one of them.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><b>34,000+</b><span>Verified businesses</span></div>
+      <div class="hero-stat"><b>570+</b><span>Cities covered</span></div>
+      <div class="hero-stat"><b>0%</b><span>Booking fees</span></div>
+    </div>
+  </aside>
+
   <div class="card">
     <div class="signedbar" id="signedBar"></div>
 
@@ -286,7 +345,19 @@
 
     </div>
   </div>
+ </div>
 </main>
+
+<!-- Sign-in transition overlay. Inert until a sign-in actually succeeds. -->
+<div class="leaving" id="leaving">
+  <canvas id="pawCanvas"></canvas>
+  <div class="leaving-inner">
+    <div class="leaving-mark" id="leavingMark"></div>
+    <div class="leaving-title" id="leavingTitle">Signing you in</div>
+    <div class="leaving-sub" id="leavingSub">Taking you to your dashboard</div>
+    <div class="leaving-bar"><i></i></div>
+  </div>
+</div>
 
 <footer class="foot">
   &copy; 2026 Pets24x7 &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp us</a>
@@ -300,6 +371,105 @@
   var API_BASE = ((window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com')).replace(/\/$/, '');
 
   function $(id){ return document.getElementById(id); }
+
+  // ---- Sign-in transition ----------------------------------------------
+  // Every successful sign-in goes through goTo(): it raises the overlay,
+  // scatters paw prints across a canvas, then navigates. The delay belongs to
+  // the animation, not to any request — the session cookie is already set by
+  // the time this runs, so a browser that skips the animation loses nothing.
+  //
+  // Deliberately not a 3D library. This is a sign-in page, most of the traffic
+  // is on Indian mobile networks, and several hundred kilobytes of WebGL to
+  // decorate one second of navigation would cost more than it returns. Canvas
+  // gives the same read for about two kilobytes.
+  var PAW = String.fromCodePoint(0x1F43E);
+
+  function pawStorm(canvas) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var ctx = canvas && canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    var paws = [];
+    for (var i = 0; i < 18; i++) {
+      paws.push({
+        x: w / 2, y: h / 2,
+        // Outward in a random direction, so they radiate from the mark.
+        vx: (Math.random() - 0.5) * 7,
+        vy: (Math.random() - 0.5) * 7 - 1.2,
+        size: 14 + Math.random() * 22,
+        rot: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.08,
+        life: 0,
+        max: 60 + Math.random() * 40,
+        delay: Math.random() * 22
+      });
+    }
+
+    var frame = 0;
+    (function tick() {
+      frame++;
+      ctx.clearRect(0, 0, w, h);
+      var alive = false;
+      for (var j = 0; j < paws.length; j++) {
+        var pw = paws[j];
+        if (frame < pw.delay) { alive = true; continue; }
+        pw.life++;
+        if (pw.life > pw.max) continue;
+        alive = true;
+        pw.x += pw.vx; pw.y += pw.vy;
+        pw.vy += 0.06;          // a little gravity, so they arc rather than fly flat
+        pw.rot += pw.spin;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 0.85 * (1 - pw.life / pw.max));
+        ctx.translate(pw.x, pw.y);
+        ctx.rotate(pw.rot);
+        ctx.font = pw.size + 'px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(PAW, 0, 0);
+        ctx.restore();
+      }
+      if (alive) requestAnimationFrame(tick);
+    })();
+  }
+
+  var leavingNow = false;
+  window.goTo = function (url, title, sub) {
+    // Guard against a double submit raising the curtain twice.
+    if (leavingNow) return;
+    leavingNow = true;
+    var el = document.getElementById('leaving');
+    if (!el) { location.href = url; return; }
+    var mark = document.getElementById('leavingMark');
+    if (mark) mark.textContent = PAW;
+    if (title) document.getElementById('leavingTitle').textContent = title;
+    if (sub) document.getElementById('leavingSub').textContent = sub;
+    el.classList.add('show');
+    pawStorm(document.getElementById('pawCanvas'));
+    setTimeout(function () { location.href = url; }, 950);
+  };
+
+  // Hero photo, assigned from script rather than a src attribute so it never
+  // competes with the form for bandwidth, and fades in only once it decodes.
+  (function () {
+    var img = document.getElementById('heroImg');
+    if (!img) return;
+    var pool = [
+      'photo-1450778869180-41d0601e046e',
+      'photo-1543466835-00a7907e9de1',
+      'photo-1477884213360-7e9d7dcc1e48',
+      'photo-1596492784531-6e6eb5ea9993'
+    ];
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    img.addEventListener('load', function () { img.classList.add('loaded'); });
+    img.src = 'https://images.unsplash.com/' + pick + '?w=900&h=1100&fit=crop&q=72';
+  })();
+
   function esc(s){ return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
   function clearErr(el){ el.classList.remove('show'); }
@@ -385,7 +555,7 @@
     var self = this;
     api.parentVerify(pPhone, code).then(function(){
       $('pOk2').classList.add('show');
-      setTimeout(function(){ location.href = '/dashboard/parent/'; }, 400);
+      goTo('/dashboard/parent/', 'Welcome back', 'Taking you to your pets');
     }).catch(function(e){
       showErr($('pErr2'), fmtErr(e));
       busy(self, false, 'Verify & sign in');
@@ -496,7 +666,7 @@
       busy(self, true, 'Verifying…');
       cfg.verify(state.email, code, extra).then(function () {
         $(cfg.ok2).classList.add('show');
-        setTimeout(function () { location.href = cfg.dashboard; }, 400);
+        goTo(cfg.dashboard, 'Welcome back', 'Taking you to your dashboard');
       }).catch(function (e) {
         showErr($(cfg.err2), fmtErr(e));
         busy(self, false, 'Verify & sign in');
@@ -623,7 +793,7 @@
     }
 
     api.parentLogin(email, pass).then(function () {
-      location.href = '/dashboard/parent/';
+      goTo('/dashboard/parent/', 'Welcome back', 'Taking you to your pets');
     }).catch(function (e) {
       if (e && e.data && e.data.needsVerification) {
         $('peOk').textContent = e.data.error || 'Please verify your email. We just sent a fresh link.';
@@ -664,7 +834,7 @@
         client_id: cfg.googleClientId,
         callback: function (resp) {
           api.parentGoogle(resp.credential).then(function () {
-            location.href = '/dashboard/parent/';
+            goTo('/dashboard/parent/', 'You are all set', 'Taking you to your pets');
           }).catch(function (e) { showErr($('peErr'), fmtErr(e)); });
         }
       });
@@ -721,7 +891,7 @@
       businessName: picked ? picked.name : undefined,
       email: ($('vEmail').value || '').trim() || undefined
     }).then(function(){
-      location.href = '/dashboard/vendor/';
+      goTo('/dashboard/vendor/', 'Welcome back', 'Opening your business dashboard');
     }).catch(function(e){
       showErr(errEl, fmtErr(e));
       busy(btn, false);
@@ -761,7 +931,7 @@
     busy($('aBtn'), true, 'Signing in…');
     api.adminLogin(email, pass).then(function(){
       $('aOk').classList.add('show');
-      setTimeout(function(){ location.href = '/dashboard/admin/'; }, 400);
+      goTo('/dashboard/admin/', 'Welcome back', 'Opening the admin panel');
     }).catch(function(e){
       showErr($('aErr'), e && e.status === 401 ? 'Invalid email or password.' : fmtErr(e));
       busy($('aBtn'), false, 'Sign in');
