@@ -159,8 +159,37 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
     req.log.warn({ issues: err.issues }, 'validation error');
     return res.status(400).json({ ok: false, error: 'validation_failed', issues: err.issues });
   }
-  req.log.error({ err }, 'unhandled error');
-  res.status(500).json({ ok: false, error: 'internal_error' });
+  // A bare "internal_error" is what made the pet-photo failure invisible: the
+  // dashboard showed it, the cause was a column too narrow for the value, and
+  // nothing in the response tied the two together. Two things fix that.
+  //
+  // First, the request id goes back to the caller, so a reported failure can be
+  // found in the log without guessing at timestamps.
+  //
+  // Second, the handful of Prisma errors that mean "your data did not fit"
+  // answer 400 with the offending field rather than 500. Those are caused by
+  // the request, not by the server being broken, and saying so turns a silent
+  // mystery into something the caller can act on. The message stays generic in
+  // production so it never leaks a column name or a constraint to the public.
+  const code = (err as { code?: string })?.code;
+  const meta = (err as { meta?: { target?: unknown; column_name?: unknown } })?.meta;
+  const field = String(meta?.column_name ?? (Array.isArray(meta?.target) ? meta!.target.join(', ') : meta?.target ?? ''));
+
+  // P2000 value too long for the column, P2005/P2006 invalid value for the field.
+  if (code === 'P2000' || code === 'P2005' || code === 'P2006') {
+    req.log.error({ err, code, field }, 'value rejected by the database');
+    return res.status(400).json({
+      ok: false,
+      error: 'value_too_large',
+      message: field
+        ? `The value sent for "${field}" is larger than this field allows.`
+        : 'One of the values sent is larger than the field allows.',
+      requestId: req.id,
+    });
+  }
+
+  req.log.error({ err, code }, 'unhandled error');
+  res.status(500).json({ ok: false, error: 'internal_error', requestId: req.id });
 });
 
 // Idempotent admin bootstrap so /admin/login always has a usable account in
