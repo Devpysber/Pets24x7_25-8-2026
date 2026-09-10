@@ -5186,11 +5186,14 @@
     document.querySelectorAll('.metric-val').forEach(function(el) { el.textContent = '—'; });
   })();
 
-  // Guard + initial load
-  api.me('admin').then(function(r) {
-    if (!r || r.role !== 'admin') { location.href = '/login/'; return; }
+  // Guard + initial load. requireRole retries an unreachable API instead of
+  // treating it as a signed-out admin.
+  requireRole('admin', '/login/').then(function(r) {
+    if (!r) return;
     loadView('dash');
-  }).catch(function() { location.href = '/login/'; });
+  }).catch(function(err) {
+    alert('Could not verify your admin session: ' + fmtErr(err));
+  });
 </script>
 
 </body>

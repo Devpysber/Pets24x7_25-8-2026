@@ -39,7 +39,12 @@ async function sendFirstPetRecommendations(
   pet: { name: string; species: unknown; breed: string | null; ageYears: number | null; vaccinated: boolean },
 ): Promise<void> {
   const parent = await prisma.petParent.findUnique({ where: { id: parentId } });
-  const city = parent?.city || 'Mumbai';
+  // No city, no mail. Substituting a default sends someone in Bhopal five
+  // "best-rated places near you" that are all in Mumbai, which is worse than
+  // sending nothing — the recommendation goes out again as soon as they set
+  // a city on their profile.
+  const city = parent?.city?.trim();
+  if (!city) return;
   const country = (parent?.country || 'IN').toUpperCase();
 
   const [featuredRows, claimedRows] = await Promise.all([
@@ -277,7 +282,13 @@ parentDashboardRouter.patch(
         req.log.warn({ err }, 'profile email verification send failed');
       });
     }
-    notifyIf(parent.email, (to) => profileUpdatedEmail(to, parent.name ?? 'there', Object.keys(data)));
+    // `data` also carries the emailVerified reset, which is bookkeeping rather
+    // than something the parent edited — listing it reads as an unexplained
+    // change in the mail.
+    const changed = Object.keys(data).filter((k) => k !== 'emailVerified' && k !== 'emailVerifiedAt');
+    if (changed.length > 0) {
+      notifyIf(parent.email, (to) => profileUpdatedEmail(to, parent.name ?? 'there', changed));
+    }
     res.json({ ok: true, parent, verificationSent: emailChanged && Boolean(parent.email) });
   }),
 );

@@ -106,8 +106,24 @@ fi
 
 if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
   echo "-- api changed, rebuilding"
+  # Preflight, before anything is rebuilt or restarted. The API refuses to boot
+  # in production without a mail relay, because a no-op relay silently drops
+  # verification links, receipts and invoices while still answering 200. Catch a
+  # missing credential here, where the running service is untouched, rather than
+  # at the restart, where it would leave the site down.
+  if ! grep -qE '^SMTP_USER=.+' "$APP/.env" || ! grep -qE '^SMTP_PASS=.+' "$APP/.env"; then
+    echo "FAILED: SMTP_USER / SMTP_PASS are missing from $APP/.env"
+    echo "        The API will not start in production without them. Nothing was changed."
+    exit 1
+  fi
   # The repo targets Postgres for local dev; this box runs MySQL.
   as_app "sed -i 's/provider = \"postgresql\"/provider = \"mysql\"/' pets24x7_api/prisma/schema.prisma"
+  # Prisma maps @db.Text to MySQL TEXT, which caps at 64KB. Pet.avatarUrl and
+  # Vendor.imageUrl hold resized photos as data URLs and the API accepts up to
+  # 600KB, so on TEXT they fail the insert and the dashboard reports a bare
+  # "internal_error". Postgres text has no such limit, which is why this only
+  # ever bit production. LONGTEXT is stored off-page exactly like TEXT.
+  as_app "sed -i 's/@db.Text/@db.LongText/g' pets24x7_api/prisma/schema.prisma"
   as_app "cd pets24x7_api && npm ci --silent"
   as_app "cd pets24x7_api && npx prisma generate"
   as_app "cd pets24x7_api && npx prisma db push --skip-generate"

@@ -2793,13 +2793,16 @@
       '</div>';
   }
 
-  // Require a signed-in vendor, else bounce to login.
+  // Require a signed-in vendor. A disabled account answers 200 with role null
+  // plus a `disabled` reason, so check that before requireRole can bounce.
   api.me('vendor').then(function(r) {
-    if (r && r.disabled) { showDisabled(r.disabled); return; }
-    if (!r || r.role !== 'vendor') { location.href = '/vendor-login/'; return; }
-    load();
-  }).catch(function() {
-    location.href = '/vendor-login/';
+    if (r && r.disabled) { showDisabled(r.disabled); return null; }
+    if (r && r.role === 'vendor') { load(); return null; }
+    return requireRole('vendor', '/vendor-login/').then(function(ok) { if (ok) load(); });
+  }).catch(function(err) {
+    if (err && (err.status === 401 || err.status === 403)) { location.href = '/vendor-login/'; return; }
+    return requireRole('vendor', '/vendor-login/').then(function(ok) { if (ok) load(); })
+      .catch(function(e) { alert('Could not reach Pets24x7: ' + fmtErr(e)); });
   });
 </script>
 

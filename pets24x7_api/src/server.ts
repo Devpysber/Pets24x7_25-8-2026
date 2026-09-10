@@ -44,6 +44,7 @@ import { recommendRouter } from './feed/recommend.routes.js';
 import { feedRouter } from './feed/feed.routes.js';
 import { unsubscribeRouter } from './mail/unsubscribe.routes.js';
 import { startReminderJob } from './jobs/reminders.js';
+import { mailEnabled, verifyMailTransport } from './mail/mailer.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
 
@@ -190,6 +191,17 @@ async function ensureSeedAdmin(): Promise<void> {
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
   startExpiryJob();         // periodic membership/campaign/featured/deal/event lifecycle sweep
   startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
+  // Production must never fall back to the logged no-op: an unconfigured relay
+  // there means verification links, receipts and invoices are silently dropped
+  // while every request still returns 200. Refuse to boot instead.
+  if (env.NODE_ENV === 'production' && !mailEnabled()) {
+    logger.fatal('SMTP_USER / SMTP_PASS are not set — refusing to start in production without a mail relay');
+    process.exit(1);
+  }
+  // The login check itself stays non-blocking: a relay that is briefly
+  // unreachable must not stop the API serving, but it must be loud in the log
+  // rather than showing up as mail that quietly never arrives.
+  void verifyMailTransport().catch(() => {});
   app.listen(env.PORT, env.HOST, () => {
     logger.info(`pets24x7-api ready on http://${env.HOST}:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
   });

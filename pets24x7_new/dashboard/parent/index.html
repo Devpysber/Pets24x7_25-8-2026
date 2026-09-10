@@ -855,6 +855,8 @@
       renderAll();
       loadRecommendations();
     }).catch(function(err) {
+      // 401 is the server saying the cookie is gone. Everything else leaves the
+      // session alone and shows a retry banner.
       if (err && err.status === 401) { location.href = '/parent-login/'; return; }
       showLoadError(fmtErr(err));
     });
@@ -2390,13 +2392,15 @@
     }
   });
 
-  // Init — require a signed-in pet parent, else bounce to login.
-  api.me('pet_parent').then(function(r) {
-    if (!r || r.role !== 'pet_parent') { location.href = '/parent-login/'; return; }
+  // Init — require a signed-in pet parent. requireRole only bounces on a
+  // definitive signed-out answer; an unreachable API is retried, then surfaced
+  // as a load error rather than silently logging the user out.
+  requireRole('pet_parent', '/parent-login/').then(function(r) {
+    if (!r) return;
     if (r.user) state.parent = r.user;
     loadData();
-  }).catch(function() {
-    location.href = '/parent-login/';
+  }).catch(function(err) {
+    showLoadError(fmtErr(err));
   });
 </script>
 </body>

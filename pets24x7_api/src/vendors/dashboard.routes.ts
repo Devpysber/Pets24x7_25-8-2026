@@ -207,7 +207,10 @@ vendorDashboardRouter.patch(
         req.log.warn({ err }, 'vendor email verification send failed');
       });
     }
-    notifyIf(v.email, (to) => vendorProfileUpdatedEmail(to, v.businessName, Object.keys(data)));
+    const changed = Object.keys(data).filter((k) => k !== 'emailVerified' && k !== 'emailVerifiedAt');
+    if (changed.length > 0) {
+      notifyIf(v.email, (to) => vendorProfileUpdatedEmail(to, v.businessName, changed));
+    }
     res.json({
       ok: true,
       vendor: {

@@ -31,6 +31,29 @@ function transporter(): Transporter | null {
   return cached;
 }
 
+/**
+ * Proves the relay actually accepts our credentials.
+ *
+ * sendMail never throws, so a wrong SMTP_PASS otherwise shows up only as mail
+ * that silently never arrives. Called once at boot, and by the admin console.
+ */
+export async function verifyMailTransport(): Promise<{ ok: boolean; error?: string }> {
+  const tx = transporter();
+  if (!tx) return { ok: false, error: 'SMTP_USER / SMTP_PASS not set — sending is a logged no-op' };
+  try {
+    await tx.verify();
+    logger.info({ host: env.SMTP_HOST, user: env.SMTP_USER }, '[mail] SMTP relay accepted our credentials');
+    return { ok: true };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error(
+      { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER, error },
+      '[mail] SMTP login FAILED — no outbound mail will be delivered',
+    );
+    return { ok: false, error };
+  }
+}
+
 export interface MailInput {
   to: string;
   subject: string;

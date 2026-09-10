@@ -274,10 +274,45 @@
 
   // Tiny global helpers shared across login/dashboard pages.
   window.fmtErr = function (e) { return (e && (e.message || e.error)) || 'Something went wrong'; };
+  /**
+   * Session guard for a role-protected page.
+   *
+   * Only a definitive answer from the server signs someone out. A dropped
+   * connection, a restarting API or a 5xx says nothing about whether the
+   * cookie is still good, and redirecting on those is what made a signed-in
+   * user land back on the login page mid-session. Those are retried with a
+   * short backoff; only role:null, 401 or 403 redirects.
+   *
+   * Resolves with the /api/me payload, or null when it redirected. Rejects
+   * with the last error when the API stayed unreachable - the caller should
+   * show a retry banner rather than assume anything about the session.
+   */
   window.requireRole = function (role, redirectTo) {
-    return window.api.me(role).then(function (r) {
-      if (!r.role || r.role !== role) { location.href = redirectTo || '/login/'; return null; }
-      return r;
-    }).catch(function () { location.href = redirectTo || '/login/'; return null; });
+    var target = redirectTo || '/login/';
+    var delays = [400, 1200, 3000];
+
+    function bounce() { location.href = target; return null; }
+
+    function attempt(n) {
+      return window.api.me(role).then(function (r) {
+        if (!r || !r.role || r.role !== role) return bounce();
+        return r;
+      }).catch(function (err) {
+        var status = err && err.status;
+        if (status === 401 || status === 403) return bounce();
+        if (n < delays.length) {
+          return new Promise(function (resolve) { setTimeout(resolve, delays[n]); })
+            .then(function () { return attempt(n + 1); });
+        }
+        throw err;
+      });
+    }
+    return attempt(0);
+  };
+
+  /** True when an error says nothing about the session and must not sign anyone out. */
+  window.isTransientApiError = function (err) {
+    var s = err && err.status;
+    return !s || s >= 500;
   };
 })();

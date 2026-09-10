@@ -15,6 +15,7 @@ import { BadRequestError, NotFoundError, ConflictError } from '../shared/errors.
 import { newMerchantTxnId } from './checkout.js';
 import { fetchOrderPayments } from './razorpay.js';
 import { startCheckout } from './checkout.js';
+import { invoiceUrl, renderInvoice } from './invoice.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import {
@@ -226,6 +227,49 @@ membershipRouter.get(
       include: { membership: { include: { plan: true } } },
     });
     res.json({ ok: true, payment: fresh });
+  }),
+);
+
+// ---- Parent: printable invoice for a settled payment ----
+// Returns HTML, not JSON: the link goes straight into the confirmation mail and
+// has to open as a page. Only the payer (or an admin) may fetch it.
+membershipRouter.get(
+  '/invoice/:txn',
+  requireAuth('pet_parent'),
+  asyncHandler(async (req, res) => {
+    const txn = req.params.txn ?? '';
+    const payment = await prisma.payment.findUnique({
+      where: { merchantTxnId: txn },
+      include: { parent: true, membership: { include: { plan: true } } },
+    });
+    if (!payment || payment.parentId !== req.auth!.sub) throw new NotFoundError('Invoice not found');
+    if (payment.status !== 'SUCCESS') {
+      throw new BadRequestError('An invoice is only available once the payment has settled');
+    }
+
+    const plan = payment.membership?.plan;
+    const endsAt = payment.membership?.endsAt ?? null;
+    const html = renderInvoice({
+      merchantTxnId: payment.merchantTxnId,
+      issuedAt: payment.updatedAt ?? payment.createdAt,
+      gatewayTxnId: payment.gatewayTxnId,
+      currency: payment.currency,
+      billTo: {
+        name: payment.parent?.name ?? 'Pets24x7 member',
+        email: payment.parent?.email ?? null,
+        phone: payment.parent?.phone ?? null,
+        city: payment.parent?.city ?? null,
+      },
+      lines: [
+        {
+          description: plan ? `${plan.name} membership (${plan.durationDays} days)` : 'Pets24x7 membership',
+          amountMinor: payment.amountMinor,
+        },
+      ],
+      totalMinor: payment.amountMinor,
+      footnote: endsAt ? `Membership active until ${endsAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.` : undefined,
+    });
+    res.type('html').send(html);
   }),
 );
 
@@ -442,6 +486,7 @@ export async function applyPaymentResult(
           },
           fresh?.endsAt ?? null,
           payment.merchantTxnId,
+          invoiceUrl(payment.merchantTxnId),
         ),
       );
     }

@@ -8,7 +8,7 @@
 import type { MailInput } from './mailer.js';
 import type { MailKind } from './optout.js';
 import { Button, Note, Text, esc, page } from './components.js';
-import { verifyEmail, welcomeEmail } from './templates.js';
+import { vendorVerifyEmail, verifyEmail, welcomeEmail } from './templates.js';
 import * as T from './action-templates.js';
 import * as L from './lifecycle-templates.js';
 
@@ -844,6 +844,33 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     description: 'Advance notice of scheduled downtime.',
     sample: { name: PARENT, minutes: 30 },
     build: (to, d) => L.maintenanceNoticeEmail(to, d.name, new Date(Date.now() + 864e5), Number(d.minutes ?? 30)),
+  },
+  {
+    id: 'vendor/verify',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Verify business email',
+    description: 'One-time verification link for the address on a business listing.',
+    sample: { businessName: BIZ, link: 'https://pets24x7.com/api/vendor/email/verify?token=sample', ttlMinutes: 10 },
+    build: (to, d) => vendorVerifyEmail(to, d.businessName, d.link, Number(d.ttlMinutes ?? 10)),
+  },
+  {
+    id: 'vendor/business_registered',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Business registered',
+    description: 'Confirms a self-service business registration and what happens next.',
+    sample: { businessName: BIZ, city: 'Mumbai' },
+    build: (to, d) => T.businessRegisteredEmail(to, d.businessName, d.city),
+  },
+  {
+    id: 'vendor/claim_credentials',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Claim credentials',
+    description: 'Temporary password issued when an owner claims an existing listing.',
+    sample: { businessName: BIZ, tempPassword: 'Temp-9x4Kq2' },
+    build: (to, d) => T.claimCredentialsEmail(to, d.businessName, d.tempPassword),
   },
 ];
 

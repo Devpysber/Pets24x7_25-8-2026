@@ -12,7 +12,9 @@ import { lastDigits, normalizePhone } from '../shared/phone.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, UnauthorizedError, NotFoundError } from '../shared/errors.js';
 import { env } from '../env.js';
-import { notifyIf } from '../mail/notify.js';
+import { notify, notifyIf } from '../mail/notify.js';
+import { adminNotifyEmails } from '../mail/admin-notify.js';
+import { adminNewClaimEmail } from '../mail/lifecycle-templates.js';
 import { businessRegisteredEmail, claimCredentialsEmail } from '../mail/action-templates.js';
 import { normEmail } from './email-otp.js';
 
@@ -455,6 +457,24 @@ vendorClaimRegistrationRouter.post(
 
     // Send Registration Confirmation Email
     notifyIf(email, (to) => businessRegisteredEmail(to, body.businessName, body.city));
+
+    // A self-service registration lands as PENDING and sits there until someone
+    // approves it, so tell the ops team it is waiting rather than relying on
+    // anyone happening to open the admin dashboard.
+    void adminNotifyEmails()
+      .then((admins) => {
+        for (const admin of admins) {
+          notify(
+            adminNewClaimEmail(admin, 'Admin', {
+              businessName: body.businessName,
+              phone: normPhone,
+              city: body.city ?? null,
+              listingName: body.businessName,
+            }),
+          );
+        }
+      })
+      .catch(() => {});
 
     // Set auth cookie
     setAuthCookie(res, { sub: vendor.id, role: 'vendor' });

@@ -23,6 +23,13 @@ meRouter.get(
     const wanted = String(req.query.role ?? '') as ActorRole | '';
     const all: ActorRole[] = ['admin', 'vendor', 'pet_parent']; // priority order
     const roles: ActorRole[] = all.includes(wanted as ActorRole) ? [wanted as ActorRole] : all;
+
+    // A lookup that could not run is not proof of being signed out. Reporting
+    // role:null on a database blip logs the user out of a session whose cookie
+    // is still perfectly valid, which is what "it keeps sending me back to the
+    // login page" actually is. Tracked here and answered with 503 instead.
+    let lookupFailed = false;
+
     for (const role of roles) {
       const tok = readAuthCookie(cookies, role);
       if (!tok) continue;
@@ -36,8 +43,9 @@ meRouter.get(
             where: { id: payload.sub },
             select: { id: true, name: true, phone: true, email: true, city: true, country: true },
           });
-        } catch {
-          // DB connection offline
+        } catch (err) {
+          req.log.warn({ err, role }, 'session lookup failed');
+          lookupFailed = true;
         }
         if (p) return res.json({ ok: true, role, user: p });
       } else if (role === 'vendor') {
@@ -47,8 +55,9 @@ meRouter.get(
             where: { id: payload.sub },
             select: { id: true, phone: true, businessName: true, status: true, listingId: true, city: true, category: true, profileCompletion: true },
           });
-        } catch {
-          // DB connection offline
+        } catch (err) {
+          req.log.warn({ err, role }, 'session lookup failed');
+          lookupFailed = true;
         }
         if (v && (v.status === 'SUSPENDED' || v.status === 'REJECTED')) {
           // Signed in, but not allowed to act — say so instead of handing back
@@ -64,11 +73,19 @@ meRouter.get(
             where: { id: payload.sub },
             select: { id: true, email: true, name: true, role: true },
           });
-        } catch {
-          // DB connection offline
+        } catch (err) {
+          req.log.warn({ err, role }, 'session lookup failed');
+          lookupFailed = true;
         }
         if (a) return res.json({ ok: true, role, user: a });
       }
+    }
+    if (lookupFailed) {
+      // The caller holds a token we could not resolve. Anything that guards a
+      // page on this answer must retry rather than treat it as signed out.
+      return res
+        .status(503)
+        .json({ ok: false, error: 'session_check_unavailable', message: 'Could not verify your session right now.' });
     }
     res.json({ ok: true, role: null, user: null });
   }),

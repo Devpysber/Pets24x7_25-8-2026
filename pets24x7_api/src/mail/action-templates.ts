@@ -191,6 +191,7 @@ export function membershipActivatedEmail(
   plan: { name: string; priceMinor: number; currency: string; discountPercent?: number },
   endsAt: Date | null,
   merchantTxnId: string,
+  invoiceUrl?: string,
 ): MailInput {
   return {
     to,
@@ -211,11 +212,29 @@ export function membershipActivatedEmail(
           ['Reference', merchantTxnId],
         ]),
         Button('Open my dashboard', PARENT_DASH()),
+        ...(invoiceUrl
+          ? [Note(`Need a tax invoice? <a href="${esc(invoiceUrl)}" style="color:#ff6b35;font-weight:600">Download it here</a> — it opens in your browser and prints to PDF.`)]
+          : []),
         Note('Keep this email as your receipt.'),
       ],
       preheader: `${plan.name} active until ${day(endsAt)}.`,
     }),
-    text: `Hi ${name},\n\nYour ${plan.name} membership is active.\nAmount paid: ${money(plan.priceMinor, plan.currency)}\nActive until: ${day(endsAt)}\nReference: ${merchantTxnId}\n\nDashboard: ${PARENT_DASH()}\n`,
+    text:
+      `Hi ${name},
+
+Your ${plan.name} membership is active.
+` +
+      `Amount paid: ${money(plan.priceMinor, plan.currency)}
+` +
+      `Active until: ${day(endsAt)}
+Reference: ${merchantTxnId}
+` +
+      (invoiceUrl ? `
+Tax invoice: ${invoiceUrl}
+` : '') +
+      `
+Dashboard: ${PARENT_DASH()}
+`,
   };
 }
 
@@ -994,7 +1013,14 @@ export function recommendationsEmail(
     .map((it) => {
       const stars = it.rating ? `★ ${Number(it.rating).toFixed(1)}` : '';
       const reviews = it.reviewCount ? ` · ${it.reviewCount} Google reviews` : '';
-      const why = (it.reasons ?? []).slice(0, 2).join(' · ');
+      const shown = `${stars}${reviews}`.toLowerCase();
+      const why = (it.reasons ?? [])
+        .filter((r) => {
+          const t = r.toLowerCase();
+          return !(t.includes('on google') || t.includes('google reviews')) || !shown;
+        })
+        .slice(0, 2)
+        .join(' · ');
       const title = it.url
         ? `<a href="${esc(it.url)}" style="color:#111827;text-decoration:none">${esc(it.name)}</a>`
         : esc(it.name);
@@ -1015,7 +1041,7 @@ export function recommendationsEmail(
     html: page({
       eyebrow: 'Recommendations',
       heading: petName ? `Picked for ${petName}` : 'Picked for you',
-      intro: h`Hi ${name} — these are the best-rated places near you that match what${forPet} actually needs.`,
+      intro: h`Hi ${name} — these are the best-rated places near you that match what ${petName ?? 'your pet'} actually needs.`,
       blocks: [
         `<tr><td class="pad" style="padding:8px 44px 0"><table width="100%">${cards}</table></td></tr>`,
         Button('See all recommendations', PARENT_DASH()),

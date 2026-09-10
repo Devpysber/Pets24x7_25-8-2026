@@ -19,7 +19,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError } from '../shared/errors.js';
 import { logger } from '../logger.js';
 import { MAIL_CATALOG, catalogEntry } from '../mail/catalog.js';
-import { mailEnabled, sendMail } from '../mail/mailer.js';
+import { mailEnabled, sendMail, verifyMailTransport } from '../mail/mailer.js';
 
 export const adminMailRouter = Router();
 adminMailRouter.use(requireAuth('admin'));
@@ -99,6 +99,15 @@ const PreviewBody = z.object({
   data: z.record(z.any()).optional(),
   to: z.string().email().optional(),
 });
+
+/** Live SMTP login check, so the console can say why mail is not arriving. */
+adminMailRouter.get(
+  '/mail/health',
+  asyncHandler(async (_req, res) => {
+    const result = await verifyMailTransport();
+    res.json({ ok: true, configured: mailEnabled(), smtp: result });
+  }),
+);
 
 adminMailRouter.post(
   '/mail/preview',

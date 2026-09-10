@@ -90,7 +90,7 @@ model SavedListing {
   parentId    String
   parent      PetParent @relation(fields: [parentId], references: [id], onDelete: Cascade)
   listingId   String
-  listingName String?
+  listingName String?  @db.Text
   category    String?
   city        String?
   country     String?
@@ -111,8 +111,8 @@ model Pet {
   ageYears   Int?
   gender     String? // "Male" | "Female" | "Unspecified"
   vaccinated Boolean    @default(false)
-  notes      String?
-  avatarUrl  String?
+  notes      String?  @db.Text
+  avatarUrl  String?  @db.Text
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -170,7 +170,7 @@ model Vendor {
   profileCompletion Int       @default(20) // 0-100
   claimedAt         DateTime?
   approvedAt        DateTime?
-  rejectedReason    String?
+  rejectedReason    String?  @db.Text
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -304,7 +304,7 @@ model Enquiry {
   parent        PetParent?    @relation(fields: [petParentId], references: [id])
   // Listing this enquiry was about (frontend static id).
   listingId     String?
-  listingName   String?
+  listingName   String?  @db.Text
   category      String?
   city          String?
   country       String?
@@ -313,7 +313,7 @@ model Enquiry {
   email         String?
   petType       String?
   preferredDate DateTime?
-  notes         String
+  notes         String  @db.Text
   source        String? // "listing_page" | "city_page" | "marketing_modal"
   status        EnquiryStatus @default(NEW)
   respondedAt   DateTime?
@@ -517,7 +517,7 @@ model Service {
   vendorId      String
   vendor        Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   name          String
-  description   String?
+  description   String?  @db.Text
   priceMinor    Int // paise / cents
   currency      String        @default("INR")
   durationLabel String        @default("30 mins")
@@ -549,7 +549,7 @@ model MarketingCampaign {
   endsAt       DateTime?
   // Payment that activated it (inverse of Payment.campaignId)
   payment      Payment?
-  notes        String?
+  notes        String?  @db.Text
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -656,14 +656,12 @@ model Review {
   reviewerName     String
   reviewerPhone    String? // captured from ReviewRequest if known; nullable for spontaneous reviews
   rating           Int // 1-5
-  text             String
-  // Moderation
+  text             String  @db.Text // Moderation
   status           ReviewStatus   @default(PENDING)
   moderatedBy      String?
   moderatedAt      DateTime?
-  moderationReason String?
-  // Vendor's public reply
-  vendorReply      String?
+  moderationReason String?  @db.Text // Vendor's public reply
+  vendorReply      String?  @db.Text
   vendorReplyAt    DateTime?
   createdAt        DateTime       @default(now())
 
@@ -690,8 +688,7 @@ model Deal {
   vendorId    String?
   vendor      Vendor?    @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   title       String
-  description String
-  // "20% off", "Free nail trim", ...
+  description String  @db.Text // "20% off", "Free nail trim", ...
   offerLabel  String
   category    String?
   city        String?
@@ -723,7 +720,7 @@ model Event {
   vendorId    String?
   vendor      Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   title       String
-  description String
+  description String  @db.Text
   venue       String?
   city        String?
   citySlug    String?

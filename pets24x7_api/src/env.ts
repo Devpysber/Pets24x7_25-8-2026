@@ -67,6 +67,9 @@ const Env = z.object({
   // ships commented-in but empty in .env.example.
   GOOGLE_CLIENT_ID: z.string().optional().transform((v) => (v ? v : undefined)),
 
+  // Inbox for admin-facing alerts raised by public requests (a new vendor
+  // signing up). Falls back to the OWNER admins on record, then SEED_ADMIN_EMAIL.
+  ADMIN_NOTIFY_EMAIL: z.string().email().optional(),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_ADMIN_NAME: z.string().optional(),

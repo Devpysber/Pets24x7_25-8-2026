@@ -18,6 +18,7 @@ const PLANS = [
       'Cancel anytime',
     ],
     priceMinor: 9900,       // ₹99
+    discountPercent: 10,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 10,
@@ -34,6 +35,7 @@ const PLANS = [
       'First-look on new vendor partner deals',
     ],
     priceMinor: 99000,      // ₹990
+    discountPercent: 10,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 20,
@@ -54,6 +56,7 @@ const PLANS = [
       'Member-only event entry',
     ],
     priceMinor: 24900,      // ₹249
+    discountPercent: 20,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 30,
@@ -70,6 +73,7 @@ const PLANS = [
       'Free Pets24x7 swag pack',
     ],
     priceMinor: 249000,     // ₹2,490
+    discountPercent: 20,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 40,
@@ -90,6 +94,7 @@ const PLANS = [
       'Free home pet pickup-and-drop for vet visits (1/mo)',
     ],
     priceMinor: 49900,      // ₹499
+    discountPercent: 30,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 50,
@@ -107,6 +112,7 @@ const PLANS = [
       'Free annual vet check-up',
     ],
     priceMinor: 499000,     // ₹4,990
+    discountPercent: 30,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 60,

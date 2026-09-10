@@ -33,7 +33,7 @@ import { notifyIf } from '../mail/notify.js';
 import { loginAlertEmail } from '../mail/action-templates.js';
 import { EMAIL_OTP_TTL_MIN, issueEmailOtp, verifyEmailOtp } from './email-otp.js';
 import { RESET_TTL_MIN, consumeResetToken, sendPasswordResetEmail } from './password-reset.js';
-import { passwordChangedEmail } from '../mail/lifecycle-templates.js';
+import { passwordChangedEmail, emailVerifiedEmail } from '../mail/lifecycle-templates.js';
 
 export const parentEmailAuthRouter = Router();
 
@@ -350,7 +350,12 @@ parentEmailAuthRouter.get(
     const parent = await prisma.petParent.findUnique({ where: { id: result.parentId } });
     if (!parent) return res.redirect(`${SITE}/login/?verified=invalid`);
 
-    await sendWelcomeEmailOnce(parent);
+    // A first-time parent gets the welcome mail instead — two mails for one
+    // click is noise.
+    const welcomed = await sendWelcomeEmailOnce(parent);
+    if (!welcomed) {
+      notifyIf(parent.email, (to) => emailVerifiedEmail(to, parent.name ?? 'there'));
+    }
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
     res.redirect(`${SITE}/dashboard/parent/?verified=1`);
   }),
