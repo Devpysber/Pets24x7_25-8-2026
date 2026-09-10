@@ -294,6 +294,27 @@ parentDashboardRouter.patch(
 );
 
 // ----- Pet CRUD -----
+
+/**
+ * Normalises the three optional health dates for Prisma. The form submits ''
+ * to clear a date, which Prisma rejects on a DateTime column, and omits the
+ * key entirely when it is not being changed — so '' becomes null and an absent
+ * key stays absent.
+ */
+function dateFields(body: {
+  dateOfBirth?: Date | '';
+  lastVaccinatedAt?: Date | '';
+  lastCheckupAt?: Date | '';
+}): Record<string, Date | null> {
+  const out: Record<string, Date | null> = {};
+  for (const k of ['dateOfBirth', 'lastVaccinatedAt', 'lastCheckupAt'] as const) {
+    const v = body[k];
+    if (v === undefined) continue;
+    out[k] = v === '' ? null : v;
+  }
+  return out;
+}
+
 const PetBody = z.object({
   name: z.string().min(1).max(40),
   species: z.enum(['DOG','CAT','BIRD','RABBIT','REPTILE','SMALL_MAMMAL','OTHER']),
@@ -301,6 +322,12 @@ const PetBody = z.object({
   ageYears: z.number().int().min(0).max(50).optional(),
   gender: z.enum(['Male', 'Female', 'Unspecified']).optional(),
   vaccinated: z.boolean().optional(),
+  // Health dates the reminder mails key off. '' clears one; an ISO date sets it.
+  // Coerced here rather than in the handler so a bad value is a 400 with a
+  // field name on it, not a Prisma error surfacing as internal_error.
+  dateOfBirth: z.union([z.literal(''), z.coerce.date()]).optional(),
+  lastVaccinatedAt: z.union([z.literal(''), z.coerce.date()]).optional(),
+  lastCheckupAt: z.union([z.literal(''), z.coerce.date()]).optional(),
   notes: z.string().max(500).optional(),
   // Either a hosted URL or a small resized data: URL (the dashboard downsizes
   // the file before upload). '' clears the photo.
@@ -330,7 +357,7 @@ parentDashboardRouter.post(
   asyncHandler(async (req, res) => {
     const body = PetBody.parse(req.body);
     const pet = await prisma.pet.create({
-      data: { ...body, avatarUrl: body.avatarUrl || null, ownerId: req.auth!.sub },
+      data: { ...body, ...dateFields(body), avatarUrl: body.avatarUrl || null, ownerId: req.auth!.sub },
     });
     const owner = await ownerContact(req.auth!.sub);
     notifyIf(owner?.email, (to) =>
@@ -362,7 +389,11 @@ parentDashboardRouter.patch(
     if (existing.ownerId !== req.auth!.sub) throw new ForbiddenError();
     const pet = await prisma.pet.update({
       where: { id: existing.id },
-      data: { ...body, ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl || null } : {}) },
+      data: {
+        ...body,
+        ...dateFields(body),
+        ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl || null } : {}),
+      },
     });
     const owner = await ownerContact(req.auth!.sub);
     const photoChanged = body.avatarUrl !== undefined && body.avatarUrl !== (existing.avatarUrl ?? '');

@@ -531,6 +531,25 @@
           <option value="false">No / Not sure</option>
         </select>
       </div>
+      <!-- Optional dates. Each one switches on a health reminder; leaving one
+           blank simply means that reminder never fires for this pet. -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date of birth <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <input type="date" id="pDob" />
+        </div>
+        <div class="form-group">
+          <label>Last vaccinated <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <input type="date" id="pVacDate" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Last vet check-up <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+        <input type="date" id="pCheckup" />
+        <p style="font-size:12px;color:var(--text-muted);margin-top:6px">
+          We use these to remind you about a birthday, a booster coming due, or a yearly check-up. Nothing else.
+        </p>
+      </div>
       <div class="form-group">
         <label>Notes / Medical Info</label>
         <textarea id="pNotes" rows="2" placeholder="Dietary needs, allergies, behavior..."></textarea>
@@ -2080,6 +2099,13 @@
     document.getElementById('petModal').classList.add('show');
   }
 
+  /** ISO timestamp -> the YYYY-MM-DD an <input type="date"> expects. */
+  function isoDay(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+
   function openEditPetModal(id) {
     var pet = state.pets.find(function(x){ return x.id === id; });
     if (!pet) return;
@@ -2091,6 +2117,12 @@
     document.getElementById('pAge').value = pet.ageYears != null ? pet.ageYears : '';
     document.getElementById('pGender').value = pet.gender || 'Unspecified';
     document.getElementById('pVac').value = pet.vaccinated ? 'true' : 'false';
+    // A date input needs YYYY-MM-DD; the API sends a full ISO timestamp. Without
+    // this the fields would open blank and saving would clear dates the parent
+    // had already entered.
+    document.getElementById('pDob').value = isoDay(pet.dateOfBirth);
+    document.getElementById('pVacDate').value = isoDay(pet.lastVaccinatedAt);
+    document.getElementById('pCheckup').value = isoDay(pet.lastCheckupAt);
     document.getElementById('pNotes').value = pet.notes || '';
     setPetAvatar(pet.avatarUrl || '');
     document.getElementById('petModal').classList.add('show');
@@ -2178,6 +2210,9 @@
       ageYears: document.getElementById('pAge').value ? Number(document.getElementById('pAge').value) : undefined,
       gender: document.getElementById('pGender').value,
       vaccinated: document.getElementById('pVac').value === 'true',
+      dateOfBirth: document.getElementById('pDob').value || '',
+      lastVaccinatedAt: document.getElementById('pVacDate').value || '',
+      lastCheckupAt: document.getElementById('pCheckup').value || '',
       notes: document.getElementById('pNotes').value.trim() || undefined,
       avatarUrl: document.getElementById('pAvatar').value || ''
     };

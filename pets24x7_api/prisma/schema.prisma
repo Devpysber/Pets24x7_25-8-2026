@@ -119,6 +119,12 @@ model Pet {
   ageYears   Int?
   gender     String? // "Male" | "Female" | "Unspecified"
   vaccinated Boolean    @default(false)
+  // Dates the health reminders key off. All optional: an existing pet has none
+  // of them, and a reminder simply does not fire until its date is filled in.
+  // `vaccinated` stays as the at-a-glance flag on the pet card.
+  dateOfBirth      DateTime?
+  lastVaccinatedAt DateTime?
+  lastCheckupAt    DateTime?
   notes      String?  @db.Text
   avatarUrl  String?  @db.Text
   createdAt  DateTime   @default(now())

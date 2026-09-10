@@ -32,6 +32,9 @@ import {
   dealNearbyEmail,
   eventReminderEmail,
   inactivityNudgeEmail,
+  petBirthdayEmail,
+  petCheckupEmail,
+  vaccinationDueEmail,
   winbackEmail,
 } from '../mail/lifecycle-templates.js';
 
@@ -50,6 +53,12 @@ const WINBACK_TO_DAYS = 30;
 const INACTIVE_DAYS = 30;
 /** Ceiling per sweep, so a first run on a large list cannot empty the quota. */
 const MAX_PER_SWEEP = 200;
+
+/** A booster is treated as annual; the nudge starts this far before it is due. */
+const VACCINE_INTERVAL_DAYS = 365;
+const VACCINE_LEAD_DAYS = 14;
+/** A pet unseen by a vet for this long is worth one check-up nudge. */
+const CHECKUP_AFTER_MONTHS = 12;
 
 interface Parent {
   id: string;
@@ -88,7 +97,43 @@ function slugify(city: string): string {
 async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
   const email = p.email!;
 
-  // 1. Lapsed member, inside the win-back window, who has not since resubscribed.
+  // Health first. These are about the animal rather than about us, and they are
+  // the only messages here a parent would be annoyed to have NOT received.
+  // Each fires only when the date it depends on has been filled in.
+  const pets = await prisma.pet.findMany({ where: { ownerId: p.id } });
+
+  // 1. A birthday, today. Once a year and date-specific: if the gap below
+  //    swallows it, it is gone until next year, which is the accepted cost of
+  //    never sending two mails in three days.
+  for (const pet of pets) {
+    if (!pet.dateOfBirth) continue;
+    const dob = pet.dateOfBirth;
+    if (dob.getMonth() === now.getMonth() && dob.getDate() === now.getDate()) {
+      const age = now.getFullYear() - dob.getFullYear();
+      return { mail: petBirthdayEmail(email, p.name, pet.name, age > 0 ? age : null), digest: false };
+    }
+  }
+
+  // 2. A booster coming due, or already overdue.
+  for (const pet of pets) {
+    if (!pet.lastVaccinatedAt) continue;
+    const dueAt = new Date(pet.lastVaccinatedAt.getTime() + VACCINE_INTERVAL_DAYS * DAY);
+    const daysToDue = (dueAt.getTime() - now.getTime()) / DAY;
+    if (daysToDue <= VACCINE_LEAD_DAYS) {
+      return { mail: vaccinationDueEmail(email, p.name, pet.name, 'Annual booster', dueAt), digest: false };
+    }
+  }
+
+  // 3. No vet visit on record for a year.
+  for (const pet of pets) {
+    if (!pet.lastCheckupAt) continue;
+    const monthsSince = Math.floor(daysSince(pet.lastCheckupAt, now) / 30);
+    if (monthsSince >= CHECKUP_AFTER_MONTHS) {
+      return { mail: petCheckupEmail(email, p.name, pet.name, monthsSince), digest: false };
+    }
+  }
+
+  // 4. Lapsed member, inside the win-back window, who has not since resubscribed.
   const lapsed = await prisma.membership.findFirst({
     where: {
       parentId: p.id,
@@ -113,7 +158,7 @@ async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
   // City-scoped content needs a city. Without one we cannot claim "near you".
   const citySlug = p.city ? slugify(p.city) : null;
 
-  // 2. An event in their city, close enough to act on.
+  // 5. An event in their city, close enough to act on.
   if (citySlug) {
     const ev = await prisma.event.findFirst({
       where: {
@@ -136,7 +181,7 @@ async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
     }
   }
 
-  // 3. A live deal in their city they have not been told about yet. Keyed off
+  // 6. A live deal in their city they have not been told about yet. Keyed off
   //    the last mail we sent, so a deal that predates it is treated as old news.
   if (citySlug) {
     const deal = await prisma.deal.findFirst({
@@ -162,13 +207,13 @@ async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
     }
   }
 
-  // 4. The weekly digest, personalised from their pets and past enquiries.
+  // 7. The weekly digest, personalised from their pets and past enquiries.
   if (daysSince(p.lastDigestAt, now) >= DIGEST_EVERY_DAYS) {
     const digest = await recommendationsFor(p, now);
     if (digest) return { mail: digest, digest: true };
   }
 
-  // 5. Nothing specific to say, and they have gone quiet. One nudge, and only
+  // 8. Nothing specific to say, and they have gone quiet. One nudge, and only
   //    for parents with no city: with a city the digest already covers them,
   //    and two generic mails would be one too many.
   if (
