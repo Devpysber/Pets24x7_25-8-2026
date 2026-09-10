@@ -33,6 +33,14 @@ model PetParent {
   // Set once so the welcome mail never goes out twice.
   welcomeEmailAt  DateTime?
 
+  // Marketing cadence. Both are stamped when a mail actually goes out, so the
+  // sweep can run every few hours without re-sending on each pass, and a
+  // restart cannot reset the clock the way an in-process marker would.
+  // lastMarketingAt caps how often ANY promotional mail may go out;
+  // lastDigestAt paces the weekly recommendations digest specifically.
+  lastMarketingAt DateTime?
+  lastDigestAt    DateTime?
+
   // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
   sessionsRevokedAt DateTime?
