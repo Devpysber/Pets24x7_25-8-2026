@@ -166,17 +166,15 @@ model Vendor {
   mustChangePassword Boolean   @default(false)
 
   // Listing Details
-  ownerName       String?
-  locality        String?
-  address         String?
+  ownerName       String?  @db.Text
+  locality        String?  @db.Text
+  address         String?  @db.Text
   pincode         String?
-  website         String?
+  website         String?  @db.Text
   whatsapp        String?
   about           String?      @db.Text
-  openingHours    String?
-  servicesList    String?
-
-  // Tokens issued before this instant are rejected. Signing out everywhere, or
+  openingHours    String?  @db.Text
+  servicesList    String?  @db.Text // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
   sessionsRevokedAt DateTime?
 
@@ -222,7 +220,7 @@ enum VendorStatus {
 model ListingClaim {
   id               String      @id @default(cuid())
   listingId        String
-  listingName      String?
+  listingName      String?  @db.Text
   ownerId          String?
   owner            Vendor?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   email            String?
@@ -230,7 +228,7 @@ model ListingClaim {
   status           ClaimStatus @default(STARTED)
   verificationCode String?
   tempPasswordHash String?
-  failureReason    String?
+  failureReason    String?  @db.Text
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -485,10 +483,9 @@ model Payment {
   providerOrderId     String?            @unique // Razorpay order_id (lookup key for the client verify call)
   status              PaymentStatus      @default(INITIATED)
   // Gateway round-trip data
-  redirectUrl         String?
+  redirectUrl         String?  @db.Text
   callbackPayload     Json?
-  errorMessage        String?
-  // Audit
+  errorMessage        String?  @db.Text // Audit
   ipAddress           String?
   userAgent           String?
   createdAt           DateTime           @default(now())
@@ -741,8 +738,8 @@ model Event {
   country     String?
   startsAt    DateTime
   endsAt      DateTime?
-  rsvpUrl     String?
-  bannerUrl   String?
+  rsvpUrl     String?  @db.Text
+  bannerUrl   String?  @db.Text
   status      EventStatus @default(PUBLISHED)
   createdBy   String?
   createdAt   DateTime    @default(now())
@@ -807,7 +804,7 @@ model ImportJob {
   id                      String   @id @default(cuid())
   actorId                 String // admin id that ran it
   target                  String // "vendors" | "parents" | "enquiries"
-  fileName                String?
+  fileName                String?  @db.Text
   dryRun                  Boolean  @default(false)
   totalRows               Int      @default(0)
   created                 Int      @default(0)

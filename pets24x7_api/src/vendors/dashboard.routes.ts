@@ -344,21 +344,25 @@ vendorDashboardRouter.get(
 );
 
 // PATCH /my-business (update vendor business info)
+// Every field here was unbounded, which meant a paste of arbitrary length went
+// straight at the column. Bounds are generous but real: the longest address in
+// the listing data is 246 characters and the longest website 2171, so these are
+// sized above what the corpus actually contains rather than guessed.
 const UpdateBusinessBody = z.object({
-  businessName: z.string().min(2).optional(),
-  category: z.string().optional(),
-  city: z.string().optional(),
-  locality: z.string().optional(),
-  address: z.string().optional(),
-  pincode: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
-  website: z.string().optional(),
-  whatsapp: z.string().optional(),
-  about: z.string().optional(),
-  openingHours: z.string().optional(),
-  servicesList: z.string().optional(),
-  imageUrl: z.string().optional(),
+  businessName: z.string().min(2).max(160).optional(),
+  category: z.string().max(120).optional(),
+  city: z.string().max(120).optional(),
+  locality: z.string().max(160).optional(),
+  address: z.string().max(500).optional(),
+  pincode: z.string().max(20).optional(),
+  phone: z.string().max(32).optional(),
+  email: z.string().email().max(200).optional(),
+  website: z.string().max(3000).optional(),
+  whatsapp: z.string().max(32).optional(),
+  about: z.string().max(5000).optional(),
+  openingHours: z.string().max(1000).optional(),
+  servicesList: z.string().max(2000).optional(),
+  imageUrl: z.string().max(600_000).optional(),
 });
 
 vendorDashboardRouter.patch(
