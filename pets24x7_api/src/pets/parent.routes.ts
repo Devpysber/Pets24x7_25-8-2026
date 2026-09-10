@@ -116,7 +116,7 @@ parentDashboardRouter.get(
       const [p, pt, e, m, sv] = await Promise.all([
         prisma.petParent.findUnique({
           where: { id: parentId },
-          select: { id: true, name: true, phone: true, email: true, city: true, country: true },
+          select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true },
         }),
         prisma.pet.findMany({ where: { ownerId: parentId }, orderBy: { createdAt: 'desc' } }),
         prisma.enquiry.findMany({

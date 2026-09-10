@@ -333,11 +333,25 @@
   })();
 
   // ---- Already signed in? ----
+  // Send them straight to their dashboard rather than showing a sign-in form to
+  // someone who is already signed in. Two deliberate exceptions, or a signed-in
+  // pet parent could never sign in as a business:
+  //   - a role hash (#vendor, #admin) means "I want to sign in as that instead"
+  //   - ?switch=1 is the explicit escape hatch
+  // Both fall back to the banner, so the session is still visible and one click
+  // away.
   api.me().then(function(r){
     if (!r || !r.role) return;
     var map = { pet_parent: ['/dashboard/parent/', 'pet parent'], vendor: ['/dashboard/vendor/', 'business'], admin: ['/dashboard/admin/', 'staff'] };
     var m = map[r.role];
     if (!m) return;
+
+    var wanted = (location.hash || '').replace('#', '');
+    var askedForAnotherRole = ['parent', 'vendor', 'admin'].indexOf(wanted) !== -1;
+    var askedToSwitch = /[?&]switch=1/.test(location.search);
+
+    if (!askedForAnotherRole && !askedToSwitch) { location.replace(m[0]); return; }
+
     var bar = $('signedBar');
     bar.innerHTML = 'You&rsquo;re signed in as ' + m[1] + '. <a href="' + m[0] + '">Go to your dashboard &rarr;</a>';
     bar.classList.add('show');

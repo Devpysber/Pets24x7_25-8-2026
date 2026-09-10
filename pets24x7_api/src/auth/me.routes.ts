@@ -41,7 +41,7 @@ meRouter.get(
         try {
           p = await prisma.petParent.findUnique({
             where: { id: payload.sub },
-            select: { id: true, name: true, phone: true, email: true, city: true, country: true },
+            select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true },
           });
         } catch (err) {
           req.log.warn({ err, role }, 'session lookup failed');
