@@ -10,6 +10,10 @@ const Env = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   PUBLIC_SITE_URL: z.string().url(),
+  // Base URL for links and branding inside outbound email only. A dev box runs
+  // on localhost, and a sign-in link that points there is useless in a real
+  // inbox. Falls back to PUBLIC_SITE_URL, so production needs nothing extra.
+  MAIL_SITE_URL: z.string().url().optional(),
   PUBLIC_API_URL: z.string().url(),
 
   DATABASE_URL: z.string().min(1),

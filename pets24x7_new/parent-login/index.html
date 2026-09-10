@@ -42,6 +42,9 @@
   .otp-row input{text-align:center;font-size:20px;font-weight:800;padding:14px 0;letter-spacing:2px}
   .small{font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center}
   .small a{font-weight:600}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0 4px;color:var(--text-muted);font-size:12px;font-weight:600}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  #gBtn{margin-top:14px;display:flex;justify-content:center;min-height:44px}
 </style>
 </head>
 <body>
@@ -66,6 +69,9 @@
 
       <div class="err" id="err1"></div>
       <button class="btn btn-primary" id="sendBtn">Email me a code &rarr;</button>
+
+      <div class="divider" id="gDivider" hidden>or</div>
+      <div id="gBtn"></div>
 
       <p class="small">Business owner? <a href="/vendor-login/">Vendor sign in</a></p>
     </section>
@@ -173,6 +179,28 @@
   document.getElementById('otp').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('verifyBtn').click();
   });
+
+  // Google Sign-In — only rendered when the server reports a client id.
+  api.siteConfig().then(function (cfg) {
+    if (!cfg || !cfg.googleClientId) return;
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = function () {
+      if (!window.google || !google.accounts || !google.accounts.id) return;
+      google.accounts.id.initialize({
+        client_id: cfg.googleClientId,
+        callback: function (resp) {
+          api.parentGoogle(resp.credential).then(function () {
+            location.href = '/dashboard/parent/';
+          }).catch(function (e) { showErr(err1, fmtErr(e)); });
+        }
+      });
+      google.accounts.id.renderButton(document.getElementById('gBtn'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      document.getElementById('gDivider').hidden = false;
+    };
+    document.head.appendChild(s);
+  }).catch(function () {});
 
   // Auto-redirect if already signed in
   api.me().then(function (r) {

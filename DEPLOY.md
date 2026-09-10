@@ -113,7 +113,7 @@ STATIC_DATA_DIR="/opt/pets24x7/app/pets24x7_new/data"
 
 # Razorpay — dashboard.razorpay.com -> Settings -> API Keys.
 RAZORPAY_KEY_ID="rzp_live_xxxxxxxxxxxxx"
-RAZORPAY_KEY_SECRET="xxxxxxxxxxxxxxxxxxxxxxxx"
+RAZORPAY_KEY_SECRET=___from_the_razorpay_dashboard___
 RAZORPAY_WEBHOOK_SECRET="xxxxxxxxxxxxxxxxxxxxxxxx"
 
 SEED_ADMIN_EMAIL="founder@pets24x7.com"
@@ -121,16 +121,28 @@ SEED_ADMIN_PASSWORD="___strong___"
 SEED_ADMIN_NAME="Pets24x7 Founder"
 
 # ---- Razorpay (LIVE) ----
-RAZORPAY_KEY_ID=rzp_live_TD5szYcJYZbQqE
-RAZORPAY_KEY_SECRET=k3V8cq7DnsxMMm6nQpA5T1QC
+RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=___from_the_razorpay_dashboard___
 RAZORPAY_WEBHOOK_SECRET=___set_after_creating_webhook___
+
+# ---- Google Sign-In ----
+# OAuth 2.0 Web client id (Google Cloud Console -> APIs & Services -> Credentials).
+# Public by design; the site reads it back from GET /api/config.
+# When this is empty the "Continue with Google" button silently does not render
+# on /login/ and /parent-login/. Authorised JavaScript origin must include
+# https://pets24x7.com (and https://www.pets24x7.com if used).
+GOOGLE_CLIENT_ID=433529532768-01i1g547fpv9shh082srs2p5uv6tve3t.apps.googleusercontent.com
 ```
 
 `chmod 600 .env`.
 
-> **These Razorpay keys are LIVE and were pasted into a chat transcript.**
-> Rotate them in the Razorpay dashboard (Settings - API Keys - Regenerate) once
-> the box is up, and put the new secret only in this file.
+> **Never put a real key in this file.** It is tracked, and this repository is
+> public — a value committed here is world-readable the moment it is pushed, and
+> stays readable in the history afterwards. Live Razorpay credentials were
+> committed here previously and must be treated as compromised: regenerate them
+> in the Razorpay dashboard (Settings - API Keys - Regenerate). Real values
+> belong only in `/opt/pets24x7/app/pets24x7_api/.env` on the server, which is
+> gitignored and `chmod 600`.
 
 ---
 

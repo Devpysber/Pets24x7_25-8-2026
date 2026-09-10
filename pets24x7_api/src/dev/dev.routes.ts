@@ -33,6 +33,7 @@ const DEV_VENDOR_ID = 'dev-vendor-id';
 const DEV_ADMIN_ID = 'dev-admin-id';
 const DEV_VENDOR_PHONE = '+919930090487';
 const DEV_PARENT_PHONE = '+919876543210';
+const DEV_PARENT_EMAIL = 'alex.parent@example.com';
 
 // Ensure the fixed dev ids map to real rows so every write path (pets,
 // services, campaigns, featured, profile edits) works after a dev login.
@@ -40,10 +41,21 @@ async function ensureDevRows(): Promise<void> {
   const claimed = findListingByPhone(DEV_VENDOR_PHONE)[0];
   const listing = claimed ?? getListingById('coco-s-pet-boarding-and-homestay-63035557');
 
+  // phone and email are unique. A real signup on this box can already hold the
+  // dev values, and then the upsert-by-id below fails the constraint instead of
+  // logging anyone in. Release them from whichever row holds them first.
+  await prisma.petParent.updateMany({
+    where: {
+      id: { not: DEV_PARENT_ID },
+      OR: [{ phone: DEV_PARENT_PHONE }, { email: DEV_PARENT_EMAIL }],
+    },
+    data: { phone: null, email: null },
+  });
+
   await prisma.petParent.upsert({
     where: { id: DEV_PARENT_ID },
     update: {},
-    create: { id: DEV_PARENT_ID, phone: DEV_PARENT_PHONE, name: 'Dev Pet Parent', email: 'alex.parent@example.com', city: 'Mumbai', country: 'IN' },
+    create: { id: DEV_PARENT_ID, phone: DEV_PARENT_PHONE, name: 'Dev Pet Parent', email: DEV_PARENT_EMAIL, city: 'Mumbai', country: 'IN' },
   });
 
   // Self-heal the dev vendor's listing binding on every dev login so a stray

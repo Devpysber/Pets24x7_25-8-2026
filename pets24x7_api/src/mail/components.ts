@@ -15,7 +15,14 @@ export function esc(s: unknown): string {
 }
 
 const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
-const SITE = () => env.PUBLIC_SITE_URL;
+/**
+ * Base URL for links and branding inside outbound email. MAIL_SITE_URL wins so
+ * a dev box still mails production-looking links; PUBLIC_SITE_URL is the
+ * fallback, which is what production already sets.
+ */
+export const mailSite = (): string => (env.MAIL_SITE_URL ?? env.PUBLIC_SITE_URL).replace(/\/+$/, '');
+
+const SITE = mailSite;
 
 export function money(amountMinor: number, currency = 'INR'): string {
   const symbol = currency === 'USD' ? '$' : '₹';

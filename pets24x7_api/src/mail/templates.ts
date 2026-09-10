@@ -1,14 +1,13 @@
 // Account mails: welcome, and the one-time email-verification link.
 // Everything else lives in action-templates.ts.
 
-import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
-import { Button, Note, Text, esc, h, page } from './components.js';
+import { Button, esc, h, mailSite, Note, page, Text } from './components.js';
 
 export { BRAND, esc as escapeHtml } from './components.js';
 
 export function welcomeEmail(to: string, name: string): MailInput {
-  const dash = `${env.PUBLIC_SITE_URL}/dashboard/parent/`;
+  const dash = `${mailSite()}/dashboard/parent/`;
   return {
     to,
     subject: 'Welcome to Pets24x7 🐾',
