@@ -45,6 +45,9 @@
   .divider{display:flex;align-items:center;gap:12px;margin:20px 0 4px;color:var(--text-muted);font-size:12px;font-weight:600}
   .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
   #gBtn{margin-top:14px;display:flex;justify-content:center;min-height:44px}
+  .tabs{display:flex;gap:6px;background:var(--bg-alt);border-radius:12px;padding:5px;margin-bottom:24px}
+  .tabs button{flex:1;background:transparent;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:9px;cursor:pointer;color:var(--text-muted)}
+  .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 </style>
 </head>
 <body>
@@ -58,6 +61,12 @@
 
 <main>
   <div class="card">
+    <div class="tabs">
+      <button id="tabCode" class="on" type="button">Sign in with code</button>
+      <button id="tabPass" type="button">Sign in with password</button>
+    </div>
+
+    <div id="paneCode">
     <!-- Step 1: email -->
     <section id="step1">
       <div class="step-hint">Step 1 of 2</div>
@@ -96,6 +105,25 @@
       <button class="btn-link" id="resendBtn">Resend code</button>
       <button class="btn-link" id="backBtn">&larr; Wrong email? Start over</button>
     </section>
+    </div>
+
+    <!-- Password sign-in, for accounts that set one -->
+    <div id="panePass" hidden>
+      <h1>Sign in with your password</h1>
+      <p class="sub">Use the email and password on your Pets24x7 account.</p>
+
+      <label for="lpEmail">Email address</label>
+      <input id="lpEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+
+      <label for="lpPass">Password</label>
+      <input id="lpPass" type="password" placeholder="Your password" autocomplete="current-password" />
+
+      <div class="err" id="lpErr"></div>
+      <div class="ok"  id="lpOk">Signed in. Redirecting&hellip;</div>
+      <button class="btn btn-primary" id="lpBtn" type="button">Sign in</button>
+      <button class="btn-link" id="lpForgot" type="button">Forgot your password?</button>
+      <p class="small">No password set? <a href="#" id="toCode">Sign in with an emailed code</a></p>
+    </div>
   </div>
 </main>
 
@@ -201,6 +229,65 @@
     };
     document.head.appendChild(s);
   }).catch(function () {});
+
+  // ---------------- tabs ----------------
+  var paneCode = document.getElementById('paneCode');
+  var panePass = document.getElementById('panePass');
+  var tabCode = document.getElementById('tabCode');
+  var tabPass = document.getElementById('tabPass');
+  function selectTab(which) {
+    var isCode = which === 'code';
+    paneCode.hidden = !isCode; panePass.hidden = isCode;
+    tabCode.classList.toggle('on', isCode); tabPass.classList.toggle('on', !isCode);
+  }
+  tabCode.addEventListener('click', function () { selectTab('code'); });
+  tabPass.addEventListener('click', function () { selectTab('pass'); });
+  document.getElementById('toCode').addEventListener('click', function (e) { e.preventDefault(); selectTab('code'); });
+  if (location.hash === '#password') selectTab('pass');
+
+  // ---------------- password sign-in ----------------
+  // Not every account has one: a code-only signup has no password until they
+  // set it through the reset link, which is what the Forgot button sends.
+  var lpErr = document.getElementById('lpErr'), lpOk = document.getElementById('lpOk');
+
+  document.getElementById('lpBtn').addEventListener('click', function () {
+    clearErr(lpErr);
+    var em = document.getElementById('lpEmail').value.trim().toLowerCase();
+    var pw = document.getElementById('lpPass').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return showErr(lpErr, 'Enter a valid email address.');
+    if (!pw) return showErr(lpErr, 'Enter your password.');
+
+    this.disabled = true; this.textContent = 'Signing in…';
+    var self = this;
+    api.parentLogin(em, pw).then(function () {
+      lpOk.classList.add('show');
+      setTimeout(function () { location.href = '/dashboard/parent/'; }, 400);
+    }).catch(function (e) {
+      // A 403 here means the address exists but is unverified; the API has
+      // already sent a fresh link, so say that rather than "wrong password".
+      showErr(lpErr, e && e.status === 403
+        ? 'Please verify your email first — we just sent you a fresh link.'
+        : fmtErr(e));
+      self.disabled = false; self.textContent = 'Sign in';
+    });
+  });
+
+  document.getElementById('lpForgot').addEventListener('click', function () {
+    clearErr(lpErr);
+    var em = document.getElementById('lpEmail').value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return showErr(lpErr, 'Enter your email address first.');
+    var self = this;
+    self.disabled = true; self.textContent = 'Sending…';
+    api.parentForgot(em).then(function () {
+      lpOk.textContent = 'If that address has a password, a reset link is on its way.';
+      lpOk.classList.add('show');
+    }).catch(function (e) { showErr(lpErr, fmtErr(e)); })
+      .finally(function () { self.disabled = false; self.textContent = 'Forgot your password?'; });
+  });
+
+  document.getElementById('lpPass').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('lpBtn').click();
+  });
 
   // Auto-redirect if already signed in
   api.me().then(function (r) {

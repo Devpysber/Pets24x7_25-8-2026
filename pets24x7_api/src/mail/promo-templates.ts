@@ -206,3 +206,48 @@ export function parentNewNearbyEmail(
       `\n\nBrowse: ${browse}\n`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// "Claim your listing" — sent to a business that is listed but has never
+// completed a claim. The pitch is the enquiries they are already missing, not
+// a feature list.
+// ---------------------------------------------------------------------------
+export function claimListingEmail(to: string, ctx: VendorPromoContext): MailInput {
+  const claimUrl = track(`${SITE()}/find-my-listing/`, 'vendor_claim_listing');
+  const listingUrl = ctx.listingUrl ? track(ctx.listingUrl, 'vendor_claim_listing') : null;
+  const where = ctx.city ? ` in ${ctx.city}` : '';
+  return {
+    to,
+    kind: 'marketing',
+    subject: `${ctx.businessName} is listed on Pets24x7 — claim it free`,
+    html: page({
+      eyebrow: 'Your listing',
+      heading: 'Your business is already on Pets24x7',
+      intro: h`${ctx.businessName} appears in our directory${where}, and pet owners are finding it. Claiming it — free, a couple of minutes — puts you in control of what they see.`,
+      blocks: [
+        InfoBox([
+          ['Business', ctx.businessName],
+          ['Area', ctx.city || '—'],
+          ['Google rating shown', ctx.rating ? `${ctx.rating} / 5` : 'Not shown yet'],
+          ['Reviews shown', ctx.reviewCount ? String(ctx.reviewCount) : '—'],
+        ]),
+        Text(
+          '<p style="margin:0 0 8px;line-height:22px">Claiming lets you:</p>' +
+          '<ul style="margin:0 0 4px 18px;padding:0;line-height:22px">' +
+          '<li>Receive enquiries from pet owners straight to your WhatsApp</li>' +
+          '<li>Correct your address, hours, services and phone number</li>' +
+          '<li>Add photos, and reply publicly to reviews</li>' +
+          '</ul>',
+        ),
+        Button('Claim my listing', claimUrl),
+        ...(listingUrl ? [Note(`Prefer to look first? <a href="${listingUrl}">See your listing as it appears today</a>.`)] : []),
+        Note('We verify with the phone number already on the listing, so nobody else can claim your business.'),
+      ],
+      preheader: `Claim ${ctx.businessName} on Pets24x7 — free.`,
+    }),
+    text:
+      `${ctx.businessName} is listed on Pets24x7${where}.\n\n` +
+      `Claim it free: ${claimUrl}\n` +
+      (listingUrl ? `See your listing: ${listingUrl}\n` : ''),
+  };
+}

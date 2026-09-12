@@ -756,10 +756,43 @@
     }).catch(function () { /* API offline — the bundled snapshot still renders */ });
   }
 
+  // The bundled snapshot's "top rated" list is the same eight businesses on
+  // every visit, because it is a fixed sort by rating and thousands of listings
+  // share a 5.0. Pull a wider pool and rotate through it, so the section is
+  // different hour to hour and across visitors, while still only ever showing
+  // well-reviewed places.
+  function loadFeaturedPool() {
+    if (!window.api || !api.listingsSearch) return;
+    var cities = (window.PETS_INDEX || []).slice(0, 24);
+    var pick = cities.length ? cities[Math.floor(Math.random() * cities.length)] : null;
+
+    api.listingsSearch({ city: pick ? pick.city : '', limit: 60 }).then(function (r) {
+      var pool = (r.listings || []).filter(function (b) {
+        return (Number(b.rating) || 0) >= 4.5 && (b.review_count || 0) >= 25;
+      });
+      if (pool.length < 8) return;
+
+      // Rotate by the hour so the page changes through the day without being
+      // random on every reload, then shuffle within that window.
+      var offset = (new Date().getHours() * 3) % pool.length;
+      var rotated = pool.slice(offset).concat(pool.slice(0, offset));
+      window.PETS_FEATURED = rotated.slice(0, 8);
+      renderFeatured();
+
+      var head = document.querySelector('.featured-head p');
+      if (head && pick) head.textContent = 'Highly-rated pet businesses in ' + pick.city + ', by real Google reviews.';
+      var browseAll = document.querySelector('.featured-head a');
+      if (browseAll && pick) {
+        browseAll.href = '/' + String(pick.country || 'in').toLowerCase() + '/' + pick.city_slug + '/';
+      }
+    }).catch(function () { /* keep the bundled snapshot */ });
+  }
+
   // initial render
   renderCities();
   renderFeatured();
   loadRecentListings();
+  loadFeaturedPool();
   window.addEventListener('petsUpdated', function(){ renderCities(); renderFeatured(); });
 </script>
 
