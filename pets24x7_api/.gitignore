@@ -10,3 +10,6 @@ dist
 prisma/.cache
 .pgdata
 .mail-preview
+
+# Data dumps produced by scripts/export-data.mjs (contains customer rows)
+export/

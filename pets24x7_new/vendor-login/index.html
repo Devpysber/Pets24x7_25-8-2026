@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
-<title>Vendor Sign in — Pets24x7.com</title>
-<meta name="description" content="Sign in to your Pets24x7 vendor dashboard with an emailed code, or claim your listing by phone." />
+<title>Business Sign in — Pets24x7.com</title>
+<meta name="description" content="Sign in to your Pets24x7 business dashboard with an emailed code or your password." />
 <meta name="robots" content="noindex" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
-  :root{--primary:#2563EB;--primary-dark:#1D4ED8;--primary-light:#EFF6FF;--bg:#fff;--bg-alt:#F9FAFB;--text:#1F2937;--text-muted:#6B7280;--border:#E5E7EB;--success:#10B981;--danger:#DC2626;--whatsapp:#25D366;}
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --primary-light:#EFF6FF; --bg:#fff; --bg-alt:#F9FAFB; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; --success:#10B981; --danger:#DC2626; }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
   a{color:var(--primary);text-decoration:none}
@@ -21,7 +21,7 @@
   .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
   .brand-name .tld{color:var(--text)}
   main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#fff;max-width:540px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
+  .card{background:#fff;max-width:440px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
   .step-hint{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
   h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px}
   p.sub{color:var(--text-muted);font-size:14px;margin-bottom:24px}
@@ -37,23 +37,13 @@
   .err.show{display:block}
   .ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
   .ok.show{display:block}
-  .match-list{margin-top:18px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .match{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:14px}
-  .match:last-child{border-bottom:none}
-  .match:hover{background:var(--primary-light)}
-  .match.sel{background:var(--primary-light);border-left:4px solid var(--primary);padding-left:12px}
-  .match input[type=radio]{margin:0;width:18px;height:18px}
-  .match .info{flex:1;min-width:0}
-  .match .info strong{display:block;font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
-  .match .info .meta{font-size:12px;color:var(--text-muted);margin-top:2px}
-  .match .rating{font-size:12px;font-weight:700;color:var(--success);background:#DCFCE7;padding:2px 8px;border-radius:999px;flex-shrink:0}
-  .nomatch{padding:18px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:14px;margin-top:18px;line-height:1.5}
-  .nomatch strong{display:block;margin-bottom:6px}
   .small{font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center}
   .small a{font-weight:600}
   .tabs{display:flex;gap:6px;background:var(--bg-alt);border-radius:12px;padding:5px;margin-bottom:24px}
   .tabs button{flex:1;background:transparent;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:9px;cursor:pointer;color:var(--text-muted)}
   .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+  .links{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .links a{flex:1;text-align:center;border:1px solid var(--border);border-radius:10px;padding:10px;font-weight:700;font-size:13px;color:var(--primary);background:#fff}
 </style>
 </head>
 <body>
@@ -67,30 +57,29 @@
 
 <main>
   <div class="card">
-    <div class="tabs" style="display:flex; flex-wrap:wrap; gap:6px;">
-      <button id="tabEmail" class="on">Sign in with email</button>
-      <a href="/find-my-listing/" class="btn btn-outline" style="flex:1; text-align:center; padding:10px; font-weight:700; font-size:13px; margin-top:0;">Find &amp; Claim Listing</a>
-      <a href="/register-business/" class="btn btn-outline" style="flex:1; text-align:center; padding:10px; font-weight:700; font-size:13px; margin-top:0;">+ Register Business</a>
+    <div class="tabs">
+      <button id="tabCode" class="on" type="button">Sign in with code</button>
+      <button id="tabPass" type="button">Sign in with password</button>
     </div>
 
-    <!-- ============ Email OTP sign-in (already-claimed vendors) ============ -->
-    <div id="paneEmail">
+    <!-- ============ Email OTP sign-in (same flow as pet parents) ============ -->
+    <div id="paneCode">
       <section id="e1">
-        <div class="step-hint">Step 1 of 2 &middot; Vendor sign in</div>
+        <div class="step-hint">Step 1 of 2</div>
         <h1>Sign in to your dashboard</h1>
-        <p class="sub">Enter the email on your vendor account and we&rsquo;ll send a 6-digit code. No password needed.</p>
+        <p class="sub">Enter the email on your business account and we&rsquo;ll send a 6-digit code. No password needed.</p>
 
         <label for="vEmailIn">Business email</label>
         <input id="vEmailIn" type="email" placeholder="you@business.com" autocomplete="email" inputmode="email" />
 
         <div class="err" id="eErr1"></div>
-        <button class="btn btn-primary" id="eSendBtn">Email me a code &rarr;</button>
+        <button class="btn btn-primary" id="eSendBtn" type="button">Email me a code &rarr;</button>
 
-        <p class="small">Haven&rsquo;t claimed your listing yet? <a href="#" id="toClaim">Claim it with your phone</a></p>
+        <p class="small">Pet parent? <a href="/parent-login/">Sign in here</a></p>
       </section>
 
       <section id="e2" hidden>
-        <div class="step-hint">Step 2 of 2 &middot; Verify</div>
+        <div class="step-hint">Step 2 of 2</div>
         <h1>Enter the code</h1>
         <p class="sub" id="eSentTo">We sent a 6-digit code to your email.</p>
 
@@ -99,103 +88,68 @@
 
         <div class="err" id="eErr2"></div>
         <div class="ok"  id="eOk2">Verified. Redirecting&hellip;</div>
-        <button class="btn btn-primary" id="eVerifyBtn">Verify &amp; sign in</button>
-        <button class="btn-link" id="eResendBtn">Resend code</button>
-        <button class="btn-link" id="eBackBtn">&larr; Wrong email? Start over</button>
+        <button class="btn btn-primary" id="eVerifyBtn" type="button">Verify &amp; sign in</button>
+        <button class="btn-link" id="eResendBtn" type="button">Resend code</button>
+        <button class="btn-link" id="eBackBtn" type="button">&larr; Wrong email? Start over</button>
       </section>
     </div>
 
-    <!-- ============ Phone OTP claim flow ============ -->
-    <div id="paneClaim" hidden>
-      <!-- Step 1: phone -->
-      <section id="step1">
-        <div class="step-hint">Step 1 of 3 &middot; Claim your listing</div>
-        <h1>Claim your business listing</h1>
-        <p class="sub">Enter the phone number shown on your listing. We&rsquo;ll match it and send a WhatsApp code.</p>
+    <!-- ============ Password sign-in ============ -->
+    <div id="panePass" hidden>
+      <h1>Sign in with your password</h1>
+      <p class="sub">Use the email (or phone number) and password on your business account.</p>
 
-        <label for="vPhone">WhatsApp number</label>
-        <input id="vPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" inputmode="tel" />
+      <label for="pKey">Business email or phone</label>
+      <input id="pKey" type="text" placeholder="you@business.com" autocomplete="username" />
 
-        <div class="err" id="err1"></div>
-        <button class="btn btn-primary" id="lookupBtn">Find my listing &rarr;</button>
+      <label for="pPass">Password</label>
+      <input id="pPass" type="password" placeholder="Your password" autocomplete="current-password" />
 
-        <p class="small">Pet parent? <a href="/parent-login/">Sign in here</a></p>
-      </section>
-
-      <!-- Step 2: pick listing -->
-      <section id="step2" hidden>
-        <div class="step-hint">Step 2 of 3 &middot; Pick your listing</div>
-        <h1 id="step2H">We found a match</h1>
-        <p class="sub" id="step2Sub">Pick the listing you own. We&rsquo;ll send a code to confirm.</p>
-
-        <div id="matchList" class="match-list"></div>
-        <div id="noMatch" class="nomatch" hidden>
-          <strong>No listing matches that number.</strong>
-          We couldn&rsquo;t find your business in our database with that WhatsApp number.
-          <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20add%20my%20business%20to%20your%20listings..." target="_blank" rel="noopener" style="color:#92400E;font-weight:700;text-decoration:underline">Message us to add your business &rarr;</a>
-        </div>
-
-        <div class="err" id="err2"></div>
-        <button class="btn btn-primary" id="sendOtpBtn" hidden>Send me the code &rarr;</button>
-        <button class="btn-link" id="back1">&larr; Try a different number</button>
-      </section>
-
-      <!-- Step 3: OTP + claim -->
-      <section id="step3" hidden>
-        <div class="step-hint">Step 3 of 3 &middot; Verify</div>
-        <h1>Enter the code</h1>
-        <p class="sub" id="sentTo">We sent a 6-digit code to your WhatsApp.</p>
-
-        <label for="otp">6-digit code</label>
-        <input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
-
-        <label for="vEmail">Business email (recommended)</label>
-        <input id="vEmail" type="email" placeholder="you@business.com" autocomplete="email" />
-        <p class="small" style="text-align:left;margin-top:6px">Adding it now lets you sign in by email next time.</p>
-
-        <div class="err" id="err3"></div>
-        <div class="ok"  id="ok3">Claimed. Redirecting to your dashboard&hellip;</div>
-        <button class="btn btn-primary" id="claimBtn">Verify &amp; claim listing</button>
-        <button class="btn-link" id="back2">&larr; Wrong listing? Go back</button>
-      </section>
+      <div class="err" id="pErr"></div>
+      <div class="ok"  id="pOk">Signed in. Redirecting&hellip;</div>
+      <button class="btn btn-primary" id="pLoginBtn" type="button">Sign in</button>
+      <p class="small">Forgot it? <a href="#" id="toCode">Sign in with an emailed code instead</a></p>
     </div>
 
+    <div class="links">
+      <a href="/find-my-listing/">Find &amp; Claim Listing</a>
+      <a href="/register-business/">+ Register Business</a>
+    </div>
   </div>
 </main>
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
 <script>
+  function byId(id) { return document.getElementById(id); }
   function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
   function clearErr(el) { el.classList.remove('show'); }
-  function esc(s) { return (s||'').toString().replace(/[<>&"']/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];}); }
-  function byId(id) { return document.getElementById(id); }
 
   // ---------------- tabs ----------------
-  var paneEmail = byId('paneEmail'), paneClaim = byId('paneClaim');
-  var tabEmail = byId('tabEmail'), tabClaim = byId('tabClaim');
+  var paneCode = byId('paneCode'), panePass = byId('panePass');
+  var tabCode = byId('tabCode'), tabPass = byId('tabPass');
   function selectTab(which) {
-    var isEmail = which === 'email';
-    paneEmail.hidden = !isEmail; paneClaim.hidden = isEmail;
-    tabEmail.classList.toggle('on', isEmail); tabClaim.classList.toggle('on', !isEmail);
+    var isCode = which === 'code';
+    paneCode.hidden = !isCode; panePass.hidden = isCode;
+    tabCode.classList.toggle('on', isCode); tabPass.classList.toggle('on', !isCode);
   }
-  tabEmail.addEventListener('click', function () { selectTab('email'); });
-  tabClaim.addEventListener('click', function () { selectTab('claim'); });
-  byId('toClaim').addEventListener('click', function (e) { e.preventDefault(); selectTab('claim'); });
-  if (location.hash === '#claim') selectTab('claim');
+  tabCode.addEventListener('click', function () { selectTab('code'); });
+  tabPass.addEventListener('click', function () { selectTab('pass'); });
+  byId('toCode').addEventListener('click', function (e) { e.preventDefault(); selectTab('code'); });
+  if (location.hash === '#password') selectTab('pass');
 
   // ---------------- email OTP sign-in ----------------
   var eErr1 = byId('eErr1'), eErr2 = byId('eErr2'), eOk2 = byId('eOk2');
   var vendorEmail = '';
 
   function eRequest(btn, label) {
-    btn.disabled = true; btn.textContent = 'Sending\u2026';
+    btn.disabled = true; btn.textContent = 'Sending…';
     return api.vendorEmailOtpRequest(vendorEmail).then(function (r) {
       btn.disabled = false; btn.textContent = label;
       if (r.hint === 'no_account') {
-        // Deliberately explicit: a vendor account only exists after a claim, so
-        // pointing them at the claim tab is more useful than a vague error.
-        throw new Error('No vendor account uses that email yet. Claim your listing by phone first.');
+        // A business account exists only after a claim or a registration, so
+        // point them at those rather than showing a vague error.
+        throw new Error('No business account uses that email yet. Claim your listing or register your business first.');
       }
       byId('eSentTo').textContent =
         'We sent a 6-digit code to ' + vendorEmail + '. It expires in ' + (r.expiresInMinutes || 10) + ' minutes.';
@@ -213,7 +167,7 @@
     var v = byId('vEmailIn').value.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return showErr(eErr1, 'Enter a valid email address.');
     vendorEmail = v.toLowerCase();
-    eRequest(this, 'Email me a code \u2192').catch(function (e) { showErr(eErr1, fmtErr(e)); });
+    eRequest(this, 'Email me a code →').catch(function (e) { showErr(eErr1, fmtErr(e)); });
   });
 
   byId('eResendBtn').addEventListener('click', function () {
@@ -225,7 +179,7 @@
     clearErr(eErr2);
     var code = byId('eOtp').value.trim();
     if (!/^[0-9]{6}$/.test(code)) return showErr(eErr2, 'Enter the 6-digit code.');
-    this.disabled = true; this.textContent = 'Verifying\u2026';
+    this.disabled = true; this.textContent = 'Verifying…';
     var self = this;
     api.vendorEmailOtpVerify(vendorEmail, code).then(function () {
       eOk2.classList.add('show');
@@ -246,97 +200,35 @@
   byId('vEmailIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('eSendBtn').click(); });
   byId('eOtp').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('eVerifyBtn').click(); });
 
-  // ---------------- phone OTP claim ----------------
-  var s1 = byId('step1'), s2 = byId('step2'), s3 = byId('step3');
-  var err1 = byId('err1'), err2 = byId('err2'), err3 = byId('err3'), ok3 = byId('ok3');
-  var matchList = byId('matchList'), noMatch = byId('noMatch'), sendOtpBtn = byId('sendOtpBtn');
-  var phone = '', matches = [], picked = null;
+  // ---------------- password sign-in ----------------
+  var pErr = byId('pErr'), pOk = byId('pOk');
 
-  byId('lookupBtn').addEventListener('click', function () {
-    clearErr(err1);
-    var p = byId('vPhone').value.trim();
-    if (p.replace(/[^0-9]/g, '').length < 10) return showErr(err1, 'Enter a valid phone number.');
+  byId('pLoginBtn').addEventListener('click', function () {
+    clearErr(pErr);
+    var key = byId('pKey').value.trim();
+    var pass = byId('pPass').value;
+    if (!key) return showErr(pErr, 'Enter your business email or phone number.');
+    if (!pass) return showErr(pErr, 'Enter your password.');
 
-    this.disabled = true; this.textContent = 'Looking up\u2026';
+    this.disabled = true; this.textContent = 'Signing in…';
     var self = this;
-    api.vendorRequestOtp(p).then(function (r) {
-      self.disabled = false; self.textContent = 'Find my listing \u2192';
-      phone = r.phone || p;
-      matches = r.matches || [];
-      s1.hidden = true; s2.hidden = false;
-
-      if (!matches.length) {
-        matchList.innerHTML = ''; noMatch.hidden = false; sendOtpBtn.hidden = true;
-        byId('step2H').textContent = 'No match found';
-        byId('step2Sub').textContent = '';
+    api.vendorPasswordLogin(key, pass).then(function (r) {
+      // A temporary password from a claim email must be replaced before the
+      // account is usable, so send them to that step instead of the dashboard.
+      if (r.mustChangePassword) {
+        location.href = '/vendor-login/change-password/?email=' + encodeURIComponent(r.email || key);
         return;
       }
-      noMatch.hidden = true; sendOtpBtn.hidden = false;
-      byId('step2H').textContent = matches.length === 1 ? 'We found your listing' : 'We found ' + matches.length + ' listings';
-      matchList.innerHTML = matches.map(function (m, i) {
-        return '<label class="match' + (i === 0 ? ' sel' : '') + '">' +
-          '<input type="radio" name="listing" value="' + esc(m.id) + '"' + (i === 0 ? ' checked' : '') + ' />' +
-          '<span class="info"><strong>' + esc(m.name) + '</strong>' +
-          '<span class="meta">' + esc(m.category) + ' &middot; ' + esc(m.city) + '</span></span>' +
-          (m.rating ? '<span class="rating">' + esc(m.rating) + ' \u2605</span>' : '') +
-          '</label>';
-      }).join('');
-      Array.prototype.forEach.call(matchList.querySelectorAll('input[name=listing]'), function (radio) {
-        radio.addEventListener('change', function () {
-          Array.prototype.forEach.call(matchList.querySelectorAll('.match'), function (el) { el.classList.remove('sel'); });
-          radio.parentNode.classList.add('sel');
-        });
-      });
+      pOk.classList.add('show');
+      setTimeout(function () { location.href = r.redirect || '/dashboard/vendor/'; }, 400);
     }).catch(function (e) {
-      showErr(err1, fmtErr(e));
-      self.disabled = false; self.textContent = 'Find my listing \u2192';
+      showErr(pErr, fmtErr(e));
+      self.disabled = false; self.textContent = 'Sign in';
     });
   });
 
-  // The OTP was already sent by /request-otp; this step only confirms which
-  // listing is being claimed before asking for the code.
-  sendOtpBtn.addEventListener('click', function () {
-    clearErr(err2);
-    var sel = matchList.querySelector('input[name=listing]:checked');
-    if (!sel) return showErr(err2, 'Pick a listing first.');
-    picked = sel.value;
-    byId('sentTo').textContent = 'We sent a 6-digit code to ' + phone + ' on WhatsApp.';
-    s2.hidden = true; s3.hidden = false;
-    byId('otp').focus();
-  });
-
-  byId('claimBtn').addEventListener('click', function () {
-    clearErr(err3);
-    var code = byId('otp').value.trim();
-    var email = byId('vEmail').value.trim();
-    if (!/^[0-9]{6}$/.test(code)) return showErr(err3, 'Enter the 6-digit code.');
-
-    this.disabled = true; this.textContent = 'Verifying\u2026';
-    var self = this;
-    var pickedListing = matches.filter(function (m) { return m.id === picked; })[0];
-    api.vendorVerify({
-      phone: phone,
-      code: code,
-      listingId: picked,
-      businessName: pickedListing ? pickedListing.name : undefined,
-      email: email || undefined
-    }).then(function () {
-      ok3.classList.add('show');
-      setTimeout(function () { location.href = '/dashboard/vendor/'; }, 500);
-    }).catch(function (e) {
-      showErr(err3, fmtErr(e));
-      self.disabled = false; self.textContent = 'Verify & claim listing';
-    });
-  });
-
-  byId('back1').addEventListener('click', function () {
-    s2.hidden = true; s1.hidden = false; clearErr(err1); clearErr(err2);
-  });
-  byId('back2').addEventListener('click', function () {
-    s3.hidden = true; s2.hidden = false; clearErr(err3);
-    byId('otp').value = '';
-    byId('claimBtn').disabled = false; byId('claimBtn').textContent = 'Verify & claim listing';
-  });
+  byId('pPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('pLoginBtn').click(); });
+  byId('pKey').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('pLoginBtn').click(); });
 
   // Already signed in? Go straight through.
   api.me().then(function (r) {

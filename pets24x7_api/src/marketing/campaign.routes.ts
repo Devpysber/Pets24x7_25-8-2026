@@ -21,6 +21,7 @@ import { notifyIf } from '../mail/notify.js';
 import { campaignCreatedEmail } from '../mail/action-templates.js';
 
 import { getActiveGrowPlans } from '../admin/admin.api.routes.js';
+import { isVendorApproved } from '../shared/vendor-status.js';
 
 export const vendorCampaignsRouter = Router();
 vendorCampaignsRouter.use(requireAuth('vendor'));
@@ -56,7 +57,7 @@ vendorCampaignsRouter.post(
 
     const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
     if (!vendor) throw new ForbiddenError();
-    if (vendor.status !== 'ACTIVE') {
+    if (!isVendorApproved(vendor.status)) {
       throw new ForbiddenError('Your vendor account must be approved before buying a campaign');
     }
 

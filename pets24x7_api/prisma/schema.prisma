@@ -1,15 +1,58 @@
 // Pets24x7 — Phase 1 schema.
-// Models: PetParent, Pet, Vendor, Admin, OtpCode, Enquiry, AuditLog.
-// Listing data itself stays in the static frontend (JSON files); Vendor.listingId
-// references that immutable id so we can join without duplicating 34k rows.
+// Models: PetParent, Pet, Vendor, Admin, OtpCode, Enquiry, AuditLog, Listing.
+// The directory itself now lives in the Listing table (migrated out of the
+// static JSON files); Vendor.listingId references Listing.id.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------
+// Directory listings (the 34k scraped + imported businesses)
+//
+// Held in the database rather than the bundled JSON files, so an import, a
+// vendor edit and the public site all read one copy. `id` is the same slug the
+// public URLs already use, so existing links keep resolving.
+// -----------------------------------------------------------
+model Listing {
+  id           String    @id @db.VarChar(191)
+  name         String    @db.VarChar(255)
+  category     String    @db.VarChar(160)
+  categorySlug String    @db.VarChar(160)
+  categoryIcon String?   @db.VarChar(16)
+  city         String    @db.VarChar(160)
+  citySlug     String    @db.VarChar(160)
+  state        String?   @db.VarChar(120)
+  country      String    @db.VarChar(8) // "IN" | "US"
+  address      String?   @db.Text
+  // Matching a claim is done on the trailing digits, so the raw value is kept
+  // as typed and `phoneLast10` carries the comparable form.
+  phone        String?   @db.VarChar(32)
+  phoneLast10  String?   @db.VarChar(10)
+  website      String?   @db.Text
+  pincode      String?   @db.VarChar(20)
+  rating       Float     @default(0)
+  reviewCount  Int       @default(0)
+  googleCid    String?   @db.VarChar(64)
+  gmbLink      String?   @db.Text
+  claimStatus  String    @default("UNCLAIMED") @db.VarChar(16)
+  // Set for rows that arrived through an admin import or a vendor edit, so the
+  // newest entries can be listed first without scanning the whole table.
+  importedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([country, citySlug])
+  @@index([categorySlug])
+  @@index([phoneLast10])
+  @@index([city])
+  @@index([importedAt])
+  @@map("listings")
 }
 
 // -----------------------------------------------------------
@@ -98,7 +141,7 @@ model SavedListing {
   parentId    String
   parent      PetParent @relation(fields: [parentId], references: [id], onDelete: Cascade)
   listingId   String
-  listingName String?  @db.Text
+  listingName String?   @db.Text
   category    String?
   city        String?
   country     String?
@@ -110,25 +153,28 @@ model SavedListing {
 }
 
 model Pet {
-  id         String     @id @default(cuid())
-  ownerId    String
-  owner      PetParent  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  name       String
-  species    PetSpecies
-  breed      String?
-  ageYears   Int?
-  gender     String? // "Male" | "Female" | "Unspecified"
-  vaccinated Boolean    @default(false)
+  id               String     @id @default(cuid())
+  ownerId          String
+  owner            PetParent  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name             String
+  species          PetSpecies
+  breed            String?
+  ageYears         Int?
+  // Months part of the pet's age (0-11). A puppy under a year has ageYears 0
+  // and the real age here, which the old years-only field could not express.
+  ageMonths        Int?
+  gender           String? // "Male" | "Female" | "Unspecified"
+  vaccinated       Boolean    @default(false)
   // Dates the health reminders key off. All optional: an existing pet has none
   // of them, and a reminder simply does not fire until its date is filled in.
   // `vaccinated` stays as the at-a-glance flag on the pet card.
   dateOfBirth      DateTime?
   lastVaccinatedAt DateTime?
   lastCheckupAt    DateTime?
-  notes      String?  @db.Text
-  avatarUrl  String?  @db.Text
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  notes            String?    @db.Text
+  avatarUrl        String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   @@index([ownerId])
   @@map("pets")
@@ -159,22 +205,25 @@ model Vendor {
   country         String? // "IN" | "US"
   category        String?
   imageUrl        String?      @db.Text
+  // Up to 5 extra photos for the public listing gallery, stored as a JSON array
+  // of data URLs / URLs. Kept as text so no migration is needed per photo.
+  galleryImages   String?      @db.Text
   status          VendorStatus @default(PENDING)
 
   // Auth & Password fields for Claim & Registration System
   passwordHash       String?
-  mustChangePassword Boolean   @default(false)
+  mustChangePassword Boolean @default(false)
 
   // Listing Details
-  ownerName       String?  @db.Text
-  locality        String?  @db.Text
-  address         String?  @db.Text
-  pincode         String?
-  website         String?  @db.Text
-  whatsapp        String?
-  about           String?      @db.Text
-  openingHours    String?  @db.Text
-  servicesList    String?  @db.Text // Tokens issued before this instant are rejected. Signing out everywhere, or
+  ownerName         String?   @db.Text
+  locality          String?   @db.Text
+  address           String?   @db.Text
+  pincode           String?
+  website           String?   @db.Text
+  whatsapp          String?
+  about             String?   @db.Text
+  openingHours      String?   @db.Text
+  servicesList      String?   @db.Text // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
   sessionsRevokedAt DateTime?
 
@@ -182,7 +231,7 @@ model Vendor {
   profileCompletion Int       @default(20) // 0-100
   claimedAt         DateTime?
   approvedAt        DateTime?
-  rejectedReason    String?  @db.Text
+  rejectedReason    String?   @db.Text
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -220,7 +269,7 @@ enum VendorStatus {
 model ListingClaim {
   id               String      @id @default(cuid())
   listingId        String
-  listingName      String?  @db.Text
+  listingName      String?     @db.Text
   ownerId          String?
   owner            Vendor?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   email            String?
@@ -228,7 +277,7 @@ model ListingClaim {
   status           ClaimStatus @default(STARTED)
   verificationCode String?
   tempPasswordHash String?
-  failureReason    String?  @db.Text
+  failureReason    String?     @db.Text
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -316,7 +365,7 @@ model Enquiry {
   parent        PetParent?    @relation(fields: [petParentId], references: [id])
   // Listing this enquiry was about (frontend static id).
   listingId     String?
-  listingName   String?  @db.Text
+  listingName   String?       @db.Text
   category      String?
   city          String?
   country       String?
@@ -325,7 +374,7 @@ model Enquiry {
   email         String?
   petType       String?
   preferredDate DateTime?
-  notes         String  @db.Text
+  notes         String        @db.Text
   source        String? // "listing_page" | "city_page" | "marketing_modal"
   status        EnquiryStatus @default(NEW)
   respondedAt   DateTime?
@@ -483,9 +532,9 @@ model Payment {
   providerOrderId     String?            @unique // Razorpay order_id (lookup key for the client verify call)
   status              PaymentStatus      @default(INITIATED)
   // Gateway round-trip data
-  redirectUrl         String?  @db.Text
+  redirectUrl         String?            @db.Text
   callbackPayload     Json?
-  errorMessage        String?  @db.Text // Audit
+  errorMessage        String?            @db.Text // Audit
   ipAddress           String?
   userAgent           String?
   createdAt           DateTime           @default(now())
@@ -528,7 +577,7 @@ model Service {
   vendorId      String
   vendor        Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   name          String
-  description   String?  @db.Text
+  description   String?       @db.Text
   priceMinor    Int // paise / cents
   currency      String        @default("INR")
   durationLabel String        @default("30 mins")
@@ -560,7 +609,7 @@ model MarketingCampaign {
   endsAt       DateTime?
   // Payment that activated it (inverse of Payment.campaignId)
   payment      Payment?
-  notes        String?  @db.Text
+  notes        String?        @db.Text
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -667,12 +716,12 @@ model Review {
   reviewerName     String
   reviewerPhone    String? // captured from ReviewRequest if known; nullable for spontaneous reviews
   rating           Int // 1-5
-  text             String  @db.Text // Moderation
+  text             String         @db.Text // Moderation
   status           ReviewStatus   @default(PENDING)
   moderatedBy      String?
   moderatedAt      DateTime?
-  moderationReason String?  @db.Text // Vendor's public reply
-  vendorReply      String?  @db.Text
+  moderationReason String?        @db.Text // Vendor's public reply
+  vendorReply      String?        @db.Text
   vendorReplyAt    DateTime?
   createdAt        DateTime       @default(now())
 
@@ -699,7 +748,7 @@ model Deal {
   vendorId    String?
   vendor      Vendor?    @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   title       String
-  description String  @db.Text // "20% off", "Free nail trim", ...
+  description String     @db.Text // "20% off", "Free nail trim", ...
   offerLabel  String
   category    String?
   city        String?
@@ -731,15 +780,15 @@ model Event {
   vendorId    String?
   vendor      Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   title       String
-  description String  @db.Text
+  description String      @db.Text
   venue       String?
   city        String?
   citySlug    String?
   country     String?
   startsAt    DateTime
   endsAt      DateTime?
-  rsvpUrl     String?  @db.Text
-  bannerUrl   String?  @db.Text
+  rsvpUrl     String?     @db.Text
+  bannerUrl   String?     @db.Text
   status      EventStatus @default(PUBLISHED)
   createdBy   String?
   createdAt   DateTime    @default(now())

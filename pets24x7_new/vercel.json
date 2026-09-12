@@ -94,6 +94,14 @@
     {
       "source": "/review/:code/thanks/",
       "destination": "/review/thanks/index.html?code=:code"
+    },
+    {
+      "source": "/:country(in|us)/:city/:id/",
+      "destination": "/listing.html"
+    },
+    {
+      "source": "/:country(in|us)/:city/",
+      "destination": "/city.html"
     }
   ]
 }

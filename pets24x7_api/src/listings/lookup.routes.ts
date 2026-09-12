@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import { asyncHandler } from '../shared/async-handler.js';
 import { NotFoundError } from '../shared/errors.js';
-import { findListingByPhone, getListingById, searchListings, indexStats } from './index.js';
+import { findListingByPhone, getListingById, searchListings, indexStats, recentListings } from './index.js';
 import { normalizePhone } from '../shared/phone.js';
 import { prisma } from '../db.js';
 
@@ -32,36 +32,22 @@ listingsRouter.get(
     // request to an anonymous caller.
     const raw = Number(req.query.limit);
     const limit = Number.isFinite(raw) ? Math.min(Math.max(Math.trunc(raw), 1), MAX_SEARCH_RESULTS) : 60;
-    const results = searchListings({ q, category, city, limit });
+    // `newest=1` surfaces freshly imported or edited listings first, which a
+    // capped walk over 34k scraped rows would otherwise never reach.
+    const newestFirst = req.query.newest === '1' || req.query.newest === 'true';
+    const results = searchListings({ q, category, city, limit, newestFirst });
     res.json({ ok: true, count: results.length, listings: results });
   }),
 );
 
+// Recently added listings (imports + vendor self-registrations), newest first.
 listingsRouter.get(
-  '/:id',
+  '/recent',
   asyncHandler(async (req, res) => {
-    const r = getListingById(req.params.id ?? '');
-    if (!r) throw new NotFoundError('Listing not found');
-
-    // Merge in the claimed vendor's uploaded image + verified state, if any.
-    let claimed: { imageUrl: string | null; status: string; businessName: string } | null = null;
-    try {
-      claimed = await prisma.vendor.findFirst({
-        where: { listingId: r.id, claimedAt: { not: null } },
-        select: { imageUrl: true, status: true, businessName: true },
-      });
-    } catch {
-      // DB offline — serve the static record as-is.
-    }
-
-    res.json({
-      ok: true,
-      listing: {
-        ...r,
-        imageUrl: claimed?.imageUrl ?? null,
-        claimed: !!claimed && claimed.status === 'ACTIVE',
-      },
-    });
+    const raw = Number(req.query.limit);
+    const limit = Number.isFinite(raw) ? Math.min(Math.max(Math.trunc(raw), 1), 48) : 12;
+    const listings = recentListings(limit);
+    res.json({ ok: true, count: listings.length, listings });
   }),
 );
 
@@ -93,3 +79,59 @@ listingsRouter.get(
     });
   }),
 );
+
+// Kept last: '/:id' matches anything, so every literal path must precede it.
+listingsRouter.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const r = getListingById(req.params.id ?? '');
+    if (!r) throw new NotFoundError('Listing not found');
+
+    // Merge in the claimed vendor's uploaded image + verified state, if any.
+    let claimed:
+      | { imageUrl: string | null; status: string; businessName: string; galleryImages: string | null; about: string | null; openingHours: string | null; servicesList: string | null; website: string | null }
+      | null = null;
+    try {
+      claimed = await prisma.vendor.findFirst({
+        where: { listingId: r.id, claimedAt: { not: null } },
+        select: {
+          imageUrl: true,
+          status: true,
+          businessName: true,
+          galleryImages: true,
+          about: true,
+          openingHours: true,
+          servicesList: true,
+          website: true,
+        },
+      });
+    } catch {
+      // DB offline — serve the static record as-is.
+    }
+
+    res.json({
+      ok: true,
+      listing: {
+        ...r,
+        imageUrl: claimed?.imageUrl ?? null,
+        gallery: parseGallery(claimed?.galleryImages),
+        about: claimed?.about ?? null,
+        openingHours: claimed?.openingHours ?? null,
+        servicesList: claimed?.servicesList ?? null,
+        website: claimed?.website ?? r.website ?? null,
+        claimed: !!claimed && (claimed.status === 'ACTIVE' || claimed.status === 'CLAIMED'),
+      },
+    });
+  }),
+);
+
+function parseGallery(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string').slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+

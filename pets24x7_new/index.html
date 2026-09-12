@@ -339,6 +339,10 @@
 
     <form class="search-card" id="searchForm" onsubmit="event.preventDefault(); doSearch();">
       <div class="search-field">
+        <label for="searchQ">Business or service</label>
+        <input id="searchQ" placeholder="Name, e.g. Coco&rsquo;s Pet Boarding" autocomplete="off" />
+      </div>
+      <div class="search-field">
         <label for="searchCity">Where to?</label>
         <input list="cityList" id="searchCity" placeholder="City — Mumbai, Dallas, Bengaluru…" autocomplete="off" />
         <datalist id="cityList"></datalist>
@@ -617,6 +621,7 @@
 </a>
 
 <script src="config.js"></script>
+<script src="/api-client.js"></script>
 <script src="pets-data.js"></script>
 <script src="pets-loader.js"></script>
 <script>
@@ -678,22 +683,24 @@
   function renderFeatured() {
     var list = (window.PETS_FEATURED || []).slice(0, 8);
     var html = list.map(function(p, i){
-      return '<a class="feat-card" href="/' + p.country.toLowerCase() + '/' + encodeURIComponent(p.city_slug) + '/' + encodeURIComponent(p.id) + '/">' +
+      var pRating = Number(p.rating) || 0;
+      var pIcon = p.category_icon || '🐾';
+      return '<a class="feat-card" href="/' + String(p.country || 'in').toLowerCase() + '/' + encodeURIComponent(p.city_slug || '') + '/' + encodeURIComponent(p.id) + '/">' +
              '<div class="feat-img">' +
                 '<span class="badge-top">★ Top Rated</span>' +
-                '<span class="cat-chip">' + p.category_icon + ' ' + p.category + '</span>' +
-                '<span class="feat-icon" aria-hidden="true">' + (p.category_icon || '🐾') + '</span>' +
+                '<span class="cat-chip">' + pIcon + ' ' + escapeAttr(p.category) + '</span>' +
+                '<span class="feat-icon" aria-hidden="true">' + pIcon + '</span>' +
                 '<img loading="lazy" src="' + escapeAttr(cardImg(p)) + '" alt="' + escapeAttr(p.category || 'Pet service') + '" onerror="this.remove()">' +
              '</div>' +
              '<div class="feat-body">' +
                 '<h3>' + escapeAttr(p.name) + '</h3>' +
                 '<div class="feat-loc">📍 ' + escapeAttr(p.city) + (p.country==='US' && p.state ? ', ' + p.state : '') + '</div>' +
                 '<div class="feat-rating">' +
-                  '<span class="rating-pill">★ ' + p.rating.toFixed(1) + '</span>' +
+                  '<span class="rating-pill">★ ' + pRating.toFixed(1) + '</span>' +
                   '<span class="google-badge">' +
-                    '<span class="gscore">' + p.rating.toFixed(1) + '/5</span>' +
+                    '<span class="gscore">' + pRating.toFixed(1) + '/5</span>' +
                     '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
-                    '<span>' + p.review_count + ' ratings</span>' +
+                    '<span>' + (p.review_count || 0) + ' ratings</span>' +
                   '</span>' +
                 '</div>' +
              '</div>' +
@@ -704,26 +711,55 @@
 
   function doSearch() {
     var raw = document.getElementById('searchCity').value.trim();
-    if (!raw) return;
+    var q = (document.getElementById('searchQ') || {}).value || '';
+    q = q.trim();
+    var cat = document.getElementById('searchCat').value;
     // strip ", US" hint from datalist labels
     var cityName = raw.replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
     var slug = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    var cat = document.getElementById('searchCat').value;
-    // detect country: USA cities get country=US, else fall back to IN
-    var country = /,\s*US|USA/i.test(raw) ? 'US' : '';
-    if (!country) {
-      // try to detect via the index
-      var match = (window.PETS_INDEX || []).find(function(c){ return c.city_slug === slug; });
-      country = match ? match.country : 'IN';
+
+    // A city page is only built for cities in the last static build, so jumping
+    // straight to /in/<slug>/ landed on a 404 for any other city — and for a
+    // typed business name there is no such page at all. Only take that shortcut
+    // when the city really is in the index and nothing else was typed.
+    if (!q && slug) {
+      var match = (window.PETS_INDEX || []).filter(function(c){ return c.city_slug === slug; })[0];
+      if (match) {
+        var url = '/' + match.country.toLowerCase() + '/' + encodeURIComponent(slug) + '/';
+        if (cat) url += encodeURIComponent(cat) + '/';
+        location.href = url;
+        return;
+      }
     }
-    var url = '/' + country.toLowerCase() + '/' + encodeURIComponent(slug) + '/';
-    if (cat) url += encodeURIComponent(cat) + '/';
-    location.href = url;
+
+    if (!q && !cityName && !cat) return;
+    var qs = [];
+    if (q) qs.push('q=' + encodeURIComponent(q));
+    if (cityName) qs.push('city=' + encodeURIComponent(cityName));
+    if (cat) qs.push('category=' + encodeURIComponent(cat));
+    location.href = '/search/' + (qs.length ? '?' + qs.join('&') : '');
+  }
+
+  // Listings added after the last static build (admin imports, self-registered
+  // businesses) live only in the API index, so the bundled snapshot never shows
+  // them. Pull the newest ones in and put them at the front of the grid.
+  function loadRecentListings() {
+    if (!window.api || !api.get) return;
+    api.get('/api/listings/recent?limit=8').then(function (r) {
+      var fresh = (r && r.listings) || [];
+      if (!fresh.length) return;
+      var existing = (window.PETS_FEATURED || []).filter(function (p) {
+        return !fresh.some(function (f) { return f.id === p.id; });
+      });
+      window.PETS_FEATURED = fresh.concat(existing);
+      renderFeatured();
+    }).catch(function () { /* API offline — the bundled snapshot still renders */ });
   }
 
   // initial render
   renderCities();
   renderFeatured();
+  loadRecentListings();
   window.addEventListener('petsUpdated', function(){ renderCities(); renderFeatured(); });
 </script>
 

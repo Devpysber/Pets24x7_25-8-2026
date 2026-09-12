@@ -368,26 +368,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         My Listing
       </a>
-      <a class="nav-item" data-view="services">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-        Services
-      </a>
       <a class="nav-item" data-view="enquiries">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Enquiries
         <span class="badge" id="enqNavBadge" hidden>0</span>
       </a>
-      <a class="nav-item" data-view="reviews">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Reviews
-      </a>
       <a class="nav-item" data-view="performance">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Performance
-      </a>
-      <a class="nav-item" data-view="account">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Business Account
       </a>
       <a class="nav-item" data-view="subscriptions" style="color:#2563EB; font-weight:600;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -446,7 +434,6 @@
         <!-- Quick Actions Bar -->
         <div class="quick-actions">
           <button class="btn btn-primary btn-sm" onclick="navigate('listing')">Edit Listing</button>
-          <button class="btn btn-sm" onclick="openAddServiceModal()">Add Service</button>
           <button class="btn btn-sm" onclick="navigate('enquiries')">View Enquiries</button>
           <button class="btn btn-sm" onclick="navigate('grow')">🚀 Grow Your Business</button>
         </div>
@@ -462,23 +449,7 @@
             <div class="metric-trend" style="color:var(--text-muted);" id="mEnqNew">—</div>
           </div>
 
-          <div class="metric-card">
-            <div class="metric-top">
-              <span class="metric-lbl">Services Listed</span>
-              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5M17 3l3 4-3 4M7 21l-3-4 3-4"/></svg>
-            </div>
-            <div class="metric-val" id="mServices">—</div>
-            <div class="metric-trend" style="color:var(--text-muted);">On your listing</div>
-          </div>
 
-          <div class="metric-card">
-            <div class="metric-top">
-              <span class="metric-lbl">Published Reviews</span>
-              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <div class="metric-val" id="mReviews">—</div>
-            <div class="metric-trend" style="color:var(--text-muted);" id="mReviewAvg">No reviews yet</div>
-          </div>
 
           <div class="metric-card">
             <div class="metric-top">
@@ -555,6 +526,19 @@
         <div class="card">
           <div class="card-header">
             <div>
+              <div class="card-title">Listing Photo Gallery</div>
+              <div class="card-subtitle">Up to 5 extra photos shown on your public listing page, under the storefront photo.</div>
+            </div>
+          </div>
+          <div id="vGalleryGrid" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;"></div>
+          <input type="file" id="vGalleryFile" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+          <button class="btn btn-sm btn-primary" id="vGalleryAdd" onclick="document.getElementById('vGalleryFile').click()">+ Add photo</button>
+          <div id="vGalleryMsg" style="font-size:12px; margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
               <div class="card-title">Business Information</div>
               <div class="card-subtitle">Public details shown to customers.</div>
             </div>
@@ -569,18 +553,25 @@
             <div style="grid-column: 1 / -1;"><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Street Address</div><div style="font-weight:600; margin-top:2px;" id="infoAddress">—</div></div>
           </div>
         </div>
-      </section>
-
-      <!-- 3. SERVICES VIEW -->
-      <section id="view-services" class="view-pane">
-        <div class="card-header" style="margin-bottom:16px;">
-          <div>
-            <h2 style="font-size:18px; font-weight:700;">Services Offered</h2>
-            <div class="card-subtitle">Manage the services customers can find on your listing.</div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddServiceModal()">+ Add Service</button>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:6px;">Change email address</div>
+          <div class="card-subtitle" style="margin-bottom:14px;">Receipts, enquiry alerts and sign-in codes go here. A new address has to be verified.</div>
+          <div class="form-group"><label>Business email</label><input type="email" class="form-control" id="accEmailInput" placeholder="you@business.com" /></div>
+          <button class="btn btn-primary btn-sm" id="accEmailSave">Save email</button>
+          <div id="accEmailMsg" style="font-size:12.5px; margin-top:8px;"></div>
         </div>
-        <div class="services-grid" id="servicesGrid"></div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:6px;">Change password</div>
+          <div class="card-subtitle" style="margin-bottom:14px;">Used for password sign-in. Signing in with an emailed code keeps working either way.</div>
+          <div class="form-group" id="accCurrentPassWrap"><label>Current password</label><input type="password" class="form-control" id="accCurrentPass" autocomplete="current-password" /></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group"><label>New password</label><input type="password" class="form-control" id="accNewPass" autocomplete="new-password" /></div>
+            <div class="form-group"><label>Confirm new password</label><input type="password" class="form-control" id="accNewPass2" autocomplete="new-password" /></div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="accPassSave">Update password</button>
+          <div id="accPassMsg" style="font-size:12.5px; margin-top:8px;"></div>
+        </div>
       </section>
 
       <!-- 4. ENQUIRIES VIEW -->
@@ -619,22 +610,6 @@
         </div>
       </section>
 
-      <!-- 5. REVIEWS VIEW -->
-      <section id="view-reviews" class="view-pane">
-        <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
-          <div>
-            <div style="font-size:32px; font-weight:700; color:var(--text-main); line-height:1;" id="revAvg">—</div>
-            <div style="color:#D97706; font-size:14px; margin-top:4px; font-weight:700;" id="revStars"></div>
-            <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;" id="revCount">No reviews yet</div>
-          </div>
-          <button class="btn btn-wa btn-sm" onclick="openBulkReviewModal()">Request Reviews on WhatsApp</button>
-        </div>
-        <div class="card">
-          <div class="card-title" style="margin-bottom:12px;">Customer Reviews</div>
-          <div id="reviewsList"></div>
-        </div>
-      </section>
-
       <!-- 6. PERFORMANCE VIEW -->
       <section id="view-performance" class="view-pane">
         <div class="card-header" style="margin-bottom:16px;">
@@ -647,9 +622,6 @@
           <div class="metric-card"><span class="metric-lbl">Total Enquiries</span><div class="metric-val" id="pEnqTotal">—</div></div>
           <div class="metric-card"><span class="metric-lbl">New / Unhandled</span><div class="metric-val" id="pEnqNew">—</div></div>
           <div class="metric-card"><span class="metric-lbl">Completed</span><div class="metric-val" id="pEnqDone">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Published Reviews</span><div class="metric-val" id="pReviews">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Avg. Rating</span><div class="metric-val" id="pRating">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Services Listed</span><div class="metric-val" id="pServices">—</div></div>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted); margin-top:12px;">Profile-view and impression tracking is not enabled for this account yet.</p>
       </section>
@@ -806,22 +778,6 @@
       </section>
 
       <!-- 8. ACCOUNT VIEW -->
-      <section id="view-account" class="view-pane">
-        <div class="card">
-          <div class="card-title" style="margin-bottom:16px;">Business Profile Details</div>
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; font-size:13.5px;">
-            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Business Name</div><div style="font-weight:600; margin-top:2px;" id="accBizName">—</div></div>
-            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Category</div><div style="font-weight:600; margin-top:2px;" id="accCategory">—</div></div>
-            <div>
-              <div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Email Address</div>
-              <div style="font-weight:600; margin-top:2px;" id="accEmail">—</div>
-              <div id="accEmailVerify" style="margin-top:6px; font-size:12.5px;"></div>
-            </div>
-            <div><div style="font-weight:600; color:var(--text-muted); font-size:11.5px; text-transform:uppercase;">Phone Number</div><div style="font-weight:600; margin-top:2px;" id="accPhone">—</div></div>
-          </div>
-        </div>
-      </section>
-
       <!-- 9. SETTINGS VIEW -->
       <section id="view-settings" class="view-pane">
         <div class="card">
@@ -1054,27 +1010,6 @@
 
 
 <!-- Other Modals -->
-<div class="modal-backdrop" id="addServiceModal">
-  <div class="modal-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <h3 style="font-size:16px; font-weight:700;">Add Service</h3>
-      <button onclick="closeModal('addServiceModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
-    </div>
-    <form id="addServiceForm">
-      <div class="form-group"><label>Service Name</label><input type="text" class="form-control" placeholder="e.g. Grooming &amp; Bathing" id="sName" required /></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="form-group"><label>Price (₹)</label><input type="number" class="form-control" min="0" placeholder="700" id="sPrice" required /></div>
-        <div class="form-group"><label>Duration</label><input type="text" class="form-control" placeholder="45 mins" id="sDuration" /></div>
-      </div>
-      <div class="form-group"><label>Description <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label><textarea class="form-control" id="sDesc" rows="2" placeholder="What's included, e.g. bath + blow-dry + nail clip"></textarea></div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-        <button type="button" class="btn btn-sm" onclick="closeModal('addServiceModal')">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Save Service</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div class="modal-backdrop" id="editBizModal">
   <div class="modal-panel" style="max-width:680px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -1086,10 +1021,17 @@
         <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="ebName" required /></div>
         <div class="form-group"><label>Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
         <div class="form-group"><label>City</label><input type="text" class="form-control" id="ebCity" required /></div>
         <div class="form-group"><label>Locality / Area</label><input type="text" class="form-control" id="ebLocality" /></div>
+        <div class="form-group"><label>Country</label>
+          <select class="form-control" id="ebCountry">
+            <option value="IN">India</option>
+            <option value="US">United States</option>
+          </select>
+        </div>
       </div>
+      <div class="form-group"><label>PIN / ZIP code</label><input type="text" class="form-control" id="ebPincode" /></div>
       <div class="form-group"><label>Full Address</label><input type="text" class="form-control" id="ebAddress" required /></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" required /></div>
@@ -1135,19 +1077,6 @@
   </div>
 </div>
 
-<div class="modal-backdrop" id="bulkReviewModal">
-  <div class="modal-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <h3 style="font-size:16px; font-weight:700;">Send Review Requests</h3>
-      <button onclick="closeModal('bulkReviewModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
-    </div>
-    <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">Enter customer WhatsApp numbers (one per line) to send review invitation links.</p>
-    <textarea class="form-control" id="rrInput" placeholder="+91 98765 43210 — Rahul Sharma&#10;+91 99887 76655 — Priya Mehta" style="height:110px;"></textarea>
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-      <button class="btn btn-sm" onclick="closeModal('bulkReviewModal')">Cancel</button>
-      <button class="btn btn-wa btn-sm" id="rrSend">Send Review Requests</button>
-    </div>
-<!-- Payment Gateway Checkout Modal -->
 <div class="modal-backdrop" id="vendorPaymentGatewayModal">
   <div class="modal-panel" style="max-width:540px; padding:0; overflow:hidden; border-radius:16px;">
     <!-- Modal Header -->
@@ -1345,11 +1274,8 @@
     var titles = {
       dash: ['Dashboard', 'Overview of your business activity on Pets24x7.'],
       listing: ['My Listing', 'Manage how your business appears on Pets24x7.'],
-      services: ['Services Offered', 'Manage the services customers can find on your listing.'],
       enquiries: ['Customer Enquiries', 'Manage enquiries received from Pet Parents.'],
-      reviews: ['Customer Reviews', 'View ratings and feedback.'],
       performance: ['Business Performance', 'Track profile visibility and customer engagement.'],
-      account: ['Business Account', 'Manage owner profile and account details.'],
       grow: ['Grow Your Business', 'Managed marketing campaigns by the Pets24x7 team.'],
       'grow-plans': ['Select Marketing Plan', 'Choose campaign duration and estimated customer reach.'],
       subscriptions: ['Vendor Subscriptions & Payment', 'Manage your subscription tier, lead limits, and payment receipts.'],
@@ -1405,29 +1331,36 @@
   }
 
   function loadVendorSubscriptions() {
-    api.vendorSubPlans().then(function(r) {
-      vendorSubState.plans = r.plans || [];
-      renderVendorSubPlans();
-    }).catch(function() { renderVendorSubPlans(); });
+    // Both calls have to land before the cards render. Rendering on whichever
+    // resolved first marked the wrong card "Current Active Plan" (and disabled
+    // its Subscribe button) while the banner showed the real plan.
+    var plans = api.vendorSubPlans()
+      .then(function(r) { vendorSubState.plans = r.plans || []; })
+      .catch(function() { vendorSubState.plans = []; });
 
-    api.vendorSubMe().then(function(r) {
-      vendorSubState.subscription = r.subscription || null;
-      vendorSubState.invoices = r.invoices || [];
+    var mine = api.vendorSubMe()
+      .then(function(r) {
+        vendorSubState.subscription = r.subscription || null;
+        vendorSubState.invoices = r.invoices || [];
+      })
+      .catch(function() { vendorSubState.subscription = null; vendorSubState.invoices = []; });
+
+    return Promise.all([plans, mine]).then(function() {
       renderVendorSubBanner();
       renderVendorInvoices();
-    }).catch(function() {
-      renderVendorSubBanner();
-      renderVendorInvoices();
+      renderVendorSubPlans();
     });
   }
 
   function renderVendorSubBanner() {
+    // No invented plan: showing Gold to an account that is on Basic Free is
+    // exactly what made the banner and the plan cards disagree.
     var sub = vendorSubState.subscription || {
-      tier: 'GOLD',
-      tierName: 'Vendor Gold Platinum Plan',
-      badge: 'GOLD_PLATINUM',
+      tier: 'BASIC',
+      tierName: 'Basic Free Plan',
+      badge: 'STANDARD',
       status: 'ACTIVE',
-      endsAt: new Date(Date.now() + 30 * 86400 * 1000),
+      endsAt: null,
       leadLimit: 9999
     };
 
@@ -1438,12 +1371,16 @@
     var leadsEl = document.getElementById('vSubLeadCount');
     var badgeStatEl = document.getElementById('vSubBadgeStatus');
 
-    if (titleEl) titleEl.textContent = sub.tierName || 'Vendor Gold Platinum Plan';
-    if (badgeEl) badgeEl.textContent = '⭐ ' + (sub.badge || 'GOLD_PLATINUM').replace('_', ' ');
+    if (titleEl) titleEl.textContent = sub.tierName || 'Basic Free Plan';
+    if (badgeEl) badgeEl.textContent = '⭐ ' + String(sub.badge || 'STANDARD').replace(/_/g, ' ');
     if (statusEl) statusEl.textContent = '● ' + (sub.status || 'ACTIVE');
     if (validityEl) {
-      var dStr = sub.endsAt ? new Date(sub.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Next Month';
-      validityEl.textContent = 'Valid until ' + dStr + ' • Auto-renew active';
+      if (sub.endsAt) {
+        var dStr = new Date(sub.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+        validityEl.textContent = 'Valid until ' + dStr + (sub.autoRenew ? ' • Auto-renew active' : ' • Auto-renew off');
+      } else {
+        validityEl.textContent = 'No expiry — upgrade any time';
+      }
     }
     if (leadsEl) leadsEl.textContent = '∞ Unlimited Customer Leads';
     if (badgeStatEl) badgeStatEl.textContent = (sub.tier === 'GOLD' || sub.tier === 'DIAMOND') ? 'Verified Gold Business' : 'Verified Business Listing';
@@ -1460,11 +1397,13 @@
       { id: 'v_plan_diamond', name: 'Diamond Enterprise', priceRupees: 24999, leadLimit: 9999, tier: 'DIAMOND', badge: 'DIAMOND_VIP', perks: ['💎 Diamond Badge', '∞ Unlimited Customer Leads', 'Top Ranking Across All Cities', 'Includes 30 Days Free Featured Spot', 'VIP 24/7 Priority Support'] }
     ];
 
-    var currentTier = (vendorSubState.subscription && vendorSubState.subscription.tier) || 'GOLD';
+    // Until /subscriptions/me has answered, nothing is the current plan — so no
+    // card is disabled and every Subscribe button stays clickable.
+    var currentTier = vendorSubState.subscription ? vendorSubState.subscription.tier : null;
     var isAnnual = vendorSubState.billingPeriod === 'ANNUAL';
 
     grid.innerHTML = plans.map(function(p) {
-      var isCurrent = p.tier === currentTier;
+      var isCurrent = currentTier != null && p.tier === currentTier;
       var price = p.priceRupees;
       var periodText = '/ month';
       if (isAnnual && price > 0) {
@@ -1583,38 +1522,74 @@
 
     var target = vendorSubState.checkoutTarget || { type: 'SUBSCRIPTION', payload: 'v_plan_gold' };
     var planId = typeof target.payload === 'string' ? target.payload : (target.payload.id || 'v_plan_gold');
+    var label = '🔒 Pay & Activate Now';
+
+    function stop(msg) {
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+      if (msg) alert(msg);
+    }
+
+    function done(vRes) {
+      closeModal('vendorPaymentGatewayModal');
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+      alert('Payment successful. Your subscription is active.' +
+            (vRes && vRes.invoice ? '\n\nInvoice reference: ' + vRes.invoice.merchantTxnId : ''));
+      loadVendorSubscriptions();
+    }
 
     api.vendorSubCheckout({
       planId: planId,
       billingPeriod: vendorSubState.billingPeriod,
       paymentGateway: 'RAZORPAY'
     }).then(function(res) {
-      var txnId = res.merchantTxnId || ('TXN_' + Date.now());
+      // A free plan is activated by the checkout call itself — there is nothing
+      // to pay for and no signature to verify.
+      if (res.isFree) { done(res); return; }
 
-      return api.vendorSubVerify({
-        merchantTxnId: txnId,
-        planId: planId,
-        billingPeriod: vendorSubState.billingPeriod,
-        priceRupees: res.amountRupees || 2999,
-        paymentMethod: 'Razorpay / Card'
+      var c = res.checkout || {};
+      var txnId = res.merchantTxnId;
+
+      // The server verifies the Razorpay signature, so the real gateway has to
+      // run. Skipping it (as this used to) meant every "payment" was rejected
+      // and the failure was then reported to the vendor as a success.
+      if (c.mode !== 'razorpay' && c.mode !== 'simulated') {
+        stop('Could not start payment: the payment gateway is not available right now.');
+        return;
+      }
+
+      return loadRazorpay().then(function() {
+        var rzp = new Razorpay({
+          key: c.keyId,
+          order_id: c.orderId,
+          amount: c.amountMinor,
+          currency: c.currency || 'INR',
+          name: 'Pets24x7',
+          description: (document.getElementById('vPayItemName') || {}).textContent || 'Pets24x7 subscription',
+          theme: { color: '#2563EB' },
+          handler: function(resp) {
+            if (btn) btn.textContent = 'Confirming…';
+            api.vendorSubVerify({
+              merchantTxnId: txnId,
+              planId: planId,
+              billingPeriod: vendorSubState.billingPeriod,
+              paymentMethod: 'Razorpay',
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature
+            }).then(done).catch(function(e) {
+              stop('Payment was taken but could not be confirmed: ' + fmtErr(e) +
+                   '\n\nQuote reference ' + txnId + ' to support.');
+            });
+          },
+          modal: { ondismiss: function() { stop(null); } }
+        });
+        rzp.on('payment.failed', function(e) {
+          stop('Payment failed: ' + ((e.error && e.error.description) || 'please try another method.'));
+        });
+        rzp.open();
       });
-    }).then(function(vRes) {
-      closeModal('vendorPaymentGatewayModal');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '🔒 Pay &amp; Activate Now';
-      }
-
-      alert('🎉 Payment Successful!\n\nYour subscription has been upgraded and activated successfully. Invoice reference: ' + (vRes.invoice ? vRes.invoice.merchantTxnId : 'TXN_OK'));
-      loadVendorSubscriptions();
     }).catch(function(err) {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '🔒 Pay &amp; Activate Now';
-      }
-      alert('Payment complete! Subscription tier updated successfully.');
-      closeModal('vendorPaymentGatewayModal');
-      loadVendorSubscriptions();
+      stop('Could not start payment: ' + fmtErr(err));
     });
   }
 
@@ -2093,7 +2068,9 @@
     }).catch(function(err) { alert('Could not post reply: ' + fmtErr(err)); });
   }
 
-  function openAddServiceModal() { document.getElementById('addServiceModal').classList.add('show'); }
+  // Services were removed from the vendor dashboard; kept as a no-op so an
+  // older cached page cannot throw on the missing modal.
+  function openAddServiceModal() {}
   function openEditBizModal() { document.getElementById('editBizModal').classList.add('show'); }
   function openPreviewModal() {
     var f = document.getElementById('previewIframe');
@@ -2155,8 +2132,8 @@
       invalid: ['#FEF2F2', '#B91C1C', 'That verification link is not valid. Send a fresh one below.']
     }[stateParam];
     if (!copy) return;
-    navigate('account');
-    var host = document.getElementById('view-account');
+    navigate('listing');
+    var host = document.getElementById('view-listing');
     if (host) {
       var bar = document.createElement('div');
       bar.style.cssText = 'background:' + copy[0] + '; color:' + copy[1] +
@@ -2167,11 +2144,8 @@
     if (history.replaceState) history.replaceState(null, '', location.pathname);
   }
 
-  function openBulkReviewModal() {
-    var box = document.getElementById('rrResults');
-    if (box) { box.style.display = 'none'; box.innerHTML = ''; }
-    document.getElementById('bulkReviewModal').classList.add('show');
-  }
+  // Reviews were removed from the vendor dashboard; kept as a no-op.
+  function openBulkReviewModal() {}
 
   // Every request always produces a working review link. When WhatsApp is not
   // connected (or a single send fails) the link is shown with a one-tap wa.me
@@ -2371,6 +2345,8 @@
       businessName: name,
       category: document.getElementById('ebCategory').value.trim() || undefined,
       city: document.getElementById('ebCity').value.trim() || undefined,
+      country: (document.getElementById('ebCountry') || {}).value || undefined,
+      pincode: ((document.getElementById('ebPincode') || {}).value || '').trim() || undefined,
       locality: document.getElementById('ebLocality').value.trim() || undefined,
       address: document.getElementById('ebAddress').value.trim() || undefined,
       phone: document.getElementById('ebPhone').value.trim() || undefined,
@@ -2465,7 +2441,18 @@
     state.vendor.openingHours = v.openingHours || state.vendor.openingHours || '';
     state.vendor.servicesList = v.servicesList || state.vendor.servicesList || '';
     state.vendor.status = v.status || state.vendor.status || '';
+    state.vendor.country = v.country || state.vendor.country || 'IN';
     if (v.imageUrl !== undefined) state.vendor.imageUrl = v.imageUrl || '';
+    if (v.galleryImages !== undefined) {
+      state.vendor.galleryImages = Array.isArray(v.galleryImages) ? v.galleryImages : [];
+      renderVendorGallery();
+    }
+    if (v.hasPassword !== undefined) {
+      state.vendor.hasPassword = !!v.hasPassword;
+      // Nothing to confirm against when the account has only ever used codes.
+      var cw = document.getElementById('accCurrentPassWrap');
+      if (cw) cw.hidden = !state.vendor.hasPassword;
+    }
     var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; };
     set('dashBizName', state.vendor.businessName);
     set('infoBizName', state.vendor.businessName);
@@ -2502,6 +2489,9 @@
     if ((f = document.getElementById('ebHours'))) f.value = state.vendor.openingHours;
     if ((f = document.getElementById('ebServices'))) f.value = state.vendor.servicesList;
     if ((f = document.getElementById('ebImageUrl'))) f.value = state.vendor.imageUrl;
+    if ((f = document.getElementById('ebCountry'))) f.value = state.vendor.country || 'IN';
+    if ((f = document.getElementById('ebPincode'))) f.value = state.vendor.pincode || '';
+    if ((f = document.getElementById('accEmailInput'))) f.value = state.vendor.email;
     if ((f = document.getElementById('csBizName'))) f.value = state.vendor.businessName;
     if ((f = document.getElementById('csPhone')) && !f.value) f.value = state.vendor.phone;
     if ((f = document.getElementById('csLocation')) && !f.value) f.value = state.vendor.city || '';
@@ -2584,6 +2574,138 @@
       msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
     });
   }
+
+  // ---- Listing photo gallery (max 5) ----
+  var GALLERY_MAX = 5;
+
+  function renderVendorGallery() {
+    var grid = document.getElementById('vGalleryGrid');
+    if (!grid) return;
+    var list = state.vendor.galleryImages || [];
+    if (!list.length) {
+      grid.innerHTML = '<div style="font-size:13px; color:var(--text-muted);">No extra photos yet.</div>';
+    } else {
+      grid.innerHTML = list.map(function(src, i) {
+        return '<div style="position:relative; width:132px; height:99px; border-radius:10px; overflow:hidden; border:1px solid var(--border);">' +
+          '<img src="' + esc(src) + '" alt="Listing photo ' + (i + 1) + '" style="width:100%; height:100%; object-fit:cover;">' +
+          '<button class="btn btn-sm" style="position:absolute; top:6px; right:6px; padding:2px 8px; font-size:11px; background:#fff;" ' +
+          'onclick="removeGalleryImage(' + i + ')">Remove</button>' +
+        '</div>';
+      }).join('');
+    }
+    var add = document.getElementById('vGalleryAdd');
+    if (add) {
+      var full = list.length >= GALLERY_MAX;
+      add.disabled = full;
+      add.textContent = full ? 'Photo limit reached (5)' : '+ Add photo';
+    }
+  }
+
+  function saveGallery(list, msgText) {
+    var msg = document.getElementById('vGalleryMsg');
+    if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving...'; }
+    return api.vendorUpdateMyBusiness({ galleryImages: list }).then(function(r) {
+      state.vendor.galleryImages = (r.business && r.business.galleryImages) || list;
+      renderVendorGallery();
+      if (msg) { msg.style.color = 'var(--success)'; msg.textContent = msgText; setTimeout(function(){ msg.textContent = ''; }, 2500); }
+    }).catch(function(err) {
+      if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err); }
+    });
+  }
+
+  function removeGalleryImage(index) {
+    var list = (state.vendor.galleryImages || []).slice();
+    if (index < 0 || index >= list.length) return;
+    if (!confirm('Remove this photo from your listing?')) return;
+    list.splice(index, 1);
+    saveGallery(list, 'Removed');
+  }
+
+  (function wireGalleryUpload() {
+    var input = document.getElementById('vGalleryFile');
+    if (!input) return;
+    input.addEventListener('change', function() {
+      var file = this.files && this.files[0];
+      this.value = '';
+      if (!file) return;
+      var list = (state.vendor.galleryImages || []).slice();
+      var msg = document.getElementById('vGalleryMsg');
+      if (list.length >= GALLERY_MAX) {
+        if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = 'You can keep at most 5 photos. Remove one first.'; }
+        return;
+      }
+      if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resizing...'; }
+      resizeImage(file, 600, 0.8).then(function(dataUrl) {
+        if (dataUrl.length > 480000) return resizeImage(file, 480, 0.7);
+        return dataUrl;
+      }).then(function(dataUrl) {
+        if (dataUrl.length > 560000) throw new Error('Image still too large after resize - try a simpler photo.');
+        list.push(dataUrl);
+        return saveGallery(list, 'Saved');
+      }).catch(function(err) {
+        if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err); }
+      });
+    });
+  })();
+
+  // ---- Account: change email / change password ----
+  (function wireAccountControls() {
+    var emailBtn = document.getElementById('accEmailSave');
+    if (emailBtn) {
+      emailBtn.addEventListener('click', function() {
+        var msg = document.getElementById('accEmailMsg');
+        var value = (document.getElementById('accEmailInput').value || '').trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
+          msg.style.color = 'var(--danger)'; msg.textContent = 'Enter a valid email address.';
+          return;
+        }
+        emailBtn.disabled = true; emailBtn.textContent = 'Saving...';
+        api.vendorPatch({ email: value }).then(function(r) {
+          applyVendor(r.vendor);
+          msg.style.color = 'var(--success)';
+          msg.textContent = r.verificationSent
+            ? 'Saved. Check that inbox for the verification link.'
+            : 'Saved.';
+        }).catch(function(err) {
+          msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
+        }).finally(function() {
+          emailBtn.disabled = false; emailBtn.textContent = 'Save email';
+        });
+      });
+    }
+
+    var passBtn = document.getElementById('accPassSave');
+    if (passBtn) {
+      passBtn.addEventListener('click', function() {
+        var msg = document.getElementById('accPassMsg');
+        var current = document.getElementById('accCurrentPass').value || '';
+        var next = document.getElementById('accNewPass').value || '';
+        var again = document.getElementById('accNewPass2').value || '';
+        if (next.length < 8) {
+          msg.style.color = 'var(--danger)'; msg.textContent = 'New password must be at least 8 characters.';
+          return;
+        }
+        if (next !== again) {
+          msg.style.color = 'var(--danger)'; msg.textContent = 'The two new passwords do not match.';
+          return;
+        }
+        passBtn.disabled = true; passBtn.textContent = 'Saving...';
+        api.vendorChangePassword({ currentPassword: current || undefined, newPassword: next }).then(function() {
+          state.vendor.hasPassword = true;
+          var cw = document.getElementById('accCurrentPassWrap');
+          if (cw) cw.hidden = false;
+          document.getElementById('accCurrentPass').value = '';
+          document.getElementById('accNewPass').value = '';
+          document.getElementById('accNewPass2').value = '';
+          msg.style.color = 'var(--success)'; msg.textContent = 'Password updated.';
+        }).catch(function(err) {
+          msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
+        }).finally(function() {
+          passBtn.disabled = false; passBtn.textContent = 'Update password';
+        });
+      });
+    }
+  })();
 
   var GOAL_LABEL = { WHATSAPP_ENQUIRIES: 'Get WhatsApp Enquiries', WEBSITE_LEADS: 'Get Website Leads', PROFILE_VISITS: 'Get Profile Visits' };
 
@@ -2674,6 +2796,13 @@
   }
 
   function load() {
+    // The dashboard endpoint returns only a summary. The full record (address,
+    // about, hours, gallery, country) lives here, and without it the Edit
+    // Business Information form opened empty.
+    api.vendorMyBusiness().then(function(r) {
+      applyVendor(r.business);
+    }).catch(function() {});
+
     api.vendorDashboard().then(function(d) {
       if (d.listing && d.listing.address) state.vendor.address = d.listing.address;
       if (d.listing && d.listing.id && d.listing.id !== 'unclaimed') {

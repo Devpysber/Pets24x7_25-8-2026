@@ -23,6 +23,7 @@ import { getListingById } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { featuredCreatedEmail } from '../mail/action-templates.js';
+import { isVendorApproved } from '../shared/vendor-status.js';
 
 export const featuredPublicRouter = Router();
 export const vendorFeaturedRouter = Router();
@@ -85,7 +86,7 @@ vendorFeaturedRouter.post(
 
     const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
     if (!vendor) throw new ForbiddenError();
-    if (vendor.status !== 'ACTIVE') throw new ForbiddenError('Your vendor account must be approved first');
+    if (!isVendorApproved(vendor.status)) throw new ForbiddenError('Your vendor account must be approved first');
     if (!vendor.listingId) throw new BadRequestError('Claim your listing before buying Featured placement');
 
     const option = featuredOptionFor(body.durationDays);

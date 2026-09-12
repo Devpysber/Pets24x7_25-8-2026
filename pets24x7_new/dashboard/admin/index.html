@@ -2419,9 +2419,19 @@
     }
   }
 
+  // Opens the modal for a row of the currently filtered vendor list.
+  function openVendorModalAt(index) {
+    var v = (vendorState.filteredVendors || [])[index];
+    if (v) showVendorModal(v);
+  }
+
   function openVendorModal(json) {
     var v = {};
     try { v = JSON.parse(decodeURIComponent(json)); } catch (e) { try { v = JSON.parse(json); } catch (e2) { v = { name: String(json || '') }; } }
+    showVendorModal(v);
+  }
+
+  function showVendorModal(v) {
     document.getElementById('vModalName').textContent = v.name || 'Vendor Details';
     document.getElementById('vModalBody').innerHTML =
       '<div style="font-weight:700; font-size:15px; margin-bottom:6px;">' + escH(v.name || '—') + '</div>' +
@@ -2728,9 +2738,11 @@
     var pageItems = vendorState.filteredVendors.slice(start, end);
     var total = vendorState.filteredVendors.length;
 
-    rows(tbodyOf('vendors'), pageItems, 6, function(v) {
-      var vJson = encAttr(JSON.stringify(v));
-      var acts = '<button class="btn btn-sm" onclick="openVendorModal(\'' + vJson + '\')">View</button>';
+    rows(tbodyOf('vendors'), pageItems, 6, function(v, i) {
+      // Look the row up by position instead of round-tripping the whole record
+      // through an onclick attribute: any quote, ampersand or newline in a
+      // business name broke that attribute, and View then did nothing at all.
+      var acts = '<button class="btn btn-sm" onclick="openVendorModalAt(' + (start + i) + ')">View</button>';
       if (v.status === 'PENDING') {
         acts = '<button class="btn btn-sm btn-primary" onclick="adminSetVendor(\'' + v.id + '\',\'ACTIVE\')">Approve</button> ' +
                '<button class="btn btn-sm btn-danger" onclick="adminSetVendor(\'' + v.id + '\',\'REJECTED\')">Reject</button>';

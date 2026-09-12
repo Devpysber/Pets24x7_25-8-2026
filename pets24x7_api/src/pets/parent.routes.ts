@@ -36,7 +36,7 @@ async function sendFirstPetRecommendations(
   parentId: string,
   email: string,
   name: string,
-  pet: { name: string; species: unknown; breed: string | null; ageYears: number | null; vaccinated: boolean },
+  pet: { name: string; species: unknown; breed: string | null; ageYears: number | null; ageMonths?: number | null; vaccinated: boolean },
 ): Promise<void> {
   const parent = await prisma.petParent.findUnique({ where: { id: parentId } });
   // No city, no mail. Substituting a default sends someone in Bhopal five
@@ -320,6 +320,8 @@ const PetBody = z.object({
   species: z.enum(['DOG','CAT','BIRD','RABBIT','REPTILE','SMALL_MAMMAL','OTHER']),
   breed: z.string().max(60).optional(),
   ageYears: z.number().int().min(0).max(50).optional(),
+  // Under-a-year pets need months, not a rounded-down 0 years.
+  ageMonths: z.number().int().min(0).max(11).optional(),
   gender: z.enum(['Male', 'Female', 'Unspecified']).optional(),
   vaccinated: z.boolean().optional(),
   // Health dates the reminder mails key off. '' clears one; an ISO date sets it.
@@ -366,6 +368,7 @@ parentDashboardRouter.post(
         species: String(pet.species),
         breed: pet.breed,
         ageYears: pet.ageYears,
+        ageMonths: pet.ageMonths,
       }),
     );
 

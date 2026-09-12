@@ -103,10 +103,19 @@ export function profileUpdatedEmail(to: string, name: string, changed: string[])
 // Pet parent — pets
 // ===========================================================================
 
+/** "2 years 3 months", "7 months", or an em dash when neither part is set. */
+export function formatPetAge(years: number | null, months: number | null): string {
+  const parts: string[] = [];
+  if (years != null && years > 0) parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  if (months != null && months > 0) parts.push(`${months} month${months === 1 ? '' : 's'}`);
+  if (parts.length === 0 && years === 0) return 'Under 1 month';
+  return parts.length ? parts.join(' ') : '—';
+}
+
 export function petAddedEmail(
   to: string,
   name: string,
-  pet: { name: string; species: string; breed: string | null; ageYears: number | null },
+  pet: { name: string; species: string; breed: string | null; ageYears: number | null; ageMonths?: number | null },
 ): MailInput {
   return {
     to,
@@ -121,7 +130,7 @@ export function petAddedEmail(
           ['Name', pet.name],
           ['Species', pet.species],
           ['Breed', pet.breed || '—'],
-          ['Age', pet.ageYears == null ? '—' : `${pet.ageYears} years`],
+          ['Age', formatPetAge(pet.ageYears, pet.ageMonths ?? null)],
         ]),
         Button('View my pets', PARENT_DASH()),
       ],
