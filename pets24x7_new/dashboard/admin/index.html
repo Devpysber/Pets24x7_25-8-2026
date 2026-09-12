@@ -1546,8 +1546,9 @@
       <section id="view-featured" class="view-pane">
         <div class="card-header" style="margin-bottom:16px;"><div>
           <h2 style="font-size:18px; font-weight:800;">Featured Listings</h2>
-          <div class="card-subtitle">Paid top-of-page placements.</div>
-        </div></div>
+          <div class="card-subtitle">Paid top-of-page placements on the city and category pages.</div>
+        </div><button class="btn btn-primary btn-sm" onclick="adminGrantFeatured()">+ Grant placement</button></div>
+        <div id="featuredLive" class="metrics-grid" style="margin-bottom:14px;"></div>
         <div class="card" style="padding:0; overflow:hidden;"><div class="table-container">
           <table class="data-table"><thead><tr>
             <th>Vendor</th><th>City</th><th>Category</th><th>Amount</th><th>Window</th><th>Status</th><th style="text-align:right;">Action</th>
@@ -3243,13 +3244,47 @@
     },
     featured: function() {
       return api.adminFeatured().then(function(res) {
-        rows(tbodyOf('featured'), res.featured || [], 7, function(f) {
+        var all = res.featured || [];
+        var now = Date.now();
+        var live = all.filter(function(f) {
+          return f.status === 'ACTIVE' && f.endsAt && new Date(f.endsAt).getTime() > now;
+        });
+        var queued = all.filter(function(f) {
+          return f.status === 'ACTIVE' && f.startsAt && new Date(f.startsAt).getTime() > now;
+        });
+        var revenue = all.reduce(function(sum, f) { return sum + (Number(f.amount) || 0); }, 0);
+
+        var tiles = document.getElementById('featuredLive');
+        if (tiles) {
+          tiles.innerHTML =
+            [['Live on the site now', live.length],
+             ['Queued to start', queued.length],
+             ['Placements sold', all.length],
+             ['Revenue', '₹' + revenue.toLocaleString('en-IN')]].map(function(pair) {
+              return '<div class="metric-card" style="padding:12px 14px;"><span class="metric-lbl">' + pair[0] +
+                '</span><div class="metric-val" style="font-size:22px;">' + pair[1] + '</div></div>';
+            }).join('');
+        }
+
+        rows(tbodyOf('featured'), all, 7, function(f) {
+          var ends = f.endsAt ? new Date(f.endsAt).getTime() : 0;
+          var isLive = f.status === 'ACTIVE' && ends > now;
           var acts = f.status === 'ACTIVE'
             ? '<button class="btn btn-sm btn-danger" onclick="adminFeatured(\'' + f.id + '\',\'CANCELLED\')">Cancel</button>'
             : '<button class="btn btn-sm btn-primary" onclick="adminFeatured(\'' + f.id + '\',\'ACTIVE\')">Activate</button>';
           var win = (f.startsAt ? dstr(f.startsAt) : '—') + ' → ' + (f.endsAt ? dstr(f.endsAt) : '—');
-          return '<tr><td style="font-weight:700;">' + escH(f.vendor) + '</td><td>' + escH(f.city) + '</td><td>' + escH(f.category) +
-            '</td><td>' + inr(f.amount) + '</td><td style="font-size:12px;">' + win + '</td><td><span class="status-tag ' + tagCls(f.status) + '">' + escH(f.status) +
+          if (isLive) {
+            var daysLeft = Math.max(0, Math.ceil((ends - now) / 864e5));
+            win += '<div style="color:var(--success);font-weight:700;">' + daysLeft + ' day' +
+              (daysLeft === 1 ? '' : 's') + ' left</div>';
+          }
+          var amount = Number(f.amount) === 0
+            ? '<span title="Granted by an admin, no payment taken">Comped</span>'
+            : inr(f.amount);
+          return '<tr><td style="font-weight:700;">' + escH(f.vendor) +
+            (isLive ? ' <span class="status-tag tag-ok">On page</span>' : '') +
+            '</td><td>' + escH(f.city) + '</td><td>' + escH(f.category) +
+            '</td><td>' + amount + '</td><td style="font-size:12px;">' + win + '</td><td><span class="status-tag ' + tagCls(f.status) + '">' + escH(f.status) +
             '</span></td><td style="text-align:right;">' + acts + '</td></tr>';
         });
       });
@@ -5816,8 +5851,68 @@
                  placeholder: 'e.g. Abusive language, or not about this business.' }]
     }).then(function (res) { if (res) after(api.adminReviewReject(id, res.reason || ''), 'rejected'); });
   };
+  // Give a business the top slot without taking a payment: sold offline, a
+  // make-good after an outage, or a trial. Recorded at zero so revenue stays
+  // true, and the audit log names the admin who did it.
+  window.adminGrantFeatured = function() {
+    api.adminFeaturedCandidates().then(function(res) {
+      var cands = res.candidates || [];
+      if (!cands.length) {
+        uiAlert({
+          title: 'Nobody can be featured yet',
+          body: 'A placement only works for a business that has claimed its listing. ' +
+                'No claimed business is on the platform right now.'
+        });
+        return;
+      }
+      var opts = (res.options || []).map(function(o) {
+        return { value: String(o.durationDays), label: o.label + ' \u00b7 normally \u20b9' + o.rupees.toLocaleString('en-IN') };
+      });
+      if (!opts.length) opts = [{ value: '30', label: '30 days' }];
+
+      uiForm({
+        title: 'Grant a featured placement',
+        body: 'The business goes to the top of its city and category pages for the window you pick. No payment is taken.',
+        confirmLabel: 'Grant placement',
+        fields: [
+          { name: 'vendorId', label: 'Business', type: 'select',
+            options: cands.map(function(c) {
+              return {
+                value: c.id,
+                label: c.name + ' \u00b7 ' + c.city + (c.liveUntil ? ' (already live, this one queues)' : '')
+              };
+            }) },
+          { name: 'durationDays', label: 'For how long', type: 'select', options: opts },
+          { name: 'note', label: 'Why', placeholder: 'e.g. Sold over the phone, invoice 114' }
+        ]
+      }).then(function(f) {
+        if (!f) return;
+        api.adminFeaturedGrant({
+          vendorId: f.vendorId,
+          durationDays: parseInt(f.durationDays, 10) || 30,
+          note: f.note || undefined
+        }).then(function(r) {
+          toast('Featured: ' + r.vendor, 'ok');
+          loadView('featured', true);
+        }).catch(function(e) { uiAlert({ title: 'Could not grant it', body: fmtErr(e) }); });
+      });
+    }).catch(function(e) { toast('Could not load businesses: ' + fmtErr(e), 'error'); });
+  };
+
   window.adminFeatured = function(id, status) {
-    api.adminFeaturedStatus(id, status).then(function(){ loadView('featured', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    function apply() {
+      api.adminFeaturedStatus(id, status).then(function(){
+        toast('Placement ' + status.toLowerCase(), 'ok');
+        loadView('featured', true);
+      }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    }
+    if (status !== 'CANCELLED') { apply(); return; }
+    uiConfirm({
+      title: 'Cancel this placement?',
+      body: 'The business drops off the top of its city and category pages straight away, and is emailed about it.',
+      confirmLabel: 'Cancel placement',
+      danger: true
+    }).then(function(ok) { if (ok) apply(); });
   };
 
   // ---- Membership plans ----

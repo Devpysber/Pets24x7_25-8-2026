@@ -233,3 +233,15 @@ footer a:hover{color:#fff}
 .city-search span{font-size:12.5px;color:var(--text-muted);white-space:nowrap}
 .biz-card.is-hidden{display:none}
 @media(max-width:560px){.city-search{flex-direction:column;align-items:stretch;gap:6px}.city-search span{text-align:right}}
+
+/* ---- Featured placements (paid top-of-page slot) ----
+   Visibly separated from the ranked results and labelled as paid, so the list
+   below it still reads as a neutral directory. */
+.featured-strip{margin-bottom:18px;border:1px solid #FDE68A;background:linear-gradient(180deg,#FFFBEB,#fff);border-radius:var(--radius-lg);padding:14px}
+.featured-head{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;color:#92400E;margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px}
+.featured-head span{font-size:10.5px;font-weight:700;letter-spacing:.4px;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;padding:3px 8px;border-radius:999px;text-transform:none}
+.featured-strip .biz-list{display:grid;gap:12px}
+.featured-strip .biz-card{border-color:#FDE68A}
+.badge-featured{background:var(--warning,#F59E0B)!important;color:#1F2937!important}
+.biz-card.is-featured .biz-img{min-height:120px;background:#FEF3C7}
+@media(max-width:560px){.featured-strip{padding:10px}.featured-head{font-size:12px}}

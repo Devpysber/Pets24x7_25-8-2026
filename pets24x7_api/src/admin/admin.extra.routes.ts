@@ -13,6 +13,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { getListingById } from '../listings/index.js';
+import { getFeaturedOptions } from '../payments/pricing.js';
 import { notifyIf } from '../mail/notify.js';
 import { adminProfileChangedEmail } from '../mail/action-templates.js';
 import { logger } from '../logger.js';
@@ -214,6 +215,91 @@ adminExtraRouter.get(
         endsAt: f.endsAt,
       })),
     });
+  }),
+);
+
+// Which businesses can be given a placement, and for how long. The picker
+// needs this, because a placement only means something for a claimed listing —
+// an unclaimed directory row has no owner to benefit from it.
+adminExtraRouter.get(
+  '/featured/candidates',
+  asyncHandler(async (_req, res) => {
+    const vendors = await prisma.vendor.findMany({
+      where: { listingId: { not: null }, status: { in: ['ACTIVE', 'CLAIMED'] } },
+      orderBy: { businessName: 'asc' },
+      take: 500,
+      select: { id: true, businessName: true, city: true, category: true, listingId: true },
+    });
+    const live = await prisma.featuredListing.findMany({
+      where: { status: 'ACTIVE', endsAt: { gt: new Date() } },
+      select: { vendorId: true, endsAt: true },
+    });
+    const liveBy = new Map(live.map((f) => [f.vendorId, f.endsAt]));
+    res.json({
+      ok: true,
+      candidates: vendors.map((v) => ({
+        id: v.id,
+        name: v.businessName,
+        city: v.city ?? '—',
+        category: v.category ?? '—',
+        liveUntil: liveBy.get(v.id) ?? null,
+      })),
+      options: getFeaturedOptions().map((o) => ({
+        durationDays: o.durationDays,
+        label: o.label,
+        rupees: Math.round(o.priceMinor / 100),
+      })),
+    });
+  }),
+);
+
+// Grant a placement without a payment. Used for a slot sold offline, a make-good
+// after an outage, or a trial. It is recorded at zero so the revenue figures
+// stay true, and the audit log says who granted it.
+const FeaturedGrantBody = z.object({
+  vendorId: z.string().min(1),
+  durationDays: z.number().int().min(1).max(365),
+  note: z.string().max(500).optional(),
+});
+adminExtraRouter.post(
+  '/featured',
+  asyncHandler(async (req, res) => {
+    const body = FeaturedGrantBody.parse(req.body ?? {});
+    const vendor = await prisma.vendor.findUnique({ where: { id: body.vendorId } });
+    if (!vendor) throw new NotFoundError('Vendor not found');
+    if (!vendor.listingId) throw new BadRequestError(`${vendor.businessName} has not claimed a listing yet.`);
+
+    // Queue behind a live placement rather than overwrite it, the same rule the
+    // paid path follows.
+    const live = await prisma.featuredListing.findFirst({
+      where: { vendorId: vendor.id, status: 'ACTIVE', endsAt: { gt: new Date() } },
+      orderBy: { endsAt: 'desc' },
+    });
+    const startsAt = live?.endsAt ?? new Date();
+    const endsAt = new Date(startsAt.getTime() + body.durationDays * 24 * 3600 * 1000);
+
+    const listing = getListingById(vendor.listingId);
+    const f = await prisma.featuredListing.create({
+      data: {
+        vendorId: vendor.id,
+        listingId: vendor.listingId,
+        city: listing?.city ?? vendor.city ?? null,
+        citySlug: listing?.city_slug ?? null,
+        category: listing?.category ?? vendor.category ?? null,
+        categorySlug: listing?.category_slug ?? null,
+        priceMinor: 0,
+        currency: 'INR',
+        durationDays: body.durationDays,
+        status: 'ACTIVE',
+        startsAt,
+        endsAt,
+      },
+    });
+
+    await audit(req, 'featured.grant', {
+      featuredId: f.id, vendorId: vendor.id, durationDays: body.durationDays, note: body.note ?? null,
+    });
+    res.json({ ok: true, featured: { id: f.id, startsAt, endsAt }, vendor: vendor.businessName });
   }),
 );
 

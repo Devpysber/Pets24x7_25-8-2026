@@ -51,13 +51,39 @@ featuredPublicRouter.get(
           ...(citySlug ? { citySlug } : {}),
           ...(categorySlug ? { categorySlug } : {}),
         },
-        select: { listingId: true, city: true, category: true, endsAt: true },
+        select: { listingId: true, city: true, citySlug: true, category: true, categorySlug: true, endsAt: true },
         take: 200,
       });
     } catch {
       // DB offline — no featured
     }
-    res.json({ ok: true, featured: rows, listingIds: rows.map((r) => r.listingId) });
+
+    // A city page is static HTML: it knows nothing about a listing it does not
+    // already print, so an id alone cannot be rendered. Send enough of the
+    // record to draw a card for a boosted business on page 3 of the results.
+    const cards = rows
+      .map((r) => {
+        const l = getListingById(r.listingId);
+        if (!l) return null;
+        return {
+          id: l.id,
+          name: l.name,
+          category: l.category,
+          categoryIcon: l.category_icon ?? null,
+          city: l.city,
+          state: l.state ?? null,
+          address: l.address ?? null,
+          phone: l.phone ?? null,
+          rating: l.rating,
+          reviewCount: l.review_count,
+          googleCid: l.google_cid ?? null,
+          url: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
+          endsAt: r.endsAt,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ ok: true, featured: rows, listingIds: rows.map((r) => r.listingId), cards });
   }),
 );
 

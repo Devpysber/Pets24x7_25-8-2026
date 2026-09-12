@@ -310,7 +310,7 @@ def biz_card_html(b, badge=None):
         phone_html = (f'<div class="biz-phone">📞 <a href="tel:{ea(clean_phone)}">'
                       f'{e(b["phone"])}</a></div>')
 
-    return f"""<article class="biz-card">
+    return f"""<article class="biz-card" data-lid="{ea(b["id"])}">
   <a class="biz-img" href="{listing_url(b)}">
     {badge_html}
     <span class="ct-chip">{e(b.get("category_icon") or "📍")} {e(b["category"])}</span>
@@ -338,6 +338,96 @@ def biz_card_html(b, badge=None):
     {f'<a class="map-link" href="https://www.google.com/maps?cid={ea(b["google_cid"])}" target="_blank" rel="noopener">View on Google Maps ↗</a>' if b.get("google_cid") else ""}
   </div>
 </article>"""
+
+def featured_strip_html():
+    """Empty container. Filled at runtime — a placement bought this morning has
+    to appear on a page that was built last month."""
+    return ('<div class="featured-strip" id="featuredStrip" hidden>'
+            '<div class="featured-head">Featured placements '
+            '<span>Paid promotion</span></div>'
+            '<div class="biz-list" id="featuredList"></div>'
+            '</div>')
+
+
+def featured_script(country, city_slug, category_slug=None):
+    """Pins businesses that paid for top-of-page placement.
+
+    A listing already printed on this page is moved into the strip rather than
+    drawn twice. One that is not on this page — it sits on page 3, or the
+    placement covers the whole city while the reader is in one category — is
+    drawn from what the API returns.
+    """
+    cat = f", category: {json.dumps(category_slug)}" if category_slug else ""
+    return f"""<script>
+(function(){{
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com');
+  var params = {{ city: {json.dumps(city_slug)}{cat} }};
+  var qs = Object.keys(params).map(function(k){{ return k + '=' + encodeURIComponent(params[k]); }}).join('&');
+
+  function esc(v){{
+    return String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }}
+
+  function cardFor(c){{
+    var loc = esc(c.address || (c.city + (c.state ? ', ' + c.state : '')));
+    var tel = c.phone ? String(c.phone).replace(/\s+/g,'') : '';
+    return '<article class="biz-card is-featured">' +
+      '<a class="biz-img" href="' + esc(c.url) + '">' +
+        '<span class="badge badge-featured">Featured</span>' +
+        '<span class="ct-chip">' + esc(c.categoryIcon || '📍') + ' ' + esc(c.category) + '</span>' +
+      '</a>' +
+      '<div class="biz-info">' +
+        '<h3><a href="' + esc(c.url) + '">' + esc(c.name) + '</a></h3>' +
+        '<div class="biz-loc">' + loc + '</div>' +
+        '<div class="biz-rating"><span class="rating-pill">\u2605 ' + Number(c.rating || 0).toFixed(1) + '</span>' +
+          (c.reviewCount ? '<span class="google-badge"><span class="gscore">' +
+            Number(c.rating || 0).toFixed(1) + '/5</span> ' + c.reviewCount + ' reviews</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="biz-action">' +
+        (tel ? '<div class="biz-phone">📞 <a href="tel:' + esc(tel) + '">' + esc(c.phone) + '</a></div>' : '') +
+        '<a class="open-btn" href="' + esc(c.url) + '">View Details</a>' +
+      '</div>' +
+    '</article>';
+  }}
+
+  fetch(BASE + '/api/featured?' + qs, {{ credentials: 'omit' }})
+    .then(function(r){{ return r.json(); }})
+    .then(function(d){{
+      var cards = (d && d.cards) || [];
+      if (!cards.length) return;
+      var strip = document.getElementById('featuredStrip');
+      var list = document.getElementById('featuredList');
+      if (!strip || !list) return;
+
+      cards.slice(0, 3).forEach(function(c){{
+        var existing = document.querySelector('.biz-list .biz-card[data-lid="' + (c.id || '').replace(/"/g,'') + '"]');
+        if (existing && existing.parentNode !== list) {{
+          // Move the card that is already here, so nothing appears twice and
+          // the page count below stays honest.
+          existing.classList.add('is-featured');
+          var img = existing.querySelector('.biz-img');
+          if (img && !img.querySelector('.badge-featured')) {{
+            var b = document.createElement('span');
+            b.className = 'badge badge-featured';
+            b.textContent = 'Featured';
+            img.insertBefore(b, img.firstChild);
+          }}
+          list.appendChild(existing);
+        }} else if (!existing) {{
+          list.insertAdjacentHTML('beforeend', cardFor(c));
+        }}
+      }});
+
+      if (list.children.length) strip.hidden = false;
+    }})
+    .catch(function(){{}});
+}})();
+</script>"""
+
 
 def cat_chips_html(country, city_slug, categories, active_cat=None):
     """categories = [{slug, name, icon, count}, ...]"""
@@ -497,6 +587,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
   <div class="results-bar">
     <div class="results-count"><strong>{len(items):,}</strong> businesses in {e(full_city)}{f' — showing {(page-1)*page_size + 1}–{(page-1)*page_size + len(page_items)}' if total_pages > 1 else ''}</div>
   </div>
+  {featured_strip_html()}
   <div class="biz-list">{cards}</div>
   {pagination_html(country, city_slug, page, total_pages)}
   {seo_copy_city(full_city, country_n, len(items), categories)}
@@ -537,6 +628,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
   input.addEventListener('search', apply);
 }})();
 </script>
+
+{featured_script(country, city_slug)}
 
 {footer_html()}
 </body>
@@ -606,6 +699,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
   <div class="results-bar">
     <div class="results-count"><strong>{len(items)}</strong> {e(category_name.lower())} provider{'s' if len(items) != 1 else ''} in {e(full_city)}</div>
   </div>
+  {featured_strip_html()}
   <div class="biz-list">{cards}</div>
   {seo_copy_category(category_name, full_city, country_n, len(items))}
   {related_cities_html(country, city_slug, all_cities)}
@@ -645,6 +739,8 @@ def render_category(country, city_slug, city, category_name, category_slug, item
   input.addEventListener('search', apply);
 }})();
 </script>
+
+{featured_script(country, city_slug, category_slug)}
 
 {footer_html()}
 </body>

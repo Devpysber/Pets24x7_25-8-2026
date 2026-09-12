@@ -259,6 +259,8 @@
 
     adminFeatured:       function ()          { return req('GET',  '/api/admin/featured'); },
     adminFeaturedStatus: function (id, status){ return req('POST', '/api/admin/featured/' + encodeURIComponent(id) + '/status', { status: status }); },
+    adminFeaturedCandidates: function ()       { return req('GET',  '/api/admin/featured/candidates'); },
+    adminFeaturedGrant:  function (body)      { return req('POST', '/api/admin/featured', body); },
 
     adminDeals:        function ()          { return req('GET',    '/api/admin/deals'); },
     adminDealCreate:   function (body)      { return req('POST',   '/api/admin/deals', body); },
