@@ -223,6 +223,23 @@
   /* Directory cards */
   .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
   .dir-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: box-shadow .16s, transform .16s, border-color .16s; text-align: left; padding: 0; font: inherit; color: inherit; }
+  .dir-ac { position: relative; display: block; }
+  .dir-ac-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 14px 34px rgba(2,6,23,.16); max-height: 320px; overflow-y: auto; padding: 4px; text-transform: none; letter-spacing: 0; }
+  .dir-ac-item { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); }
+  .dir-ac-item small { font-size: 11.5px; font-weight: 500; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dir-ac-item.active, .dir-ac-item:hover { background: #EEF2FF; }
+  .dir-ac-item mark { background: #FEF08A; color: inherit; border-radius: 2px; padding: 0 1px; }
+  .dir-ac-empty { padding: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .dir-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .dir-chip { display: inline-flex; align-items: center; gap: 6px; background: #EEF2FF; color: #3730A3; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+  .dir-chip button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+  .dir-card { position: relative; }
+  .dir-card-tools { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 6px; align-items: center; }
+  .dir-card-del { border: 0; background: rgba(220,38,38,.92); color: #fff; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .dir-card-del[disabled] { background: rgba(100,116,139,.85); cursor: not-allowed; }
+  .dir-card-check { width: 22px; height: 22px; accent-color: #DC2626; cursor: pointer; margin: 0; }
+  .dir-card.selected { border-color: #DC2626; box-shadow: 0 0 0 2px rgba(220,38,38,.35); }
+  .dir-bulk { position: sticky; top: 8px; z-index: 50; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; font-weight: 700; }
   .dir-card:hover { box-shadow: 0 10px 26px rgba(2,6,23,.12); transform: translateY(-2px); border-color: var(--primary); }
   .dir-card-img { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #F1F5F9; display: block; }
   .dir-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2007,19 +2024,22 @@
         <div class="card" style="margin-bottom:14px;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
             <label style="flex:2;min-width:200px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Search
-              <input type="text" id="dirQ" class="form-control" placeholder="Business name, area or phone" />
+              <span class="dir-ac"><input type="search" id="dirQ" class="form-control" autocomplete="off" placeholder="Business name, area or phone" /></span>
             </label>
             <label style="flex:1;min-width:130px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">City
-              <input type="text" id="dirCity" class="form-control" placeholder="Mumbai" />
+              <span class="dir-ac"><input type="search" id="dirCity" class="form-control" autocomplete="off" placeholder="Any city" /></span>
             </label>
             <label style="flex:1;min-width:130px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Category
-              <input type="text" id="dirCat" class="form-control" placeholder="Grooming" />
+              <span class="dir-ac"><input type="search" id="dirCat" class="form-control" autocomplete="off" placeholder="Any category" /></span>
             </label>
             <button class="btn btn-primary btn-sm" onclick="dirSearch()">Search</button>
+            <button class="btn btn-sm" onclick="dirClear()">Clear</button>
           </div>
+          <div id="dirChips" class="dir-chips"></div>
           <div id="dirCount" style="font-size:12.5px;color:var(--text-muted);margin-top:10px;"></div>
         </div>
 
+        <div id="dirBulk" class="dir-bulk" hidden></div>
         <div id="dirGrid" class="dir-grid"></div>
         <div id="dirPager" style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:16px;"></div>
       </section>
@@ -5756,7 +5776,16 @@
 
     grid.innerHTML = dirState.rows.map(function (l, i) {
       var loc = l.address || (l.city + (l.state ? ', ' + l.state : ''));
-      return '<button type="button" class="dir-card" onclick="dirOpen(' + i + ')">' +
+      var sel = !!dirSelected[l.id];
+      return '<div role="button" tabindex="0" class="dir-card' + (sel ? ' selected' : '') + '" onclick="dirOpen(' + i + ')" ' +
+          'onkeydown="if(event.key===\'Enter\')dirOpen(' + i + ')">' +
+        '<span class="dir-card-tools" onclick="event.stopPropagation()">' +
+          (l.claimed
+            ? '<button type="button" class="dir-card-del" disabled title="Claimed by a business. Delete the vendor account first.">Claimed</button>'
+            : '<input type="checkbox" class="dir-card-check" title="Select for bulk delete" ' + (sel ? 'checked ' : '') +
+                'onchange="dirToggle(' + i + ', this.checked)">' +
+              '<button type="button" class="dir-card-del" title="Delete this listing" onclick="dirDeleteOne(' + i + ')">Delete</button>') +
+        '</span>' +
         '<span class="dir-card-img">' +
           '<img loading="lazy" src="' + escH(dirPhoto(l)) + '" alt="" onerror="this.style.display=\'none\'">' +
           '<span class="dir-card-badge' + (l.claimed ? ' claimed' : '') + '">' +
@@ -5770,8 +5799,10 @@
           (l.photoCount ? '<span class="dir-card-meta">' + l.photoCount + ' own photo' +
             (l.photoCount === 1 ? '' : 's') + '</span>' : '') +
         '</span>' +
-      '</button>';
+      '</div>';
     }).join('');
+    dirRenderBulk();
+    dirRenderChips();
 
     if (pager) {
       var hasPrev = dirState.page > 1;
@@ -5785,10 +5816,179 @@
 
   window.dirLoad = dirLoad;
 
+  // ---- Selection and delete ----
+  var dirSelected = {}; // listing id -> name
+
+  function dirRenderBulk() {
+    var bar = document.getElementById('dirBulk');
+    if (!bar) return;
+    var ids = Object.keys(dirSelected);
+    var selectable = dirState.rows.filter(function (l) { return !l.claimed; });
+    if (!ids.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+    bar.hidden = false;
+    bar.innerHTML = '<span>' + ids.length + ' selected</span>' +
+      '<button class="btn btn-sm" onclick="dirSelectPage(true)">Select all ' + selectable.length + ' on this page</button>' +
+      '<button class="btn btn-sm" onclick="dirSelectPage(false)">Clear selection</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="dirDeleteSelected()">Delete ' + ids.length + ' listing' + (ids.length === 1 ? '' : 's') + '</button>';
+  }
+
+  window.dirToggle = function (i, on) {
+    var l = dirState.rows[i];
+    if (!l || l.claimed) return;
+    if (on) dirSelected[l.id] = l.name; else delete dirSelected[l.id];
+    dirRender();
+  };
+
+  window.dirSelectPage = function (on) {
+    if (on) dirState.rows.forEach(function (l) { if (!l.claimed) dirSelected[l.id] = l.name; });
+    else dirSelected = {};
+    dirRender();
+  };
+
+  window.dirDeleteOne = function (i) {
+    var l = dirState.rows[i];
+    if (l) window.adminDeleteListingById(l.id, l.name);
+  };
+
+  window.dirDeleteSelected = function () {
+    var ids = Object.keys(dirSelected);
+    if (!ids.length) return;
+    var names = ids.slice(0, 5).map(function (id) { return '"' + dirSelected[id] + '"'; }).join(', ') +
+      (ids.length > 5 ? ' and ' + (ids.length - 5) + ' more' : '');
+    uiConfirm({
+      title: 'Delete ' + ids.length + ' listing' + (ids.length === 1 ? '' : 's') + '?',
+      body: names + ' will be removed from the directory and every city and category page. This cannot be undone.',
+      confirmLabel: 'Delete ' + ids.length,
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      var done = 0, failed = [];
+      // One at a time: each delete rewrites the index, so a parallel burst
+      // gains nothing but contention.
+      ids.reduce(function (p, id) {
+        return p.then(function () {
+          var name = dirSelected[id];
+          return api.adminListingDelete(id).then(function () { done++; delete dirSelected[id]; })
+            .catch(function (e) { failed.push(name + ': ' + fmtErr(e)); });
+        });
+      }, Promise.resolve()).then(function () {
+        toast('Deleted ' + done + ' listing' + (done === 1 ? '' : 's'), 'ok');
+        if (failed.length) uiAlert({ title: failed.length + ' could not be deleted', body: failed.join('\n') });
+        dirLoad(dirState.page).catch(function () {});
+        loadView('dash', true);
+      });
+    });
+  };
+
+  // ---- Filter chips ----
+  function dirRenderChips() {
+    var host = document.getElementById('dirChips');
+    if (!host) return;
+    var chips = [['q', 'Search'], ['city', 'City'], ['category', 'Category']].filter(function (c) { return dirState[c[0]]; });
+    host.innerHTML = chips.map(function (c) {
+      return '<span class="dir-chip">' + c[1] + ': ' + escH(dirState[c[0]]) +
+        '<button type="button" title="Remove" onclick="dirDropFilter(\'' + c[0] + '\')">×</button></span>';
+    }).join('');
+  }
+
+  var dirInputFor = { q: 'dirQ', city: 'dirCity', category: 'dirCat' };
+  window.dirDropFilter = function (key) {
+    var el = document.getElementById(dirInputFor[key]);
+    if (el) el.value = '';
+    window.dirSearch();
+  };
+  window.dirClear = function () {
+    ['dirQ', 'dirCity', 'dirCat'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    window.dirSearch();
+  };
+
+  // ---- Type-ahead ----
+  // Each box suggests from the live index, narrowed by the other two, so
+  // "Groo" under City "Mumbai" only offers categories Mumbai actually has.
+  function dirAutocomplete(inputId, field) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var menu = document.createElement('div');
+    menu.className = 'dir-ac-menu';
+    menu.hidden = true;
+    input.parentNode.appendChild(menu);
+    var items = [], active = -1, timer = null, live = null, seq = 0;
+
+    function hl(text, term) {
+      var t = String(text), i = term ? t.toLowerCase().indexOf(term.toLowerCase()) : -1;
+      if (i < 0) return escH(t);
+      return escH(t.slice(0, i)) + '<mark>' + escH(t.slice(i, i + term.length)) + '</mark>' + escH(t.slice(i + term.length));
+    }
+    function close() { menu.hidden = true; active = -1; }
+    function paint() {
+      menu.innerHTML = items.length
+        ? items.map(function (s, i) {
+            return '<div class="dir-ac-item' + (i === active ? ' active' : '') + '" data-i="' + i + '">' +
+              '<span>' + hl(s.value, input.value.trim()) + '</span>' +
+              '<small>' + (s.sub ? escH(s.sub) : (s.count != null ? s.count + ' listing' + (s.count === 1 ? '' : 's') : '')) + '</small></div>';
+          }).join('')
+        : '<div class="dir-ac-empty">No matches</div>';
+      menu.hidden = false;
+      var a = menu.querySelector('.dir-ac-item.active');
+      if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest' });
+    }
+    function pick(i) {
+      var s = items[i];
+      if (!s) return;
+      input.value = s.value;
+      clearTimeout(live);
+      close();
+      window.dirSearch();
+    }
+    function fetchNow() {
+      var term = input.value.trim();
+      if (field === 'name' && !term) { close(); return; }
+      var my = ++seq;
+      var qs = '?field=' + field + '&q=' + encodeURIComponent(term) +
+        (field !== 'city' ? '&city=' + encodeURIComponent((document.getElementById('dirCity') || {}).value || '') : '') +
+        (field !== 'category' ? '&category=' + encodeURIComponent((document.getElementById('dirCat') || {}).value || '') : '');
+      api.adminDirectorySuggest(qs).then(function (res) {
+        if (my !== seq || document.activeElement !== input) return;
+        items = res.suggestions || [];
+        active = -1;
+        paint();
+      }).catch(function () { close(); });
+    }
+
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(fetchNow, 160);
+      // Results follow the typing too, a little behind the suggestions.
+      clearTimeout(live);
+      live = setTimeout(function () { window.dirSearch(); }, 600);
+    });
+    input.addEventListener('focus', function () { if (field !== 'name' || input.value.trim()) fetchNow(); });
+    input.addEventListener('blur', function () { setTimeout(close, 150); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (menu.hidden || !items.length) return;
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        paint();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!menu.hidden && active >= 0) pick(active);
+        else { clearTimeout(live); close(); window.dirSearch(); }
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    });
+    menu.addEventListener('mousedown', function (e) {
+      var row = e.target.closest('.dir-ac-item');
+      if (row) { e.preventDefault(); pick(Number(row.getAttribute('data-i'))); }
+    });
+  }
+
   window.dirSearch = function () {
     dirState.q = (document.getElementById('dirQ') || {}).value || '';
     dirState.city = (document.getElementById('dirCity') || {}).value || '';
     dirState.category = (document.getElementById('dirCat') || {}).value || '';
+    dirSelected = {};
     dirLoad(1).catch(function () {});
   };
 
@@ -5810,10 +6010,9 @@
   };
 
   (function wireDirectory() {
-    ['dirQ', 'dirCity', 'dirCat'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') window.dirSearch(); });
-    });
+    dirAutocomplete('dirQ', 'name');
+    dirAutocomplete('dirCity', 'city');
+    dirAutocomplete('dirCat', 'category');
   })();
 
   // ---- Recipient picker for the mail console ----

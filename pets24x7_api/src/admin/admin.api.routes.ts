@@ -24,7 +24,7 @@ import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
-import { addAndPersistImportedListing, getListingById, indexStats, removeListingFromIndex, searchListings } from '../listings/index.js';
+import { addAndPersistImportedListing, getListingById, indexStats, removeListingFromIndex, searchListings, suggestListings } from '../listings/index.js';
 import { notify } from '../whatsapp/notify.js';
 import { notifyIf } from '../mail/notify.js';
 import {
@@ -804,6 +804,21 @@ adminApiRouter.get(
         };
       }),
     });
+  }),
+);
+
+// Type-ahead for the directory search boxes.
+adminApiRouter.get(
+  '/directory/suggest',
+  asyncHandler(async (req, res) => {
+    const raw = String(req.query.field ?? 'name');
+    const field = raw === 'city' || raw === 'category' ? raw : 'name';
+    const suggestions = suggestListings(field, String(req.query.q ?? '').slice(0, 80), {
+      city: String(req.query.city ?? '').slice(0, 80),
+      category: String(req.query.category ?? '').slice(0, 80),
+      limit: 8,
+    });
+    res.json({ ok: true, field, suggestions });
   }),
 );
 

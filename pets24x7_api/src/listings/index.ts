@@ -233,6 +233,7 @@ export function recentListings(limit = 24): ListingRecord[] {
 
 export function searchListings(opts: { q?: string; category?: string; city?: string; limit?: number; newestFirst?: boolean }): ListingRecord[] {
   const q = (opts.q || '').toLowerCase().trim();
+  const qDigits = /^[\d\s+()-]+$/.test(q) ? q.replace(/\D/g, '') : '';
   const cat = (opts.category || '').toLowerCase().trim();
   const city = (opts.city || '').toLowerCase().trim();
   // Defence in depth: a caller that forgets to clamp must not be able to walk
@@ -256,7 +257,9 @@ export function searchListings(opts: { q?: string; category?: string; city?: str
       const match = item.name.toLowerCase().includes(q) ||
                     item.category.toLowerCase().includes(q) ||
                     item.city.toLowerCase().includes(q) ||
-                    (item.address && item.address.toLowerCase().includes(q));
+                    (item.address && item.address.toLowerCase().includes(q)) ||
+                    // A pasted phone number, with or without spaces or +91.
+                    (qDigits.length >= 5 && !!item.phone && String(item.phone).replace(/\D/g, '').includes(qDigits));
       if (!match) continue;
     }
     seenNames.add(normName);
@@ -264,6 +267,65 @@ export function searchListings(opts: { q?: string; category?: string; city?: str
     if (results.length >= limit) break;
   }
   return results;
+}
+
+/**
+ * Type-ahead suggestions for the admin directory search. Cities and categories
+ * come back as distinct values with how many listings each has, prefix matches
+ * first; names come back as listings. Bounded: one pass over the index, and at
+ * most `limit` rows out.
+ */
+export function suggestListings(
+  field: 'name' | 'city' | 'category',
+  term: string,
+  opts: { city?: string; category?: string; limit?: number } = {},
+): Array<{ value: string; count?: number; id?: string; sub?: string }> {
+  const t = term.toLowerCase().trim();
+  const limit = Math.min(Math.max(opts.limit ?? 8, 1), 20);
+  const cityF = (opts.city || '').toLowerCase().trim();
+  const catF = (opts.category || '').toLowerCase().trim();
+  const inScope = (item: ListingRecord) =>
+    (!cityF || item.city.toLowerCase().includes(cityF)) &&
+    (!catF || item.category.toLowerCase().includes(catF) || (item.category_slug || '').toLowerCase().includes(catF));
+
+  if (field === 'name') {
+    if (!t) return [];
+    const digits = /^[\d\s+()-]+$/.test(t) ? t.replace(/\D/g, '') : '';
+    const prefix: ListingRecord[] = [];
+    const inner: ListingRecord[] = [];
+    const seen = new Set<string>();
+    for (const item of byId.values()) {
+      if (!inScope(item)) continue;
+      const n = item.name.toLowerCase();
+      const key = n.trim() + '|' + item.city.toLowerCase();
+      if (seen.has(key)) continue;
+      const phoneHit = digits.length >= 5 && !!item.phone && String(item.phone).replace(/\D/g, '').includes(digits);
+      if (n.startsWith(t)) { prefix.push(item); seen.add(key); }
+      else if (n.includes(t) || phoneHit) { if (inner.length < limit) inner.push(item); seen.add(key); }
+      if (prefix.length >= limit) break;
+    }
+    return [...prefix, ...inner].slice(0, limit).map((l) => ({
+      value: l.name, id: l.id, sub: `${l.category} · ${l.city}`,
+    }));
+  }
+
+  const counts = new Map<string, { value: string; count: number }>();
+  for (const item of byId.values()) {
+    if (field === 'city' ? !(!catF || item.category.toLowerCase().includes(catF)) : !(!cityF || item.city.toLowerCase().includes(cityF))) continue;
+    const v = field === 'city' ? item.city : item.category;
+    if (!v) continue;
+    const k = v.toLowerCase();
+    if (t && !k.includes(t)) continue;
+    const cur = counts.get(k);
+    if (cur) cur.count += 1; else counts.set(k, { value: v, count: 1 });
+  }
+  return [...counts.values()]
+    .sort((a, b) => {
+      const ap = a.value.toLowerCase().startsWith(t) ? 0 : 1;
+      const bp = b.value.toLowerCase().startsWith(t) ? 0 : 1;
+      return ap - bp || b.count - a.count;
+    })
+    .slice(0, limit);
 }
 
 /**

@@ -283,6 +283,7 @@
       if (o.page)     qs.push('page=' + encodeURIComponent(o.page));
       return req('GET', '/api/admin/directory' + (qs.length ? '?' + qs.join('&') : ''));
     },
+    adminDirectorySuggest: function (qs)  { return req('GET', '/api/admin/directory/suggest' + (qs || '')); },
     adminListing:       function (id)       { return req('GET',    '/api/admin/listings/' + encodeURIComponent(id)); },
     adminListingUpdate: function (id, body) { return req('PATCH',  '/api/admin/listings/' + encodeURIComponent(id), body); },
     adminListingDelete: function (id)       { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id)); },
