@@ -127,13 +127,21 @@ export function recommend(
     }
   }
 
+  // Enquiries and saves store whatever the page had, often a display name
+  // ("Vaccination Centers") rather than a slug. Normalise both sides, or a
+  // parent with any enquiry matches nothing and gets no recommendations at all.
+  const norm = (v: string | null | undefined) =>
+    (v || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
   // Recency-weighted affinity: the most recent enquiry counts most.
   const affinity = new Map<string, number>();
-  input.enquiredCategories.forEach((slug, i) => {
+  input.enquiredCategories.forEach((raw, i) => {
+    const slug = norm(raw);
     if (!slug) return;
     affinity.set(slug, Math.max(affinity.get(slug) ?? 0, 1 / (1 + i * 0.5)));
   });
-  for (const slug of input.savedCategories) {
+  for (const raw of input.savedCategories) {
+    const slug = norm(raw);
     if (!slug) continue;
     affinity.set(slug, Math.max(affinity.get(slug) ?? 0, 0.7));
   }
@@ -144,6 +152,9 @@ export function recommend(
   const hasSignals = need.size > 0 || affinity.size > 0;
 
   const scored: Recommendation[] = [];
+  // Well-rated listings that matched no signal. Used only to top up a short
+  // list, so a stale or unrecognised signal never empties it.
+  const filler: Recommendation[] = [];
   for (const l of listings) {
     const slug = l.category_slug || '';
     const reasons: string[] = [];
@@ -165,7 +176,7 @@ export function recommend(
       reasons.push(n.reason);
     }
 
-    const aff = affinity.get(slug) ?? 0;
+    const aff = Math.max(affinity.get(slug) ?? 0, affinity.get(norm(l.category)) ?? 0);
     if (aff > 0) {
       score += WEIGHTS.affinity * aff;
       reasons.push(`you looked at ${l.category.toLowerCase()} before`);
@@ -188,13 +199,20 @@ export function recommend(
 
     // Nothing relevant matched — skip rather than pad the list with filler.
     // Only applies once we have something to be relevant to.
-    if (hasSignals && !n && aff === 0 && !featured.has(l.id)) continue;
+    if (hasSignals && !n && aff === 0 && !featured.has(l.id)) {
+      filler.push({ listing: l, score, reasons: reasons.length ? reasons.slice(0, 3) : [`well rated in ${l.city}`] });
+      continue;
+    }
     if (!hasSignals && reasons.length === 0) reasons.push(`well rated in ${l.city}`);
 
     scored.push({ listing: l, score, reasons: reasons.slice(0, 3) });
   }
 
   scored.sort((a, b) => b.score - a.score);
+  if (scored.length < limit) {
+    filler.sort((a, b) => b.score - a.score);
+    scored.push(...filler.slice(0, limit - scored.length));
+  }
 
   // Spread categories so one category can't monopolise the list: at most 3 of
   // any single category before every other category has had a turn.
