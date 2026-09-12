@@ -643,6 +643,9 @@
         <div class="form-group">
           <label>Email Address</label>
           <input type="email" id="profEmail" />
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
+            Change this and we email the new address a link to confirm it. Sign-in codes go there from then on.
+          </div>
         </div>
         <div class="form-group">
           <label>Mobile / Phone Number *</label>
@@ -2607,7 +2610,11 @@
       initCitySelector();
       renderAll();
     }).catch(function(err) {
-      alert('Could not save profile: ' + fmtErr(err));
+      // The address is unique per account, so the common failure is that it is
+      // already on another one. Say that rather than "could not save".
+      var msg = fmtErr(err);
+      alert('Could not save profile: ' + msg +
+        (/already/i.test(msg) ? '\n\nIf that address is yours, email hello@pets24x7.com and we will merge the accounts.' : ''));
     }).finally(function() {
       if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
     });

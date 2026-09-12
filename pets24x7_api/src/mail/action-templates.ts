@@ -1184,3 +1184,43 @@ You can now log in to manage your business listing: ${dashboardUrl}
   };
 }
 
+
+// ===========================================================================
+// Admin — account security
+// ===========================================================================
+
+/**
+ * Sent to the address on file whenever an admin's own email or password
+ * changes, so a change nobody made is noticed by the person who did not make it.
+ */
+export function adminProfileChangedEmail(
+  to: string,
+  name: string,
+  change: { emailChanged: boolean; passwordChanged: boolean; newEmail: string | null },
+): MailInput {
+  const what = [
+    change.passwordChanged ? 'the password' : null,
+    change.emailChanged ? 'the sign-in email' : null,
+  ].filter(Boolean).join(' and ');
+  return {
+    to,
+    sensitive: true,
+    subject: `Your Pets24x7 admin account changed`,
+    html: page({
+      eyebrow: 'Admin security',
+      banner: ['Account updated', 'info'],
+      heading: 'Your admin account was updated',
+      intro: h`Hi ${name} — ${what || 'your profile'} on your Pets24x7 admin account was just changed.`,
+      blocks: [
+        InfoBox([
+          ['Password changed', change.passwordChanged ? 'Yes — other sessions were signed out' : 'No'],
+          ['Email changed', change.emailChanged ? `Yes — now ${change.newEmail ?? '—'}` : 'No'],
+          ['When', new Date().toLocaleString()],
+        ]),
+        Note('If this was not you, change the password immediately and tell the other admins.'),
+      ],
+      preheader: 'An admin account setting was changed.',
+    }),
+    text: `Your Pets24x7 admin account was updated (${what || 'profile'}).\nIf this was not you, change the password immediately.\n`,
+  };
+}

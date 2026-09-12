@@ -844,7 +844,8 @@ adminApiRouter.get(
       reviews: reviews.map((r) => ({
         id: r.id,
         reviewer: r.reviewerName,
-        vendor: r.vendor.businessName,
+        vendor: r.vendor?.businessName ?? r.listingName ?? 'Unclaimed listing',
+        listingId: r.listingId,
         rating: r.rating,
         comment: r.text,
         status: r.status,
@@ -867,9 +868,12 @@ adminApiRouter.post(
     await prisma.auditLog.create({
       data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'review.publish', meta: { reviewId: id }, ipAddress: req.ip ?? null },
     });
-    const publishVendor = await prisma.vendor
-      .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
-      .catch(() => null);
+    // Only a claimed listing has a business to notify.
+    const publishVendor = r.vendorId
+      ? await prisma.vendor
+          .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
+          .catch(() => null)
+      : null;
     notifyIf(publishVendor?.email, (to) =>
       reviewPublishedEmail(to, publishVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }),
     );
@@ -893,9 +897,11 @@ adminApiRouter.post(
     await prisma.auditLog.create({
       data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'review.reject', meta: { reviewId: id, reason: reason ?? null }, ipAddress: req.ip ?? null },
     });
-    const rejectVendor = await prisma.vendor
-      .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
-      .catch(() => null);
+    const rejectVendor = r.vendorId
+      ? await prisma.vendor
+          .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
+          .catch(() => null)
+      : null;
     notifyIf(rejectVendor?.email, (to) =>
       reviewRejectedEmail(to, rejectVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }, reason ?? null),
     );

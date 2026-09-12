@@ -83,10 +83,12 @@ model PetParent {
   // lastDigestAt paces the weekly recommendations digest specifically.
   lastMarketingAt DateTime?
   lastDigestAt    DateTime?
+  reviews         Review[]
+
   // Ids featured in the last promotional mails, newest first, as JSON text.
   // The next pick skips them, so two mails in a row never show the same
   // businesses — which is what made the old digest look like a repeat.
-  recentPromoIds  String?   @db.Text
+  recentPromoIds String? @db.Text
 
   // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
@@ -235,8 +237,8 @@ model Vendor {
   sessionsRevokedAt DateTime?
 
   // Paces promotional mail to this business, exactly like PetParent.
-  lastMarketingAt   DateTime?
-  lastPromoKind     String?   @db.VarChar(40)
+  lastMarketingAt DateTime?
+  lastPromoKind   String?   @db.VarChar(40)
 
   // Profile completion bookkeeping
   profileCompletion Int       @default(20) // 0-100
@@ -719,8 +721,17 @@ enum ReviewChoice {
 // Vendor's listing page can render these (after admin moderation publishes them).
 model Review {
   id               String         @id @default(cuid())
-  vendorId         String
-  vendor           Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  // Nullable: any of the 34k directory listings can be reviewed, and most have
+  // no vendor account behind them yet. When the listing is later claimed the
+  // reviews already attached to it come with it.
+  vendorId         String?
+  vendor           Vendor?        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  // The listing being reviewed. Always set for a review left on a public page.
+  listingId        String?        @db.VarChar(191)
+  listingName      String?        @db.Text
+  // Set when a signed-in pet parent left it, so their dashboard can show it.
+  parentId         String?
+  parent           PetParent?     @relation(fields: [parentId], references: [id], onDelete: SetNull)
   // Inverse — set when ReviewRequest.reviewId points here
   request          ReviewRequest?
   // Content
@@ -737,6 +748,8 @@ model Review {
   createdAt        DateTime       @default(now())
 
   @@index([vendorId, status])
+  @@index([listingId, status])
+  @@index([parentId])
   @@index([status])
   @@map("reviews")
 }

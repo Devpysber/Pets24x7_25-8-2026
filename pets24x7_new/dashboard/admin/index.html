@@ -1931,6 +1931,27 @@
       <!-- 11. SETTINGS VIEW -->
       <section id="view-settings" class="view-pane">
         <div class="card">
+          <div class="card-title" style="margin-bottom:4px;">My admin account</div>
+          <div class="card-subtitle" style="margin-bottom:16px;" id="apRole">—</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group"><label>Name</label><input type="text" class="form-control" id="apName" /></div>
+            <div class="form-group">
+              <label>Sign-in email</label>
+              <input type="email" class="form-control" id="apEmail" />
+              <div id="apEmailLock" style="font-size:11.5px; color:var(--text-muted); margin-top:4px;"></div>
+            </div>
+          </div>
+          <div style="margin-top:6px; font-size:12.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Change password</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:8px;">
+            <div class="form-group"><label>Current password</label><input type="password" class="form-control" id="apCurrentPass" autocomplete="current-password" /></div>
+            <div class="form-group"><label>New password</label><input type="password" class="form-control" id="apNewPass" autocomplete="new-password" /></div>
+            <div class="form-group"><label>Confirm new password</label><input type="password" class="form-control" id="apNewPass2" autocomplete="new-password" /></div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="apSave" onclick="saveAdminProfile()">Save my account</button>
+          <div id="apMsg" style="font-size:12.5px; margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
           <div class="card-title" style="margin-bottom:14px;">Admin Platform Settings</div>
           <div class="form-group"><label>Platform Name</label><input type="text" id="setPlatformName" class="form-control" placeholder="Pets24x7 Platform" /></div>
           <div class="form-group"><label>Admin Contact Email</label><input type="email" id="setContactEmail" class="form-control" value="" /></div>
@@ -1946,6 +1967,17 @@
 </div>
 
 <!-- Vendor Details Modal -->
+<div class="modal-backdrop" id="enquiryDetailModal">
+  <div class="modal-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:17px; font-weight:800;" id="enqModalTitle">Enquiry</h3>
+      <button onclick="closeModal('enquiryDetailModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+    </div>
+    <div id="enqModalBody" style="background:#F8FAFC; border:1px solid var(--border); padding:16px; border-radius:8px; margin-bottom:16px; font-size:13px;"></div>
+    <div id="enqModalActions" style="display:flex; gap:8px; justify-content:flex-end;"></div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="mailOneModal">
   <div class="modal-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -2996,12 +3028,13 @@
     },
     enquiries: function() {
       return api.adminEnquiries().then(function(res) {
-        rows(tbodyOf('enquiries'), res.enquiries || [], 7, function(e) {
+        enquiryRows = res.enquiries || [];
+        rows(tbodyOf('enquiries'), enquiryRows, 7, function(e, i) {
           var st = (e.status || 'NEW');
           var stCls = st === 'RESPONDED' || st === 'COMPLETED' ? 'tag-active' : (st === 'ARCHIVED' ? 'tag-suspended' : 'tag-pending');
           return '<tr><td style="font-weight:700;">' + escH(e.parent) + '</td><td>' + escH(e.phone) + '</td><td>' + escH(e.vendor) +
             '</td><td>' + escH(e.service) + '</td><td>' + dstr(e.date) + '</td><td><span class="status-tag ' + stCls + '">' + escH(st) + '</span></td>' +
-            '<td style="text-align:right;"><button class="btn btn-sm" onclick="alert(' + JSON.stringify(JSON.stringify(e.notes || '')) + ')">View</button></td></tr>';
+            '<td style="text-align:right;"><button class="btn btn-sm" onclick="openEnquiryModal(' + i + ')">View</button></td></tr>';
         });
       });
     },
@@ -3107,6 +3140,7 @@
       });
     },
     settings: function() {
+      loadAdminProfile();
       return api.adminSettings().then(function(res) {
         var s = res.settings || {};
         var g = function(id, v) { var el = document.getElementById(id); if (el && v != null) { if (el.type === 'checkbox') el.checked = !!v; else el.value = v; } };
@@ -5120,6 +5154,90 @@
     api.adminVendorStatus(id, { status: status, reason: reason }).then(function(){ loadView('vendors', true); loadView('dash', true); })
       .catch(function(e){ alert('Failed: ' + fmtErr(e)); });
   };
+  // ---- Enquiry details ----
+  var enquiryRows = [];
+
+  window.openEnquiryModal = function(index) {
+    var e = enquiryRows[index];
+    if (!e) return;
+    document.getElementById('enqModalTitle').textContent = e.parent || 'Enquiry';
+    var phone = (e.phone || '').replace(/[^0-9+]/g, '');
+    document.getElementById('enqModalBody').innerHTML =
+      '<div>Pet parent: <strong>' + escH(e.parent || '—') + '</strong></div>' +
+      '<div>Phone: <strong>' + escH(e.phone || '—') + '</strong></div>' +
+      '<div>Business: <strong>' + escH(e.vendor || '—') + '</strong></div>' +
+      '<div>Service: <strong>' + escH(e.service || '—') + '</strong></div>' +
+      '<div>Received: <strong>' + dstr(e.date) + '</strong></div>' +
+      '<div style="margin-top:6px;">Status: <span class="status-tag ' + tagCls(e.status) + '">' + escH(e.status || 'NEW') + '</span></div>' +
+      '<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">' +
+        '<div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Message</div>' +
+        '<p style="margin-top:4px; white-space:pre-wrap;">' + (e.notes ? escH(e.notes) : '<span style="color:var(--text-muted)">No message left.</span>') + '</p>' +
+      '</div>';
+    var acts = document.getElementById('enqModalActions');
+    acts.innerHTML = phone.length >= 10
+      ? '<a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://wa.me/' + encodeURIComponent(phone.replace(/^\+/, '')) + '">Message on WhatsApp</a>'
+      : '';
+    document.getElementById('enquiryDetailModal').classList.add('show');
+  };
+
+  // ---- The signed-in admin's own account ----
+  function loadAdminProfile() {
+    if (!api.adminMyProfile) return;
+    api.adminMyProfile().then(function(r) {
+      var a = r.admin || {};
+      var set = function(id, v) { var el = document.getElementById(id); if (el) el.value = v || ''; };
+      set('apName', a.name);
+      set('apEmail', a.email);
+      var emailInput = document.getElementById('apEmail');
+      var lockNote = document.getElementById('apEmailLock');
+      // The address is the account identifier and where security notices go, so
+      // it is settable once and then frozen.
+      if (emailInput && a.emailLocked) {
+        emailInput.disabled = true;
+        if (lockNote) lockNote.textContent = 'Set once and now locked. Another admin can change it for you.';
+      } else if (lockNote) {
+        lockNote.textContent = 'You can set this once. After saving it cannot be changed here.';
+      }
+      var role = document.getElementById('apRole');
+      if (role) role.textContent = (a.role || 'OPS') + (a.lastLoginAt ? ' · last signed in ' + dstr(a.lastLoginAt) : '');
+    }).catch(function() {});
+  }
+
+  window.saveAdminProfile = function() {
+    var msg = document.getElementById('apMsg');
+    var btn = document.getElementById('apSave');
+    var payload = { name: (document.getElementById('apName').value || '').trim() };
+    var emailInput = document.getElementById('apEmail');
+    if (emailInput && !emailInput.disabled && emailInput.value.trim()) payload.email = emailInput.value.trim();
+
+    var cur = document.getElementById('apCurrentPass').value;
+    var next = document.getElementById('apNewPass').value;
+    var again = document.getElementById('apNewPass2').value;
+    if (next || again || cur) {
+      if (next.length < 10) { msg.style.color = 'var(--danger)'; msg.textContent = 'New password must be at least 10 characters.'; return; }
+      if (next !== again) { msg.style.color = 'var(--danger)'; msg.textContent = 'The two new passwords do not match.'; return; }
+      if (!cur) { msg.style.color = 'var(--danger)'; msg.textContent = 'Enter your current password to change it.'; return; }
+      payload.currentPassword = cur;
+      payload.newPassword = next;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving...';
+    msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving...';
+    api.adminMyProfileSave(payload).then(function() {
+      document.getElementById('apCurrentPass').value = '';
+      document.getElementById('apNewPass').value = '';
+      document.getElementById('apNewPass2').value = '';
+      msg.style.color = 'var(--success)';
+      msg.textContent = payload.newPassword ? 'Saved. Other sessions were signed out.' : 'Saved.';
+      loadAdminProfile();
+    }).catch(function(e) {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = fmtErr(e);
+    }).finally(function() {
+      btn.disabled = false; btn.textContent = 'Save my account';
+    });
+  };
+
   // ---- Delete + email a vendor or a pet parent ----
   // Both tables hand over a row index rather than the record, so a name with a
   // quote in it cannot break the button.

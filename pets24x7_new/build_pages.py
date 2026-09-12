@@ -145,16 +145,12 @@ def amenities_for(biz, n=10):
             out.append(a); picked.add(a)
     return out
 
-def recent_rating_squares(biz):
-    seed = seed_of(biz["id"])
-    avg = biz["rating"] or 4.5
-    out = []
-    for i in range(10):
-        x = ((seed * 9301 + (i + 1) * 49297) % 233280) / 233280.0
-        raw = avg + (x - 0.5) * 3.0
-        r = max(1, min(5, round(raw)))
-        out.append(f'<span class="recent-square rs-{r}" title="{r} star rating">{r}</span>')
-    return "".join(out)
+# The old version of this drew ten "recent customer ratings" from a hash of the
+# listing id. They looked like real ratings and were not: no customer gave them.
+# Showing invented ratings against a named business is not something we can put
+# in front of a pet owner, so the block is gone. What remains on the page is the
+# real Google average, the real review count, and reviews people actually left
+# on Pets24x7.
 
 def listing_url(biz):
     return f"/{country_lc(biz['country'])}/{slugify(biz['city_slug'])}/{biz['id']}/"
@@ -616,11 +612,6 @@ def render_listing(biz, all_in_city, all_cats):
     # Google reviews block (only if CID exists)
     reviews_section = ""
     if biz.get("google_cid"):
-        ai_tone = ("professional staff, clear pricing and genuine care for the animals."
-                   if biz["rating"] >= 4.7 else
-                   "good experience overall with attentive staff and reasonable rates."
-                   if biz["rating"] >= 4.3 else
-                   "mixed feedback — read individual reviews to judge fit for your pet.")
         reviews_section = f"""<section>
   <h2>Guest reviews</h2>
   <div class="greviews-head">
@@ -630,15 +621,44 @@ def render_listing(biz, all_in_city, all_cats):
       <a href="https://www.google.com/maps?cid={ea(biz['google_cid'])}" target="_blank" rel="noopener">View {biz["review_count"]} ratings →</a>
     </div>
   </div>
-  <div class="recent-row">
-    <div class="label">Last 10 customer ratings</div>
-    <div class="recent-squares">{recent_rating_squares(biz)}</div>
-  </div>
-  <div class="ai-summary">
-    <div class="ai-tag">✦ AI-generated summary</div>
-    <p>{e(biz['name'])} holds a <strong>{biz['rating']:.1f}/5</strong> on Google from <strong>{biz['review_count']} real customer reviews</strong>. Recurring themes from recent pet parents: {ai_tone}</p>
-  </div>
+  <p style="margin:6px 0 0;">{e(biz['name'])} holds a <strong>{biz['rating']:.1f} / 5</strong> average on Google from <strong>{biz['review_count']}</strong> public review{"" if biz["review_count"] == 1 else "s"}. Open them on Google to read the reviews themselves.</p>
+  <a href="https://www.google.com/maps?cid={ea(biz['google_cid'])}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;background:#EFF6FF;color:var(--primary);border:1px solid #BFDBFE;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;">Open in Google Maps ↗</a>
   <iframe class="gmap-embed" loading="lazy" src="https://www.google.com/maps?cid={ea(biz['google_cid'])}&output=embed" allowfullscreen title="Map of {ea(biz['name'])}"></iframe>
+</section>"""
+
+    # Reviews people leave here, and the form to leave one. Rendered empty and
+    # filled from the API, so a page built weeks ago still shows what came in
+    # since — the static build is a shell, not a snapshot of the reviews.
+    p24_reviews_section = """<section id="p24reviews">
+  <h2>Reviews on Pets24x7</h2>
+  <div id="p24rvSummary" style="color:var(--text-muted);font-size:14px;">Loading reviews…</div>
+  <div id="p24rvList" style="margin-top:14px;"></div>
+
+  <div style="margin-top:18px;border:1px solid var(--border);border-radius:12px;padding:18px;">
+    <h3 style="font-size:15px;font-weight:800;margin:0 0 4px;">Been here? Leave a review</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin:0 0 14px;">Reviews are checked by our team before they appear.</p>
+    <form id="p24rvForm" onsubmit="return submitListingReview(event)">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <label style="flex:1;min-width:180px;font-size:12px;font-weight:700;color:var(--text-muted);">YOUR NAME
+          <input id="rvName" type="text" required placeholder="e.g. Priya S." style="width:100%;margin-top:5px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;">
+        </label>
+        <label style="flex:1;min-width:180px;font-size:12px;font-weight:700;color:var(--text-muted);">RATING
+          <select id="rvRating" style="width:100%;margin-top:5px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;">
+            <option value="5">★★★★★ Excellent</option>
+            <option value="4">★★★★ Good</option>
+            <option value="3">★★★ Okay</option>
+            <option value="2">★★ Poor</option>
+            <option value="1">★ Bad</option>
+          </select>
+        </label>
+      </div>
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);">YOUR REVIEW
+        <textarea id="rvText" rows="4" required placeholder="What was the visit like? Be specific and fair." style="width:100%;margin-top:5px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;"></textarea>
+      </label>
+      <div id="rvMsg" style="font-size:13px;margin-top:10px;"></div>
+      <button type="submit" id="rvSubmit" style="margin-top:12px;background:var(--primary);color:#fff;border:none;padding:11px 20px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">Submit review</button>
+    </form>
+  </div>
 </section>"""
 
     phone_line = ""
@@ -733,6 +753,7 @@ def render_listing(biz, all_in_city, all_cats):
       </section>
 
       {reviews_section}
+{p24_reviews_section}
 
       <section>
         <h2>Business details</h2>
@@ -817,6 +838,72 @@ def render_listing(biz, all_in_city, all_cats):
     state:{json.dumps(biz.get("state") or "")},
     country:{json.dumps(biz["country"])}
   }};
+  var API_BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) ||
+    ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : 'https://api.pets24x7.com');
+
+  function rvEsc(x){{ return (x==null?'':String(x)).replace(/[<>&"]/g, function(c){{ return {{'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}}[c]; }}); }}
+
+  function loadListingReviews(){{
+    fetch(API_BASE + '/api/reviews/listing/' + encodeURIComponent(biz.id), {{ headers: {{ 'Accept':'application/json' }} }})
+      .then(function(r){{ return r.ok ? r.json() : null; }})
+      .then(function(d){{
+        var sum = document.getElementById('p24rvSummary');
+        var list = document.getElementById('p24rvList');
+        if(!d || !d.count){{
+          sum.textContent = 'No Pets24x7 reviews yet — be the first to leave one.';
+          list.innerHTML = '';
+          return;
+        }}
+        sum.innerHTML = '<strong>' + d.average + ' / 5</strong> from ' + d.count + ' Pets24x7 review' + (d.count === 1 ? '' : 's');
+        list.innerHTML = (d.reviews||[]).map(function(r){{
+          return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+              '<strong>' + rvEsc(r.reviewerName) + '</strong>' +
+              '<span style="color:#D97706;font-weight:800;">★ ' + r.rating + '</span>' +
+            '</div>' +
+            '<p style="margin:6px 0 0;font-size:14px;line-height:1.5;">' + rvEsc(r.text) + '</p>' +
+            (r.vendorReply ? '<div style="margin-top:8px;padding:8px 10px;background:#F1F5F9;border-radius:8px;font-size:13px;"><strong>Reply from the business:</strong> ' + rvEsc(r.vendorReply) + '</div>' : '') +
+          '</div>';
+        }}).join('');
+      }})
+      .catch(function(){{
+        var sum = document.getElementById('p24rvSummary');
+        if (sum) sum.textContent = 'Reviews could not be loaded right now.';
+      }});
+  }}
+
+  function submitListingReview(ev){{
+    ev.preventDefault();
+    var msg = document.getElementById('rvMsg');
+    var btn = document.getElementById('rvSubmit');
+    var body = {{
+      reviewerName: document.getElementById('rvName').value.trim(),
+      rating: Number(document.getElementById('rvRating').value),
+      text: document.getElementById('rvText').value.trim()
+    }};
+    if (body.reviewerName.length < 2) {{ msg.style.color='#DC2626'; msg.textContent='Please enter your name.'; return false; }}
+    if (body.text.length < 10) {{ msg.style.color='#DC2626'; msg.textContent='Please write at least a sentence.'; return false; }}
+
+    btn.disabled = true; btn.textContent = 'Sending…';
+    msg.style.color = '#6B7280'; msg.textContent = 'Sending…';
+    fetch(API_BASE + '/api/reviews/listing/' + encodeURIComponent(biz.id), {{
+      method: 'POST',
+      credentials: 'include',
+      headers: {{ 'Content-Type':'application/json', 'Accept':'application/json' }},
+      body: JSON.stringify(body)
+    }}).then(function(r){{ return r.json().then(function(d){{ if(!r.ok) throw new Error(d.message||d.error||'Could not submit'); return d; }}); }})
+      .then(function(d){{
+        document.getElementById('p24rvForm').reset();
+        msg.style.color = '#047857';
+        msg.textContent = d.message || 'Thanks — your review goes live once checked.';
+      }})
+      .catch(function(e){{ msg.style.color = '#DC2626'; msg.textContent = e.message; }})
+      .finally(function(){{ btn.disabled = false; btn.textContent = 'Submit review'; }});
+    return false;
+  }}
+
+  loadListingReviews();
+
   var LEADS_WEBAPP_URL = (window.PETS_CONFIG && window.PETS_CONFIG.LEADS_WEBAPP_URL) || '';
   function pushLead(data){{
     if(!LEADS_WEBAPP_URL)return;

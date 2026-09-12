@@ -4,14 +4,17 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcrypt';
 
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
+import { setAuthCookie } from '../auth/jwt.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { getListingById } from '../listings/index.js';
 import { notifyIf } from '../mail/notify.js';
+import { adminProfileChangedEmail } from '../mail/action-templates.js';
 import { logger } from '../logger.js';
 import { createRefund } from '../payments/razorpay.js';
 import {
@@ -487,6 +490,107 @@ adminExtraRouter.get(
     const take = Math.min(500, Number(req.query.limit ?? 200) || 200);
     const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take });
     res.json({ ok: true, logs });
+  }),
+);
+
+// ---------------- The signed-in admin's own account ----------------
+// Email is the account identifier and the address every security notice goes
+// to, so it can be set once and then only changed by another admin or in the
+// database. The password has no such constraint: it should be changed often,
+// and always after anyone leaves.
+adminExtraRouter.get(
+  '/me/profile',
+  asyncHandler(async (req, res) => {
+    const admin = await prisma.admin.findUnique({
+      where: { id: req.auth!.sub },
+      select: { id: true, name: true, email: true, role: true, lastLoginAt: true, createdAt: true },
+    });
+    if (!admin) throw new NotFoundError('Admin not found');
+
+    const emailLocked = await prisma.setting
+      .findUnique({ where: { key: `admin_email_set:${admin.id}` } })
+      .catch(() => null);
+
+    res.json({ ok: true, admin: { ...admin, emailLocked: !!emailLocked } });
+  }),
+);
+
+const AdminProfileBody = z
+  .object({
+    name: z.string().min(2).max(80).optional(),
+    email: z.string().email().max(160).optional(),
+    currentPassword: z.string().max(200).optional(),
+    newPassword: z.string().min(10, 'Use at least 10 characters').max(200).optional(),
+  })
+  .refine((b) => b.name || b.email || b.newPassword, { message: 'Nothing to change' });
+
+adminExtraRouter.patch(
+  '/me/profile',
+  asyncHandler(async (req, res) => {
+    const body = AdminProfileBody.parse(req.body ?? {});
+    const admin = await prisma.admin.findUnique({ where: { id: req.auth!.sub } });
+    if (!admin) throw new NotFoundError('Admin not found');
+
+    const data: Record<string, unknown> = {};
+    if (body.name) data.name = body.name.trim();
+
+    // ----- email: once -----
+    if (body.email) {
+      const nextEmail = body.email.trim().toLowerCase();
+      if (nextEmail !== admin.email) {
+        const lockKey = `admin_email_set:${admin.id}`;
+        const locked = await prisma.setting.findUnique({ where: { key: lockKey } }).catch(() => null);
+        if (locked) {
+          throw new BadRequestError(
+            'The admin email can only be set once. Ask another admin to change it for you.',
+          );
+        }
+        const taken = await prisma.admin.findUnique({ where: { email: nextEmail } });
+        if (taken) throw new BadRequestError('Another admin already uses that address');
+
+        data.email = nextEmail;
+        await prisma.setting.create({
+          data: { key: lockKey, value: { email: nextEmail, setAt: new Date().toISOString() }, updatedBy: admin.id },
+        });
+      }
+    }
+
+    // ----- password: as often as they like, current one required -----
+    if (body.newPassword) {
+      const ok = body.currentPassword ? await bcrypt.compare(body.currentPassword, admin.passwordHash) : false;
+      if (!ok) throw new BadRequestError('Your current password is incorrect');
+      if (await bcrypt.compare(body.newPassword, admin.passwordHash)) {
+        throw new BadRequestError('The new password must be different from the current one');
+      }
+      data.passwordHash = await bcrypt.hash(body.newPassword, 12);
+      // Every other session made with the old password stops working.
+      data.sessionsRevokedAt = new Date();
+    }
+
+    const updated = await prisma.admin.update({
+      where: { id: admin.id },
+      data,
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    // The revoke above would sign this admin out of the tab they are using.
+    if (data.passwordHash) setAuthCookie(res, { sub: updated.id, role: 'admin' });
+
+    await audit(req, 'admin.profile.update', {
+      changed: Object.keys(data).filter((k) => k !== 'passwordHash' && k !== 'sessionsRevokedAt'),
+      passwordChanged: !!data.passwordHash,
+    });
+
+    // Tell the address on file, so a change nobody made is noticed.
+    notifyIf(admin.email, (to) =>
+      adminProfileChangedEmail(to, updated.name, {
+        emailChanged: !!data.email,
+        passwordChanged: !!data.passwordHash,
+        newEmail: (data.email as string) ?? null,
+      }),
+    );
+
+    res.json({ ok: true, admin: updated });
   }),
 );
 

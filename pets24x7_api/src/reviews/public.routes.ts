@@ -4,6 +4,8 @@
 //   GET  /api/reviews/:code                  fetch request context for customer landing page
 //   POST /api/reviews/:code/choose           customer picks GOOGLE vs PETS24X7
 //   POST /api/reviews/:code/submit           customer submits Pets24x7-hosted review (rating + text)
+//   GET  /api/reviews/listing/:listingId     published reviews for any listing
+//   POST /api/reviews/listing/:listingId     leave a review on any listing (moderated)
 
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
@@ -49,10 +51,14 @@ reviewPublicApiRouter.get(
   asyncHandler(async (req, res) => {
     const listingId = (req.params.listingId ?? '').slice(0, 120);
     const vendor = await prisma.vendor.findUnique({ where: { listingId }, select: { id: true } });
-    if (!vendor) return res.json({ ok: true, count: 0, average: null, reviews: [] });
 
+    // Reviews can be left on any listing, claimed or not, so match on either
+    // side: the listing id itself, and the vendor when one has claimed it.
     const reviews = await prisma.review.findMany({
-      where: { vendorId: vendor.id, status: 'PUBLISHED' },
+      where: {
+        status: 'PUBLISHED',
+        OR: [{ listingId }, ...(vendor ? [{ vendorId: vendor.id }] : [])],
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: { id: true, reviewerName: true, rating: true, text: true, vendorReply: true, vendorReplyAt: true, createdAt: true },
@@ -61,6 +67,84 @@ reviewPublicApiRouter.get(
       ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
       : null;
     res.json({ ok: true, count: reviews.length, average, reviews });
+  }),
+);
+
+// ---- POST /api/reviews/listing/:listingId  →  leave a review on a listing ----
+// Open to anyone, because the people with something to say about a vet visit
+// are not necessarily account holders. Everything lands PENDING and is only
+// visible after an admin publishes it, which is what keeps this from becoming
+// a spam surface. A signed-in parent is recorded so their dashboard can show
+// what they wrote and its moderation state.
+const submitLimiter = rateLimit({ windowMs: 60 * 60_000, max: 5, standardHeaders: true });
+
+const ListingReviewBody = z.object({
+  reviewerName: z.string().min(2, 'Tell us your name').max(60),
+  rating: z.coerce.number().int().min(1).max(5),
+  text: z.string().min(10, 'Please write at least a sentence').max(2000),
+  phone: z.string().max(32).optional(),
+});
+
+reviewPublicApiRouter.post(
+  '/listing/:listingId',
+  submitLimiter,
+  asyncHandler(async (req, res) => {
+    const listingId = (req.params.listingId ?? '').slice(0, 120);
+    const body = ListingReviewBody.parse(req.body);
+
+    const listing = getListingById(listingId);
+    if (!listing) throw new NotFoundError('Listing not found');
+
+    const vendor = await prisma.vendor
+      .findUnique({ where: { listingId }, select: { id: true, businessName: true, email: true } })
+      .catch(() => null);
+
+    // The auth cookie is optional here: it only decides attribution.
+    const parentId = req.auth?.role === 'pet_parent' ? req.auth.sub : null;
+
+    // One pending review per listing per person stops a double submit from the
+    // same form creating two rows for a moderator to read.
+    if (parentId) {
+      const existing = await prisma.review.findFirst({
+        where: { listingId, parentId, status: 'PENDING' },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new BadRequestError('You already have a review waiting to be published for this business.');
+      }
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        vendorId: vendor?.id ?? null,
+        listingId,
+        listingName: listing.name,
+        parentId,
+        reviewerName: body.reviewerName.trim(),
+        reviewerPhone: body.phone?.trim() || null,
+        rating: body.rating,
+        text: body.text.trim(),
+        status: 'PENDING',
+      },
+    });
+
+    // Tell the business someone reviewed them, when there is a business to tell.
+    if (vendor?.email) {
+      notifyIf(vendor.email, (to) =>
+        vendorNewReviewEmail(to, vendor.businessName, {
+          reviewerName: review.reviewerName,
+          rating: review.rating,
+          text: review.text,
+        }),
+      );
+    }
+
+    logger.info({ listingId, reviewId: review.id }, 'listing review submitted');
+    res.status(201).json({
+      ok: true,
+      pending: true,
+      message: 'Thanks — your review goes live once our team has checked it.',
+    });
   }),
 );
 

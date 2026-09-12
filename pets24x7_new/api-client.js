@@ -187,6 +187,7 @@
 
     // Public listing reviews (Pets24x7-hosted, published)
     listingReviews: function (listingId) { return req('GET', '/api/reviews/listing/' + encodeURIComponent(listingId)); },
+    listingReviewCreate: function (listingId, body) { return req('POST', '/api/reviews/listing/' + encodeURIComponent(listingId), body); },
 
     // Enquiries
     enquiryCreate:    function (p)                       { return req('POST', '/api/enquiries', p); },
@@ -262,6 +263,8 @@
     adminWaMessages:  function (dir)        { return req('GET',  '/api/admin/wa-messages' + (dir ? '?direction=' + encodeURIComponent(dir) : '')); },
     adminAudit:       function ()          { return req('GET',  '/api/admin/audit'); },
     adminSettings:    function ()          { return req('GET',  '/api/admin/settings'); },
+    adminMyProfile:   function ()          { return req('GET',   '/api/admin/me/profile'); },
+    adminMyProfileSave: function (body)    { return req('PATCH', '/api/admin/me/profile', body); },
     adminSettingsSave:function (obj)       { return req('PUT',  '/api/admin/settings', obj); },
 
     // Public listing lookup (no auth)
