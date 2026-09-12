@@ -122,6 +122,7 @@
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script>
   function $(id) { return document.getElementById(id); }
   function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
@@ -201,7 +202,7 @@
     btn.disabled = true; btn.textContent = 'Resending…';
     api.adminEmailOtpRequest(aoEmailStr).then(function(r) {
       if (r && r.devCode) $('aoOtp').value = r.devCode;
-      alert('A fresh code was sent to ' + aoEmailStr);
+      toast('A fresh code was sent to ' + aoEmailStr, 'ok');
       btn.disabled = false; btn.textContent = 'Resend code';
     }).catch(function(err) {
       showErr($('aoErr2'), fmtErr(err));

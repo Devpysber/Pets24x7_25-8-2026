@@ -208,10 +208,19 @@
       var tName = target ? target.name : 'the new plan';
       var tPrice = target ? fmtINR(target.priceMinor) : '';
       var curName = (activeMembership.plan && activeMembership.plan.name) || 'your current plan';
-      if (!confirm('Move to ' + tName + '?\n\nYou pay ' + tPrice + ' now for a full new term. Any unused time on ' + curName + ' is converted to credit and added on top — you don’t lose it. Your benefits switch to ' + tName + ' straight away.')) {
-        return;
-      }
+      uiConfirm({
+        title: 'Move to ' + tName + '?',
+        body: 'You pay ' + tPrice + ' now for a full new term. Any unused time on ' + curName +
+              ' is converted to credit and added on top, so you do not lose it. Your benefits switch to ' +
+              tName + ' straight away.',
+        confirmLabel: 'Move to ' + tName
+      }).then(function (ok) { if (ok) startCheckout(planId, btn); });
+      return;
     }
+    startCheckout(planId, btn);
+  }
+
+  function startCheckout(planId, btn) {
     btn.disabled = true; btn.textContent = 'Starting…';
     api.membershipCheckout(planId).then(function (r) {
       var c = r.checkout;
@@ -267,11 +276,20 @@
 
     var cb = document.getElementById('cancelMembershipBtn');
     if (cb) cb.addEventListener('click', function() {
-      if (!confirm('Cancel auto-renew? Your membership stays active until ' + ends + '.')) return;
-      cb.disabled = true;
-      api.membershipCancel().then(function(r) {
-        showActiveBanner(Object.assign({}, active, { cancelledAt: (r.membership && r.membership.cancelledAt) || new Date().toISOString() }));
-      }).catch(function(e) { toast('Could not cancel: ' + fmtErr(e), 'error'); cb.disabled = false; });
+      uiConfirm({
+        title: 'Cancel auto-renew?',
+        body: 'Your membership stays active until ' + ends + '. After that it ends.',
+        confirmLabel: 'Cancel auto-renew',
+        cancelLabel: 'Keep it',
+        danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        cb.disabled = true;
+        api.membershipCancel().then(function(r) {
+          toast('Auto-renew cancelled', 'ok');
+          showActiveBanner(Object.assign({}, active, { cancelledAt: (r.membership && r.membership.cancelledAt) || new Date().toISOString() }));
+        }).catch(function(e) { toast('Could not cancel: ' + fmtErr(e), 'error'); cb.disabled = false; });
+      });
     });
 
     var rb = document.getElementById('resumeMembershipBtn');

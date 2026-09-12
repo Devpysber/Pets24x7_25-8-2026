@@ -1788,8 +1788,14 @@
       ? 'Book ' + o.label + ' of featured placement at ₹' + rupees.toLocaleString('en-IN') +
         '? It starts when your current placement ends on ' + fmtDate(live.endsAt) + '.'
       : 'Feature your listing for ' + o.label + ' at ₹' + rupees.toLocaleString('en-IN') + '?';
-    if (!confirm(msg)) return;
+    uiConfirm({
+      title: live ? 'Book the next placement?' : 'Feature your listing?',
+      body: msg,
+      confirmLabel: 'Pay ₹' + rupees.toLocaleString('en-IN')
+    }).then(function (ok) { if (ok) startFeaturedCheckout(o, durationDays, btn); });
+  }
 
+  function startFeaturedCheckout(o, durationDays, btn) {
     if (btn) { btn.disabled = true; btn.textContent = 'Starting payment…'; }
     api.vendorFeaturedCreate({ durationDays: durationDays }).then(function(r) {
       var c = r.checkout || {};
@@ -2064,12 +2070,21 @@
 
   function replyToReview(id) {
     var r = state.reviews.find(function(x){ return x.id === id; });
-    var txt = prompt('Your public reply to this review:', (r && r.vendorReply) || '');
-    if (txt === null || !txt.trim()) return;
-    api.vendorReviewReply(id, txt.trim()).then(function(res) {
-      if (r) r.vendorReply = (res.review && res.review.vendorReply) || txt.trim();
-      renderReviews();
-    }).catch(function(err) { toast('Could not post reply: ' + fmtErr(err), 'error'); });
+    uiForm({
+      title: 'Reply to this review',
+      body: 'Your reply appears publicly under the review, signed with your business name.',
+      confirmLabel: 'Post reply',
+      fields: [{ name: 'text', label: 'Your reply', type: 'textarea', rows: 4,
+                 value: (r && r.vendorReply) || '', required: true,
+                 placeholder: 'Thanks for coming in — glad Bruno is doing better.' }]
+    }).then(function (f) {
+      if (!f) return;
+      api.vendorReviewReply(id, f.text).then(function(res) {
+        if (r) r.vendorReply = (res.review && res.review.vendorReply) || f.text;
+        toast('Reply posted', 'ok');
+        renderReviews();
+      }).catch(function(err) { toast('Could not post reply: ' + fmtErr(err), 'error'); });
+    });
   }
 
   // Services were removed from the vendor dashboard; kept as a no-op so an
@@ -2190,10 +2205,21 @@
 
   function copyReviewLink(btn, url) {
     var done = function() { btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = 'Copy link'; }, 1800); };
+    // When the clipboard is refused (an insecure origin, or permission denied)
+    // the link still has to be gettable, so it goes into a selected field.
+    var fallback = function() {
+      uiForm({
+        title: 'Copy this link',
+        body: 'Select the link and copy it.',
+        confirmLabel: 'Done',
+        cancelLabel: 'Close',
+        fields: [{ name: 'url', label: 'Review link', value: url }]
+      });
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done).catch(function(){ window.prompt('Copy this link:', url); });
+      navigator.clipboard.writeText(url).then(done).catch(fallback);
     } else {
-      window.prompt('Copy this link:', url);
+      fallback();
     }
   }
 
@@ -2291,31 +2317,42 @@
   }
 
   function removeService(id) {
-    if (!confirm('Remove this service?')) return;
-    api.vendorServiceDelete(id).then(loadServices).catch(function(err){ toast('Could not remove: ' + fmtErr(err), 'error'); });
+    uiConfirm({
+      title: 'Remove this service?',
+      body: 'It stops showing on your listing straight away.',
+      confirmLabel: 'Remove service',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.vendorServiceDelete(id).then(function () { toast('Service removed', 'ok'); return loadServices(); })
+        .catch(function(err){ toast('Could not remove: ' + fmtErr(err), 'error'); });
+    });
   }
 
   function editService(id) {
     var s = state.services.find(function(x){ return x.id === id; });
     if (!s) return;
-    var name = prompt('Service name:', s.name);
-    if (name === null) return;
-    name = name.trim();
-    if (!name) { toast('Service name is required.', 'error'); return; }
-    var price = prompt('Price (₹):', s.price);
-    if (price === null) return;
-    var pn = parseFloat(price);
-    if (isNaN(pn) || pn < 0) { toast('Enter a valid price.', 'error'); return; }
-    var duration = prompt('Duration (e.g. 45 mins):', s.duration || '30 mins');
-    if (duration === null) return;
-    var desc = prompt('Description (optional):', s.description || '');
-    if (desc === null) return;
-    api.vendorServiceUpdate(id, {
-      name: name,
-      priceMinor: Math.round(pn * 100),
-      durationLabel: (duration.trim() || '30 mins'),
-      description: desc.trim() || undefined
-    }).then(loadServices).catch(function(err){ toast('Could not update: ' + fmtErr(err), 'error'); });
+    uiForm({
+      title: 'Edit service',
+      confirmLabel: 'Save service',
+      fields: [
+        { name: 'name', label: 'Service name', value: s.name, required: true },
+        { name: 'price', label: 'Price (₹)', type: 'number', value: s.price, required: true },
+        { name: 'duration', label: 'Duration', value: s.duration || '30 mins', placeholder: '45 mins' },
+        { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: s.description || '' }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      var pn = parseFloat(f.price);
+      if (isNaN(pn) || pn < 0) { toast('Enter a valid price.', 'error'); return; }
+      api.vendorServiceUpdate(id, {
+        name: f.name,
+        priceMinor: Math.round(pn * 100),
+        durationLabel: f.duration || '30 mins',
+        description: f.description || undefined
+      }).then(function () { toast('Service saved', 'ok'); return loadServices(); })
+        .catch(function(err){ toast('Could not update: ' + fmtErr(err), 'error'); });
+    });
   }
 
   document.getElementById('addServiceForm').addEventListener('submit', function(ev){
@@ -2566,7 +2603,15 @@
   })();
 
   function removeVendorImage() {
-    if (!confirm('Remove your storefront photo?')) return;
+    uiConfirm({
+      title: 'Remove your storefront photo?',
+      body: 'Your listing falls back to a stock photo for your category until you upload another.',
+      confirmLabel: 'Remove photo',
+      danger: true
+    }).then(function (ok) { if (ok) removeVendorImageNow(); });
+  }
+
+  function removeVendorImageNow() {
     var msg = document.getElementById('vImgMsg');
     msg.style.color = 'var(--text-muted)'; msg.textContent = 'Removing…';
     api.vendorPatch({ imageUrl: '' }).then(function() {
@@ -2619,9 +2664,16 @@
   function removeGalleryImage(index) {
     var list = (state.vendor.galleryImages || []).slice();
     if (index < 0 || index >= list.length) return;
-    if (!confirm('Remove this photo from your listing?')) return;
-    list.splice(index, 1);
-    saveGallery(list, 'Removed');
+    uiConfirm({
+      title: 'Remove this photo?',
+      body: 'It disappears from your listing gallery straight away.',
+      confirmLabel: 'Remove photo',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      list.splice(index, 1);
+      saveGallery(list, 'Removed');
+    });
   }
 
   (function wireGalleryUpload() {

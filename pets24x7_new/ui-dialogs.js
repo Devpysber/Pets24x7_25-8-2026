@@ -143,4 +143,159 @@
   window.uiAlert = function (opts) {
     return dialog(Object.assign({ mode: 'alert', title: 'Heads up' }, typeof opts === 'string' ? { body: opts } : opts));
   };
+  /* ------------------------------------------------------------------ *
+   * In-page forms, so nothing in the product has to reach for prompt().
+   *
+   * A chain of prompt() calls cannot be cancelled halfway, cannot be
+   * validated, shows no field labels and is blocked outright by some
+   * browsers. uiPrompt is one field; uiForm is several, and resolves to
+   * null when the person backs out.
+   * ------------------------------------------------------------------ */
+  function fieldEl(f) {
+    var wrap = document.createElement('label');
+    wrap.style.cssText = 'display:block;margin-bottom:12px;font-size:11px;font-weight:700;' +
+      'letter-spacing:.4px;text-transform:uppercase;color:#6B7280;';
+    wrap.textContent = f.label || f.name;
+
+    var input;
+    if (f.type === 'select') {
+      input = document.createElement('select');
+      (f.options || []).forEach(function (o) {
+        var opt = document.createElement('option');
+        opt.value = typeof o === 'string' ? o : o.value;
+        opt.textContent = typeof o === 'string' ? o : (o.label || o.value);
+        input.appendChild(opt);
+      });
+    } else if (f.type === 'textarea') {
+      input = document.createElement('textarea');
+      input.rows = f.rows || 3;
+    } else {
+      input = document.createElement('input');
+      input.type = f.type || 'text';
+    }
+    input.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin-top:5px;' +
+      'padding:9px 11px;border:1px solid #D1D5DB;border-radius:8px;font:inherit;' +
+      'font-size:14px;text-transform:none;letter-spacing:0;color:#111827;';
+    if (f.placeholder) input.placeholder = f.placeholder;
+    if (f.value !== undefined && f.value !== null) input.value = String(f.value);
+    if (f.required) input.required = true;
+    wrap.appendChild(input);
+
+    if (f.hint) {
+      var hint = document.createElement('span');
+      hint.style.cssText = 'display:block;margin-top:4px;font-size:11px;font-weight:500;' +
+        'text-transform:none;letter-spacing:0;color:#9CA3AF;';
+      hint.textContent = f.hint;
+      wrap.appendChild(hint);
+    }
+    return { wrap: wrap, input: input };
+  }
+
+  /**
+   * Resolves to a plain object of values, or null if cancelled.
+   * Required fields block the submit and say which one is missing.
+   */
+  window.uiForm = function (opts) {
+    opts = opts || {};
+    var fields = opts.fields || [];
+    return new Promise(function (resolve) {
+      var back = document.createElement('div');
+      back.className = 'p24-dlg-back';
+      var dlg = document.createElement('div');
+      dlg.className = 'p24-dlg';
+      dlg.setAttribute('role', 'dialog');
+      dlg.setAttribute('aria-modal', 'true');
+      dlg.style.maxHeight = '86vh';
+      dlg.style.overflowY = 'auto';
+
+      var h = document.createElement('h3');
+      h.textContent = opts.title || 'Details';
+      dlg.appendChild(h);
+      if (opts.body) {
+        var p = document.createElement('p');
+        p.textContent = opts.body;
+        dlg.appendChild(p);
+      }
+
+      var form = document.createElement('form');
+      var built = fields.map(function (f) {
+        var el = fieldEl(f);
+        form.appendChild(el.wrap);
+        return { def: f, input: el.input };
+      });
+
+      var err = document.createElement('div');
+      err.style.cssText = 'font-size:12.5px;color:#B91C1C;font-weight:600;min-height:16px;margin-bottom:4px;';
+      form.appendChild(err);
+
+      var row = document.createElement('div');
+      row.className = 'p24-dlg-row';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'p24-btn p24-btn-ghost';
+      cancel.textContent = opts.cancelLabel || 'Cancel';
+      var ok = document.createElement('button');
+      ok.type = 'submit';
+      ok.className = 'p24-btn ' + (opts.danger ? 'p24-btn-danger' : 'p24-btn-primary');
+      ok.textContent = opts.confirmLabel || 'Save';
+      row.appendChild(cancel);
+      row.appendChild(ok);
+      form.appendChild(row);
+      dlg.appendChild(form);
+
+      function close(result) {
+        back.classList.remove('in');
+        document.removeEventListener('keydown', onKey);
+        setTimeout(function () { if (back.parentNode) back.parentNode.removeChild(back); }, 200);
+        resolve(result);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(null); }
+
+      cancel.onclick = function () { close(null); };
+      back.addEventListener('click', function (e) { if (e.target === back) close(null); });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var out = {};
+        for (var i = 0; i < built.length; i++) {
+          var b = built[i];
+          var v = b.input.value;
+          if (typeof v === 'string') v = v.trim();
+          if (b.def.required && !v) {
+            err.textContent = (b.def.label || b.def.name) + ' is needed.';
+            b.input.focus();
+            return;
+          }
+          out[b.def.name] = v;
+        }
+        close(out);
+      });
+
+      document.addEventListener('keydown', onKey);
+      back.appendChild(dlg);
+      document.body.appendChild(back);
+      requestAnimationFrame(function () {
+        back.classList.add('in');
+        if (built.length) built[0].input.focus(); else ok.focus();
+      });
+    });
+  };
+
+  /** One field. Resolves to the string, or null if cancelled. */
+  window.uiPrompt = function (opts) {
+    opts = typeof opts === 'string' ? { title: opts } : (opts || {});
+    return window.uiForm({
+      title: opts.title || 'Enter a value',
+      body: opts.body,
+      confirmLabel: opts.confirmLabel || 'OK',
+      fields: [{
+        name: 'value',
+        label: opts.label || 'Value',
+        type: opts.type || 'text',
+        value: opts.value,
+        placeholder: opts.placeholder,
+        hint: opts.hint,
+        required: opts.required !== false
+      }]
+    }).then(function (res) { return res ? res.value : null; });
+  };
 })();

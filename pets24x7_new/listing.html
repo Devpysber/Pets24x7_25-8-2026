@@ -214,6 +214,7 @@
 </div>
 
 <script src="config.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script src="pets-data.js"></script>
 <script src="pets-loader.js"></script>
 <script src="/pet-images.js"></script>
@@ -414,8 +415,11 @@
       return;
     }
     if (saveState.role !== 'pet_parent') {
-      alert('Sign in as a pet parent to save businesses.');
-      location.href = '/login/#parent';
+      uiAlert({
+        title: 'Pet parent accounts only',
+        body: 'Saving businesses is a pet parent feature. Sign in with a pet parent account to use it.',
+        confirmLabel: 'Go to sign in'
+      }).then(function () { location.href = '/login/#parent'; });
       return;
     }
     var btn = document.getElementById('saveBtn');
@@ -427,7 +431,7 @@
             country: (biz.country === 'IN' || biz.country === 'US') ? biz.country : undefined }) })
       : fetch(API_BASE + '/api/parent/saved/' + encodeURIComponent(biz.id), { method: 'DELETE', credentials: 'include' });
     p.then(function(r){ if (!r.ok) throw new Error('save failed'); saveState.isSaved = want; renderSaveBtn(); })
-     .catch(function(){ alert('Could not update saved businesses. Try again.'); })
+     .catch(function(){ toast('Could not update your saved list. Try again.', 'error'); })
      .finally(function(){ if (btn) btn.disabled = false; });
   }
 

@@ -321,6 +321,22 @@ export function indexStats() {
   };
 }
 
+/** Drops a listing from the in-memory index, for an admin deletion. */
+export function removeListingFromIndex(id: string): void {
+  const record = byId.get(id);
+  if (!record) return;
+  byId.delete(id);
+  if (record.phone) {
+    const key = lastDigits(record.phone, 10);
+    const bucket = phoneIndex.get(key);
+    if (bucket) {
+      const rest = bucket.filter((r) => r.id !== id);
+      if (rest.length) phoneIndex.set(key, rest);
+      else phoneIndex.delete(key);
+    }
+  }
+}
+
 export async function addAndPersistImportedListing(record: ListingRecord): Promise<void> {
   indexRecord(record, true);
 

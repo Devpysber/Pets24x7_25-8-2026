@@ -24,7 +24,7 @@ import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
-import { getListingById, indexStats, searchListings } from '../listings/index.js';
+import { addAndPersistImportedListing, getListingById, indexStats, removeListingFromIndex, searchListings } from '../listings/index.js';
 import { notify } from '../whatsapp/notify.js';
 import { notifyIf } from '../mail/notify.js';
 import {
@@ -142,26 +142,23 @@ adminApiRouter.get(
     for (const item of enquiriesByStatusRaw) {
       enquiryMap[item.status] = item._count._all;
     }
-    const totEnq = Object.values(enquiryMap).reduce((a, b) => a + b, 0) || totalEnquiries || 100;
+    // Real counts only. The previous version substituted percentages of a total
+    // whenever a status had none, so an empty platform still drew a healthy
+    // funnel — a chart that cannot show bad news is worth nothing.
     const enquiryConversion = {
       labels: ['Responded / Contacted', 'New Leads', 'Completed / Converted', 'Archived'],
       counts: [
-        enquiryMap.RESPONDED || Math.max(1, Math.round(totEnq * 0.65)),
-        enquiryMap.NEW || Math.max(1, Math.round(totEnq * 0.20)),
-        enquiryMap.COMPLETED || Math.max(1, Math.round(totEnq * 0.10)),
-        enquiryMap.ARCHIVED || Math.max(1, Math.round(totEnq * 0.05)),
+        enquiryMap.RESPONDED ?? 0,
+        enquiryMap.NEW ?? 0,
+        enquiryMap.COMPLETED ?? 0,
+        enquiryMap.ARCHIVED ?? 0,
       ],
     };
 
-    // Grow Business Plan Breakdown
+    // Grow Business Plan Breakdown — actual rows, and zeros when there are none.
     const growPlanBreakdown = {
-      labels: ['Gold Business Tier (₹2,999/mo)', 'Silver Business Tier (₹1,499/mo)', 'Featured Listing Boost', 'Marketing Boost Campaign'],
-      counts: [
-        goldPlanCount > 0 ? goldPlanCount : Math.max(1, Math.round(totalGrowBusinessPlan * 0.52)),
-        silverPlanCount > 0 ? silverPlanCount : Math.max(1, Math.round(totalGrowBusinessPlan * 0.28)),
-        featuredCount > 0 ? featuredCount : Math.max(1, Math.round(totalGrowBusinessPlan * 0.12)),
-        activeCampaigns > 0 ? activeCampaigns : Math.max(1, Math.round(totalGrowBusinessPlan * 0.08)),
-      ],
+      labels: ['Gold Business Tier', 'Silver Business Tier', 'Featured Listing Boost', 'Marketing Campaigns'],
+      counts: [goldPlanCount, silverPlanCount, featuredCount, activeCampaigns],
     };
 
     // Pet Parent Subscriptions Breakdown
@@ -172,17 +169,11 @@ adminApiRouter.get(
       const name = p ? p.name : 'Standard Subscription';
       planMap[name] = (planMap[name] || 0) + item._count._all;
     }
-    const subLabels = Object.keys(planMap).length ? Object.keys(planMap) : ['Bronze · Monthly (₹99)', 'Silver · Annual (₹999)', 'Gold · Premium (₹1,999)'];
-    const subCounts = Object.keys(planMap).length
-      ? Object.values(planMap)
-      : [
-          Math.max(1, Math.round((totalSubscriptions || 15) * 0.60)),
-          Math.max(1, Math.round((totalSubscriptions || 15) * 0.28)),
-          Math.max(1, Math.round((totalSubscriptions || 15) * 0.12)),
-        ];
+    // One slice per plan that actually has members. An empty platform charts
+    // nothing rather than three invented tiers.
     const subscriptionBreakdown = {
-      labels: subLabels,
-      counts: subCounts,
+      labels: Object.keys(planMap),
+      counts: Object.values(planMap),
     };
 
     // Category and City distribution
@@ -209,44 +200,40 @@ adminApiRouter.get(
           { name: 'Kolkata', count: 1980 },
         ];
 
-    const baseListings = idxStats.listings || 34170;
-    const baseVendors = totalClaimedListings;
-    const baseParents = petParents || 720;
+    // Real history: each month is what the platform actually held at the end of
+    // it. The old version multiplied today's total by a hand-picked curve, so
+    // the "growth" line was decoration rather than data.
+    const MONTHS_BACK = 9;
+    const monthStart = (offset: number) => {
+      const d = new Date();
+      return new Date(d.getFullYear(), d.getMonth() - offset, 1);
+    };
+    const monthEdges: Date[] = [];
+    for (let i = MONTHS_BACK - 1; i >= 0; i--) monthEdges.push(monthStart(i));
+    const monthLabels = monthEdges.map((d) => d.toLocaleString('en-US', { month: 'short' }));
+    const upTo = monthEdges.map((d, i) =>
+      i === monthEdges.length - 1 ? new Date() : monthEdges[i + 1]!,
+    );
+
+    const [vendorHistory, parentHistory] = await Promise.all([
+      Promise.all(upTo.map((end) => prisma.vendor.count({ where: { createdAt: { lt: end } } }))),
+      Promise.all(upTo.map((end) => prisma.petParent.count({ where: { createdAt: { lt: end } } }))),
+    ]);
+    const listingHistory = await Promise.all(
+      upTo.map(async (end) => {
+        // Imported rows carry a date; the scraped baseline does not, so it is
+        // counted as having always been there, which is true of the directory.
+        const added = await prisma.listing.count({ where: { importedAt: { lt: end } } }).catch(() => 0);
+        const base = await prisma.listing.count({ where: { importedAt: null } }).catch(() => 0);
+        return base + added;
+      }),
+    );
+
     const growthTrajectory = {
-      months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
-      listings: [
-        Math.round(baseListings * 0.83),
-        Math.round(baseListings * 0.85),
-        Math.round(baseListings * 0.88),
-        Math.round(baseListings * 0.92),
-        Math.round(baseListings * 0.95),
-        Math.round(baseListings * 0.97),
-        Math.round(baseListings * 0.99),
-        Math.round(baseListings * 0.998),
-        totalListings,
-      ],
-      vendors: [
-        Math.round(baseVendors * 0.32),
-        Math.round(baseVendors * 0.44),
-        Math.round(baseVendors * 0.56),
-        Math.round(baseVendors * 0.66),
-        Math.round(baseVendors * 0.75),
-        Math.round(baseVendors * 0.85),
-        Math.round(baseVendors * 0.90),
-        Math.round(baseVendors * 0.96),
-        baseVendors,
-      ],
-      parents: [
-        Math.round(baseParents * 0.16),
-        Math.round(baseParents * 0.25),
-        Math.round(baseParents * 0.33),
-        Math.round(baseParents * 0.43),
-        Math.round(baseParents * 0.54),
-        Math.round(baseParents * 0.66),
-        Math.round(baseParents * 0.77),
-        Math.round(baseParents * 0.88),
-        baseParents,
-      ],
+      months: monthLabels,
+      listings: listingHistory,
+      vendors: vendorHistory,
+      parents: parentHistory,
     };
 
     const pendingActions = [
@@ -499,6 +486,179 @@ adminApiRouter.delete(
     res.json({ ok: true, id, businessName: vendor.businessName });
   }),
 );
+
+// ---------- One directory listing, in full ----------
+// The Vendors table mixes registered accounts with the 34k directory rows, and
+// a directory row has no vendor record behind it — so "View" had nothing to
+// show and there was no way to correct or remove a bad entry. These three
+// routes cover a listing whether or not anyone has claimed it.
+adminApiRouter.get(
+  '/listings/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const row = await prisma.listing.findUnique({ where: { id } });
+    const indexed = getListingById(id);
+    if (!row && !indexed) throw new NotFoundError('Listing not found');
+
+    const vendor = await prisma.vendor
+      .findUnique({
+        where: { listingId: id },
+        select: {
+          id: true, businessName: true, email: true, phone: true, status: true,
+          claimedAt: true, imageUrl: true, galleryImages: true, about: true,
+          openingHours: true, servicesList: true, website: true, address: true,
+        },
+      })
+      .catch(() => null);
+
+    const [enquiries, reviews, activity] = await Promise.all([
+      prisma.enquiry.count({ where: { listingId: id } }).catch(() => 0),
+      prisma.review.count({ where: { listingId: id, status: 'PUBLISHED' } }).catch(() => 0),
+      prisma.listingActivity.groupBy({ by: ['kind'], where: { listingId: id }, _count: { _all: true } }).catch(() => []),
+    ]);
+    const taps: Record<string, number> = {};
+    for (const a of activity as Array<{ kind: string; _count: { _all: number } }>) taps[a.kind] = a._count._all;
+
+    const country = String(row?.country ?? indexed?.country ?? 'IN').toLowerCase();
+    const citySlug = row?.citySlug ?? indexed?.city_slug ?? '';
+
+    res.json({
+      ok: true,
+      listing: {
+        id,
+        name: row?.name ?? indexed?.name ?? '—',
+        category: row?.category ?? indexed?.category ?? '—',
+        city: row?.city ?? indexed?.city ?? '—',
+        state: row?.state ?? indexed?.state ?? null,
+        country: row?.country ?? indexed?.country ?? 'IN',
+        address: vendor?.address ?? row?.address ?? indexed?.address ?? null,
+        phone: row?.phone ?? indexed?.phone ?? null,
+        website: vendor?.website ?? row?.website ?? indexed?.website ?? null,
+        pincode: row?.pincode ?? indexed?.pincode ?? null,
+        rating: row?.rating ?? indexed?.rating ?? 0,
+        reviewCount: row?.reviewCount ?? indexed?.review_count ?? 0,
+        googleCid: row?.googleCid ?? indexed?.google_cid ?? null,
+        publicUrl: citySlug ? `/${country}/${citySlug}/${id}/` : null,
+        claimed: !!vendor,
+      },
+      vendor: vendor
+        ? { ...vendor, galleryImages: parseGalleryText(vendor.galleryImages) }
+        : null,
+      stats: {
+        enquiries,
+        reviews,
+        phoneTaps: taps.phone_click ?? 0,
+        whatsappTaps: taps.whatsapp_click ?? 0,
+        views: taps.listing_view ?? 0,
+      },
+    });
+  }),
+);
+
+const ListingPatchBody = z.object({
+  name: z.string().min(2).max(255).optional(),
+  category: z.string().max(160).optional(),
+  city: z.string().max(160).optional(),
+  address: z.string().max(1000).optional(),
+  phone: z.string().max(32).optional(),
+  website: z.string().max(2000).optional(),
+  pincode: z.string().max(20).optional(),
+});
+
+adminApiRouter.patch(
+  '/listings/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const body = ListingPatchBody.parse(req.body ?? {});
+    const existing = await prisma.listing.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError('Listing not found');
+
+    const slug = (v: string, fallback: string) =>
+      v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
+
+    const updated = await prisma.listing.update({
+      where: { id },
+      data: {
+        ...body,
+        ...(body.category ? { categorySlug: slug(body.category, 'pet-service') } : {}),
+        ...(body.city ? { citySlug: slug(body.city, 'unknown') } : {}),
+        // Marks it as touched, which also floats it to the front of the
+        // in-memory index on the next boot.
+        importedAt: new Date(),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.update',
+        meta: { listingId: id, changed: Object.keys(body) }, ipAddress: req.ip ?? null,
+      },
+    });
+
+    // Keep the running index in step, or the site shows the old values until
+    // the next restart.
+    await addAndPersistImportedListing({
+      id: updated.id,
+      name: updated.name,
+      category: updated.category,
+      category_slug: updated.categorySlug,
+      city: updated.city,
+      city_slug: updated.citySlug,
+      country: updated.country,
+      address: updated.address ?? undefined,
+      phone: updated.phone ?? undefined,
+      website: updated.website ?? undefined,
+      pincode: updated.pincode ?? undefined,
+      rating: updated.rating,
+      review_count: updated.reviewCount,
+      claimStatus: updated.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
+    }).catch(() => {});
+
+    res.json({ ok: true, listing: updated });
+  }),
+);
+
+adminApiRouter.delete(
+  '/listings/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const existing = await prisma.listing.findUnique({ where: { id }, select: { id: true, name: true, city: true } });
+    if (!existing) throw new NotFoundError('Listing not found');
+
+    // A claimed listing belongs to a business with an account. Removing it from
+    // under them would leave a dashboard pointing at nothing, so that has to be
+    // a deliberate vendor deletion instead.
+    const vendor = await prisma.vendor.findUnique({ where: { listingId: id }, select: { businessName: true } });
+    if (vendor) {
+      throw new BadRequestError(
+        `"${vendor.businessName}" has claimed this listing. Delete the vendor account first if you really mean to remove it.`,
+      );
+    }
+
+    await prisma.listing.delete({ where: { id } });
+    removeListingFromIndex(id);
+
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.delete',
+        meta: { listingId: id, name: existing.name, city: existing.city }, ipAddress: req.ip ?? null,
+      },
+    });
+
+    res.json({ ok: true, id, name: existing.name });
+  }),
+);
+
+/** Gallery is stored as JSON text; a bad row must not break the panel. */
+function parseGalleryText(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string').slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
 
 // ---------- Pet parents ----------
 adminApiRouter.get(

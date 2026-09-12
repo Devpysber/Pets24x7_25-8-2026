@@ -148,6 +148,10 @@ export async function runVendorEngagementSweep(): Promise<{ considered: number; 
       email: { not: null },
       emailVerified: true,
       status: { in: ['ACTIVE', 'CLAIMED'] },
+      // Claimed only. An unclaimed directory row never asked to hear from us —
+      // the one message those get is the claim invitation, sent by hand from
+      // scripts/claim-campaign.mjs, never this recurring sweep.
+      claimedAt: { not: null },
       OR: [{ lastMarketingAt: null }, { lastMarketingAt: { lt: gapBefore } }],
     },
     select: {

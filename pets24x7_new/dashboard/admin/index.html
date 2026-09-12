@@ -1643,7 +1643,8 @@
               </div>
               <div class="form-group">
                 <label>Recipients — comma separated</label>
-                <input type="text" id="mailTo" class="form-control" placeholder="someone@example.com, other@example.com" />
+                <input type="text" id="mailTo" class="form-control" list="mailToOptions" placeholder="someone@example.com, other@example.com" />
+                <datalist id="mailToOptions"></datalist>
               </div>
               <div class="form-group">
                 <label>…or an audience</label>
@@ -2558,11 +2559,81 @@
     }
   }
 
-  // Opens the modal for a row of the currently filtered vendor list.
+  // Opens the modal for a row of the currently filtered vendor list. Everything
+  // in that table is a listing, claimed or not, so the modal loads the full
+  // record rather than echoing the four columns already on screen.
   function openVendorModalAt(index) {
     var v = (vendorState.filteredVendors || [])[index];
-    if (v) showVendorModal(v);
+    if (!v) return;
+    showVendorModal(v);
+    var id = v.listingId || v.id;
+    if (id) loadListingDetail(id, v);
   }
+
+  function loadListingDetail(id, row) {
+    var body = document.getElementById('vModalBody');
+    if (!body) return;
+    body.insertAdjacentHTML('beforeend', '<div id="vModalDetail" style="margin-top:12px;color:var(--text-muted);">Loading full record…</div>');
+
+    api.adminListing(id).then(function (r) {
+      var l = r.listing || {};
+      var vend = r.vendor;
+      var st = r.stats || {};
+      var photos = [];
+      if (vend && vend.imageUrl) photos.push(vend.imageUrl);
+      (vend && vend.galleryImages ? vend.galleryImages : []).forEach(function (g) { photos.push(g); });
+
+      var host = document.getElementById('vModalDetail');
+      if (!host) return;
+      host.style.color = 'inherit';
+      host.innerHTML =
+        (photos.length
+          ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
+              photos.slice(0, 6).map(function (src) {
+                return '<img src="' + escH(src) + '" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">';
+              }).join('') +
+            '</div>'
+          : '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;">No photos uploaded for this listing.</div>') +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px;">' +
+          '<div>Phone: <strong>' + escH(l.phone || '—') + '</strong></div>' +
+          '<div>PIN / ZIP: <strong>' + escH(l.pincode || '—') + '</strong></div>' +
+          '<div style="grid-column:1/-1;">Address: <strong>' + escH(l.address || '—') + '</strong></div>' +
+          '<div>Google rating: <strong>' + (l.rating || 0) + ' / 5 · ' + (l.reviewCount || 0) + '</strong></div>' +
+          '<div>Website: ' + (l.website ? '<a href="' + escH(l.website) + '" target="_blank" rel="noopener">open ↗</a>' : '—') + '</div>' +
+        '</div>' +
+        '<div class="metrics-grid" style="margin-top:14px;">' +
+          [['Enquiries', st.enquiries || 0], ['Reviews', st.reviews || 0],
+           ['Phone taps', st.phoneTaps || 0], ['Views', st.views || 0]].map(function (pair) {
+            return '<div class="metric-card" style="padding:10px 12px;"><span class="metric-lbl">' + pair[0] +
+              '</span><div class="metric-val" style="font-size:20px;">' + pair[1] + '</div></div>';
+          }).join('') +
+        '</div>' +
+        (l.publicUrl ? '<div style="margin-top:12px;"><a class="btn btn-sm" href="' + escH(l.publicUrl) + '" target="_blank" rel="noopener">Open the public page ↗</a></div>' : '');
+    }).catch(function (e) {
+      var host = document.getElementById('vModalDetail');
+      if (host) host.textContent = 'Could not load the full record: ' + fmtErr(e);
+    });
+  }
+
+  window.adminDeleteListing = function (index) {
+    var v = (vendorState.filteredVendors || [])[index];
+    if (!v) return;
+    var id = v.listingId || v.id;
+    uiConfirm({
+      title: 'Delete this listing?',
+      body: '"' + v.name + '" is removed from the directory and from every city and category page it appears on. ' +
+            'This cannot be undone.',
+      confirmLabel: 'Delete listing',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.adminListingDelete(id).then(function () {
+        toast('Deleted ' + v.name, 'ok');
+        loadView('vendors', true);
+        loadView('dash', true);
+      }).catch(function (e) { uiAlert({ title: 'Could not delete', body: fmtErr(e) }); });
+    });
+  };
 
   function openVendorModal(json) {
     var v = {};
@@ -2882,8 +2953,11 @@
       // through an onclick attribute: any quote, ampersand or newline in a
       // business name broke that attribute, and View then did nothing at all.
       var acts = '<button class="btn btn-sm" onclick="openVendorModalAt(' + (start + i) + ')">View</button>';
-      // A directory row has no vendor account behind it, so there is nothing to
-      // email and nothing to delete — only claimed vendors get those.
+      // A directory row has no account behind it: it can still be inspected and
+      // removed, but there is nobody to email.
+      if (v.source !== 'REGISTERED_VENDOR') {
+        acts += ' <button class="btn btn-sm btn-danger" onclick="adminDeleteListing(' + (start + i) + ')">Delete</button>';
+      }
       if (v.source === 'REGISTERED_VENDOR') {
         if (v.email && v.email !== '—') {
           acts += ' <button class="btn btn-sm" onclick="openMailOne(' + (start + i) + ', \'vendor\')">Email</button>';
@@ -4516,17 +4590,30 @@
     var list = mailEl('mailTo').value.split(',').map(function(x) { return x.trim(); }).filter(Boolean);
     if (audience) {
       var n = (mailEl('mailAudienceCount').textContent || '').split(' ')[0] || 'all';
-      if (!confirm('Send "' + mailCur.label + '" to ' + n + ' recipients in "' + audience + '"? This sends real email.')) return;
-      return mailDoSend(null, audience);
+      uiConfirm({
+        title: 'Send real email?',
+        body: '"' + mailCur.label + '" goes to ' + n + ' recipients in "' + audience + '". ' +
+              'This cannot be recalled once sent.',
+        confirmLabel: 'Send to ' + n
+      }).then(function (ok) { if (ok) mailDoSend(null, audience); });
+      return;
     }
     if (!list.length) { mailEl('mailSendMsg').style.color = '#B91C1C'; mailEl('mailSendMsg').textContent = 'Add at least one address, or pick an audience.'; return; }
     mailDoSend(list, null);
   });
 
   mailEl('mailSendSelfBtn').addEventListener('click', function() {
-    var me = mailAdminEmail || prompt('Send the test to which address?') || '';
-    if (!me) return;
-    mailDoSend([me], null);
+    if (mailAdminEmail) { mailDoSend([mailAdminEmail], null); return; }
+    // No address on the admin record, so ask for one in the page rather than a
+    // browser prompt.
+    uiPrompt({
+      title: 'Send the test where?',
+      label: 'Email address',
+      placeholder: 'you@example.com',
+      confirmLabel: 'Send test'
+    }).then(function (addr) {
+      if (addr && addr.indexOf('@') > 0) mailDoSend([addr.trim()], null);
+    });
   });
 
 
@@ -5130,8 +5217,18 @@
   };
 
   window.impExecuteCommit = function(dryRun) {
-    if (!dryRun && !confirm('Confirm database import execution? Listing entries will be created in PostgreSQL and synced to Google Sheets.')) return;
+    if (!dryRun) {
+      uiConfirm({
+        title: 'Write these listings to the database?',
+        body: 'Rows are created in PostgreSQL and synced to Google Sheets. Run a dry run first if you have not.',
+        confirmLabel: 'Import for real'
+      }).then(function (ok) { if (ok) impCommitNow(false); });
+      return;
+    }
+    impCommitNow(true);
+  };
 
+  function impCommitNow(dryRun) {
     impGotoStep(4);
     impEl('impProgressBar').style.width = '40%';
     impEl('impStatusPill').textContent = dryRun ? 'Dry Running…' : 'Processing…';
@@ -5234,9 +5331,24 @@
   })();
 
   window.adminSetVendor = function(id, status) {
-    var reason = status === 'REJECTED' ? (prompt('Reason for rejection (optional):') || '') : '';
-    api.adminVendorStatus(id, { status: status, reason: reason }).then(function(){ loadView('vendors', true); loadView('dash', true); })
-      .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    function send(reason) {
+      api.adminVendorStatus(id, { status: status, reason: reason || '' }).then(function(){
+        toast('Vendor set to ' + status.toLowerCase(), 'ok');
+        loadView('vendors', true);
+        loadView('dash', true);
+      }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    }
+    if (status !== 'REJECTED') { send(''); return; }
+    // The reason reaches the business in the rejection email, so it is worth a
+    // real field with room to type in rather than a one-line browser prompt.
+    uiForm({
+      title: 'Reject this business?',
+      body: 'What you write here is sent to them, so say what they need to fix.',
+      confirmLabel: 'Reject and notify',
+      danger: true,
+      fields: [{ name: 'reason', label: 'Reason', type: 'textarea', rows: 3,
+                 placeholder: 'e.g. The phone number does not reach the clinic.' }]
+    }).then(function (res) { if (res) send(res.reason); });
   };
   // ---- Reports ----
   // Numbers count up rather than appearing, which makes a changed figure
@@ -5438,6 +5550,13 @@
     var list = q
       ? mailPeople.filter(function (x) { return (x.label + ' ' + x.email).toLowerCase().indexOf(q) !== -1; })
       : mailPeople;
+    // The same people also feed the free-text field's suggestions.
+    var dl = document.getElementById('mailToOptions');
+    if (dl) {
+      dl.innerHTML = mailPeople.slice(0, 300).map(function (x) {
+        return '<option value="' + escH(x.email) + '">' + escH(x.label) + '</option>';
+      }).join('');
+    }
     sel.innerHTML = list.length
       ? list.slice(0, 200).map(function (x) {
           return '<option value="' + escH(x.email) + '">' + escH(x.label) + ' — ' + escH(x.email) + '</option>';
@@ -5596,23 +5715,39 @@
   window.adminDeleteVendor = function(index) {
     var v = rowAt('vendor', index);
     if (!v || !v.id) return;
-    if (!confirm('Delete "' + v.name + '"?\n\nTheir listing claim, services, campaigns, featured slots and ' +
-                 'reviews are deleted with them. Payment records are kept. This cannot be undone.')) return;
-    api.adminVendorDelete(v.id).then(function() {
-      loadView('vendors', true);
-      loadView('dash', true);
-    }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
+    uiConfirm({
+      title: 'Delete "' + v.name + '"?',
+      body: 'Their listing claim, services, campaigns, featured slots and reviews are deleted with them. ' +
+            'Payment records are kept. This cannot be undone.',
+      confirmLabel: 'Delete vendor',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.adminVendorDelete(v.id).then(function() {
+        toast('Deleted ' + v.name, 'ok');
+        loadView('vendors', true);
+        loadView('dash', true);
+      }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
+    });
   };
 
   window.adminDeleteParent = function(index) {
     var p = rowAt('parent', index);
     if (!p || !p.id) return;
-    if (!confirm('Delete ' + p.name + '?\n\nTheir pets, saved listings and membership records go too. ' +
-                 'Enquiries and payments are kept, with the account link cleared. This cannot be undone.')) return;
-    api.adminParentDelete(p.id).then(function() {
-      loadView('parents', true);
-      loadView('dash', true);
-    }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
+    uiConfirm({
+      title: 'Delete ' + p.name + '?',
+      body: 'Their pets, saved listings and membership records go too. Enquiries and payments are kept, ' +
+            'with the account link cleared. This cannot be undone.',
+      confirmLabel: 'Delete pet parent',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.adminParentDelete(p.id).then(function() {
+        toast('Deleted ' + p.name, 'ok');
+        loadView('parents', true);
+        loadView('dash', true);
+      }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
+    });
   };
 
   var mailOneTarget = null;
@@ -5664,8 +5799,22 @@
       .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminReview = function(id, action) {
-    var p = action === 'publish' ? api.adminReviewPublish(id) : api.adminReviewReject(id, prompt('Reason (optional):') || '');
-    p.then(function(){ loadView('reviews', true); loadView('dash', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    function after(p, word) {
+      p.then(function(){
+        toast('Review ' + word, 'ok');
+        loadView('reviews', true);
+        loadView('dash', true);
+      }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    }
+    if (action === 'publish') { after(api.adminReviewPublish(id), 'published'); return; }
+    uiForm({
+      title: 'Reject this review?',
+      body: 'It stays on the record but never appears on the listing.',
+      confirmLabel: 'Reject review',
+      danger: true,
+      fields: [{ name: 'reason', label: 'Reason (internal)', type: 'textarea', rows: 3,
+                 placeholder: 'e.g. Abusive language, or not about this business.' }]
+    }).then(function (res) { if (res) after(api.adminReviewReject(id, res.reason || ''), 'rejected'); });
   };
   window.adminFeatured = function(id, status) {
     api.adminFeaturedStatus(id, status).then(function(){ loadView('featured', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
@@ -5673,68 +5822,160 @@
 
   // ---- Membership plans ----
   window.adminNewPlan = function() {
-    var sku = prompt('SKU (e.g. bronze_monthly):'); if (!sku) return;
-    var name = prompt('Display name:', 'Bronze · Monthly'); if (!name) return;
-    var tier = (prompt('Tier BRONZE/SILVER/GOLD:', 'BRONZE') || 'BRONZE').toUpperCase();
-    var period = (prompt('Period MONTHLY/ANNUAL:', 'MONTHLY') || 'MONTHLY').toUpperCase();
-    var price = parseFloat(prompt('Price ₹:', '99')); if (!price && price !== 0) return;
-    var days = parseInt(prompt('Duration days:', period === 'ANNUAL' ? '365' : '30'), 10) || 30;
-    api.adminPlanCreate({ sku: sku, name: name, tier: tier, billingPeriod: period, priceMinor: Math.round(price * 100), durationDays: days })
-      .then(function(){ loadView('plans', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'New membership plan',
+      confirmLabel: 'Create plan',
+      fields: [
+        { name: 'sku', label: 'SKU', required: true, placeholder: 'bronze_monthly',
+          hint: 'Lower case, no spaces. It appears in payment records, so it cannot be changed later.' },
+        { name: 'name', label: 'Display name', required: true, value: 'Bronze · Monthly' },
+        { name: 'tier', label: 'Tier', type: 'select', options: ['BRONZE', 'SILVER', 'GOLD'] },
+        { name: 'billingPeriod', label: 'Billing period', type: 'select', options: ['MONTHLY', 'ANNUAL'] },
+        { name: 'price', label: 'Price (₹)', type: 'number', value: '99', required: true },
+        { name: 'durationDays', label: 'Duration (days)', type: 'number', value: '30', required: true }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      var price = parseFloat(f.price);
+      if (isNaN(price)) { toast('Price must be a number', 'error'); return; }
+      api.adminPlanCreate({
+        sku: f.sku, name: f.name, tier: f.tier, billingPeriod: f.billingPeriod,
+        priceMinor: Math.round(price * 100),
+        durationDays: parseInt(f.durationDays, 10) || 30
+      }).then(function(){ toast('Plan created', 'ok'); loadView('plans', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
   window.adminEditPlan = function(id) {
     var p = (window.__plans || []).find(function(x){ return x.id === id; }); if (!p) return;
-    var name = prompt('Display name:', p.name); if (name === null) return;
-    var price = prompt('Price ₹:', Math.round(p.priceMinor / 100)); if (price === null) return;
-    var active = confirm('OK = active, Cancel = inactive');
-    api.adminPlanUpdate(id, { name: name.trim(), priceMinor: Math.round(parseFloat(price) * 100), active: active })
-      .then(function(){ loadView('plans', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'Edit ' + p.name,
+      confirmLabel: 'Save plan',
+      fields: [
+        { name: 'name', label: 'Display name', value: p.name, required: true },
+        { name: 'price', label: 'Price (₹)', type: 'number', value: Math.round(p.priceMinor / 100), required: true },
+        { name: 'active', label: 'Sold right now', type: 'select',
+          value: p.active === false ? 'no' : 'yes',
+          options: [{ value: 'yes', label: 'Yes, on sale' }, { value: 'no', label: 'No, hidden' }] }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      var price = parseFloat(f.price);
+      if (isNaN(price)) { toast('Price must be a number', 'error'); return; }
+      api.adminPlanUpdate(id, { name: f.name, priceMinor: Math.round(price * 100), active: f.active === 'yes' })
+        .then(function(){ toast('Plan saved', 'ok'); loadView('plans', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
 
   // ---- Deals ----
   window.adminNewDeal = function() {
-    var title = prompt('Deal title:'); if (!title) return;
-    var offerLabel = prompt('Offer label (e.g. 20% OFF):', '10% OFF'); if (!offerLabel) return;
-    var description = prompt('Description:', '') || title;
-    var city = prompt('City (blank = all):', '') || undefined;
-    var code = prompt('Coupon code (optional):', '') || undefined;
-    api.adminDealCreate({ title: title, offerLabel: offerLabel, description: description, city: city, code: code })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'New deal',
+      confirmLabel: 'Create deal',
+      fields: [
+        { name: 'title', label: 'Title', required: true, placeholder: 'Monsoon vaccination drive' },
+        { name: 'offerLabel', label: 'Offer badge', value: '10% OFF', required: true },
+        { name: 'description', label: 'Description', type: 'textarea', rows: 3 },
+        { name: 'city', label: 'City', hint: 'Leave blank to show it in every city.' },
+        { name: 'code', label: 'Coupon code', placeholder: 'Optional' }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      api.adminDealCreate({
+        title: f.title, offerLabel: f.offerLabel,
+        description: f.description || f.title,
+        city: f.city || undefined, code: f.code || undefined
+      }).then(function(){ toast('Deal created', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
   window.adminEditDeal = function(id) {
     var d = (window.__deals || []).find(function(x){ return x.id === id; }); if (!d) return;
-    var title = prompt('Title:', d.title); if (title === null) return;
-    var offerLabel = prompt('Offer:', d.offerLabel) || d.offerLabel;
-    var status = (prompt('Status ACTIVE/DRAFT/EXPIRED/ARCHIVED:', d.status) || d.status).toUpperCase();
-    api.adminDealUpdate(id, { title: title.trim(), offerLabel: offerLabel, status: status })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'Edit deal',
+      confirmLabel: 'Save deal',
+      fields: [
+        { name: 'title', label: 'Title', value: d.title, required: true },
+        { name: 'offerLabel', label: 'Offer badge', value: d.offerLabel, required: true },
+        { name: 'status', label: 'Status', type: 'select', value: d.status,
+          options: ['ACTIVE', 'DRAFT', 'EXPIRED', 'ARCHIVED'] }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      api.adminDealUpdate(id, { title: f.title, offerLabel: f.offerLabel, status: f.status })
+        .then(function(){ toast('Deal saved', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
   window.adminDelDeal = function(id) {
-    if (!confirm('Delete this deal?')) return;
-    api.adminDealDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    var d = (window.__deals || []).find(function(x){ return x.id === id; });
+    uiConfirm({
+      title: 'Delete this deal?',
+      body: (d ? '"' + d.title + '" ' : 'The deal ') + 'stops showing to pet parents straight away.',
+      confirmLabel: 'Delete deal',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.adminDealDelete(id).then(function(){ toast('Deal deleted', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
 
   // ---- Events ----
   window.adminNewEvent = function() {
-    var title = prompt('Event title:'); if (!title) return;
-    var description = prompt('Description:', '') || title;
-    var startsAt = prompt('Starts at (YYYY-MM-DDTHH:MM):', new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 16));
-    if (!startsAt) return;
-    var venue = prompt('Venue:', '') || undefined;
-    var city = prompt('City:', '') || undefined;
-    api.adminEventCreate({ title: title, description: description, startsAt: new Date(startsAt).toISOString(), venue: venue, city: city })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'New event',
+      confirmLabel: 'Create event',
+      fields: [
+        { name: 'title', label: 'Title', required: true, placeholder: 'Free pet health camp' },
+        { name: 'description', label: 'Description', type: 'textarea', rows: 3 },
+        { name: 'startsAt', label: 'Starts at', type: 'datetime-local', required: true,
+          value: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 16) },
+        { name: 'venue', label: 'Venue' },
+        { name: 'city', label: 'City' }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      var when = new Date(f.startsAt);
+      if (isNaN(when.getTime())) { toast('That start time is not a date', 'error'); return; }
+      api.adminEventCreate({
+        title: f.title, description: f.description || f.title,
+        startsAt: when.toISOString(),
+        venue: f.venue || undefined, city: f.city || undefined
+      }).then(function(){ toast('Event created', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
   window.adminEditEvent = function(id) {
     var ev = (window.__events || []).find(function(x){ return x.id === id; }); if (!ev) return;
-    var title = prompt('Title:', ev.title); if (title === null) return;
-    var status = (prompt('Status DRAFT/PUBLISHED/CANCELLED/PAST:', ev.status) || ev.status).toUpperCase();
-    api.adminEventUpdate(id, { title: title.trim(), status: status })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    uiForm({
+      title: 'Edit event',
+      confirmLabel: 'Save event',
+      fields: [
+        { name: 'title', label: 'Title', value: ev.title, required: true },
+        { name: 'status', label: 'Status', type: 'select', value: ev.status,
+          options: ['DRAFT', 'PUBLISHED', 'CANCELLED', 'PAST'] }
+      ]
+    }).then(function (f) {
+      if (!f) return;
+      api.adminEventUpdate(id, { title: f.title, status: f.status })
+        .then(function(){ toast('Event saved', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
   window.adminDelEvent = function(id) {
-    if (!confirm('Delete this event?')) return;
-    api.adminEventDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    var ev = (window.__events || []).find(function(x){ return x.id === id; });
+    uiConfirm({
+      title: 'Delete this event?',
+      body: (ev ? '"' + ev.title + '" ' : 'The event ') + 'is removed from the site and from any listing that shows it.',
+      confirmLabel: 'Delete event',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.adminEventDelete(id).then(function(){ toast('Event deleted', 'ok'); loadView('deals', true); })
+        .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
+    });
   };
 
   document.querySelectorAll('.nav-item[data-view]').forEach(function(el){

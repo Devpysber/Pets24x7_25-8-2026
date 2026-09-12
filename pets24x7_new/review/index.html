@@ -78,6 +78,7 @@
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script>
   function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
 
@@ -125,7 +126,7 @@
         api.reviewChoose(code, 'GOOGLE').then(function (rr) {
           location.href = rr.nextUrl;
         }).catch(function (err) {
-          alert(fmtErr(err));
+          toast(fmtErr(err), 'error');
         });
       });
       // Wire Pets24x7 option
@@ -133,7 +134,7 @@
         api.reviewChoose(code, 'PETS24X7').then(function (rr) {
           location.href = rr.nextUrl;
         }).catch(function (err) {
-          alert(fmtErr(err));
+          toast(fmtErr(err), 'error');
         });
       });
     }).catch(function (err) {

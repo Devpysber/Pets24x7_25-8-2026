@@ -1546,7 +1546,17 @@
   }
 
   function cancelMembership(btn) {
-    if (!confirm('Cancel auto-renew? Your benefits stay active until the expiry date, then the membership ends. You can resume any time before then.')) return;
+    uiConfirm({
+      title: 'Cancel auto-renew?',
+      body: 'Your benefits stay active until the expiry date, then the membership ends. ' +
+            'You can resume any time before then.',
+      confirmLabel: 'Cancel auto-renew',
+      cancelLabel: 'Keep it',
+      danger: true
+    }).then(function (ok) { if (ok) cancelMembershipNow(btn); });
+  }
+
+  function cancelMembershipNow(btn) {
     btn.disabled = true; btn.textContent = 'Cancelling…';
     api.membershipCancel().then(function() {
       return api.membershipMe();
@@ -2448,9 +2458,20 @@
   }
 
   function deletePet(id) {
-    if (!confirm('Are you sure you want to delete this pet?')) return;
-    api.parentPetDelete(id).then(loadData).catch(function(err) {
-      toast('Could not delete pet: ' + fmtErr(err), 'error');
+    var pet = (state.pets || []).filter(function (x) { return x.id === id; })[0];
+    uiConfirm({
+      title: 'Delete ' + ((pet && pet.name) || 'this pet') + '?',
+      body: 'Their profile and photo are removed from your account. This cannot be undone.',
+      confirmLabel: 'Delete pet',
+      danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      api.parentPetDelete(id).then(function () {
+        toast('Pet deleted', 'ok');
+        return loadData();
+      }).catch(function(err) {
+        toast('Could not delete pet: ' + fmtErr(err), 'error');
+      });
     });
   }
 

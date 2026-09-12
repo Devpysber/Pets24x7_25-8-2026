@@ -19,7 +19,19 @@ const MAX_SEARCH_RESULTS = 100;
 
 const phoneLookupLimiter = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true });
 
-listingsRouter.get('/_stats', (_req, res) => res.json(indexStats()));
+// Public directory counters. Used by the home and marketing pages, so the
+// figures they print are the real ones rather than numbers typed into markup.
+listingsRouter.get(
+  '/_stats',
+  asyncHandler(async (_req, res) => {
+    const stats = indexStats();
+    const [claimedListings, activeVendors] = await Promise.all([
+      prisma.vendor.count({ where: { listingId: { not: null }, claimedAt: { not: null } } }).catch(() => 0),
+      prisma.vendor.count({ where: { status: { in: ['ACTIVE', 'CLAIMED'] } } }).catch(() => 0),
+    ]);
+    res.json({ ...stats, claimedListings, activeVendors });
+  }),
+);
 
 listingsRouter.get(
   '/search',

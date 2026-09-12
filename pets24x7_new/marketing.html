@@ -303,7 +303,7 @@
 <section class="m-hero">
   <div class="container">
     <div>
-      <span class="eyebrow">★ Trusted by 100+ pet businesses · India + USA</span>
+      <span class="eyebrow" id="mkEyebrow">★ Pet businesses across India + USA</span>
       <h1>Your Pet Business's Growth Partner: Enquiries, Reviews, and Visibility Made Simple</h1>
       <p class="lead">SEO, Google Ads, listings management and reputation services — purpose-built for vets, groomers, boarders, walkers and trainers. We get pet parents to find you, trust you, and WhatsApp you.</p>
       <div class="cta-row">
@@ -315,32 +315,27 @@
       </div>
     </div>
     <div class="hero-visual">
-      <span class="ping">+ 1 Enquiry</span>
+      <!-- Every figure here comes from /api/listings/_stats. The card used to
+           print an invented 428 enquiries, a 4.9 rating and a 78 rupee cost
+           per lead, which is a claim about results we cannot support and the
+           worst possible thing to put in front of a buyer who later checks. -->
       <div class="hv-card">
-        <div class="label">WhatsApp Enquiries · This Month</div>
-        <div class="value">428</div>
-        <div class="delta">▲ 312% vs last month</div>
-        <div class="bars">
-          <div class="bar" style="height: 30%; animation-delay: 0.05s;"></div>
-          <div class="bar" style="height: 45%; animation-delay: 0.1s;"></div>
-          <div class="bar" style="height: 38%; animation-delay: 0.15s;"></div>
-          <div class="bar" style="height: 60%; animation-delay: 0.2s;"></div>
-          <div class="bar" style="height: 72%; animation-delay: 0.25s;"></div>
-          <div class="bar" style="height: 55%; animation-delay: 0.3s;"></div>
-          <div class="bar" style="height: 88%; animation-delay: 0.35s;"></div>
-          <div class="bar" style="height: 95%; animation-delay: 0.4s;"></div>
-        </div>
+        <div class="label">Verified businesses in the directory</div>
+        <div class="value" id="mkListings">—</div>
+        <div class="delta" id="mkListingsSub">Real Google profiles, live ratings</div>
+        <div class="bars" id="mkBars" aria-hidden="true"></div>
+        <div id="mkBarLabels" style="display:flex;gap:5px;margin-top:6px;font-size:9px;color:var(--text-muted);font-weight:600;"></div>
       </div>
       <div class="hv-row">
         <div class="hv-card">
-          <div class="label">Google Rating</div>
-          <div class="value">4.9 ★</div>
-          <div class="delta">▲ from 4.5</div>
+          <div class="label">Cities covered</div>
+          <div class="value" id="mkCities">—</div>
+          <div class="delta">India + USA</div>
         </div>
         <div class="hv-card">
-          <div class="label">CPL (paid)</div>
-          <div class="value">₹78</div>
-          <div class="delta">▼ 41%</div>
+          <div class="label">Service categories</div>
+          <div class="value" id="mkCats">—</div>
+          <div class="delta">Vets to relocation</div>
         </div>
       </div>
     </div>
@@ -924,5 +919,72 @@
 </script>
 
 <script src="/nav-auth.js" defer></script>
+
+<script>
+/* Live directory figures for the hero. Fails silently to the em-dash
+   placeholders rather than printing a number nobody measured. */
+(function () {
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com');
+
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+
+  function countUp(id, target) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = target.toLocaleString('en-IN');
+      return;
+    }
+    var started = null, dur = 900;
+    function step(ts) {
+      if (started === null) started = ts;
+      var t = Math.min(1, (ts - started) / dur);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(target * eased).toLocaleString('en-IN');
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  fetch(BASE + '/api/listings/_stats', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || typeof d.listings !== 'number') return;
+      countUp('mkListings', d.listings);
+      countUp('mkCities', d.cities || 0);
+      countUp('mkCats', d.categories || 0);
+
+      if (d.activeVendors) {
+        setText('mkEyebrow', '★ ' + d.activeVendors.toLocaleString('en-IN') +
+          ' pet businesses on Pets24x7 · India + USA');
+      }
+
+      /* The bars were decoration on a made-up trend. Now they are the top
+         cities by listing count, which is a real shape of the directory. */
+      var cities = (d.topCities || []).slice(0, 8);
+      if (!cities.length) return;
+      var max = cities.reduce(function (m, c) { return Math.max(m, c.count); }, 1);
+      var bars = document.getElementById('mkBars');
+      var labels = document.getElementById('mkBarLabels');
+      if (bars) {
+        bars.innerHTML = cities.map(function (c, i) {
+          var h = Math.max(8, Math.round((c.count / max) * 100));
+          return '<div class="bar" style="height:' + h + '%;animation-delay:' +
+            (0.05 * (i + 1)).toFixed(2) + 's;" title="' + c.name + ': ' + c.count + '"></div>';
+        }).join('');
+      }
+      if (labels) {
+        labels.innerHTML = cities.map(function (c) {
+          return '<span style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+            c.name.slice(0, 6) + '</span>';
+        }).join('');
+      }
+      setText('mkListingsSub', 'Across ' + cities.length + ' top cities and ' + ((d.cities || 0)) + ' more');
+    })
+    .catch(function () {});
+})();
+</script>
 </body>
 </html>
