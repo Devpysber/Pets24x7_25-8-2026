@@ -491,7 +491,7 @@
           topBadge +
           '<span class="cat-chip">' + (b.category_icon || '📍') + ' ' + esc(b.category) + '</span>' +
           '<span class="biz-icon" aria-hidden="true">' + (b.category_icon || '🐾') + '</span>' +
-          '<img loading="lazy" src="' + escapeAttr(cardImg(b)) + '" alt="' + escapeAttr(b.category || 'Pet service') + '" onerror="this.remove()">' +
+          '<img loading="lazy" src="' + escapeAttr(cardImg(b)) + '" alt="" onerror="this.remove()">' +
         '</a>' +
         '<div class="biz-info">' +
           '<h3><a href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">' + esc(b.name) + '</a></h3>' +

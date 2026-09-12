@@ -561,7 +561,17 @@ def related_cities_html(country, current_slug, all_cities, limit=12):
 
 # ---- Page templates -------------------------------------------------------
 
-def render_city(country, city_slug, city, items, categories, page, total_pages, all_cities, page_size=PAGE_SIZE):
+def robots_meta(thin):
+    """Thin city and category pages resolve but are not offered to Google.
+
+    A visitor who followed a link to a city with one business should see that
+    business, not a 404. Google being asked to index thousands of near-empty
+    pages is a different matter, and hurts the pages that do have substance.
+    """
+    return '<meta name="robots" content="noindex,follow" />\n' if thin else ""
+
+
+def render_city(country, city_slug, city, items, categories, page, total_pages, all_cities, page_size=PAGE_SIZE, thin=False):
     country_n = country_name(country)
     state = next((b["state"] for b in items if b.get("state")), "")
     full_city = f"{city}{', ' + state if (country == 'US' and state) else ''}"
@@ -605,6 +615,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 <title>{e(title)}</title>
 <meta name="description" content="{ea(desc)}" />
 <link rel="canonical" href="{canonical}" />
+{robots_meta(thin)}
 {prev_link}{next_link}
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <meta property="og:type" content="website" />
@@ -690,7 +701,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 </html>
 """
 
-def render_category(country, city_slug, city, category_name, category_slug, items, all_cats, all_cities):
+def render_category(country, city_slug, city, category_name, category_slug, items, all_cats, all_cities, thin=False):
     country_n = country_name(country)
     state = next((b["state"] for b in items if b.get("state")), "")
     full_city = f"{city}{', ' + state if (country == 'US' and state) else ''}"
@@ -722,6 +733,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 <title>{e(title)}</title>
 <meta name="description" content="{ea(desc)}" />
 <link rel="canonical" href="{canonical}" />
+{robots_meta(thin)}
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="{ea(title)}" />
@@ -1274,6 +1286,9 @@ def main():
     for cmeta in index:
         country = cmeta["country"]
         city_slug = cmeta["city_slug"]
+        # An older pets-data.js has no flag; treat those cities as substantial,
+        # which is what they were when that file was written.
+        thin = bool(cmeta.get("thin", False))
         data_file = DATA_DIR / f"{country.lower()}-{city_slug}.json"
         if not data_file.exists():
             print(f"[skip] missing data: {data_file.name}")
@@ -1294,10 +1309,11 @@ def main():
         # ---- City pages (with pagination) ----
         total_pages = max(1, math.ceil(len(items) / PAGE_SIZE))
         for page in range(1, total_pages + 1):
-            html = render_city(country, city_slug, city, items, cats, page, total_pages, index)
+            html = render_city(country, city_slug, city, items, cats, page, total_pages, index, thin=thin)
             url  = city_url(country, city_slug, page)
             write(url, html)
-            sitemap_urls.append((url, "0.8" if (page == 1 and len(items) >= 100) else ("0.7" if page == 1 else "0.5"), "weekly"))
+            if not thin:
+                sitemap_urls.append((url, "0.8" if (page == 1 and len(items) >= 100) else ("0.7" if page == 1 else "0.5"), "weekly"))
             counts["city_pages"] += 1
         counts["city"] += 1
 
@@ -1306,10 +1322,11 @@ def main():
             cat_items = [b for b in items if b["category_slug"] == cat["slug"]]
             if not cat_items:
                 continue
-            html = render_category(country, city_slug, city, cat["name"], cat["slug"], cat_items, cats, index)
+            html = render_category(country, city_slug, city, cat["name"], cat["slug"], cat_items, cats, index, thin=thin)
             url  = category_url(country, city_slug, cat["slug"])
             write(url, html)
-            sitemap_urls.append((url, "0.7", "weekly"))
+            if not thin:
+                sitemap_urls.append((url, "0.7", "weekly"))
             counts["category"] += 1
 
         # ---- Listing pages ----

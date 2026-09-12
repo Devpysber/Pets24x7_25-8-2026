@@ -316,9 +316,14 @@ def main():
             "top_rating": max(it["rating"] for it in items),
         })
 
-    # Only feature cities with at least 5 listings on home page index;
-    # per-city JSON files still exist for any city via deep link.
-    city_index = [c for c in city_index if c["count"] >= 5]
+    # Every city stays in the index. Dropping the small ones here is what left
+    # 1,646 cities with no pages while the search results still linked to them,
+    # so every one of those links was a 404. The thin ones are flagged instead:
+    # the build gives them a page but marks it noindex, and the home page shows
+    # only the big ones because it takes the first slice of this sorted list.
+    THIN_CITY_MAX = 5
+    for c in city_index:
+        c["thin"] = c["count"] < THIN_CITY_MAX
     city_index.sort(key=lambda x: (x["country"], -x["count"]))
 
     # Featured: top 24 highest rated across all data (with review_count >= 25)
