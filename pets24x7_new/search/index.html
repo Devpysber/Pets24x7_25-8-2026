@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#2563EB" />
+<title>Search pet services — Pets24x7.com</title>
+<meta name="description" content="Search verified vets, groomers, boarding, training and more across India and the USA." />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; --bg-alt:#F9FAFB; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-font-smoothing:antialiased}
+  a{color:var(--primary);text-decoration:none}
+  .container{max-width:1180px;margin:0 auto;padding:0 20px}
+  header{border-bottom:1px solid var(--border);padding:16px 0;position:sticky;top:0;background:#fff;z-index:10}
+  .header-in{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .brand{display:inline-flex;align-items:center;gap:10px}
+  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
+  .brand-name .tld{color:var(--text)}
+  .nav-link{font-weight:600;font-size:14px;color:var(--text-muted);padding:6px 10px}
+  .searchbar{background:var(--bg-alt);border:1px solid var(--border);border-radius:14px;padding:16px;margin:24px 0;display:grid;grid-template-columns:2fr 1.2fr 1.2fr auto;gap:12px}
+  .searchbar label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px}
+  .searchbar input,.searchbar select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;color:var(--text)}
+  .searchbar button{align-self:end;padding:12px 22px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+  .searchbar button:hover{background:var(--primary-dark)}
+  h1{font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px}
+  .count{color:var(--text-muted);font-size:14px;margin-bottom:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:48px}
+  .card{border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:all .15s;background:#fff}
+  .card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,23,42,.08);border-color:#BFDBFE}
+  .card .img{height:150px;background:linear-gradient(135deg,#DBEAFE,#C7D2FE);position:relative}
+  .card .img img{width:100%;height:100%;object-fit:cover;display:block}
+  .chip{position:absolute;top:10px;left:10px;background:rgba(15,23,42,.78);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+  .rate{position:absolute;bottom:10px;right:10px;background:#fff;color:#B45309;font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px}
+  .body{padding:14px 16px 16px}
+  .body h3{font-size:15.5px;font-weight:700;line-height:1.3;margin-bottom:6px}
+  .body p{font-size:12.5px;color:var(--text-muted);line-height:1.45}
+  .empty{border:1px dashed var(--border);border-radius:14px;padding:36px;text-align:center;color:var(--text-muted);margin-bottom:48px}
+  footer{border-top:1px solid var(--border);padding:22px 0;color:var(--text-muted);font-size:13px}
+  @media (max-width:760px){ .searchbar{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container header-in">
+    <a href="/" class="brand">
+      <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
+      <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+    </a>
+    <nav>
+      <a href="/#cats" class="nav-link">Categories</a>
+      <a href="/#destinations" class="nav-link">Destinations</a>
+      <a href="/membership/" class="nav-link">Membership</a>
+      <a href="/login/" class="nav-link">Sign In</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+  <form class="searchbar" id="sForm" onsubmit="event.preventDefault(); runSearch(true);">
+    <div>
+      <label for="fq">Business or service</label>
+      <input id="fq" type="text" placeholder="e.g. Coco's Pet Boarding, grooming, vet…" autocomplete="off" />
+    </div>
+    <div>
+      <label for="fcity">City</label>
+      <input id="fcity" list="cityList" placeholder="Any city" autocomplete="off" />
+      <datalist id="cityList"></datalist>
+    </div>
+    <div>
+      <label for="fcat">Service type</label>
+      <select id="fcat">
+        <option value="">Any pet service</option>
+        <option value="veterinary-clinics">Veterinary Clinics</option>
+        <option value="pet-grooming-spa">Grooming &amp; Spa</option>
+        <option value="pet-boarding-daycare">Boarding &amp; Daycare</option>
+        <option value="pet-walking">Pet Walking</option>
+        <option value="pet-training-obedience-behavior">Training (Obedience)</option>
+        <option value="pet-sitting-in-home-care">Sitting (In-home Care)</option>
+        <option value="emergency-animal-hospital">Emergency Vet</option>
+        <option value="vaccination-centers">Vaccination Centers</option>
+        <option value="mobile-vet-services">Mobile Vet</option>
+        <option value="pet-dental-care">Pet Dental Care</option>
+        <option value="pet-taxi-transport">Pet Taxi &amp; Transport</option>
+        <option value="pet-relocation-services">Pet Relocation</option>
+        <option value="pet-physiotherapy-rehab">Physio &amp; Rehab</option>
+      </select>
+    </div>
+    <button type="submit">Search</button>
+  </form>
+
+  <h1 id="sTitle">Search results</h1>
+  <div class="count" id="sCount">Searching…</div>
+  <div class="grid" id="sGrid"></div>
+  <div class="empty" id="sEmpty" hidden></div>
+</div>
+
+<footer>
+  <div class="container">© 2026 Pets24x7 — <a href="/">Back to home</a></div>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/pets-data.js"></script>
+<script src="/api-client.js"></script>
+<script>
+  // A city page only exists for cities that were part of the last static build,
+  // so sending every search to /in/<slug>/ produced a 404 for any other city —
+  // and for a typed business name. This page asks the API instead, which also
+  // means freshly imported listings show up straight away.
+  function esc(s){ return (s == null ? '' : String(s)).replace(/[<>&"']/g, function(c){
+    return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];
+  }); }
+
+  var CATEGORY_IMG = {
+    'veterinary-clinics':'photo-1628009368231-7bb7cfcb0def','emergency-animal-hospital':'photo-1583337130417-3346a1be7dee',
+    'vaccination-centers':'photo-1612349317150-e413f6a5b16d','mobile-vet-services':'photo-1601758228041-f3b2795255f1',
+    'pet-dental-care':'photo-1548199973-03cce0bbc87b','pet-physiotherapy-rehab':'photo-1576201836106-db1758fd1c97',
+    'pet-grooming-spa':'photo-1516734212186-a967f81ad0d7','pet-boarding-daycare':'photo-1543466835-00a7907e9de1',
+    'pet-walking':'photo-1450778869180-41d0601e046e','pet-training-obedience-behavior':'photo-1587300003388-59208cc962cb',
+    'pet-sitting-in-home-care':'photo-1596492784531-6e6eb5ea9993','pet-relocation-services':'photo-1518717758536-85ae29035b6d',
+    'pet-taxi-transport':'photo-1425082661705-1834bfd09dca'
+  };
+  function cardImg(b) {
+    if (b && b.imageUrl) return b.imageUrl;
+    var id = CATEGORY_IMG[b && b.category_slug] || 'photo-1583337130417-3346a1be7dee';
+    return 'https://images.unsplash.com/' + id + '?w=560&h=420&fit=crop&q=70';
+  }
+  function listingUrl(b) {
+    var country = (b.country || 'in').toLowerCase();
+    var citySlug = b.city_slug || String(b.city || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return '/' + country + '/' + encodeURIComponent(citySlug) + '/' + encodeURIComponent(b.id) + '/';
+  }
+
+  function fillCityList() {
+    var dl = document.getElementById('cityList');
+    var idx = window.PETS_INDEX || [];
+    dl.innerHTML = idx.slice(0, 250).map(function(c){
+      return '<option value="' + esc(c.city) + '"></option>';
+    }).join('');
+  }
+
+  function readParams() {
+    var p = new URLSearchParams(location.search);
+    document.getElementById('fq').value = p.get('q') || '';
+    document.getElementById('fcity').value = p.get('city') || '';
+    var cat = p.get('category') || '';
+    var sel = document.getElementById('fcat');
+    sel.value = cat;
+    // A category that is not in the dropdown still filters the query.
+    if (cat && sel.value !== cat) {
+      var opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      sel.appendChild(opt); sel.value = cat;
+    }
+  }
+
+  function runSearch(pushUrl) {
+    var q = document.getElementById('fq').value.trim();
+    var city = document.getElementById('fcity').value.trim().replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
+    var category = document.getElementById('fcat').value;
+
+    if (pushUrl && history.replaceState) {
+      var qs = [];
+      if (q) qs.push('q=' + encodeURIComponent(q));
+      if (city) qs.push('city=' + encodeURIComponent(city));
+      if (category) qs.push('category=' + encodeURIComponent(category));
+      history.replaceState(null, '', location.pathname + (qs.length ? '?' + qs.join('&') : ''));
+    }
+
+    var bits = [];
+    if (q) bits.push('“' + q + '”');
+    if (category) bits.push(category.replace(/-/g, ' '));
+    if (city) bits.push('in ' + city);
+    document.getElementById('sTitle').textContent = bits.length ? 'Results for ' + bits.join(' ') : 'All pet services';
+    document.getElementById('sCount').textContent = 'Searching…';
+    document.getElementById('sGrid').innerHTML = '';
+    document.getElementById('sEmpty').hidden = true;
+
+    api.listingsSearch({ q: q, city: city, category: category, limit: 60 }).then(function (r) {
+      render(r.listings || []);
+    }).catch(function (err) {
+      document.getElementById('sCount').textContent = '';
+      var box = document.getElementById('sEmpty');
+      box.hidden = false;
+      box.innerHTML = 'Could not load results: ' + esc(fmtErr(err)) +
+        '<br/><br/><a href="/">Back to home</a>';
+    });
+  }
+
+  function render(list) {
+    var count = document.getElementById('sCount');
+    var grid = document.getElementById('sGrid');
+    var empty = document.getElementById('sEmpty');
+
+    if (!list.length) {
+      count.textContent = '';
+      empty.hidden = false;
+      empty.innerHTML = 'No listings matched that search.<br/><br/>' +
+        'Try a different spelling, a broader service type, or <a href="/#destinations">browse a city</a>.';
+      return;
+    }
+    count.textContent = list.length + (list.length === 60 ? '+' : '') + ' businesses found';
+    grid.innerHTML = list.map(function (b) {
+      var rating = Number(b.rating) || 0;
+      return '<a class="card" href="' + listingUrl(b) + '">' +
+        '<div class="img">' +
+          '<span class="chip">' + esc(b.category || 'Pet Service') + '</span>' +
+          (rating ? '<span class="rate">★ ' + rating.toFixed(1) + '</span>' : '') +
+          '<img loading="lazy" src="' + esc(cardImg(b)) + '" alt="' + esc(b.category || 'Pet service') + '" onerror="this.remove()" />' +
+        '</div>' +
+        '<div class="body">' +
+          '<h3>' + esc(b.name) + '</h3>' +
+          '<p>📍 ' + esc(b.address || [b.city, b.state].filter(Boolean).join(', ') || b.city || '') + '</p>' +
+          (b.review_count ? '<p style="margin-top:6px;">' + b.review_count + ' Google ratings</p>' : '') +
+        '</div>' +
+      '</a>';
+    }).join('');
+  }
+
+  fillCityList();
+  readParams();
+  runSearch(false);
+</script>
+
+<script src="/nav-auth.js" defer></script>
+</body>
+</html>

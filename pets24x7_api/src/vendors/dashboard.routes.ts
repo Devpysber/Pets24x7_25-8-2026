@@ -8,9 +8,11 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { requireAuth } from '../auth/middleware.js';
+import { setAuthCookie } from '../auth/jwt.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
-import { getListingById } from '../listings/index.js';
+import { addAndPersistImportedListing, getListingById, type ListingRecord } from '../listings/index.js';
+import bcrypt from 'bcrypt';
 import { notifyIf } from '../mail/notify.js';
 import {
   VENDOR_VERIFY_TTL_MIN,
@@ -325,6 +327,7 @@ vendorDashboardRouter.get(
         businessName: v.businessName,
         category: v.category || staticListing?.category || 'Pet Service',
         city: v.city || staticListing?.city || 'Mumbai',
+        country: v.country || staticListing?.country || 'IN',
         locality: v.locality || '',
         address: v.address || staticListing?.address || '',
         pincode: v.pincode || staticListing?.pincode || '',
@@ -336,6 +339,8 @@ vendorDashboardRouter.get(
         openingHours: v.openingHours || '',
         servicesList: v.servicesList || '',
         imageUrl: v.imageUrl || '',
+        galleryImages: parseGallery(v.galleryImages),
+        hasPassword: !!v.passwordHash,
         status: v.status,
         claimedAt: v.claimedAt,
       },
@@ -352,6 +357,7 @@ const UpdateBusinessBody = z.object({
   businessName: z.string().min(2).max(160).optional(),
   category: z.string().max(120).optional(),
   city: z.string().max(120).optional(),
+  country: z.enum(['IN', 'US']).optional(),
   locality: z.string().max(160).optional(),
   address: z.string().max(500).optional(),
   pincode: z.string().max(20).optional(),
@@ -363,21 +369,126 @@ const UpdateBusinessBody = z.object({
   openingHours: z.string().max(1000).optional(),
   servicesList: z.string().max(2000).optional(),
   imageUrl: z.string().max(600_000).optional(),
+  // Up to five extra photos for the public listing gallery. Each is either a
+  // hosted URL or a small resized data URL produced by the dashboard.
+  galleryImages: z
+    .array(z.string().max(600_000))
+    .max(5, 'You can keep at most 5 photos')
+    .optional(),
 });
+
+/** Gallery column is stored as JSON text; never let a bad row break the page. */
+function parseGallery(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string').slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+const slugify = (v: string, fallback: string) =>
+  v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
 
 vendorDashboardRouter.patch(
   '/my-business',
   asyncHandler(async (req, res) => {
-    const data = UpdateBusinessBody.parse(req.body);
+    const body = UpdateBusinessBody.parse(req.body);
     const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
     if (!v) throw new ForbiddenError();
 
-    const updated = await prisma.vendor.update({
-      where: { id: v.id },
-      data,
-    });
+    const { galleryImages, ...rest } = body;
+    const data: Record<string, unknown> = { ...rest };
+    if (galleryImages !== undefined) data.galleryImages = JSON.stringify(galleryImages);
 
-    res.json({ ok: true, business: updated });
+    const updated = await prisma.vendor.update({ where: { id: v.id }, data });
+
+    // The public site reads the in-memory listing index, not the vendor table,
+    // so an edit that never reached the index showed nowhere outside this
+    // dashboard. Push it across (and persist it) on every save.
+    await syncVendorToListingIndex(updated).catch((err) =>
+      req.log.warn({ err }, 'listing index sync failed after vendor edit'),
+    );
+
+    res.json({
+      ok: true,
+      business: { ...updated, galleryImages: parseGallery(updated.galleryImages) },
+    });
+  }),
+);
+
+/** Mirrors a vendor row into the public listing index so the site shows it. */
+async function syncVendorToListingIndex(v: {
+  listingId: string | null;
+  id: string;
+  businessName: string;
+  category: string | null;
+  city: string | null;
+  country: string | null;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
+  pincode: string | null;
+}): Promise<void> {
+  const listingId = v.listingId || v.id;
+  const existing = getListingById(listingId);
+  const category = v.category || existing?.category || 'Pet Service';
+  const city = v.city || existing?.city || 'Mumbai';
+  const record: ListingRecord = {
+    ...(existing ?? {}),
+    id: listingId,
+    name: v.businessName,
+    category,
+    category_slug: slugify(category, 'pet-service'),
+    city,
+    city_slug: slugify(city, 'mumbai'),
+    country: (v.country || existing?.country || 'IN') as ListingRecord['country'],
+    address: v.address || existing?.address,
+    phone: v.phone || existing?.phone,
+    website: v.website || existing?.website,
+    pincode: v.pincode || existing?.pincode,
+    rating: existing?.rating ?? 0,
+    review_count: existing?.review_count ?? 0,
+    claimStatus: 'CLAIMED',
+  };
+  await addAndPersistImportedListing(record);
+}
+
+// ----- Change password -----
+// A vendor who signed in with an emailed code may have no password yet, so the
+// current one is only required when there is something to check against.
+const ChangePasswordBody = z.object({
+  currentPassword: z.string().max(200).optional(),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(200),
+});
+
+vendorDashboardRouter.post(
+  '/change-password',
+  asyncHandler(async (req, res) => {
+    const body = ChangePasswordBody.parse(req.body);
+    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
+    if (!v) throw new ForbiddenError();
+
+    if (v.passwordHash) {
+      const ok = body.currentPassword
+        ? await bcrypt.compare(body.currentPassword, v.passwordHash)
+        : false;
+      if (!ok) throw new BadRequestError('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(body.newPassword, 12);
+    await prisma.vendor.update({
+      where: { id: v.id },
+      // Changing the password ends other sessions: whoever knew the old one
+      // should not keep a live cookie.
+      data: { passwordHash, mustChangePassword: false, sessionsRevokedAt: new Date() },
+    });
+    // Revoking sessions would log this vendor out of the tab they are using, so
+    // hand them a fresh cookie issued after the cut-off.
+    setAuthCookie(res, { sub: v.id, role: 'vendor' });
+
+    res.json({ ok: true, message: 'Password updated' });
   }),
 );
 

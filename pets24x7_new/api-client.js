@@ -134,6 +134,7 @@
     vendorPasswordLogin:        function (loginKey, pass){ return req('POST', '/api/vendor/login', { loginKey: loginKey, password: pass }); },
     vendorMyBusiness:           function ()              { return req('GET',  '/api/vendor/my-business'); },
     vendorUpdateMyBusiness:     function (p)             { return req('PATCH', '/api/vendor/my-business', p); },
+    vendorChangePassword:       function (p)             { return req('POST', '/api/vendor/change-password', p); },
 
     // Vendor services
     vendorServices:       function ()        { return req('GET',    '/api/vendor/services'); },

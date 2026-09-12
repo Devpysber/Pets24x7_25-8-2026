@@ -255,9 +255,20 @@
   }
 
   // ---- Load ----
-  var country = (qs('country') || 'IN').toUpperCase();
-  var citySlug = (qs('city') || '').toLowerCase();
-  var id = qs('id');
+  // A clean /in/<city>/<id>/ URL that has no pre-built folder is rewritten to
+  // this page by the host, and a rewrite keeps the browser URL clean — so the
+  // path is the source of truth and the query string is only the legacy form.
+  function fromPath() {
+    var parts = location.pathname.split('/').filter(Boolean);
+    if (parts.length >= 3 && (parts[0] === 'in' || parts[0] === 'us')) {
+      return { country: parts[0], city: parts[1], id: decodeURIComponent(parts[2]) };
+    }
+    return null;
+  }
+  var path = fromPath();
+  var country = (qs('country') || (path && path.country) || 'IN').toUpperCase();
+  var citySlug = (qs('city') || (path && path.city) || '').toLowerCase();
+  var id = qs('id') || (path && path.id) || '';
   var content = document.getElementById('content');
   var biz = null;
 

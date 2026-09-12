@@ -21,6 +21,7 @@ import { getListingById } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { reviewReplyPostedEmail, reviewRequestsSentEmail } from '../mail/action-templates.js';
+import { isVendorApproved } from '../shared/vendor-status.js';
 
 export const vendorReviewsRouter = Router();
 vendorReviewsRouter.use(requireAuth('vendor'));
@@ -66,7 +67,7 @@ vendorReviewsRouter.post(
 
     const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
     if (!vendor) throw new ForbiddenError();
-    if (vendor.status !== 'ACTIVE') {
+    if (!isVendorApproved(vendor.status)) {
       throw new ForbiddenError('Your vendor account must be approved by admin before sending review requests');
     }
 

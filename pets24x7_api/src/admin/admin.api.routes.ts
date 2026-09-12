@@ -43,6 +43,29 @@ adminApiRouter.use(requireAuth('admin'));
 
 const rupees = (minor: number) => Math.round(minor / 100);
 
+/**
+ * The one listing total the whole admin portal quotes.
+ *
+ * The directory index already contains every scraped listing, and a claimed
+ * vendor usually points at one of those rows — adding the two counts is what
+ * made the dashboard read one higher than the Vendors tab. Only a vendor whose
+ * listing is NOT in the index (a self-registered business) adds to the total.
+ */
+export async function totalListingCount(): Promise<number> {
+  const base = indexStats().listings || 0;
+  let extra = 0;
+  try {
+    const claimed = await prisma.vendor.findMany({
+      where: { listingId: { not: null } },
+      select: { listingId: true },
+    });
+    extra = claimed.filter((v) => v.listingId && !getListingById(v.listingId)).length;
+  } catch {
+    // DB offline — the index count alone is still the honest number.
+  }
+  return base + extra;
+}
+
 // ---------- Overview ----------
 adminApiRouter.get(
   '/overview',
@@ -107,7 +130,7 @@ adminApiRouter.get(
       prisma.featuredListing.count({ where: { status: 'ACTIVE' } }),
     ]);
 
-    const totalListings = (idxStats.listings || 34170) + claimedVendors;
+    const totalListings = await totalListingCount();
     const totalCities = idxStats.cities || 570;
     const totalCategories = idxStats.categories || 42;
     const totalClaimedListings = claimedVendors;
@@ -327,11 +350,13 @@ adminApiRouter.get(
       };
     });
 
-    const idxStats = indexStats();
     let directoryListingsFormatted: any[] = [];
 
     if (status === 'UNCLAIMED' || status === 'ALL' || status === '') {
-      const rawListings = searchListings({ q: search, category, limit: 100 });
+      // Newest first: an import adds rows at the end of the index, and a capped
+      // search that walks 34k scraped rows first would never reach them — which
+      // is why a fresh import bumped the count but showed nothing in the table.
+      const rawListings = searchListings({ q: search, category, limit: 100, newestFirst: true });
       directoryListingsFormatted = rawListings.map((l) => ({
         id: l.id,
         name: l.name,
@@ -369,7 +394,7 @@ adminApiRouter.get(
     res.json({
       ok: true,
       vendors: combinedVendors,
-      totalDirectoryListings: idxStats.listings || 34170,
+      totalDirectoryListings: await totalListingCount(),
       registeredVendorsCount,
       activeVendorsCount,
       pendingVendorsCount,

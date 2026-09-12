@@ -512,8 +512,25 @@
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Age (years)</label>
-          <input type="number" id="pAge" min="0" max="40" placeholder="3" />
+          <label>Age</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="pAge" min="0" max="40" placeholder="Years" aria-label="Age in years" style="flex:1;" />
+            <select id="pAgeMonths" aria-label="Age in months" style="flex:1;">
+              <option value="">Months</option>
+              <option value="0">0 months</option>
+              <option value="1">1 month</option>
+              <option value="2">2 months</option>
+              <option value="3">3 months</option>
+              <option value="4">4 months</option>
+              <option value="5">5 months</option>
+              <option value="6">6 months</option>
+              <option value="7">7 months</option>
+              <option value="8">8 months</option>
+              <option value="9">9 months</option>
+              <option value="10">10 months</option>
+              <option value="11">11 months</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label>Gender</label>
@@ -1089,9 +1106,9 @@
               <button class="btn" style="justify-content: flex-start; text-align: left;" onclick="navigate('search')">
                 <span>🔍</span> <span>Find Nearby Vets & Groomers</span>
               </button>
-              <a href="/membership/" class="btn" style="justify-content: flex-start; text-align: left;">
+              <button class="btn" style="justify-content: flex-start; text-align: left;" onclick="navigate('membership')">
                 <span>⭐</span> <span>View Membership Plans & Benefits</span>
-              </a>
+              </button>
             </div>
           </div>
           <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
@@ -1602,7 +1619,7 @@
 
     var metaBits = [SPECIES_LABEL[selectedPet.species] || 'Pet'];
     if (selectedPet.breed) metaBits.push(esc(selectedPet.breed));
-    if (selectedPet.ageYears != null) metaBits.push(selectedPet.ageYears + (selectedPet.ageYears === 1 ? ' year' : ' years'));
+    if (selectedPet.ageYears != null || selectedPet.ageMonths != null) metaBits.push(petAgeLabel(selectedPet, ''));
     if (selectedPet.gender && selectedPet.gender !== 'Unspecified') metaBits.push(esc(selectedPet.gender));
 
     // Build Pet Switcher Options if multiple pets exist
@@ -1884,33 +1901,96 @@
   function renderVendorDetails(v) {
     var body = document.getElementById('vendorDetailsBody');
     var loc = esc(v.address || [v.city, v.state].filter(Boolean).join(', ') || '');
-    var hasRating = typeof v.rating === 'number' && v.rating > 0;
-    var reviewLine = hasRating
-      ? '⭐ ' + v.rating.toFixed(1) + ' / 5' + (v.review_count ? ' · ' + v.review_count + ' Google reviews' : '')
-      : 'No public rating yet';
-    var heroInner = '<img src="' + esc(vendorImg(v, 900, 480)) + '" alt="' + esc(v.category || 'Pet service') + '" style="width:100%; height:100%; object-fit:cover;" onerror="this.remove()">';
+    var hasRating = Number(v.rating) > 0;
+    var rating = Number(v.rating) || 0;
+    var website = cleanWebsite(v.website);
+    var phone = v.phone ? v.phone.replace(/\s+/g, '') : '';
+
+    // The public listing page shows a photo gallery, an about block, hours,
+    // services and a map. This view used to show one photo and three lines,
+    // which is why it read as a different (and emptier) business page.
+    var photos = [];
+    if (v.imageUrl) photos.push(v.imageUrl);
+    (v.gallery || []).forEach(function(g) { if (g && photos.indexOf(g) === -1) photos.push(g); });
+    while (photos.length < 5) photos.push(vendorImg(v, 600, 450));
+
+    var galleryHtml =
+      '<div style="display:grid; grid-template-columns:2fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; height:320px; margin-bottom:18px;">' +
+        photos.slice(0, 5).map(function(src, i) {
+          var span = i === 0 ? 'grid-row:span 2;' : '';
+          return '<div style="' + span + 'border-radius:10px; overflow:hidden; background:linear-gradient(135deg,#DBEAFE,#C7D2FE);">' +
+            '<img src="' + esc(src) + '" alt="' + esc(v.name) + '" loading="lazy" ' +
+            'style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.remove()">' +
+          '</div>';
+        }).join('') +
+      '</div>';
+
+    var about = v.about || (esc(v.name) + ' is a Google-listed ' + esc(String(v.category || 'pet service').toLowerCase()) +
+      (loc ? ' at ' + loc : '') + '. Pets24x7 shows verified public listing details only — confirm exact services, ' +
+      'availability and pricing with the business directly.');
+
+    var services = (v.servicesList || '').split(/[,;\n]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+    var mapQuery = v.address || [v.name, v.city, v.state, v.pincode].filter(Boolean).join(', ');
+    var mapSrc = v.google_cid
+      ? 'https://www.google.com/maps?cid=' + encodeURIComponent(v.google_cid) + '&output=embed'
+      : (mapQuery ? 'https://www.google.com/maps?q=' + encodeURIComponent(mapQuery) + '&output=embed' : '');
+
     body.innerHTML =
-      '<div style="position:relative; height:240px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border); margin-bottom:16px; background:linear-gradient(135deg,#DBEAFE,#C7D2FE);">' + heroInner + '</div>' +
-      '<div class="card" style="padding:24px;">' +
-        '<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">' +
-          '<div class="pet-avatar" style="font-size:26px;">' + catIcon(v) + '</div>' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<h2 style="font-size:20px; font-weight:800; margin-bottom:2px;">' + esc(v.name) + '</h2>' +
-            '<div style="color:var(--text-muted); font-size:13px;">' + esc(v.category || 'Pet Service') + '</div>' +
-            '<div style="color:var(--text-muted); font-size:13px; margin-top:4px;">' + reviewLine + '</div>' +
-            memberBenefitHtml() +
+      '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">' +
+        '<div>' +
+          '<h2 style="font-size:24px; font-weight:800; letter-spacing:-0.4px;">' + esc(v.name) + '</h2>' +
+          '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; font-size:13px; color:var(--text-muted);">' +
+            (hasRating ? '<span style="background:#DCFCE7; color:#166534; font-weight:800; padding:2px 10px; border-radius:99px;">★ ' + rating.toFixed(1) + '</span>' : '') +
+            (v.review_count ? '<span>' + v.review_count + ' Google ratings</span>' : '') +
+            '<span>' + esc(v.category || 'Pet Service') + '</span>' +
+            (v.city ? '<span>📍 ' + esc(v.city) + (v.pincode ? ' · ' + esc(v.pincode) : '') + '</span>' : '') +
+            (v.claimed ? '<span style="color:#166534; font-weight:700;">✓ Claimed by owner</span>' : '') +
           '</div>' +
         '</div>' +
-        (loc ? '<p style="margin-top:16px; color:var(--text-main);">📍 ' + loc + (v.pincode ? ' · ' + esc(v.pincode) : '') + '</p>' : '') +
-        (v.phone ? '<p style="margin-top:6px;">📞 <a href="tel:' + esc(v.phone.replace(/\s+/g,'')) + '" style="font-weight:600;">' + esc(v.phone) + '</a></p>' : '') +
-        (cleanWebsite(v.website) ? '<p style="margin-top:6px;">🌐 <a href="' + esc(cleanWebsite(v.website)) + '" target="_blank" rel="noopener nofollow" style="font-weight:600;">' + esc(cleanWebsite(v.website).replace(/^https?:\/\//,'').replace(/\/$/,'')) + '</a></p>' : '') +
-        '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;">' +
-          '<button class="btn btn-primary" onclick="openEnquiryModal(\'' + esc(v.id) + '\')">Enquire / Book</button>' +
-          (v.phone ? '<a class="btn" href="tel:' + esc(v.phone.replace(/\s+/g,'')) + '">Call</a>' : '') +
-          '<a class="btn" href="' + publicListingUrl(v) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
-        '</div>' +
+        memberBenefitHtml() +
       '</div>' +
-      '<div id="vendorDetailsReviews"></div>';
+
+      galleryHtml +
+
+      '<div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); gap:18px; align-items:start;">' +
+        '<div>' +
+          '<div class="card" style="padding:22px;">' +
+            '<div class="section-title" style="margin-bottom:8px;">About this listing</div>' +
+            '<p style="font-size:14px; line-height:1.6; color:var(--text-main);">' + esc(about) + '</p>' +
+            (services.length
+              ? '<div class="section-title" style="margin:18px 0 8px;">Services</div><div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+                services.map(function(x) {
+                  return '<span style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; border-radius:99px; padding:4px 12px; font-size:12.5px; font-weight:600;">' + esc(x) + '</span>';
+                }).join('') + '</div>'
+              : '') +
+            (v.openingHours
+              ? '<div class="section-title" style="margin:18px 0 6px;">Opening hours</div><p style="font-size:13.5px; color:var(--text-main);">🕒 ' + esc(v.openingHours) + '</p>'
+              : '') +
+            (loc ? '<div class="section-title" style="margin:18px 0 6px;">Address</div><p style="font-size:13.5px;">📍 ' + loc + '</p>' : '') +
+            (website ? '<p style="margin-top:8px; font-size:13.5px;">🌐 <a href="' + esc(website) + '" target="_blank" rel="noopener nofollow" style="font-weight:600;">' + esc(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a></p>' : '') +
+          '</div>' +
+          (mapSrc
+            ? '<div class="card" style="padding:0; overflow:hidden;">' +
+                '<iframe src="' + esc(mapSrc) + '" width="100%" height="280" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map"></iframe>' +
+              '</div>'
+            : '') +
+          '<div id="vendorDetailsReviews"></div>' +
+        '</div>' +
+
+        '<div class="card" style="padding:22px; position:sticky; top:16px;">' +
+          '<div style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.6px;">' + esc(v.category || 'Pet Service') + '</div>' +
+          '<div style="font-size:18px; font-weight:800; margin:6px 0 4px;">Enquire about ' + esc(v.name) + '</div>' +
+          '<div style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">' +
+            (hasRating ? '★ ' + rating.toFixed(1) + ' / 5' : 'No public rating yet') +
+            (v.review_count ? ' · ' + v.review_count + ' Google reviews' : '') +
+            (v.city ? ' · ' + esc(v.city) : '') +
+          '</div>' +
+          '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(\'' + esc(v.id) + '\')">Enquire / Book</button>' +
+          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="tel:' + esc(phone) + '">📞 Call ' + esc(v.phone) + '</a>' : '') +
+          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/' + esc(phone.replace(/[^0-9]/g, '')) + '?text=' + encodeURIComponent("Hi! I found " + v.name + " on Pets24x7 and would like to know more.") + '">💬 WhatsApp enquiry</a>' : '') +
+          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + publicListingUrl(v) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
+        '</div>' +
+      '</div>';
   }
 
   function renderListingReviews(rev) {
@@ -1964,7 +2044,7 @@
     document.getElementById('passportCode').textContent = 'ID: P24X7-PET-' + p.id.slice(-6).toUpperCase();
     document.getElementById('passportSpecies').textContent = SPECIES_LABEL[p.species] || 'Pet';
     document.getElementById('passportBreed').textContent = p.breed || 'Mixed / Unknown';
-    document.getElementById('passportAge').textContent = p.ageYears != null ? p.ageYears + (p.ageYears === 1 ? ' Year' : ' Years') : 'Not specified';
+    document.getElementById('passportAge').textContent = petAgeLabel(p, 'Not specified');
     document.getElementById('passportGender').textContent = p.gender || 'Unspecified';
     document.getElementById('passportOwner').textContent = state.parent.name || 'Pet Parent';
     document.getElementById('passportVac').textContent = p.vaccinated ? '✓ Vaccinated' : '⚠️ Needs Vaccine';
@@ -2056,7 +2136,7 @@
                   ${SPECIES_LABEL[p.species] || 'Pet'} · ${esc(p.breed || 'Mixed Breed')}
                 </div>
                 <div style="font-size: 12.5px; color: var(--text-subtle); display: flex; gap: 12px; flex-wrap: wrap;">
-                  <span>🎂 ${p.ageYears != null ? p.ageYears + (p.ageYears === 1 ? ' yr old' : ' yrs old') : 'Age n/a'}</span>
+                  <span>🎂 ${petAgeLabel(p, 'Age n/a')}</span>
                   <span>${p.gender === 'Female' ? '♀️ Female' : p.gender === 'Male' ? '♂️ Male' : '🐾 Gender n/a'}</span>
                 </div>
               </div>
@@ -2090,6 +2170,17 @@
     }).join('');
   }
 
+  /** "2 yrs 3 mos", "7 mos", or a fallback when neither part is set. */
+  function petAgeLabel(pet, fallback) {
+    var years = pet && pet.ageYears;
+    var months = pet && pet.ageMonths;
+    var bits = [];
+    if (years != null && years > 0) bits.push(years + (years === 1 ? ' yr' : ' yrs'));
+    if (months != null && months > 0) bits.push(months + (months === 1 ? ' mo' : ' mos'));
+    if (!bits.length && years === 0 && (months === 0 || months == null)) return 'Under 1 month';
+    return bits.length ? bits.join(' ') : (fallback || 'Age n/a');
+  }
+
   // Add / Edit Pet Modal Actions
   function openAddPetModal() {
     document.getElementById('petEditId').value = '';
@@ -2115,6 +2206,7 @@
     document.getElementById('pSpecies').value = pet.species || 'DOG';
     document.getElementById('pBreed').value = pet.breed || '';
     document.getElementById('pAge').value = pet.ageYears != null ? pet.ageYears : '';
+    document.getElementById('pAgeMonths').value = pet.ageMonths != null ? String(pet.ageMonths) : '';
     document.getElementById('pGender').value = pet.gender || 'Unspecified';
     document.getElementById('pVac').value = pet.vaccinated ? 'true' : 'false';
     // A date input needs YYYY-MM-DD; the API sends a full ISO timestamp. Without
@@ -2208,6 +2300,9 @@
       species: document.getElementById('pSpecies').value,
       breed: document.getElementById('pBreed').value.trim() || undefined,
       ageYears: document.getElementById('pAge').value ? Number(document.getElementById('pAge').value) : undefined,
+      ageMonths: document.getElementById('pAgeMonths').value !== ''
+        ? Number(document.getElementById('pAgeMonths').value)
+        : undefined,
       gender: document.getElementById('pGender').value,
       vaccinated: document.getElementById('pVac').value === 'true',
       dateOfBirth: document.getElementById('pDob').value || '',

@@ -23,5 +23,13 @@
 # Review short-link hop — /r/ is served by the API, not this static site.
 /r/:code   https://api.pets24x7.com/r/:code   302
 
+# Listings and cities added after the last static build have no pre-built
+# folder. These rewrites (200, so the clean URL is kept) hand the request to the
+# generic pages, which resolve the record from the API instead of 404ing.
+/in/:city/:id/      /listing.html      200
+/us/:city/:id/      /listing.html      200
+/in/:city/          /city.html         200
+/us/:city/          /city.html         200
+
 # Pretty 404
 /*               /404.html                 404
