@@ -498,7 +498,6 @@ adminApiRouter.get(
     const id = req.params.id ?? '';
     const row = await prisma.listing.findUnique({ where: { id } });
     const indexed = getListingById(id);
-    if (!row && !indexed) throw new NotFoundError('Listing not found');
 
     const vendor = await prisma.vendor
       .findUnique({
@@ -519,6 +518,11 @@ adminApiRouter.get(
     const taps: Record<string, number> = {};
     for (const a of activity as Array<{ kind: string; _count: { _all: number } }>) taps[a.kind] = a._count._all;
 
+    // A vendor can hold a claim on a listing the directory no longer has. That
+    // is a broken record worth showing, not a 404 — it is exactly the case an
+    // admin needs to see and fix.
+    if (!row && !indexed && !vendor) throw new NotFoundError('Listing not found');
+
     const country = String(row?.country ?? indexed?.country ?? 'IN').toLowerCase();
     const citySlug = row?.citySlug ?? indexed?.city_slug ?? '';
 
@@ -526,9 +530,11 @@ adminApiRouter.get(
       ok: true,
       listing: {
         id,
-        name: row?.name ?? indexed?.name ?? '—',
+        name: row?.name ?? indexed?.name ?? vendor?.businessName ?? '—',
         category: row?.category ?? indexed?.category ?? '—',
         city: row?.city ?? indexed?.city ?? '—',
+        // True when the claim points at a directory row that is gone.
+        orphanedClaim: !row && !indexed && !!vendor,
         state: row?.state ?? indexed?.state ?? null,
         country: row?.country ?? indexed?.country ?? 'IN',
         address: vendor?.address ?? row?.address ?? indexed?.address ?? null,

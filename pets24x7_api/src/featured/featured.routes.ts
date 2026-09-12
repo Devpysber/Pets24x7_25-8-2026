@@ -61,10 +61,51 @@ featuredPublicRouter.get(
     // A city page is static HTML: it knows nothing about a listing it does not
     // already print, so an id alone cannot be rendered. Send enough of the
     // record to draw a card for a boosted business on page 3 of the results.
+    // A claimed listing can be missing from the directory index — an imported
+    // row that never made it in, or one deleted since. The business still paid,
+    // so the card is built from its own account rather than dropped.
+    const missing = rows.filter((r) => !getListingById(r.listingId)).map((r) => r.listingId);
+    let vendorFallback = new Map<string, { businessName: string; city: string | null; category: string | null; phone: string | null }>();
+    if (missing.length) {
+      try {
+        const vendors = await prisma.vendor.findMany({
+          where: { listingId: { in: missing } },
+          select: { listingId: true, businessName: true, city: true, category: true, phone: true },
+        });
+        vendorFallback = new Map(
+          vendors
+            .filter((v) => v.listingId)
+            .map((v) => [v.listingId as string, {
+              businessName: v.businessName, city: v.city, category: v.category, phone: v.phone,
+            }]),
+        );
+      } catch {
+        // No fallback available; those rows are skipped below.
+      }
+    }
+
     const cards = rows
       .map((r) => {
         const l = getListingById(r.listingId);
-        if (!l) return null;
+        if (!l) {
+          const v = vendorFallback.get(r.listingId);
+          if (!v) return null;
+          return {
+            id: r.listingId,
+            name: v.businessName,
+            category: r.category ?? v.category ?? 'Pet Service',
+            categoryIcon: null,
+            city: r.city ?? v.city ?? '',
+            state: null,
+            address: null,
+            phone: v.phone,
+            rating: 0,
+            reviewCount: 0,
+            googleCid: null,
+            url: `/find-my-listing/?id=${encodeURIComponent(r.listingId)}`,
+            endsAt: r.endsAt,
+          };
+        }
         return {
           id: l.id,
           name: l.name,

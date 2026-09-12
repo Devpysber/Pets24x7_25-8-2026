@@ -2588,6 +2588,16 @@
       if (!host) return;
       host.style.color = 'inherit';
       host.innerHTML =
+        // A claim pointing at a directory row that no longer exists: the vendor
+        // has a dashboard, but the public page behind it is gone. Worth saying
+        // plainly, because it is the admin who has to fix it.
+        (l.orphanedClaim
+          ? '<div style="background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;border-radius:8px;' +
+            'padding:10px 12px;font-size:12.5px;font-weight:600;margin-bottom:12px;">' +
+            'This business holds a claim on a directory listing that no longer exists. ' +
+            'Its public page is missing. Re-import the listing or ask them to claim the right one.' +
+            '</div>'
+          : '') +
         (photos.length
           ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
               photos.slice(0, 6).map(function (src) {

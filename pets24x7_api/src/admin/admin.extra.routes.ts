@@ -279,14 +279,30 @@ adminExtraRouter.post(
     const endsAt = new Date(startsAt.getTime() + body.durationDays * 24 * 3600 * 1000);
 
     const listing = getListingById(vendor.listingId);
+    // The slugs are what a city page filters on, so they cannot be left null
+    // when the index has no row for this listing — the placement would be
+    // invisible everywhere.
+    const slugify = (v: string | null | undefined) =>
+      v ? v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || null : null;
+    const city = listing?.city ?? vendor.city ?? null;
+    const category = listing?.category ?? vendor.category ?? null;
+
+    // Placements are pinned to a city page. Without a city there is no page to
+    // pin to, so the grant would take effect nowhere — say so instead.
+    if (!city) {
+      throw new BadRequestError(
+        `${vendor.businessName} has no city on its record, so a placement has no page to appear on. Set the city first.`,
+      );
+    }
+
     const f = await prisma.featuredListing.create({
       data: {
         vendorId: vendor.id,
         listingId: vendor.listingId,
-        city: listing?.city ?? vendor.city ?? null,
-        citySlug: listing?.city_slug ?? null,
-        category: listing?.category ?? vendor.category ?? null,
-        categorySlug: listing?.category_slug ?? null,
+        city,
+        citySlug: listing?.city_slug ?? slugify(city),
+        category,
+        categorySlug: listing?.category_slug ?? slugify(category),
         priceMinor: 0,
         currency: 'INR',
         durationDays: body.durationDays,
