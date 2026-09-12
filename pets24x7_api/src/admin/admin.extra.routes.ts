@@ -198,22 +198,30 @@ adminExtraRouter.get(
     const rows = await prisma.featuredListing.findMany({
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { vendor: { select: { businessName: true } }, payment: { select: { status: true } } },
+      include: {
+        vendor: { select: { businessName: true, city: true, category: true } },
+        payment: { select: { status: true } },
+      },
     });
     res.json({
       ok: true,
-      featured: rows.map((f) => ({
+      featured: rows.map((f) => {
+        // Rows granted before the city guard existed were saved without a city.
+        // Show where they belong rather than a dash.
+        const listing = f.listingId ? getListingById(f.listingId) : null;
+        return {
         id: f.id,
         vendor: f.vendor.businessName,
         listingId: f.listingId,
-        city: f.city ?? '—',
-        category: f.category ?? '—',
+        city: f.city ?? listing?.city ?? f.vendor.city ?? '—',
+        category: f.category ?? listing?.category ?? f.vendor.category ?? '—',
         amount: rupees(f.priceMinor),
         status: f.status,
         paymentStatus: f.payment?.status ?? null,
         startsAt: f.startsAt,
         endsAt: f.endsAt,
-      })),
+        };
+      }),
     });
   }),
 );
@@ -330,12 +338,37 @@ adminExtraRouter.post(
     // while endsAt stays in the future leaves a row that reads "expired" in the
     // vendor's history but still looks live to every date-based check.
     const now = new Date();
-    const data: { status: typeof status; startsAt?: Date; endsAt?: Date } = { status };
+    const data: {
+      status: typeof status; startsAt?: Date; endsAt?: Date;
+      city?: string; citySlug?: string | null; category?: string | null; categorySlug?: string | null;
+    } = { status };
     if (status === 'ACTIVE') {
-      const startsAt = existing.startsAt ?? now;
-      data.startsAt = startsAt;
+      // A slot whose window already closed (cancelled, expired) restarts today
+      // for its full duration. Reusing the old start produced a window that ended
+      // before it began, so "Activate" appeared to do nothing.
       if (!existing.endsAt || existing.endsAt <= now) {
-        data.endsAt = new Date(startsAt.getTime() + existing.durationDays * 24 * 3600 * 1000);
+        data.startsAt = now;
+        data.endsAt = new Date(now.getTime() + existing.durationDays * 24 * 3600 * 1000);
+      }
+      // Backfill a missing city: without its slug the city page never shows it.
+      if (!existing.citySlug) {
+        const vendor = await prisma.vendor.findUnique({
+          where: { id: existing.vendorId }, select: { city: true, category: true, businessName: true },
+        });
+        const listing = existing.listingId ? getListingById(existing.listingId) : null;
+        const slugify = (v: string | null | undefined) =>
+          v ? v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || null : null;
+        const city = existing.city ?? listing?.city ?? vendor?.city ?? null;
+        if (!city) {
+          throw new BadRequestError(
+            `${vendor?.businessName ?? 'This vendor'} has no city on its record, so the placement has no page to appear on. Set the city first.`,
+          );
+        }
+        const category = existing.category ?? listing?.category ?? vendor?.category ?? null;
+        data.city = city;
+        data.citySlug = listing?.city_slug ?? slugify(city);
+        data.category = category;
+        data.categorySlug = existing.categorySlug ?? listing?.category_slug ?? slugify(category);
       }
     } else if (existing.endsAt && existing.endsAt > now) {
       data.endsAt = now;
