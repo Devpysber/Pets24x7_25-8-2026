@@ -236,6 +236,8 @@
     adminEnquiryStatus:function (id, status){ return req('POST', '/api/admin/enquiries/' + encodeURIComponent(id) + '/status', { status: status }); },
     adminServiceStatus:function (id, status){ return req('POST', '/api/admin/services/' + encodeURIComponent(id) + '/status', { status: status }); },
     adminVendorCreate: function (body)      { return req('POST', '/api/admin/vendors', body); },
+    adminVendorDelete: function (id)        { return req('DELETE', '/api/admin/vendors/' + encodeURIComponent(id)); },
+    adminParentDelete: function (id)        { return req('DELETE', '/api/admin/parents/' + encodeURIComponent(id)); },
 
     adminPlans:        function ()          { return req('GET',  '/api/admin/plans'); },
     adminPlanCreate:   function (body)      { return req('POST', '/api/admin/plans', body); },

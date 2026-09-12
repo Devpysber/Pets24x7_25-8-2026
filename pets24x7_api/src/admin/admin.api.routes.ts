@@ -444,6 +444,62 @@ adminApiRouter.post(
   }),
 );
 
+// ---------- Delete a vendor ----------
+// Everything the vendor owns goes with them (services, campaigns, featured
+// slots, reviews, claims). Payments are money records and are kept: the rows
+// that point at a campaign or a featured slot are unhooked first, both so the
+// delete does not trip a foreign key and so the ledger still adds up.
+adminApiRouter.delete(
+  '/vendors/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const vendor = await prisma.vendor.findUnique({
+      where: { id },
+      select: { id: true, businessName: true, email: true, phone: true, listingId: true },
+    });
+    if (!vendor) throw new NotFoundError('Vendor not found');
+
+    const [campaigns, featured] = await Promise.all([
+      prisma.marketingCampaign.findMany({ where: { vendorId: id }, select: { id: true } }),
+      prisma.featuredListing.findMany({ where: { vendorId: id }, select: { id: true } }),
+    ]);
+
+    await prisma.$transaction(async (tx) => {
+      if (campaigns.length) {
+        await tx.payment.updateMany({
+          where: { campaignId: { in: campaigns.map((c) => c.id) } },
+          data: { campaignId: null },
+        });
+      }
+      if (featured.length) {
+        await tx.payment.updateMany({
+          where: { featuredListingId: { in: featured.map((f) => f.id) } },
+          data: { featuredListingId: null },
+        });
+      }
+      await tx.vendor.delete({ where: { id } });
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN',
+        actorId: req.auth!.sub,
+        action: 'vendor.delete',
+        meta: {
+          vendorId: id,
+          businessName: vendor.businessName,
+          email: vendor.email,
+          phone: vendor.phone,
+          listingId: vendor.listingId,
+        },
+        ipAddress: req.ip ?? null,
+      },
+    });
+
+    res.json({ ok: true, id, businessName: vendor.businessName });
+  }),
+);
+
 // ---------- Pet parents ----------
 adminApiRouter.get(
   '/parents',
@@ -468,6 +524,48 @@ adminApiRouter.get(
         createdAt: p.createdAt,
       })),
     });
+  }),
+);
+
+// ---------- Delete a pet parent ----------
+// Pets, saved listings, memberships and sign-in tokens are owned by the parent
+// and go with them. Enquiries and payments are business records: they stay, with
+// the link to the deleted account cleared.
+adminApiRouter.delete(
+  '/parents/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const parent = await prisma.petParent.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+    if (!parent) throw new NotFoundError('Pet parent not found');
+
+    const memberships = await prisma.membership.findMany({ where: { parentId: id }, select: { id: true } });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.enquiry.updateMany({ where: { petParentId: id }, data: { petParentId: null } });
+      if (memberships.length) {
+        await tx.payment.updateMany({
+          where: { membershipId: { in: memberships.map((m) => m.id) } },
+          data: { membershipId: null },
+        });
+      }
+      await tx.payment.updateMany({ where: { parentId: id }, data: { parentId: null } });
+      await tx.petParent.delete({ where: { id } });
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN',
+        actorId: req.auth!.sub,
+        action: 'parent.delete',
+        meta: { parentId: id, name: parent.name, email: parent.email, phone: parent.phone },
+        ipAddress: req.ip ?? null,
+      },
+    });
+
+    res.json({ ok: true, id, name: parent.name });
   }),
 );
 
