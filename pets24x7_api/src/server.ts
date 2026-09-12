@@ -47,6 +47,7 @@ import { unsubscribeRouter } from './mail/unsubscribe.routes.js';
 import { startReminderJob } from './jobs/reminders.js';
 import { startEngagementJob } from './jobs/engagement.js';
 import { startVendorEngagementJob } from './jobs/vendor-engagement.js';
+import { startAdminDigestJob } from './jobs/admin-digest.js';
 import { mailEnabled, verifyMailTransport } from './mail/mailer.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
@@ -227,6 +228,7 @@ async function ensureSeedAdmin(): Promise<void> {
   startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
   startEngagementJob();       // 4-hourly promotional sweep, one mail per parent per 3 days
   startVendorEngagementJob(); // the same for businesses, offset so the two do not collide
+  startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
   // Production must never fall back to the logged no-op: an unconfigured relay
   // there means verification links, receipts and invoices are silently dropped
   // while every request still returns 200. Refuse to boot instead.

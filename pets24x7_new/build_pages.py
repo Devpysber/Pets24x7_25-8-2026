@@ -348,7 +348,20 @@ def cat_chips_html(country, city_slug, categories, active_cat=None):
             f'<a class="{cls}" href="{category_url(country, city_slug, c["slug"])}">'
             f'{e(c["icon"])} {e(c["name"])} <span class="ct">{c["count"]}</span></a>'
         )
-    return f'<section class="cat-chips"><div class="container"><div class="cat-chips-row">{"".join(chips)}</div></div></section>'
+    search = (
+        '<div class="city-search">'
+        '<input id="citySearch" type="search" autocomplete="off" '
+        'placeholder="Search these businesses by name, area or service…" '
+        'aria-label="Search businesses on this page">'
+        '<span id="citySearchCount"></span>'
+        '</div>'
+    )
+    return (
+        '<section class="cat-chips"><div class="container">'
+        + search
+        + f'<div class="cat-chips-row">{"".join(chips)}</div>'
+        + '</div></section>'
+    )
 
 def pagination_html(country, city_slug, page, total_pages):
     if total_pages <= 1:
@@ -490,6 +503,41 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
   {related_cities_html(country, city_slug, all_cities)}
 </div></main>
 
+<script>
+(function(){{
+  var input = document.getElementById('citySearch');
+  if (!input) return;
+  var countEl = document.getElementById('citySearchCount');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.biz-list .biz-card'));
+  var total = cards.length;
+  // Match on everything the card already shows, so searching an area, a service
+  // or a phone number works without building a separate index.
+  var hay = cards.map(function(c){{ return (c.textContent || '').toLowerCase(); }});
+
+  function apply(){{
+    var q = input.value.toLowerCase().trim();
+    if (!q) {{
+      cards.forEach(function(c){{ c.classList.remove('is-hidden'); }});
+      countEl.textContent = '';
+      return;
+    }}
+    var shown = 0;
+    cards.forEach(function(c, i){{
+      var hit = hay[i].indexOf(q) !== -1;
+      c.classList.toggle('is-hidden', !hit);
+      if (hit) shown++;
+    }});
+    countEl.innerHTML = shown
+      ? shown + ' of ' + total + ' on this page'
+      : 'Nothing on this page — <a href="/search/?q=' + encodeURIComponent(input.value.trim()) + '">search everywhere</a>';
+  }}
+
+  var t;
+  input.addEventListener('input', function(){{ clearTimeout(t); t = setTimeout(apply, 120); }});
+  input.addEventListener('search', apply);
+}})();
+</script>
+
 {footer_html()}
 </body>
 </html>
@@ -562,6 +610,41 @@ def render_category(country, city_slug, city, category_name, category_slug, item
   {seo_copy_category(category_name, full_city, country_n, len(items))}
   {related_cities_html(country, city_slug, all_cities)}
 </div></main>
+
+<script>
+(function(){{
+  var input = document.getElementById('citySearch');
+  if (!input) return;
+  var countEl = document.getElementById('citySearchCount');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.biz-list .biz-card'));
+  var total = cards.length;
+  // Match on everything the card already shows, so searching an area, a service
+  // or a phone number works without building a separate index.
+  var hay = cards.map(function(c){{ return (c.textContent || '').toLowerCase(); }});
+
+  function apply(){{
+    var q = input.value.toLowerCase().trim();
+    if (!q) {{
+      cards.forEach(function(c){{ c.classList.remove('is-hidden'); }});
+      countEl.textContent = '';
+      return;
+    }}
+    var shown = 0;
+    cards.forEach(function(c, i){{
+      var hit = hay[i].indexOf(q) !== -1;
+      c.classList.toggle('is-hidden', !hit);
+      if (hit) shown++;
+    }});
+    countEl.innerHTML = shown
+      ? shown + ' of ' + total + ' on this page'
+      : 'Nothing on this page — <a href="/search/?q=' + encodeURIComponent(input.value.trim()) + '">search everywhere</a>';
+  }}
+
+  var t;
+  input.addEventListener('input', function(){{ clearTimeout(t); t = setTimeout(apply, 120); }});
+  input.addEventListener('search', apply);
+}})();
+</script>
 
 {footer_html()}
 </body>

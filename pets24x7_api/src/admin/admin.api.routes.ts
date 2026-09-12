@@ -913,14 +913,69 @@ adminApiRouter.post(
 adminApiRouter.get(
   '/reports',
   asyncHandler(async (_req, res) => {
-    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-    const [newVendors, newParents, newEnquiries, paid, revenueAgg] = await Promise.all([
-      prisma.vendor.count({ where: { createdAt: { gte: since } } }),
-      prisma.petParent.count({ where: { createdAt: { gte: since } } }),
-      prisma.enquiry.count({ where: { createdAt: { gte: since } } }),
-      prisma.payment.count({ where: { status: 'SUCCESS', createdAt: { gte: since } } }),
-      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', createdAt: { gte: since } } }),
+    const now = new Date();
+    const since = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+    const prevSince = new Date(now.getTime() - 60 * 24 * 3600 * 1000);
+    const win = { gte: since };
+    const prevWin = { gte: prevSince, lt: since };
+
+    const [
+      newVendors, newParents, newEnquiries, paid, revenueAgg,
+      prevVendors, prevParents, prevEnquiries, prevRevenueAgg,
+      respondedEnquiries, totalEnquiries, activeVendors, claimedVendors,
+      enquiryRows, parentRows, vendorRows, paymentRows, activityRows, topCityRows,
+    ] = await Promise.all([
+      prisma.vendor.count({ where: { createdAt: win } }),
+      prisma.petParent.count({ where: { createdAt: win } }),
+      prisma.enquiry.count({ where: { createdAt: win } }),
+      prisma.payment.count({ where: { status: 'SUCCESS', createdAt: win } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', createdAt: win } }),
+      prisma.vendor.count({ where: { createdAt: prevWin } }),
+      prisma.petParent.count({ where: { createdAt: prevWin } }),
+      prisma.enquiry.count({ where: { createdAt: prevWin } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', createdAt: prevWin } }),
+      prisma.enquiry.count({ where: { createdAt: win, status: { in: ['RESPONDED', 'COMPLETED'] } } }),
+      prisma.enquiry.count({ where: { createdAt: win } }),
+      prisma.vendor.count({ where: { status: { in: ['ACTIVE', 'CLAIMED'] } } }),
+      prisma.vendor.count({ where: { claimedAt: { not: null } } }),
+      // Raw rows for the daily series — cheap at this volume, and it keeps the
+      // bucketing in one place rather than in six database dialects.
+      prisma.enquiry.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
+      prisma.petParent.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
+      prisma.vendor.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
+      prisma.payment.findMany({ where: { status: 'SUCCESS', createdAt: win }, select: { createdAt: true, amountMinor: true } }),
+      prisma.listingActivity.findMany({ where: { createdAt: win }, select: { createdAt: true, kind: true, city: true } }).catch(() => []),
+      prisma.enquiry.groupBy({ by: ['city'], where: { createdAt: win }, _count: { _all: true } }).catch(() => []),
     ]);
+
+    // 30 day-buckets, oldest first, so the chart has no gaps on quiet days.
+    const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+    const days: string[] = [];
+    for (let i = 29; i >= 0; i--) days.push(dayKey(new Date(now.getTime() - i * 24 * 3600 * 1000)));
+    const emptySeries = () => Object.fromEntries(days.map((d) => [d, 0])) as Record<string, number>;
+
+    const enquiriesByDay = emptySeries();
+    for (const r of enquiryRows) { const k = dayKey(r.createdAt); if (k in enquiriesByDay) enquiriesByDay[k] = (enquiriesByDay[k] ?? 0) + 1; }
+    const signupsByDay = emptySeries();
+    for (const r of [...parentRows, ...vendorRows]) { const k = dayKey(r.createdAt); if (k in signupsByDay) signupsByDay[k] = (signupsByDay[k] ?? 0) + 1; }
+    const revenueByDay = emptySeries();
+    for (const r of paymentRows) { const k = dayKey(r.createdAt); if (k in revenueByDay) revenueByDay[k] = (revenueByDay[k] ?? 0) + Math.round(r.amountMinor / 100); }
+    const contactByDay = emptySeries();
+    const kinds: Record<string, number> = { phone_click: 0, whatsapp_click: 0, website_click: 0, listing_view: 0 };
+    for (const r of activityRows as Array<{ createdAt: Date; kind: string }>) {
+      kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
+      if (r.kind === 'phone_click' || r.kind === 'whatsapp_click') {
+        const k = dayKey(r.createdAt);
+        if (k in contactByDay) contactByDay[k] = (contactByDay[k] ?? 0) + 1;
+      }
+    }
+
+    const pct = (nowN: number, prevN: number) =>
+      prevN === 0 ? (nowN > 0 ? 100 : 0) : Math.round(((nowN - prevN) / prevN) * 100);
+
+    const revenue = rupees(revenueAgg._sum.amountMinor ?? 0);
+    const prevRevenue = rupees(prevRevenueAgg._sum.amountMinor ?? 0);
+
     res.json({
       ok: true,
       window: '30d',
@@ -929,8 +984,31 @@ adminApiRouter.get(
         newParents,
         newEnquiries,
         paidTransactions: paid,
-        revenue: rupees(revenueAgg._sum.amountMinor ?? 0),
+        revenue,
+        // Every headline number carries its own change against the previous 30
+        // days, so "139 new" stops being a figure with nothing to compare to.
+        change: {
+          vendors: pct(newVendors, prevVendors),
+          parents: pct(newParents, prevParents),
+          enquiries: pct(newEnquiries, prevEnquiries),
+          revenue: pct(revenue, prevRevenue),
+        },
+        enquiryResponseRate: totalEnquiries ? Math.round((respondedEnquiries / totalEnquiries) * 100) : 0,
+        vendorClaimRate: activeVendors ? Math.round((claimedVendors / activeVendors) * 100) : 0,
+        contactActions: kinds,
       },
+      series: {
+        days,
+        enquiries: days.map((d) => enquiriesByDay[d] ?? 0),
+        signups: days.map((d) => signupsByDay[d] ?? 0),
+        revenue: days.map((d) => revenueByDay[d] ?? 0),
+        contacts: days.map((d) => contactByDay[d] ?? 0),
+      },
+      topCities: (topCityRows as Array<{ city: string | null; _count: { _all: number } }>)
+        .filter((c) => c.city)
+        .sort((a, b) => b._count._all - a._count._all)
+        .slice(0, 8)
+        .map((c) => ({ name: c.city as string, count: c._count._all })),
     });
   }),
 );

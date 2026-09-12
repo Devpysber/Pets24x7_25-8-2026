@@ -30,7 +30,6 @@ import {
   sendWelcomeEmailOnce,
 } from './email-verification.js';
 import { notifyIf } from '../mail/notify.js';
-import { loginAlertEmail } from '../mail/action-templates.js';
 import { EMAIL_OTP_TTL_MIN, issueEmailOtp, verifyEmailOtp } from './email-otp.js';
 import { RESET_TTL_MIN, consumeResetToken, sendPasswordResetEmail } from './password-reset.js';
 import { passwordChangedEmail, emailVerifiedEmail } from '../mail/lifecycle-templates.js';
@@ -141,15 +140,6 @@ parentEmailAuthRouter.post(
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
     // Welcome mail already covers a first sign-in; don't send both at once.
     if (!firstTime) {
-      notifyIf(parent.email, (to) =>
-        loginAlertEmail(
-          to,
-          parent.name ?? 'there',
-          new Date(),
-          req.ip ?? null,
-          (req.headers['user-agent'] as string | undefined) ?? null,
-        ),
-      );
     }
     res.json({ ok: true, isNewAccount: !existing, parent: publicParent(parent) });
   }),
@@ -244,15 +234,6 @@ parentEmailAuthRouter.post(
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
     // Welcome mail already covers a first sign-in; don't send both at once.
     if (!firstTime) {
-      notifyIf(parent.email, (to) =>
-        loginAlertEmail(
-          to,
-          parent.name ?? 'there',
-          new Date(),
-          req.ip ?? null,
-          (req.headers['user-agent'] as string | undefined) ?? null,
-        ),
-      );
     }
     res.json({ ok: true, parent: publicParent(parent) });
   }),
@@ -418,15 +399,6 @@ parentEmailAuthRouter.post(
     // Same rule as the password path: welcome covers a first sign-in, every
     // later one gets the security alert instead.
     if (!firstGoogleSignIn) {
-      notifyIf(parent.email, (to) =>
-        loginAlertEmail(
-          to,
-          parent.name ?? 'there',
-          new Date(),
-          req.ip ?? null,
-          (req.headers['user-agent'] as string | undefined) ?? null,
-        ),
-      );
     }
     res.json({ ok: true, parent: publicParent(parent) });
   }),

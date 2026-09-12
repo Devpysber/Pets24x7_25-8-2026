@@ -14,7 +14,6 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, UnauthorizedError } from '../shared/errors.js';
 import { env } from '../env.js';
 import { notifyIf } from '../mail/notify.js';
-import { loginAlertEmail } from '../mail/action-templates.js';
 
 export const parentAuthRouter = Router();
 
@@ -111,15 +110,6 @@ parentAuthRouter.post(
     }
 
     setAuthCookie(res, { sub: parent!.id, role: 'pet_parent' });
-    notifyIf(parent!.email, (to) =>
-      loginAlertEmail(
-        to,
-        parent!.name ?? 'there',
-        new Date(),
-        req.ip ?? null,
-        (req.headers['user-agent'] as string | undefined) ?? null,
-      ),
-    );
     res.json({ ok: true, parent: { id: parent!.id, name: parent!.name, phone: normPhone, email: parent!.email ?? null } });
   }),
 );

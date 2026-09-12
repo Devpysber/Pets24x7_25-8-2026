@@ -28,7 +28,6 @@ import {
   sendVendorVerificationEmail,
 } from './vendor-email-verification.js';
 import { EMAIL_OTP_TTL_MIN, issueEmailOtp, normEmail, verifyEmailOtp } from './email-otp.js';
-import { loginAlertEmail } from '../mail/action-templates.js';
 
 export const vendorAuthRouter = Router();
 
@@ -120,15 +119,6 @@ vendorAuthRouter.post(
       .catch(() => {});
 
     setAuthCookie(res, { sub: updated.id, role: 'vendor' });
-    notifyIf(updated.email, (to) =>
-      loginAlertEmail(
-        to,
-        updated.businessName,
-        new Date(),
-        req.ip ?? null,
-        (req.headers['user-agent'] as string | undefined) ?? null,
-      ),
-    );
     res.json({
       ok: true,
       vendor: {
@@ -199,15 +189,6 @@ vendorAuthRouter.post(
       .catch(() => {});
 
     setAuthCookie(res, { sub: updated.id, role: 'vendor' });
-    notifyIf(updated.email, (to) =>
-      loginAlertEmail(
-        to,
-        updated.businessName,
-        new Date(),
-        req.ip ?? null,
-        (req.headers['user-agent'] as string | undefined) ?? null,
-      ),
-    );
     res.json({
       ok: true,
       vendor: {

@@ -50,36 +50,10 @@ If you didn't try to sign in, ignore this email.
   };
 }
 
-export function loginAlertEmail(
-  to: string,
-  name: string,
-  at: Date,
-  ip: string | null,
-  device: string | null,
-): MailInput {
-  return {
-    to,
-    subject: 'New sign-in to your Pets24x7 account',
-    html: page({
-      eyebrow: 'Security',
-      banner: ['New sign-in', 'info'],
-      heading: `Hi ${name}`,
-      intro: 'Your Pets24x7 account was just signed into. If this was you, nothing to do.',
-      blocks: [
-        InfoBox([
-          ['When', dayTime(at)],
-          ['IP address', ip || '—'],
-          ['Device', (device || '—').slice(0, 60)],
-        ]),
-        Note("Didn't recognise this? Reply to this email and we'll lock the account."),
-        Button('Open my dashboard', PARENT_DASH()),
-      ],
-      preheader: 'A new sign-in to your Pets24x7 account.',
-    }),
-    text: `Hi ${name},\n\nYour Pets24x7 account was signed into on ${dayTime(at)} (IP ${ip || '-'}, ${device || 'unknown device'}).\n\nIf this wasn't you, reply to this email.\n`,
-  };
-}
-
+// The sign-in alert was removed: it fired on every ordinary sign-in, so it
+// trained people to ignore mail from us and buried the notices that matter.
+// The events worth telling someone about — a password change, an email change,
+// a claim — each have their own template above and below.
 export function profileUpdatedEmail(to: string, name: string, changed: string[]): MailInput {
   return {
     to,

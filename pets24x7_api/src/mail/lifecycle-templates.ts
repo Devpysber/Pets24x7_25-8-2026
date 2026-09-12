@@ -925,3 +925,87 @@ export function maintenanceNoticeEmail(to: string, name: string, startsAt: Date,
     text: `Hi ${name},\n\nPets24x7 will be offline for about ${minutes} minutes from ${dayTime(startsAt)}.\n`,
   };
 }
+
+// ===========================================================================
+// Admin — the daily briefing
+// ===========================================================================
+
+/**
+ * One message a day covering what happened and what is waiting. The queue goes
+ * first: those are the items that stay broken until someone acts.
+ */
+export function adminDailyDigestEmail(
+  to: string,
+  d: {
+    pendingVendors: number;
+    pendingReviews: number;
+    pendingCampaigns: number;
+    unansweredEnquiries: number;
+    newEnquiries: number;
+    newParents: number;
+    newVendors: number;
+    newListings: number;
+    paymentsCount: number;
+    paymentsRupees: number;
+    phoneTaps: number;
+    whatsappTaps: number;
+    listingViews: number;
+    reviewsSubmitted: number;
+  },
+  siteUrl: string,
+): MailInput {
+  const site = siteUrl.replace(/\/+$/, '');
+  const waiting = d.pendingVendors + d.pendingReviews + d.pendingCampaigns + d.unansweredEnquiries;
+  const money = d.paymentsRupees > 0 ? `₹${d.paymentsRupees.toLocaleString('en-IN')}` : '—';
+
+  return {
+    to,
+    subject: waiting > 0
+      ? `Pets24x7 daily: ${waiting} waiting on you`
+      : `Pets24x7 daily: ${d.newEnquiries} enquiries, ${d.newParents + d.newVendors} new accounts`,
+    html: page({
+      eyebrow: 'Admin',
+      banner: waiting > 0 ? [`${waiting} item${waiting === 1 ? '' : 's'} need a decision`, 'warning'] : ['All clear', 'success'],
+      heading: 'Yesterday on Pets24x7',
+      intro: waiting > 0
+        ? 'These are waiting on someone in the admin panel. Everything below them is just what moved.'
+        : 'Nothing is waiting on a decision. Here is what moved yesterday.',
+      blocks: [
+        InfoBox([
+          ['Vendors awaiting approval', String(d.pendingVendors)],
+          ['Reviews awaiting moderation', String(d.pendingReviews)],
+          ['Campaigns awaiting review', String(d.pendingCampaigns)],
+          ['Enquiries still unanswered', String(d.unansweredEnquiries)],
+        ]),
+        Button('Open the admin panel', `${site}/dashboard/admin/`),
+        InfoBox([
+          ['New enquiries', String(d.newEnquiries)],
+          ['New pet parents', String(d.newParents)],
+          ['New businesses', String(d.newVendors)],
+          ['Listings added', String(d.newListings)],
+          ['Reviews submitted', String(d.reviewsSubmitted)],
+          ['Payments', `${d.paymentsCount} · ${money}`],
+        ]),
+        InfoBox([
+          ['Phone number taps', String(d.phoneTaps)],
+          ['WhatsApp taps', String(d.whatsappTaps)],
+          ['Listing views', String(d.listingViews)],
+        ]),
+        Note('Taps are pet owners who contacted a business directly from a listing — they never become an enquiry row, so this is the only place they show up.'),
+      ],
+      preheader: waiting > 0 ? `${waiting} waiting · ${d.newEnquiries} new enquiries` : `${d.newEnquiries} new enquiries`,
+    }),
+    text:
+      `Pets24x7 daily\n\n` +
+      `Waiting on you:\n` +
+      `  Vendors awaiting approval: ${d.pendingVendors}\n` +
+      `  Reviews awaiting moderation: ${d.pendingReviews}\n` +
+      `  Campaigns awaiting review: ${d.pendingCampaigns}\n` +
+      `  Enquiries unanswered: ${d.unansweredEnquiries}\n\n` +
+      `Yesterday:\n` +
+      `  Enquiries: ${d.newEnquiries}\n  Pet parents: ${d.newParents}\n  Businesses: ${d.newVendors}\n` +
+      `  Listings added: ${d.newListings}\n  Reviews: ${d.reviewsSubmitted}\n  Payments: ${d.paymentsCount} (${money})\n` +
+      `  Phone taps: ${d.phoneTaps}  WhatsApp taps: ${d.whatsappTaps}  Views: ${d.listingViews}\n\n` +
+      `${site}/dashboard/admin/\n`,
+  };
+}

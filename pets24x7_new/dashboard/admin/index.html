@@ -435,6 +435,32 @@
     letter-spacing: 0.4px;
     margin-top: 8px;
   }
+
+  /* ---- Reports ---- */
+  .rep-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px; margin-bottom:20px; }
+  .rep-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px 20px; position:relative; overflow:hidden;
+              opacity:0; transform:translateY(10px); animation:repIn .5s cubic-bezier(.2,.7,.3,1) forwards; }
+  .rep-card:nth-child(2){animation-delay:.06s} .rep-card:nth-child(3){animation-delay:.12s}
+  .rep-card:nth-child(4){animation-delay:.18s} .rep-card:nth-child(5){animation-delay:.24s} .rep-card:nth-child(6){animation-delay:.3s}
+  @keyframes repIn { to { opacity:1; transform:none; } }
+  .rep-card .lbl { font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-muted); }
+  .rep-card .val { font-size:30px; font-weight:800; letter-spacing:-1px; margin-top:6px; line-height:1.1; }
+  .rep-card .sub { font-size:12.5px; color:var(--text-muted); margin-top:4px; }
+  .rep-delta { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:800; padding:2px 8px; border-radius:99px; margin-top:8px; }
+  .rep-delta.up { background:#DCFCE7; color:#166534; } .rep-delta.down { background:#FEE2E2; color:#991B1B; }
+  .rep-delta.flat { background:#F1F5F9; color:#475569; }
+  .rep-spark { position:absolute; right:0; bottom:0; left:0; height:34px; opacity:.5; pointer-events:none; }
+  .rep-charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:18px; }
+  .rep-chart-card { opacity:0; transform:translateY(12px); animation:repIn .55s cubic-bezier(.2,.7,.3,1) .15s forwards; }
+  .rep-city-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:13px; }
+  .rep-city-row .nm { width:34%; font-weight:700; }
+  .rep-city-bar { flex:1; height:9px; background:#F1F5F9; border-radius:99px; overflow:hidden; }
+  .rep-city-bar span { display:block; height:100%; background:linear-gradient(90deg,#3B82F6,#2563EB); border-radius:99px; width:0; transition:width .7s cubic-bezier(.2,.7,.3,1); }
+  .rep-city-row .ct { width:46px; text-align:right; font-weight:800; color:var(--text-muted); }
+  @media (prefers-reduced-motion: reduce) {
+    .rep-card, .rep-chart-card { animation:none; opacity:1; transform:none; }
+    .rep-city-bar span { transition:none; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -1486,14 +1512,33 @@
         <div class="card-header" style="margin-bottom:16px;">
           <div>
             <h2 style="font-size:18px; font-weight:800;">Platform Reports</h2>
-            <div class="card-subtitle">Growth and marketplace performance reports.</div>
+            <div class="card-subtitle">The last 30 days, against the 30 before it.</div>
           </div>
         </div>
 
-        <div class="metrics-grid">
-          <div class="metric-card"><span class="metric-lbl">Monthly Active Users</span><div class="metric-val">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Enquiry Conversion</span><div class="metric-val">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Vendor Retention</span><div class="metric-val">—</div></div>
+        <div class="rep-grid" id="repCards"></div>
+
+        <div class="rep-charts">
+          <div class="card rep-chart-card">
+            <div class="card-title" style="margin-bottom:2px;">Enquiries &amp; direct contacts</div>
+            <div class="card-subtitle" style="margin-bottom:14px;">Form enquiries against taps on a phone number or WhatsApp.</div>
+            <div style="position:relative;height:260px;"><canvas id="repTrendChart"></canvas></div>
+          </div>
+          <div class="card rep-chart-card">
+            <div class="card-title" style="margin-bottom:2px;">How people make contact</div>
+            <div class="card-subtitle" style="margin-bottom:14px;">Every way a pet owner reached a business.</div>
+            <div style="position:relative;height:260px;"><canvas id="repContactChart"></canvas></div>
+          </div>
+          <div class="card rep-chart-card">
+            <div class="card-title" style="margin-bottom:2px;">Sign-ups &amp; revenue</div>
+            <div class="card-subtitle" style="margin-bottom:14px;">New accounts a day, with revenue behind them.</div>
+            <div style="position:relative;height:260px;"><canvas id="repGrowthChart"></canvas></div>
+          </div>
+          <div class="card rep-chart-card">
+            <div class="card-title" style="margin-bottom:2px;">Where the enquiries come from</div>
+            <div class="card-subtitle" style="margin-bottom:14px;">Top cities by enquiry volume.</div>
+            <div id="repCities"></div>
+          </div>
         </div>
       </section>
 
@@ -3120,12 +3165,7 @@
       });
     },
     reports: function() {
-      return api.adminReports().then(function(res) {
-        var r = res.report || {};
-        fillMetrics('reports', [
-          (r.newVendors||0) + ' new', (r.newParents||0) + ' new', (r.newEnquiries||0), inr(r.revenue)
-        ]);
-      });
+      return api.adminReports().then(renderReports);
     },
     featured: function() {
       return api.adminFeatured().then(function(res) {
@@ -5198,6 +5238,176 @@
     api.adminVendorStatus(id, { status: status, reason: reason }).then(function(){ loadView('vendors', true); loadView('dash', true); })
       .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
+  // ---- Reports ----
+  // Numbers count up rather than appearing, which makes a changed figure
+  // noticeable without anyone having to remember the old one.
+  function countUp(el, to, format) {
+    var from = 0, start = null, dur = 700;
+    function frame(ts) {
+      if (!start) start = ts;
+      var p = Math.min(1, (ts - start) / dur);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = format(Math.round(from + (to - from) * eased));
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = format(to);
+      return;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function deltaChip(pct) {
+    if (pct === 0 || pct == null) return '<span class="rep-delta flat">no change</span>';
+    var up = pct > 0;
+    return '<span class="rep-delta ' + (up ? 'up' : 'down') + '">' + (up ? '▲' : '▼') + ' ' +
+      Math.abs(pct) + '% vs previous 30 days</span>';
+  }
+
+  /** A tiny inline sparkline — no library, and it scales to the card. */
+  function sparkline(series, color) {
+    if (!series || series.length < 2) return '';
+    var max = Math.max.apply(null, series) || 1;
+    var step = 100 / (series.length - 1);
+    var pts = series.map(function (v, i) { return (i * step).toFixed(2) + ',' + (34 - (v / max) * 30).toFixed(2); });
+    return '<svg class="rep-spark" viewBox="0 0 100 34" preserveAspectRatio="none">' +
+      '<polyline fill="none" stroke="' + color + '" stroke-width="2" points="' + pts.join(' ') + '" />' +
+      '</svg>';
+  }
+
+  function renderReports(res) {
+    var r = (res && res.report) || {};
+    var series = (res && res.series) || {};
+    var change = r.change || {};
+    var contacts = r.contactActions || {};
+
+    var cards = [
+      { lbl: 'New pet parents', val: r.newParents || 0, pct: change.parents, spark: series.signups, color: '#2563EB', sub: 'Accounts created in the last 30 days' },
+      { lbl: 'New businesses', val: r.newVendors || 0, pct: change.vendors, spark: series.signups, color: '#7C3AED', sub: 'Vendor accounts created' },
+      { lbl: 'Enquiries', val: r.newEnquiries || 0, pct: change.enquiries, spark: series.enquiries, color: '#059669', sub: 'Forms submitted to businesses' },
+      { lbl: 'Revenue', val: r.revenue || 0, pct: change.revenue, spark: series.revenue, color: '#D97706', money: true, sub: (r.paidTransactions || 0) + ' successful payments' },
+      { lbl: 'Enquiries answered', val: r.enquiryResponseRate || 0, suffix: '%', sub: 'Vendors who replied or completed' },
+      { lbl: 'Listings claimed', val: r.vendorClaimRate || 0, suffix: '%', sub: 'Of active businesses on the platform' }
+    ];
+
+    var host = document.getElementById('repCards');
+    if (host) {
+      host.innerHTML = cards.map(function (c) {
+        return '<div class="rep-card">' +
+          '<div class="lbl">' + escH(c.lbl) + '</div>' +
+          '<div class="val" data-to="' + c.val + '">0</div>' +
+          '<div class="sub">' + escH(c.sub || '') + '</div>' +
+          (c.pct !== undefined ? deltaChip(c.pct) : '') +
+          (c.spark ? sparkline(c.spark, c.color) : '') +
+        '</div>';
+      }).join('');
+      Array.prototype.forEach.call(host.querySelectorAll('.val'), function (el, i) {
+        var c = cards[i];
+        countUp(el, Number(el.getAttribute('data-to')) || 0, function (n) {
+          return c.money ? inr(n) : (n.toLocaleString('en-IN') + (c.suffix || ''));
+        });
+      });
+    }
+
+    // Top cities, as bars that grow in rather than a bare list.
+    var cityHost = document.getElementById('repCities');
+    if (cityHost) {
+      var cities = (res && res.topCities) || [];
+      if (!cities.length) {
+        cityHost.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No enquiries in this window yet.</div>';
+      } else {
+        var top = cities[0].count || 1;
+        cityHost.innerHTML = cities.map(function (c) {
+          return '<div class="rep-city-row"><span class="nm">' + escH(c.name) + '</span>' +
+            '<span class="rep-city-bar"><span data-w="' + Math.round((c.count / top) * 100) + '"></span></span>' +
+            '<span class="ct">' + c.count + '</span></div>';
+        }).join('');
+        requestAnimationFrame(function () {
+          Array.prototype.forEach.call(cityHost.querySelectorAll('.rep-city-bar span'), function (b) {
+            b.style.width = b.getAttribute('data-w') + '%';
+          });
+        });
+      }
+    }
+
+    if (!window.Chart) return;
+    var labels = (series.days || []).map(function (d) { return d.slice(5); });
+
+    function draw(id, config) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (dashChartInstances[id]) dashChartInstances[id].destroy();
+      dashChartInstances[id] = new Chart(el, config);
+    }
+
+    var area = function (ctx, hex) {
+      var g = ctx.createLinearGradient(0, 0, 0, 240);
+      g.addColorStop(0, hex + '55');
+      g.addColorStop(1, hex + '05');
+      return g;
+    };
+
+    draw('repTrendChart', {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Enquiries', data: series.enquiries || [], borderColor: '#2563EB', tension: .35, fill: true,
+            backgroundColor: function (c) { return area(c.chart.ctx, '#2563EB'); }, pointRadius: 0, borderWidth: 2.5 },
+          { label: 'Phone / WhatsApp taps', data: series.contacts || [], borderColor: '#059669', tension: .35, fill: true,
+            backgroundColor: function (c) { return area(c.chart.ctx, '#059669'); }, pointRadius: 0, borderWidth: 2.5 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        animation: { duration: 800 },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, grid: { color: '#F1F5F9' } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } } }
+      }
+    });
+
+    draw('repContactChart', {
+      type: 'doughnut',
+      data: {
+        labels: ['Phone taps', 'WhatsApp taps', 'Website opens', 'Listing views'],
+        datasets: [{
+          data: [contacts.phone_click || 0, contacts.whatsapp_click || 0, contacts.website_click || 0, contacts.listing_view || 0],
+          backgroundColor: ['#2563EB', '#059669', '#7C3AED', '#CBD5E1'],
+          borderWidth: 2, borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        animation: { animateScale: true, duration: 800 },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+      }
+    });
+
+    draw('repGrowthChart', {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'New accounts', data: series.signups || [], backgroundColor: '#93C5FD', borderRadius: 4, order: 2 },
+          { label: 'Revenue (₹)', data: series.revenue || [], type: 'line', borderColor: '#D97706', backgroundColor: '#D97706',
+            tension: .35, pointRadius: 0, borderWidth: 2.5, yAxisID: 'y1', order: 1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        animation: { duration: 800 },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+          y1: { beginAtZero: true, position: 'right', grid: { display: false } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }
+        }
+      }
+    });
+  }
+
   // ---- Recipient picker for the mail console ----
   // Typing an address by hand is error-prone and there was no way to see who
   // exists, so the two audiences are loaded once and filtered in the browser.

@@ -115,15 +115,6 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     build: (to, d) => T.loginCodeEmail(to, d.name ?? null, String(d.code ?? '000000'), Number(d.ttlMinutes ?? 10)),
   },
   {
-    id: 'parent/login_alert',
-    kind: 'transactional',
-    category: 'Pet parent',
-    label: 'New sign-in alert',
-    description: 'Security notice on every sign-in after the first.',
-    sample: { name: PARENT, ip: '49.36.12.8', device: 'Chrome on Windows' },
-    build: (to, d) => T.loginAlertEmail(to, d.name, new Date(), d.ip ?? null, d.device ?? null),
-  },
-  {
     id: 'parent/profile_updated',
     kind: 'transactional',
     category: 'Pet parent',
