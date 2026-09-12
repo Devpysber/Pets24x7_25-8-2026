@@ -215,9 +215,13 @@ parentDashboardRouter.get(
 );
 
 // ----- Update profile -----
+// The address is the account identifier, the sign-in code destination and the
+// receipt address all at once, so it is not self-service: a typo locks someone
+// out of their own account, and an attacker who gets a session could quietly
+// move the account to an address they own. Support changes it after checking
+// who is asking.
 const ProfileBody = z.object({
   name: z.string().min(1).max(80).optional(),
-  email: z.string().email().max(160).optional().or(z.literal('')),
   phone: z.string().max(30).optional().or(z.literal('')),
   city: z.string().max(80).optional(),
   country: z.enum(['IN', 'US']).optional(),
@@ -247,17 +251,8 @@ parentDashboardRouter.patch(
       }
     }
 
-    // A new address is unproven: drop the verified flag so nothing downstream
-    // treats the old proof as covering it, and send a fresh link.
-    const nextEmail = body.email === undefined ? undefined : body.email || null;
-    const emailChanged = nextEmail !== undefined && nextEmail !== (current?.email ?? null);
-    if (nextEmail !== undefined) {
-      data.email = nextEmail;
-      if (emailChanged) {
-        data.emailVerified = false;
-        data.emailVerifiedAt = null;
-      }
-    }
+    // Email is deliberately absent from this endpoint — see ProfileBody above.
+    const emailChanged = false;
 
     let parent;
     try {

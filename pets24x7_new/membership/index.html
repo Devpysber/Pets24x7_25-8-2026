@@ -113,6 +113,7 @@
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script>
   function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
   function fmtINR(paise){return '₹' + (paise/100).toLocaleString('en-IN', {maximumFractionDigits:0})}
@@ -270,7 +271,7 @@
       cb.disabled = true;
       api.membershipCancel().then(function(r) {
         showActiveBanner(Object.assign({}, active, { cancelledAt: (r.membership && r.membership.cancelledAt) || new Date().toISOString() }));
-      }).catch(function(e) { alert('Could not cancel: ' + fmtErr(e)); cb.disabled = false; });
+      }).catch(function(e) { toast('Could not cancel: ' + fmtErr(e), 'error'); cb.disabled = false; });
     });
 
     var rb = document.getElementById('resumeMembershipBtn');
@@ -278,7 +279,7 @@
       rb.disabled = true;
       api.membershipResume().then(function(r) {
         showActiveBanner(Object.assign({}, active, { cancelledAt: (r.membership && r.membership.cancelledAt) || null }));
-      }).catch(function(e) { alert('Could not resume: ' + fmtErr(e)); rb.disabled = false; });
+      }).catch(function(e) { toast('Could not resume: ' + fmtErr(e), 'error'); rb.disabled = false; });
     });
   }
 

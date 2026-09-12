@@ -843,6 +843,36 @@ def render_listing(biz, all_in_city, all_cats):
 
   function rvEsc(x){{ return (x==null?'':String(x)).replace(/[<>&"]/g, function(c){{ return {{'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}}[c]; }}); }}
 
+  // A tap on the phone number, WhatsApp or the website is intent that never
+  // becomes an enquiry row. Recording it is what lets the vendor be shown
+  // something real, and support answer "who contacted us". Best effort: the
+  // call is never held up by it, and a failure is ignored.
+  function logTap(kind){{
+    try {{
+      var payload = JSON.stringify({{ listingId: biz.id, kind: kind, source: 'listing_page' }});
+      if (navigator.sendBeacon) {{
+        navigator.sendBeacon(API_BASE + '/api/activity', new Blob([payload], {{ type: 'application/json' }}));
+      }} else {{
+        fetch(API_BASE + '/api/activity', {{ method:'POST', credentials:'include', keepalive:true,
+          headers:{{ 'Content-Type':'application/json' }}, body: payload }}).catch(function(){{}});
+      }}
+    }} catch (e) {{}}
+    return true;
+  }}
+
+  // Every tel:, wa.me and website link on the page reports itself, without each
+  // one needing its own handler in the markup.
+  document.addEventListener('click', function(ev){{
+    var a = ev.target && ev.target.closest ? ev.target.closest('a') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (href.indexOf('tel:') === 0) logTap('phone_click');
+    else if (href.indexOf('wa.me') !== -1 || href.indexOf('api.whatsapp.com') !== -1) logTap('whatsapp_click');
+    else if (a.getAttribute('rel') && a.getAttribute('rel').indexOf('nofollow') !== -1 && /^https?:/.test(href)) logTap('website_click');
+  }}, true);
+
+  logTap('listing_view');
+
   function loadListingReviews(){{
     fetch(API_BASE + '/api/reviews/listing/' + encodeURIComponent(biz.id), {{ headers: {{ 'Accept':'application/json' }} }})
       .then(function(r){{ return r.ok ? r.json() : null; }})

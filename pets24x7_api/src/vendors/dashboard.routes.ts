@@ -353,6 +353,9 @@ vendorDashboardRouter.get(
 // straight at the column. Bounds are generous but real: the longest address in
 // the listing data is 246 characters and the longest website 2171, so these are
 // sized above what the corpus actually contains rather than guessed.
+// `email` is not here on purpose: it identifies the account, receives the
+// sign-in codes and carries the receipts. Support changes it after confirming
+// who is asking, which a self-service field cannot do.
 const UpdateBusinessBody = z.object({
   businessName: z.string().min(2).max(160).optional(),
   category: z.string().max(120).optional(),
@@ -362,7 +365,6 @@ const UpdateBusinessBody = z.object({
   address: z.string().max(500).optional(),
   pincode: z.string().max(20).optional(),
   phone: z.string().max(32).optional(),
-  email: z.string().email().max(200).optional(),
   website: z.string().max(3000).optional(),
   whatsapp: z.string().max(32).optional(),
   about: z.string().max(5000).optional(),

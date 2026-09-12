@@ -192,6 +192,16 @@
     // Enquiries
     enquiryCreate:    function (p)                       { return req('POST', '/api/enquiries', p); },
 
+    // Records a tap that never becomes an enquiry — the phone number, WhatsApp,
+    // the website link. Best-effort by design: a failure here must never stop
+    // the customer reaching the business.
+    activityLog:      function (listingId, kind, source) {
+      try {
+        return req('POST', '/api/activity', { listingId: listingId, kind: kind, source: source || 'listing_page' })
+          .catch(function () {});
+      } catch (e) { return Promise.resolve(); }
+    },
+
     // Featured listings (public)
     featuredList:     function (city, category) {
       var qs = [];
@@ -262,6 +272,7 @@
 
     adminWaMessages:  function (dir)        { return req('GET',  '/api/admin/wa-messages' + (dir ? '?direction=' + encodeURIComponent(dir) : '')); },
     adminAudit:       function ()          { return req('GET',  '/api/admin/audit'); },
+    adminActivity:    function (kind)      { return req('GET',  '/api/admin/activity' + (kind ? '?kind=' + encodeURIComponent(kind) : '')); },
     adminSettings:    function ()          { return req('GET',  '/api/admin/settings'); },
     adminMyProfile:   function ()          { return req('GET',   '/api/admin/me/profile'); },
     adminMyProfileSave: function (body)    { return req('PATCH', '/api/admin/me/profile', body); },

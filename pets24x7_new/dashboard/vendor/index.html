@@ -554,11 +554,14 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-title" style="margin-bottom:6px;">Change email address</div>
-          <div class="card-subtitle" style="margin-bottom:14px;">Receipts, enquiry alerts and sign-in codes go here. A new address has to be verified.</div>
-          <div class="form-group"><label>Business email</label><input type="email" class="form-control" id="accEmailInput" placeholder="you@business.com" /></div>
-          <button class="btn btn-primary btn-sm" id="accEmailSave">Save email</button>
-          <div id="accEmailMsg" style="font-size:12.5px; margin-top:8px;"></div>
+          <div class="card-title" style="margin-bottom:6px;">Email address</div>
+          <div class="card-subtitle" style="margin-bottom:14px;">Receipts, enquiry alerts and sign-in codes go here.</div>
+          <div class="form-group"><label>Business email</label><input type="email" class="form-control" id="accEmailInput" disabled /></div>
+          <div style="font-size:12.5px; color:var(--text-muted);">
+            This address identifies your account, so we change it for you rather than letting it be edited here.
+            <a href="mailto:hello@pets24x7.com?subject=Change%20the%20email%20on%20my%20business%20account" style="font-weight:700;">Email support</a>
+            or <a href="https://wa.me/919930090487?text=Hi%20Pets24x7%2C%20please%20change%20the%20email%20on%20my%20business%20account." target="_blank" rel="noopener" style="font-weight:700;">message us on WhatsApp</a>.
+          </div>
         </div>
 
         <div class="card">
@@ -1035,7 +1038,7 @@
       <div class="form-group"><label>Full Address</label><input type="text" class="form-control" id="ebAddress" required /></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" required /></div>
-        <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" required /></div>
+        <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" disabled /></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group"><label>Website</label><input type="url" class="form-control" id="ebWebsite" placeholder="https://..." /></div>
@@ -1230,6 +1233,7 @@
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script>
   var state = {
     currentView: 'dash',
@@ -1526,14 +1530,14 @@
 
     function stop(msg) {
       if (btn) { btn.disabled = false; btn.textContent = label; }
-      if (msg) alert(msg);
+      if (msg) toast(msg, 'ok');
     }
 
     function done(vRes) {
       closeModal('vendorPaymentGatewayModal');
       if (btn) { btn.disabled = false; btn.textContent = label; }
-      alert('Payment successful. Your subscription is active.' +
-            (vRes && vRes.invoice ? '\n\nInvoice reference: ' + vRes.invoice.merchantTxnId : ''));
+      uiAlert({ title: 'Payment successful', body: 'Your subscription is active.' +
+        (vRes && vRes.invoice ? '\n\nInvoice reference: ' + vRes.invoice.merchantTxnId : '') });
       loadVendorSubscriptions();
     }
 
@@ -1777,7 +1781,7 @@
   function buyFeatured(durationDays, btn) {
     var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
     var o = opts.filter(function(x){ return x.durationDays === durationDays; })[0];
-    if (!o) { alert('That placement is no longer available.'); return; }
+    if (!o) { toast('That placement is no longer available.', 'ok'); return; }
     var rupees = Math.round(o.priceMinor / 100);
     var live = liveFeatured();
     var msg = live
@@ -1794,7 +1798,7 @@
       if (!url) throw new Error('No payment URL returned');
       location.href = url;
     }).catch(function(e) {
-      alert(fmtErr(e));
+      toast(fmtErr(e), 'ok');
       if (btn) { btn.disabled = false; btn.textContent = 'Feature for ' + o.label + ' →'; }
     });
   }
@@ -1803,7 +1807,7 @@
   function startCampaignSetup(durationDays) {
     var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
     var o = opts.find(function(x){ return x.durationDays === durationDays; });
-    if (!o) { alert('That plan is no longer available.'); return; }
+    if (!o) { toast('That plan is no longer available.', 'ok'); return; }
     state.selectedPlan = { name: o.label, price: Math.round(o.priceMinor / 100), durationDays: o.durationDays, priceMinor: o.priceMinor };
     document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ₹' + Math.round(o.priceMinor / 100).toLocaleString('en-IN') + ')';
     document.getElementById('csStep2').style.display = 'block';
@@ -1870,13 +1874,13 @@
           }).then(function() {
             location.href = '/dashboard/vendor/?view=marketing&txn=' + encodeURIComponent(merchantTxnId);
           }).catch(function(e) {
-            alert('Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + merchantTxnId);
+            toast('Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + merchantTxnId, 'ok');
             if (btn) { btn.disabled = false; }
           });
         },
         modal: { ondismiss: function(){ if (btn) { btn.disabled = false; btn.textContent = 'Pay →'; } } }
       });
-      rzp.on('payment.failed', function(e){ alert((e.error && e.error.description) || 'Payment failed'); if (btn) btn.disabled = false; });
+      rzp.on('payment.failed', function(e){ toast((e.error && e.error.description) || 'Payment failed', 'error'); if (btn) btn.disabled = false; });
       rzp.open();
     });
   }
@@ -1884,7 +1888,7 @@
   function confirmPayment() {
     var goalEnum = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
     var durationDays = state.selectedPlan.durationDays;
-    if (!durationDays) { alert('Please choose a plan first.'); return; }
+    if (!durationDays) { toast('Please choose a plan first.', 'error'); return; }
     var payBtn = document.getElementById('payBtn');
     if (payBtn) { payBtn.disabled = true; payBtn.textContent = 'Starting payment…'; }
 
@@ -1904,7 +1908,7 @@
       throw new Error('No checkout method returned');
     }).catch(function(err) {
       if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString() + ' →'; }
-      alert('Could not start payment: ' + fmtErr(err));
+      toast('Could not start payment: ' + fmtErr(err), 'error');
     });
   }
 
@@ -1980,7 +1984,7 @@
     if (!s) return;
     var next = s.rawStatus === 'HIDDEN' ? 'ACTIVE' : 'HIDDEN';
     api.vendorServiceUpdate(id, { status: next }).then(loadServices)
-      .catch(function(err){ alert('Could not update: ' + fmtErr(err)); });
+      .catch(function(err){ toast('Could not update: ' + fmtErr(err), 'error'); });
   }
 
   function renderFullEnquiries(filter) {
@@ -2065,7 +2069,7 @@
     api.vendorReviewReply(id, txt.trim()).then(function(res) {
       if (r) r.vendorReply = (res.review && res.review.vendorReply) || txt.trim();
       renderReviews();
-    }).catch(function(err) { alert('Could not post reply: ' + fmtErr(err)); });
+    }).catch(function(err) { toast('Could not post reply: ' + fmtErr(err), 'error'); });
   }
 
   // Services were removed from the vendor dashboard; kept as a no-op so an
@@ -2152,7 +2156,7 @@
   // button so the vendor can deliver it themselves — the request is not lost.
   function renderReviewRequestResults(r) {
     var box = document.getElementById('rrResults');
-    if (!box) { alert('Created ' + ((r.results || []).length) + ' review request(s).'); return; }
+    if (!box) { toast('Created ' + ((r.results || []).length) + ' review request(s).', 'ok'); return; }
     var results = r.results || [];
     var sent = r.sent || 0;
     var linkOnly = r.linkOnly != null ? r.linkOnly : (r.failed || 0);
@@ -2221,14 +2225,14 @@
         var name = (parts[1] || '').trim();
         if (phone.replace(/[^0-9]/g, '').length >= 10) customers.push(name ? { phone: phone, name: name } : { phone: phone });
       });
-      if (!customers.length) { alert('Enter at least one valid phone number.'); return; }
+      if (!customers.length) { toast('Enter at least one valid phone number.', 'error'); return; }
       btn.disabled = true; btn.textContent = 'Sending…';
       api.vendorReviewRequestBulk(customers).then(function(r) {
         document.getElementById('rrInput').value = '';
         renderReviewRequestResults(r);
         loadReviewRequests();
       }).catch(function(err) {
-        alert('Could not send: ' + fmtErr(err));
+        toast('Could not send: ' + fmtErr(err), 'error');
       }).finally(function() { btn.disabled = false; btn.textContent = 'Send Review Requests'; });
     });
   })();
@@ -2272,7 +2276,7 @@
     api.vendorEnquiryStatus(id, apiStatus).then(function() {
       closeModal('enquiryModal');
       return refreshEnquiries();
-    }).catch(function(err) { alert('Could not update: ' + fmtErr(err)); });
+    }).catch(function(err) { toast('Could not update: ' + fmtErr(err), 'error'); });
   }
 
   function refreshEnquiries() {
@@ -2288,7 +2292,7 @@
 
   function removeService(id) {
     if (!confirm('Remove this service?')) return;
-    api.vendorServiceDelete(id).then(loadServices).catch(function(err){ alert('Could not remove: ' + fmtErr(err)); });
+    api.vendorServiceDelete(id).then(loadServices).catch(function(err){ toast('Could not remove: ' + fmtErr(err), 'error'); });
   }
 
   function editService(id) {
@@ -2297,11 +2301,11 @@
     var name = prompt('Service name:', s.name);
     if (name === null) return;
     name = name.trim();
-    if (!name) { alert('Service name is required.'); return; }
+    if (!name) { toast('Service name is required.', 'error'); return; }
     var price = prompt('Price (₹):', s.price);
     if (price === null) return;
     var pn = parseFloat(price);
-    if (isNaN(pn) || pn < 0) { alert('Enter a valid price.'); return; }
+    if (isNaN(pn) || pn < 0) { toast('Enter a valid price.', 'error'); return; }
     var duration = prompt('Duration (e.g. 45 mins):', s.duration || '30 mins');
     if (duration === null) return;
     var desc = prompt('Description (optional):', s.description || '');
@@ -2311,7 +2315,7 @@
       priceMinor: Math.round(pn * 100),
       durationLabel: (duration.trim() || '30 mins'),
       description: desc.trim() || undefined
-    }).then(loadServices).catch(function(err){ alert('Could not update: ' + fmtErr(err)); });
+    }).then(loadServices).catch(function(err){ toast('Could not update: ' + fmtErr(err), 'error'); });
   }
 
   document.getElementById('addServiceForm').addEventListener('submit', function(ev){
@@ -2320,8 +2324,8 @@
     var price = parseFloat(document.getElementById('sPrice').value);
     var duration = document.getElementById('sDuration').value.trim() || '30 mins';
     var desc = document.getElementById('sDesc').value.trim();
-    if (!name) { alert('Service name is required.'); return; }
-    if (isNaN(price) || price < 0) { alert('Enter a valid price.'); return; }
+    if (!name) { toast('Service name is required.', 'error'); return; }
+    if (isNaN(price) || price < 0) { toast('Enter a valid price.', 'error'); return; }
     var form = this;
     var sb = form.querySelector('button[type="submit"]');
     if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
@@ -2331,7 +2335,7 @@
       closeModal('addServiceModal');
       form.reset();
     }).catch(function(err) {
-      alert('Could not add service: ' + fmtErr(err));
+      toast('Could not add service: ' + fmtErr(err), 'error');
     }).finally(function() {
       if (sb) { sb.disabled = false; sb.textContent = 'Save Service'; }
     });
@@ -2340,7 +2344,7 @@
   document.getElementById('editBizForm').addEventListener('submit', function(ev){
     ev.preventDefault();
     var name = document.getElementById('ebName').value.trim();
-    if (name.length < 2) { alert('Business name is required.'); return; }
+    if (name.length < 2) { toast('Business name is required.', 'error'); return; }
     var payload = {
       businessName: name,
       category: document.getElementById('ebCategory').value.trim() || undefined,
@@ -2350,7 +2354,6 @@
       locality: document.getElementById('ebLocality').value.trim() || undefined,
       address: document.getElementById('ebAddress').value.trim() || undefined,
       phone: document.getElementById('ebPhone').value.trim() || undefined,
-      email: document.getElementById('ebEmail').value.trim() || undefined,
       website: document.getElementById('ebWebsite').value.trim() || undefined,
       whatsapp: document.getElementById('ebWhatsapp').value.trim() || undefined,
       about: document.getElementById('ebAbout').value.trim() || undefined,
@@ -2364,7 +2367,7 @@
       applyVendor(r.business || payload);
       closeModal('editBizModal');
     }).catch(function(err) {
-      alert('Could not save business details: ' + fmtErr(err));
+      toast('Could not save business details: ' + fmtErr(err), 'error');
     }).finally(function() {
       if (sb) { sb.disabled = false; sb.textContent = 'Save Business Changes'; }
     });
@@ -2387,9 +2390,9 @@
     btn.disabled = true;
     api.vendorPatch(payload).then(function(r) {
       applyVendor(r.vendor || payload);
-      alert('Settings saved.');
+      toast('Settings saved.', 'ok');
     }).catch(function(err) {
-      alert('Could not save: ' + fmtErr(err));
+      toast('Could not save: ' + fmtErr(err), 'error');
     }).finally(function(){ btn.disabled = false; });
   });
 
@@ -2650,30 +2653,6 @@
 
   // ---- Account: change email / change password ----
   (function wireAccountControls() {
-    var emailBtn = document.getElementById('accEmailSave');
-    if (emailBtn) {
-      emailBtn.addEventListener('click', function() {
-        var msg = document.getElementById('accEmailMsg');
-        var value = (document.getElementById('accEmailInput').value || '').trim();
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
-          msg.style.color = 'var(--danger)'; msg.textContent = 'Enter a valid email address.';
-          return;
-        }
-        emailBtn.disabled = true; emailBtn.textContent = 'Saving...';
-        api.vendorPatch({ email: value }).then(function(r) {
-          applyVendor(r.vendor);
-          msg.style.color = 'var(--success)';
-          msg.textContent = r.verificationSent
-            ? 'Saved. Check that inbox for the verification link.'
-            : 'Saved.';
-        }).catch(function(err) {
-          msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
-        }).finally(function() {
-          emailBtn.disabled = false; emailBtn.textContent = 'Save email';
-        });
-      });
-    }
-
     var passBtn = document.getElementById('accPassSave');
     if (passBtn) {
       passBtn.addEventListener('click', function() {
@@ -2873,9 +2852,9 @@
       navigate('grow');
       api.vendorFeaturedStatus(featuredTxn).then(function(r) {
         if (r.payment && r.payment.status === 'SUCCESS') {
-          alert('Payment received — your listing is now featured. It shows at the top of your city and category pages.');
+          toast('Payment received — your listing is now featured. It shows at the top of your city and category pages.', 'ok');
         } else if (r.payment && r.payment.status === 'FAILED') {
-          alert('Payment failed or cancelled. Your listing was not featured.');
+          toast('Payment failed or cancelled. Your listing was not featured.', 'error');
         }
         return loadFeatured();
       }).catch(function(){})
@@ -2889,9 +2868,9 @@
       navigate('grow');
       api.vendorCampaignStatus(txn).then(function(r) {
         if (r.payment && r.payment.status === 'SUCCESS') {
-          alert('Payment received. Your campaign has been sent to the Pets24x7 team for review — it goes live once an admin approves it.');
+          toast('Payment received. Your campaign has been sent to the Pets24x7 team for review — it goes live once an admin approves it.', 'ok');
         } else if (r.payment && r.payment.status === 'FAILED') {
-          alert('Payment failed or cancelled. Please try again.');
+          toast('Payment failed or cancelled. Please try again.', 'error');
         }
         return api.vendorCampaigns();
       }).then(function(r) { if (r) { state.campaigns = r.campaigns || []; renderCampaign(); } }).catch(function(){})
@@ -2931,7 +2910,7 @@
   }).catch(function(err) {
     if (err && (err.status === 401 || err.status === 403)) { location.href = '/vendor-login/'; return; }
     return requireRole('vendor', '/vendor-login/').then(function(ok) { if (ok) load(); })
-      .catch(function(e) { alert('Could not reach Pets24x7: ' + fmtErr(e)); });
+      .catch(function(e) { toast('Could not reach Pets24x7: ' + fmtErr(e), 'error'); });
   });
 </script>
 

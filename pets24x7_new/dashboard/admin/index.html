@@ -548,6 +548,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Import Data
       </a>
+      <a class="nav-item" data-view="activity">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Activity
+      </a>
       <a class="nav-item" data-view="audit">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         Audit Log
@@ -771,7 +775,7 @@
             <h2 style="font-size:18px; font-weight:800;">Vendors</h2>
             <div class="card-subtitle">Manage businesses registered on Pets24x7.</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="alert('Add Vendor Form')">+ Add Vendor</button>
+          <button class="btn btn-primary btn-sm" onclick="toast('Add Vendor Form', 'ok')">+ Add Vendor</button>
         </div>
 
         <!-- Vendor Overview KPI Cards -->
@@ -1584,6 +1588,15 @@
             <div class="card" id="mailSendCard" style="display:none;">
               <div class="card-title" style="margin-bottom:10px;">Send this email</div>
               <div class="form-group">
+                <label>Pick a vendor or pet parent</label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <input type="text" id="mailPickSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Type a name or email to filter…" />
+                  <select id="mailPick" class="form-control" style="flex:2; min-width:220px;"><option value="">Loading people…</option></select>
+                  <button type="button" class="btn btn-sm" id="mailPickAdd">Add</button>
+                </div>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">Adds their address to the list below. You can add several.</div>
+              </div>
+              <div class="form-group">
                 <label>Recipients — comma separated</label>
                 <input type="text" id="mailTo" class="form-control" placeholder="someone@example.com, other@example.com" />
               </div>
@@ -1911,6 +1924,33 @@
                 </tr>
               </thead>
               <tbody><tr><td colspan="12" style="text-align:center;padding:20px;color:var(--text-muted);">No imports recorded yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-activity" class="view-pane">
+        <div class="page-head">
+          <div>
+            <h2 style="font-size:18px; font-weight:700;">Customer Activity</h2>
+            <div class="card-subtitle">Who contacted which business, and how — enquiries plus taps on a phone number, WhatsApp or website link.</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select id="actFilter" class="form-control" style="width:auto;" onchange="loadActivity()">
+              <option value="">Everything</option>
+              <option value="enquiry">Enquiries</option>
+              <option value="phone_click">Phone taps</option>
+              <option value="whatsapp_click">WhatsApp taps</option>
+              <option value="website_click">Website opens</option>
+            </select>
+          </div>
+        </div>
+        <div class="metrics-grid" id="actMetrics" style="margin-bottom:18px;"></div>
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>When</th><th>Who</th><th>Did what</th><th>Business</th><th>Where</th><th>Status</th></tr></thead>
+              <tbody id="activityBody"></tbody>
             </table>
           </div>
         </div>
@@ -2393,6 +2433,7 @@
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
 <script>
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
@@ -3130,6 +3171,9 @@
         });
       });
     },
+    activity: function() {
+      return window.loadActivity();
+    },
     audit: function() {
       return api.adminAudit().then(function(res) {
         rows(tbodyOf('audit'), res.logs || [], 4, function(l) {
@@ -3507,7 +3551,7 @@
     api.adminGrowPlanUpdate(id, { recommended: isRec }).then(function() {
       loadViewData('grow-plans', true);
     }).catch(function(err) {
-      alert('Failed to update recommendation: ' + (err.message || 'Error'));
+      toast('Failed to update recommendation: ' + (err.message || 'Error'), 'error');
     });
   }
 
@@ -3515,7 +3559,7 @@
     api.adminGrowPlanUpdate(id, { active: isActive }).then(function() {
       loadViewData('grow-plans', true);
     }).catch(function(err) {
-      alert('Failed to update status: ' + (err.message || 'Error'));
+      toast('Failed to update status: ' + (err.message || 'Error'), 'error');
     });
   }
 
@@ -3568,7 +3612,7 @@
       closeModal('growPlanEditModal');
       loadViewData('grow-plans', true);
     }).catch(function(err) {
-      alert('Failed to save plan: ' + (err.message || 'Server error'));
+      toast('Failed to save plan: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -3618,7 +3662,7 @@
     api.adminGrowBuyerStatus(id, status).then(function() {
       loadViewData('grow-buyers', true);
     }).catch(function(err) {
-      alert('Failed to update buyer status: ' + (err.message || 'Server error'));
+      toast('Failed to update buyer status: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -3886,7 +3930,7 @@
     api.adminParentSubPlanUpdate(id, { recommended: isRec }).then(function() {
       loadViewData('sub-parents', true);
     }).catch(function(err) {
-      alert('Failed to update recommendation: ' + (err.message || 'Error'));
+      toast('Failed to update recommendation: ' + (err.message || 'Error'), 'error');
     });
   }
 
@@ -3894,7 +3938,7 @@
     api.adminParentSubPlanUpdate(id, { active: isActive }).then(function() {
       loadViewData('sub-parents', true);
     }).catch(function(err) {
-      alert('Failed to update status: ' + (err.message || 'Error'));
+      toast('Failed to update status: ' + (err.message || 'Error'), 'error');
     });
   }
 
@@ -3946,7 +3990,7 @@
       closeModal('parentSubPlanEditModal');
       loadViewData('sub-parents', true);
     }).catch(function(err) {
-      alert('Failed to save parent plan: ' + (err.message || 'Server error'));
+      toast('Failed to save parent plan: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -3954,7 +3998,7 @@
     api.adminParentSubStatus(id, status).then(function() {
       loadViewData('sub-parents', true);
     }).catch(function(err) {
-      alert('Failed to update subscriber status: ' + (err.message || 'Server error'));
+      toast('Failed to update subscriber status: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -4215,7 +4259,7 @@
     api.adminVendorSubPlanUpdate(id, { active: newActive }).then(function() {
       loadViewData('sub-vendors', true);
     }).catch(function(err) {
-      alert('Failed to update plan status: ' + (err.message || 'Server error'));
+      toast('Failed to update plan status: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -4223,7 +4267,7 @@
     api.adminVendorSubPlanUpdate(id, { recommended: newRec }).then(function() {
       loadViewData('sub-vendors', true);
     }).catch(function(err) {
-      alert('Failed to update plan recommendation: ' + (err.message || 'Server error'));
+      toast('Failed to update plan recommendation: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -4275,7 +4319,7 @@
       closeModal('vendorSubPlanEditModal');
       loadViewData('sub-vendors', true);
     }).catch(function(err) {
-      alert('Failed to save vendor plan: ' + (err.message || 'Server error'));
+      toast('Failed to save vendor plan: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -4283,7 +4327,7 @@
     api.adminVendorSubStatus(id, status).then(function() {
       loadViewData('sub-vendors', true);
     }).catch(function(err) {
-      alert('Failed to update vendor sub status: ' + (err.message || 'Server error'));
+      toast('Failed to update vendor sub status: ' + (err.message || 'Server error'), 'error');
     });
   }
 
@@ -4474,11 +4518,11 @@
 
   window.impGotoStep = function(step) {
     if (step > 1 && !impState.csvContent) {
-      alert('Please select and upload a CSV file first.');
+      toast('Please select and upload a CSV file first.', 'error');
       return;
     }
     if (step > 2 && !impState.analysisResults) {
-      alert('Please click "Analyze Data & Generate Preview" to analyze the file before proceeding.');
+      toast('Please click "Analyze Data & Generate Preview" to analyze the file before proceeding.', 'error');
       return;
     }
     impState.currentStep = step;
@@ -4590,9 +4634,9 @@
 
   window.impRetrySheets = function(jobId) {
     api.adminImportRetrySheets(jobId).then(function(r) {
-      alert('Google Sheets Sync Retry completed! Synced: ' + (r.synced || 0) + ' listings.');
+      toast('Google Sheets Sync Retry completed! Synced: ' + (r.synced || 0) + ' listings.', 'ok');
       importRefreshHistory();
-    }).catch(function(e) { alert('Sheets sync failed: ' + fmtErr(e)); });
+    }).catch(function(e) { toast('Sheets sync failed: ' + fmtErr(e), 'error'); });
   };
 
   function importHandleText(text, fileName, fileSize) {
@@ -4752,7 +4796,7 @@
         }
       });
       impRenderCityChips(); impRenderDetectedChips();
-      alert('Loaded cities from CSV! Total excluded cities: ' + impState.excludedCities.length);
+      toast('Loaded cities from CSV! Total excluded cities: ' + impState.excludedCities.length, 'ok');
     };
     reader.readAsText(file);
   };
@@ -4802,7 +4846,7 @@
 
       impGotoStep(3);
     }).catch(function(e) {
-      alert('Analysis failed: ' + fmtErr(e));
+      toast('Analysis failed: ' + fmtErr(e), 'error');
     }).finally(function() {
       btn.disabled = false; btn.textContent = 'Analyze Data & Generate Preview →';
     });
@@ -5088,7 +5132,7 @@
       impEl('impProgressBar').style.width = '100%';
       impEl('impProgressBar').style.background = 'var(--danger)';
       impEl('impStatusPill').textContent = 'Failed ✕';
-      alert('Import execution failed: ' + fmtErr(e));
+      toast('Import execution failed: ' + fmtErr(e), 'error');
     });
   };
 
@@ -5113,7 +5157,7 @@
   window.impViewJobDetails = function(jobId) {
     api.adminImportHistoryJob(jobId).then(function(r) {
       var j = r.job;
-      if (!j) return alert('Audit details not found.');
+      if (!j) return toast('Audit details not found.', 'ok');
       var details = j.reportDetails || [];
 
       var detailsHtml = details.length ?
@@ -5134,7 +5178,7 @@
         detailsHtml;
 
       impEl('impJobAuditModal').classList.add('show');
-    }).catch(function(e){ alert(fmtErr(e)); });
+    }).catch(function(e){ toast(fmtErr(e), 'ok'); });
   };
 
   (function wireImport() {
@@ -5152,8 +5196,100 @@
   window.adminSetVendor = function(id, status) {
     var reason = status === 'REJECTED' ? (prompt('Reason for rejection (optional):') || '') : '';
     api.adminVendorStatus(id, { status: status, reason: reason }).then(function(){ loadView('vendors', true); loadView('dash', true); })
-      .catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
+  // ---- Recipient picker for the mail console ----
+  // Typing an address by hand is error-prone and there was no way to see who
+  // exists, so the two audiences are loaded once and filtered in the browser.
+  var mailPeople = [];
+
+  function loadMailPeople() {
+    if (mailPeople.length) return Promise.resolve(mailPeople);
+    return Promise.all([
+      api.adminVendors().catch(function () { return { vendors: [] }; }),
+      api.adminParents().catch(function () { return { parents: [] }; })
+    ]).then(function (res) {
+      var vendors = (res[0].vendors || [])
+        .filter(function (v) { return v.email && v.email !== '—' && v.source === 'REGISTERED_VENDOR'; })
+        .map(function (v) { return { label: v.name + ' · vendor', email: v.email }; });
+      var parents = (res[1].parents || [])
+        .filter(function (p) { return p.email && p.email !== '—'; })
+        .map(function (p) { return { label: p.name + ' · pet parent', email: p.email }; });
+      mailPeople = vendors.concat(parents);
+      renderMailPeople();
+      return mailPeople;
+    });
+  }
+
+  function renderMailPeople() {
+    var sel = document.getElementById('mailPick');
+    if (!sel) return;
+    var q = ((document.getElementById('mailPickSearch') || {}).value || '').toLowerCase().trim();
+    var list = q
+      ? mailPeople.filter(function (x) { return (x.label + ' ' + x.email).toLowerCase().indexOf(q) !== -1; })
+      : mailPeople;
+    sel.innerHTML = list.length
+      ? list.slice(0, 200).map(function (x) {
+          return '<option value="' + escH(x.email) + '">' + escH(x.label) + ' — ' + escH(x.email) + '</option>';
+        }).join('')
+      : '<option value="">No one matches that</option>';
+  }
+
+  (function wireMailPicker() {
+    var search = document.getElementById('mailPickSearch');
+    var add = document.getElementById('mailPickAdd');
+    if (!add) return;
+    if (search) search.addEventListener('input', renderMailPeople);
+    add.addEventListener('click', function () {
+      var sel = document.getElementById('mailPick');
+      var to = document.getElementById('mailTo');
+      if (!sel || !sel.value || !to) return;
+      var have = to.value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean);
+      if (have.indexOf(sel.value.toLowerCase()) !== -1) { toast('That address is already on the list.', 'warn'); return; }
+      have.push(sel.value);
+      to.value = have.join(', ');
+      toast('Added ' + sel.value, 'ok');
+    });
+  })();
+
+  // ---- Customer activity ----
+  window.loadActivity = function() {
+    var kind = (document.getElementById('actFilter') || {}).value || '';
+    var body = document.getElementById('activityBody');
+    if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">Loading…</td></tr>';
+
+    api.adminActivity(kind).then(function(res) {
+      var counts = res.counts || {};
+      var m = document.getElementById('actMetrics');
+      if (m) {
+        m.innerHTML = [
+          ['Enquiries', counts.enquiry || 0],
+          ['Phone taps', counts.phone_click || 0],
+          ['WhatsApp taps', counts.whatsapp_click || 0],
+          ['Website opens', counts.website_click || 0]
+        ].map(function(pair) {
+          return '<div class="metric-card"><span class="metric-lbl">' + pair[0] + '</span><div class="metric-val">' + pair[1] + '</div></div>';
+        }).join('');
+      }
+
+      rows(document.getElementById('activityBody'), res.rows || [], 6, function(r) {
+        var who = escH(r.who) + (r.signedIn ? ' <span class="status-tag tag-active" style="font-size:10px;">signed in</span>' : '');
+        var contact = r.whoContact && r.whoContact !== '—' ? '<div style="font-size:11.5px;color:var(--text-muted);">' + escH(r.whoContact) + '</div>' : '';
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + dstr(r.at) + '</td>' +
+          '<td style="font-weight:700;">' + who + contact + '</td>' +
+          '<td>' + escH(r.action) + '</td>' +
+          '<td>' + escH(r.business) + '</td>' +
+          '<td>' + escH([r.city, r.category].filter(Boolean).join(' · ') || '—') + '</td>' +
+          '<td>' + (r.status ? '<span class="status-tag ' + tagCls(r.status) + '">' + escH(r.status) + '</span>' : '—') + '</td>' +
+        '</tr>';
+      });
+    }).catch(function(e) {
+      var b = document.getElementById('activityBody');
+      if (b) b.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--danger);">' + escH(fmtErr(e)) + '</td></tr>';
+    });
+  };
+
   // ---- Enquiry details ----
   var enquiryRows = [];
 
@@ -5255,7 +5391,7 @@
     api.adminVendorDelete(v.id).then(function() {
       loadView('vendors', true);
       loadView('dash', true);
-    }).catch(function(e) { alert('Could not delete: ' + fmtErr(e)); });
+    }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
   };
 
   window.adminDeleteParent = function(index) {
@@ -5266,7 +5402,7 @@
     api.adminParentDelete(p.id).then(function() {
       loadView('parents', true);
       loadView('dash', true);
-    }).catch(function(e) { alert('Could not delete: ' + fmtErr(e)); });
+    }).catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
   };
 
   var mailOneTarget = null;
@@ -5315,14 +5451,14 @@
 
   window.adminSetCampaign = function(id, status) {
     api.adminCampaignStatus(id, { status: status }).then(function(){ loadView('marketing', true); })
-      .catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminReview = function(id, action) {
     var p = action === 'publish' ? api.adminReviewPublish(id) : api.adminReviewReject(id, prompt('Reason (optional):') || '');
-    p.then(function(){ loadView('reviews', true); loadView('dash', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+    p.then(function(){ loadView('reviews', true); loadView('dash', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminFeatured = function(id, status) {
-    api.adminFeaturedStatus(id, status).then(function(){ loadView('featured', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+    api.adminFeaturedStatus(id, status).then(function(){ loadView('featured', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
 
   // ---- Membership plans ----
@@ -5334,7 +5470,7 @@
     var price = parseFloat(prompt('Price ₹:', '99')); if (!price && price !== 0) return;
     var days = parseInt(prompt('Duration days:', period === 'ANNUAL' ? '365' : '30'), 10) || 30;
     api.adminPlanCreate({ sku: sku, name: name, tier: tier, billingPeriod: period, priceMinor: Math.round(price * 100), durationDays: days })
-      .then(function(){ loadView('plans', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('plans', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminEditPlan = function(id) {
     var p = (window.__plans || []).find(function(x){ return x.id === id; }); if (!p) return;
@@ -5342,7 +5478,7 @@
     var price = prompt('Price ₹:', Math.round(p.priceMinor / 100)); if (price === null) return;
     var active = confirm('OK = active, Cancel = inactive');
     api.adminPlanUpdate(id, { name: name.trim(), priceMinor: Math.round(parseFloat(price) * 100), active: active })
-      .then(function(){ loadView('plans', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('plans', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
 
   // ---- Deals ----
@@ -5353,7 +5489,7 @@
     var city = prompt('City (blank = all):', '') || undefined;
     var code = prompt('Coupon code (optional):', '') || undefined;
     api.adminDealCreate({ title: title, offerLabel: offerLabel, description: description, city: city, code: code })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminEditDeal = function(id) {
     var d = (window.__deals || []).find(function(x){ return x.id === id; }); if (!d) return;
@@ -5361,11 +5497,11 @@
     var offerLabel = prompt('Offer:', d.offerLabel) || d.offerLabel;
     var status = (prompt('Status ACTIVE/DRAFT/EXPIRED/ARCHIVED:', d.status) || d.status).toUpperCase();
     api.adminDealUpdate(id, { title: title.trim(), offerLabel: offerLabel, status: status })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminDelDeal = function(id) {
     if (!confirm('Delete this deal?')) return;
-    api.adminDealDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+    api.adminDealDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
 
   // ---- Events ----
@@ -5377,18 +5513,18 @@
     var venue = prompt('Venue:', '') || undefined;
     var city = prompt('City:', '') || undefined;
     api.adminEventCreate({ title: title, description: description, startsAt: new Date(startsAt).toISOString(), venue: venue, city: city })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminEditEvent = function(id) {
     var ev = (window.__events || []).find(function(x){ return x.id === id; }); if (!ev) return;
     var title = prompt('Title:', ev.title); if (title === null) return;
     var status = (prompt('Status DRAFT/PUBLISHED/CANCELLED/PAST:', ev.status) || ev.status).toUpperCase();
     api.adminEventUpdate(id, { title: title.trim(), status: status })
-      .then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+      .then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
   window.adminDelEvent = function(id) {
     if (!confirm('Delete this event?')) return;
-    api.adminEventDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ alert('Failed: ' + fmtErr(e)); });
+    api.adminEventDelete(id).then(function(){ loadView('deals', true); }).catch(function(e){ toast('Failed: ' + fmtErr(e), 'error'); });
   };
 
   document.querySelectorAll('.nav-item[data-view]').forEach(function(el){
@@ -5431,7 +5567,7 @@
     if (!r) return;
     loadView('dash');
   }).catch(function(err) {
-    alert('Could not verify your admin session: ' + fmtErr(err));
+    toast('Could not verify your admin session: ' + fmtErr(err), 'error');
   });
 </script>
 

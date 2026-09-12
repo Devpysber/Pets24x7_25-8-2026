@@ -56,6 +56,36 @@ model Listing {
 }
 
 // -----------------------------------------------------------
+// Activity on a listing — a phone tap, a WhatsApp tap, a page view.
+//
+// Enquiries are already rows of their own; this is the intent that does not
+// become one. A pet owner who taps the number and calls is the most valuable
+// thing that happens on a listing page and, until now, left no trace at all —
+// so a vendor asking "is Pets24x7 doing anything for me" could not be answered.
+// -----------------------------------------------------------
+model ListingActivity {
+  id         String   @id @default(cuid())
+  listingId  String   @db.VarChar(191)
+  listingName String? @db.Text
+  vendorId   String?  @db.VarChar(191)
+  // "phone_click" | "whatsapp_click" | "website_click" | "listing_view"
+  kind       String   @db.VarChar(24)
+  // Set when a signed-in pet parent did it; null for anonymous visitors.
+  parentId   String?  @db.VarChar(191)
+  city       String?  @db.VarChar(160)
+  category   String?  @db.VarChar(160)
+  source     String?  @db.VarChar(40) // "listing_page" | "city_page" | "dashboard"
+  ipHash     String?  @db.VarChar(64) // truncated hash, for dedupe only
+  userAgent  String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([listingId, kind])
+  @@index([vendorId, createdAt])
+  @@index([createdAt])
+  @@map("listing_activity")
+}
+
+// -----------------------------------------------------------
 // Pet Parents (consumers)
 // -----------------------------------------------------------
 model PetParent {
