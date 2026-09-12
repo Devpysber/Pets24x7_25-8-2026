@@ -31,8 +31,12 @@ import {
 
 const DAY = 24 * 3600 * 1000;
 
-/** Hard floor between any two promotional emails to the same business. */
-const MIN_GAP_DAYS = 3;
+/**
+ * Hard floor between any two promotional emails to the same business: at most
+ * one a day. 20 hours rather than 24 because the sweeps run at random times,
+ * so a strict day would push someone mailed at 16:00 past every slot tomorrow.
+ */
+const MIN_GAP_DAYS = 20 / 24;
 /** Ceiling per sweep, so a first run on a large list cannot empty the quota. */
 const MAX_PER_SWEEP = 150;
 /** A brand-new vendor gets the "you are live" mail once, this soon after claiming. */

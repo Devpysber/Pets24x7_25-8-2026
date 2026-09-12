@@ -42,10 +42,14 @@ import {
 
 const DAY = 24 * 3600 * 1000;
 
-/** Hard floor between any two promotional emails to the same person. */
-const MIN_GAP_DAYS = 3;
+/**
+ * Hard floor between any two promotional emails to the same person: at most
+ * one a day. 20 hours rather than 24 because the sweeps run at random times,
+ * so a strict day would push someone mailed at 16:00 past every slot tomorrow.
+ */
+const MIN_GAP_DAYS = 20 / 24;
 /** The recommendations digest is the baseline; everything else displaces it. */
-const DIGEST_EVERY_DAYS = 7;
+const DIGEST_EVERY_DAYS = 20 / 24; // daily; recentPromoIds keeps each one different
 /** An event is worth mentioning this far ahead, and no further. */
 const EVENT_HORIZON_DAYS = 3;
 /** A lapsed member is worth one win-back inside this window, then left alone. */
@@ -107,7 +111,7 @@ async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
 
   // 1. A birthday, today. Once a year and date-specific: if the gap below
   //    swallows it, it is gone until next year, which is the accepted cost of
-  //    never sending two mails in three days.
+  //    never sending two promos in one day.
   for (const pet of pets) {
     if (!pet.dateOfBirth) continue;
     const dob = pet.dateOfBirth;
@@ -360,8 +364,8 @@ function parseRecentPromoIds(raw: string | null | undefined): string[] {
   }
 }
 
-/** Keeps the last two digests' worth, so a third mail may reuse the first's. */
-const PROMO_MEMORY = 10;
+/** About a week of daily digests, so a listing is not repeated within the week. */
+const PROMO_MEMORY = 30;
 
 function nextPromoIds(previous: string[], justSent: string[]): string {
   return JSON.stringify([...justSent, ...previous].slice(0, PROMO_MEMORY));
