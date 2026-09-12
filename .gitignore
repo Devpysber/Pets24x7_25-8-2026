@@ -25,3 +25,6 @@ prisma/.cache/
 # Packer outputs
 pets24x7-deploy.zip
 pets24x7-handoff.zip
+
+# Written at runtime when a listing is imported or a business registers.
+pets24x7_new/data/imported_listings.json

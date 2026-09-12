@@ -7,7 +7,7 @@ import randomBytes from 'node:crypto';
 
 import { prisma } from '../db.js';
 import { setAuthCookie } from './jwt.js';
-import { getListingById, searchListings } from '../listings/index.js';
+import { addAndPersistImportedListing, getListingById, searchListings } from '../listings/index.js';
 import { lastDigits, normalizePhone } from '../shared/phone.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, UnauthorizedError, NotFoundError } from '../shared/errors.js';
@@ -17,6 +17,7 @@ import { adminNotifyEmails } from '../mail/admin-notify.js';
 import { adminNewClaimEmail } from '../mail/lifecycle-templates.js';
 import { businessRegisteredEmail, claimCredentialsEmail } from '../mail/action-templates.js';
 import { normEmail } from './email-otp.js';
+import { logger } from '../logger.js';
 
 export const vendorClaimRegistrationRouter = Router();
 
@@ -442,6 +443,60 @@ vendorClaimRegistrationRouter.post(
         approvedAt: new Date(),
       },
     });
+
+    // The registration page promises the business goes live immediately, and
+    // until now it did not: a vendor record was created with a listingId that
+    // existed nowhere else, so the account had a dashboard and the public site
+    // had no page. Create the directory row and put it in the running index, so
+    // the business is actually findable the moment it signs up.
+    const slugify = (v: string | null | undefined, fallback: string) =>
+      (v ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
+    const categorySlug = slugify(body.category, 'pet-service');
+    const citySlug = slugify(body.city, 'unknown');
+
+    try {
+      await prisma.listing.create({
+        data: {
+          id: newListingId,
+          name: body.businessName,
+          category: body.category,
+          categorySlug,
+          city: body.city,
+          citySlug,
+          country: 'IN',
+          address: body.address ?? null,
+          phone: normPhone,
+          website: body.website ?? null,
+          pincode: body.pincode ?? null,
+          rating: 0,
+          reviewCount: 0,
+          claimStatus: 'CLAIMED',
+          importedAt: new Date(),
+        },
+      });
+
+      await addAndPersistImportedListing({
+        id: newListingId,
+        name: body.businessName,
+        category: body.category,
+        category_slug: categorySlug,
+        city: body.city,
+        city_slug: citySlug,
+        country: 'IN',
+        address: body.address ?? undefined,
+        phone: normPhone,
+        website: body.website ?? undefined,
+        pincode: body.pincode ?? undefined,
+        rating: 0,
+        review_count: 0,
+        claimStatus: 'CLAIMED',
+      });
+    } catch (err) {
+      // The account is already created and usable; a failure here means the
+      // public page is missing, which the admin panel now flags as an orphaned
+      // claim rather than hiding.
+      logger.error({ err, listingId: newListingId }, 'could not create the directory row for a new registration');
+    }
 
     // Create a record in ListingClaim as well
     await prisma.listingClaim.create({

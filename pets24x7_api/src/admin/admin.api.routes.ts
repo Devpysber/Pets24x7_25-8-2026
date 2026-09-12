@@ -735,6 +735,78 @@ adminApiRouter.delete(
   }),
 );
 
+// ---------- The whole directory, browsable ----------
+// The Vendors table only reaches the businesses that registered. Everything
+// the public actually sees — the 34k scraped rows — had no screen in the panel
+// at all, so a bad entry spotted on the site could not be found here. This
+// searches the live index the site serves from, pages through it, and says
+// which rows a business has claimed.
+adminApiRouter.get(
+  '/directory',
+  asyncHandler(async (req, res) => {
+    const q = String(req.query.q ?? '').trim();
+    const city = String(req.query.city ?? '').trim();
+    const category = String(req.query.category ?? '').trim();
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
+    const perPage = Math.min(60, Math.max(12, parseInt(String(req.query.perPage ?? '24'), 10) || 24));
+
+    // searchListings caps a single call at 200, so paging is done over a
+    // deliberately wider slice rather than by asking for an unbounded list.
+    const WINDOW = 200;
+    const found = searchListings({ q, city, category, limit: WINDOW });
+    const start = (page - 1) * perPage;
+    const slice = found.slice(start, start + perPage);
+
+    const claims = slice.length
+      ? await prisma.vendor
+          .findMany({
+            where: { listingId: { in: slice.map((l) => l.id) } },
+            select: {
+              listingId: true, id: true, businessName: true, status: true,
+              claimedAt: true, imageUrl: true, galleryImages: true, email: true,
+            },
+          })
+          .catch(() => [])
+      : [];
+    const claimBy = new Map(claims.filter((c) => c.listingId).map((c) => [c.listingId as string, c]));
+
+    res.json({
+      ok: true,
+      page,
+      perPage,
+      // The index is walked lazily, so this is "at least this many" once the
+      // window is full — said plainly rather than printed as a total.
+      matched: found.length,
+      capped: found.length >= WINDOW,
+      listings: slice.map((l) => {
+        const v = claimBy.get(l.id);
+        return {
+          id: l.id,
+          name: l.name,
+          category: l.category,
+          categorySlug: l.category_slug,
+          city: l.city,
+          state: l.state ?? null,
+          address: l.address ?? null,
+          phone: l.phone ?? null,
+          rating: l.rating,
+          reviewCount: l.review_count,
+          publicUrl: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
+          claimed: !!v,
+          vendorId: v?.id ?? null,
+          vendorStatus: v?.status ?? null,
+          vendorEmail: v?.email ?? null,
+          // A photo the business uploaded. Where there is none the panel falls
+          // back to the same category photo the public page shows, so what an
+          // admin sees is what a visitor sees.
+          imageUrl: v?.imageUrl ?? null,
+          photoCount: (v?.imageUrl ? 1 : 0) + parseGalleryText(v?.galleryImages).length,
+        };
+      }),
+    });
+  }),
+);
+
 // ---------- Listings (claimed) ----------
 adminApiRouter.get(
   '/listings',

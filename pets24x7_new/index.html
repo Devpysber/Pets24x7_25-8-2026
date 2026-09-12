@@ -59,7 +59,7 @@
   .header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
   .header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
   .brand { display: flex; align-items: center; gap: 12px; line-height: 1; }
-  .brand-logo{height:38px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
+  .brand-logo{height:46px;width:auto;max-width:min(200px,46vw);border-radius:0;object-fit:contain;display:block}
   .brand-mark { display: flex; flex-direction: column; }
   .brand-name { font-weight: 800; font-size: 24px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
   .brand-name .tld { color: var(--text); }
@@ -331,7 +331,7 @@
 <section class="traveler-hero">
   <div class="container">
     <h1>Find trusted pet services near you — vets, groomers, boarding & more</h1>
-    <p class="lead">34,000+ verified pet businesses across 570+ cities in India &amp; the USA. Real Google ratings. Zero booking fees. Direct WhatsApp enquiries.</p>
+    <p class="lead"><span data-stat="listings">34,169</span> verified pet businesses across <span data-stat="cities">2,212</span> cities in India &amp; the USA. Real Google ratings. Zero booking fees. Direct WhatsApp enquiries.</p>
 
     <form class="search-card" id="searchForm" onsubmit="event.preventDefault(); doSearch();">
       <div class="search-field">
@@ -444,9 +444,9 @@
     </div>
 
     <div class="hero-strip">
-      <div class="stat"><strong>34,000+</strong><span>Verified Pet Businesses</span></div>
-      <div class="stat"><strong>570+</strong><span>Cities · India + USA</span></div>
-      <div class="stat"><strong>16</strong><span>Service Categories</span></div>
+      <div class="stat"><strong data-stat="listings">34,169</strong><span>Verified Pet Businesses</span></div>
+      <div class="stat"><strong data-stat="cities">2,212</strong><span>Cities · India + USA</span></div>
+      <div class="stat"><strong data-stat="categories">16</strong><span>Service Categories</span></div>
       <div class="stat"><strong>0%</strong><span>Setup Fee</span></div>
     </div>
   </div>
@@ -548,7 +548,7 @@
 <section class="final-cta" id="final">
   <div class="container">
     <h2>Ready to Fill Your Calendar with Pet Parents?</h2>
-    <p>Claim your listing among 34,000+ verified pet businesses across India and the USA. Zero risk. Zero setup. Start today.</p>
+    <p>Claim your listing among <span data-stat="listings">34,169</span> verified pet businesses across India and the USA. Zero risk. Zero setup. Start today.</p>
     <div class="hero-ctas">
       <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=final_cta&utm_campaign=business_signup" class="btn btn-whatsapp" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
@@ -794,5 +794,36 @@
 </script>
 
 <script src="/nav-auth.js" defer></script>
+<script>
+/* Live directory counts. Any element with data-stat is filled from the API:
+   listings, cities, categories, vendors. The markup keeps a sensible number so
+   the page is never blank while the request is in flight, or if it fails. */
+(function () {
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com');
+
+  function fmt(v) { return Number(v || 0).toLocaleString('en-IN'); }
+
+  fetch(BASE + '/api/listings/_stats', { credentials: 'omit' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || typeof d.listings !== 'number') return;
+      var map = {
+        listings: fmt(d.listings),
+        cities: fmt(d.cities),
+        categories: fmt(d.categories),
+        vendors: fmt(d.activeVendors || 0)
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-stat]'), function (el) {
+        var v = map[el.getAttribute('data-stat')];
+        if (v === undefined) return;
+        var tpl = el.getAttribute('data-stat-template');
+        el.textContent = tpl ? tpl.replace('{n}', v) : v;
+      });
+    })
+    .catch(function () {});
+})();
+</script>
 </body>
 </html>

@@ -68,7 +68,7 @@
     gap: 10px;
     border-bottom: 1px solid var(--border);
   }
-  .sidebar-brand img { height: 30px; width: auto; max-width: 150px; object-fit: contain; display: block; }
+  .sidebar-brand img { height: 36px; width: auto; max-width: 170px; object-fit: contain; display: block; }
   .sidebar-brand-text { font-weight: 800; font-size: 16px; color: var(--primary); letter-spacing: -0.3px; }
   .sidebar-brand-text span { font-size: 11px; color: var(--text-muted); font-weight: 600; display: block; margin-top: -1px; text-transform: uppercase; letter-spacing: 0.5px; }
 
@@ -219,6 +219,20 @@
 
   /* Data Table */
   .table-container { overflow-x: auto; margin-top: 8px; }
+
+  /* Directory cards */
+  .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .dir-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: box-shadow .16s, transform .16s, border-color .16s; text-align: left; padding: 0; font: inherit; color: inherit; }
+  .dir-card:hover { box-shadow: 0 10px 26px rgba(2,6,23,.12); transform: translateY(-2px); border-color: var(--primary); }
+  .dir-card-img { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #F1F5F9; display: block; }
+  .dir-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dir-card-badge { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(15,23,42,.78); color: #fff; }
+  .dir-card-badge.claimed { background: #065F46; }
+  .dir-card-body { padding: 10px 12px 12px; }
+  .dir-card-name { font-size: 13.5px; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
+  .dir-card-meta { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
+  .dir-card-rating { font-size: 11.5px; font-weight: 700; color: #B45309; margin-top: 4px; }
+  @media (max-width: 560px) { .dir-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
   table.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
   table.data-table th { padding: 10px 14px; background: #F8FAFC; border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
   table.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); vertical-align: middle; color: var(--text-main); }
@@ -471,7 +485,7 @@
   <!-- Mobile Topbar -->
   <header class="mobile-bar">
     <a class="brand" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
-      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:24px;width:auto;max-width:120px;object-fit:contain;display:block;" />
+      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:30px;width:auto;max-width:150px;object-fit:contain;display:block;" />
       <span>Pets24x7 Admin</span>
     </a>
     <button class="menu-btn" id="menuToggle">
@@ -564,6 +578,10 @@
       <a class="nav-item" data-view="deals">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
         Deals &amp; Events
+      </a>
+      <a class="nav-item" data-view="directory">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Directory
       </a>
       <a class="nav-item" data-view="mail">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
@@ -679,7 +697,7 @@
               </h3>
               <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Real-time metrics tracking website growth, vendor onboarding, enquiry trends, and regional coverage.</div>
             </div>
-            <span class="status-tag tag-active" style="font-size:11px;">Live Analytics</span>
+            <span class="status-tag tag-active" style="font-size:11px;" id="dashLive" title="These figures refresh on their own while this tab is open">Live · just now</span>
           </div>
 
           <!-- Top Row Charts: Growth Line Chart (Left 2/3) + Category Share (Right 1/3) -->
@@ -1637,6 +1655,7 @@
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <input type="text" id="mailPickSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Type a name or email to filter…" />
                   <select id="mailPick" class="form-control" style="flex:2; min-width:220px;"><option value="">Loading people…</option></select>
+                  <div id="mailPickCount" style="flex:1 0 100%; font-size:11.5px; color:var(--text-muted);"></div>
                   <button type="button" class="btn btn-sm" id="mailPickAdd">Add</button>
                 </div>
                 <div style="font-size:11.5px;color:var(--text-muted);margin-top:5px;">Adds their address to the list below. You can add several.</div>
@@ -1973,6 +1992,36 @@
             </table>
           </div>
         </div>
+      </section>
+
+      <!-- DIRECTORY VIEW -->
+      <!-- Everything the public can see, with its photo, searchable, one click
+           to the full record. The Vendors table only ever reached the
+           businesses that registered. -->
+      <section id="view-directory" class="view-pane">
+        <div class="card-header" style="margin-bottom:16px;"><div>
+          <h2 style="font-size:18px; font-weight:800;">Public Directory</h2>
+          <div class="card-subtitle">Every listing on the site, claimed or not. Click one to open its full record.</div>
+        </div></div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <label style="flex:2;min-width:200px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Search
+              <input type="text" id="dirQ" class="form-control" placeholder="Business name, area or phone" />
+            </label>
+            <label style="flex:1;min-width:130px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">City
+              <input type="text" id="dirCity" class="form-control" placeholder="Mumbai" />
+            </label>
+            <label style="flex:1;min-width:130px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Category
+              <input type="text" id="dirCat" class="form-control" placeholder="Grooming" />
+            </label>
+            <button class="btn btn-primary btn-sm" onclick="dirSearch()">Search</button>
+          </div>
+          <div id="dirCount" style="font-size:12.5px;color:var(--text-muted);margin-top:10px;"></div>
+        </div>
+
+        <div id="dirGrid" class="dir-grid"></div>
+        <div id="dirPager" style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:16px;"></div>
       </section>
 
       <section id="view-activity" class="view-pane">
@@ -2480,6 +2529,7 @@
 <script src="/config.js"></script>
 <script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
+<script src="/pet-images.js"></script>
 <script src="/ui-dialogs.js"></script>
 <script>
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -2518,6 +2568,7 @@
       marketing: ['Marketing Campaigns', 'Manage paid advertising packages for vendors.'],
       payments: ['Payments & Revenue', 'Transaction history and earnings overview.'],
       reviews: ['Customer Reviews', 'Manage customer feedback & moderation.'],
+      directory: ['Public Directory', 'Every listing on the site, with its photo. Click one for the full record.'],
       reports: ['Platform Reports', 'Growth and marketplace performance reports.'],
       featured: ['Featured Listings', 'Paid top-of-page placements.'],
       plans: ['Membership Plans', 'Edit pricing and perks for pet-parent memberships.'],
@@ -3117,6 +3168,7 @@
 
   var LOADERS = {
     import: function() { return importInit(); },
+    directory: function() { return dirLoad(1); },
     mail: function() { return mailInit(); },
     dash: function() {
       return api.adminOverview().then(function(res) {
@@ -4496,13 +4548,59 @@
     if (!fn) return;
     if (loadedOnce[viewId] && !force) return;
     loadedOnce[viewId] = true;
-    fn().catch(function(err) {
+    fn().then(function () {
+      if (viewId === 'dash') { dashLastAt = Date.now(); dashAgeLabel(); startDashLive(); }
+    }).catch(function(err) {
       loadedOnce[viewId] = false;
       console.warn('admin ' + viewId + ' load failed:', err && err.message);
       if (err && err.status === 401) { location.href = '/login/'; }
     });
   }
   window.loadViewData = loadViewData;
+
+  /* ---- Live dashboard ----
+     The header claimed "Live Analytics" on a page that fetched once and then
+     sat there, so a figure could be hours stale while the badge said live.
+     It now refreshes itself and says when it last did.
+
+     Only while the dashboard is the visible view and the tab is in front: a
+     background tab polling every half minute is a cost with no reader. */
+  var DASH_REFRESH_MS = 30000;
+  var dashTimer = null, dashLastAt = 0;
+
+  function dashAgeLabel() {
+    var el = document.getElementById('dashLive');
+    if (!el || !dashLastAt) return;
+    var secs = Math.round((Date.now() - dashLastAt) / 1000);
+    el.textContent = secs < 10 ? 'Live · just now'
+      : secs < 90 ? 'Live · ' + secs + 's ago'
+      : 'Live · ' + Math.round(secs / 60) + 'm ago';
+  }
+
+  function dashOnScreen() {
+    var pane = document.getElementById('view-dash');
+    return !!pane && pane.classList.contains('active') && !document.hidden;
+  }
+
+  function dashTick() {
+    dashAgeLabel();
+    if (!dashOnScreen()) return;
+    if (Date.now() - dashLastAt < DASH_REFRESH_MS) return;
+    var fn = LOADERS.dash;
+    if (!fn) return;
+    fn().then(function () {
+      dashLastAt = Date.now();
+      dashAgeLabel();
+    }).catch(function () { /* a failed refresh keeps the last good figures */ });
+  }
+
+  function startDashLive() {
+    if (dashTimer) return;
+    dashLastAt = Date.now();
+    dashTimer = setInterval(dashTick, 5000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) dashTick(); });
+  }
+  window.startDashLive = startDashLive;
   window.loadView = function(v, f) { return navigate(v, f); };
 
 
@@ -4521,6 +4619,12 @@
       mailEl('mailSendSelfBtn').disabled = !res.smtpConfigured;
       mailRenderList('');
       api.me('admin').then(function(m) { mailAdminEmail = (m && m.email) || ''; }).catch(function(){});
+      // Without this the picker stayed empty and reported "No one matches that"
+      // however you searched.
+      loadMailPeople().catch(function (e) {
+        var sel = document.getElementById('mailPick');
+        if (sel) sel.innerHTML = '<option value="">Could not load people: ' + escH(fmtErr(e)) + '</option>';
+      });
     });
   }
 
@@ -5565,6 +5669,114 @@
     });
   }
 
+  /* ================= PUBLIC DIRECTORY BROWSER =================
+     The 34k rows the public sees, with the same photo the public page shows,
+     and one click to the record. */
+  var dirState = { page: 1, q: '', city: '', category: '', matched: 0, capped: false, rows: [] };
+
+  function dirPhoto(l) {
+    // A photo the business uploaded wins. Otherwise the category photo the
+    // public page would use, so this screen shows what a visitor sees.
+    if (l.imageUrl) return l.imageUrl;
+    if (window.PetImages) {
+      return window.PetImages.categoryImg(
+        { id: l.id, name: l.name, category: l.category, category_slug: l.categorySlug }, 320, 240);
+    }
+    return '';
+  }
+
+  function dirLoad(page) {
+    dirState.page = page || 1;
+    var grid = document.getElementById('dirGrid');
+    if (grid) grid.innerHTML = '<div style="color:var(--text-muted);padding:24px;">Loading the directory…</div>';
+
+    return api.adminDirectory({
+      q: dirState.q, city: dirState.city, category: dirState.category, page: dirState.page
+    }).then(function (res) {
+      dirState.rows = res.listings || [];
+      dirState.matched = res.matched || 0;
+      dirState.capped = !!res.capped;
+      dirRender();
+    }).catch(function (e) {
+      if (grid) grid.innerHTML = '<div style="color:var(--danger);padding:24px;">Could not load the directory: ' + escH(fmtErr(e)) + '</div>';
+      throw e;
+    });
+  }
+
+  function dirRender() {
+    var grid = document.getElementById('dirGrid');
+    var count = document.getElementById('dirCount');
+    var pager = document.getElementById('dirPager');
+    if (!grid) return;
+
+    if (count) {
+      count.textContent = dirState.rows.length
+        ? (dirState.capped ? 'Showing the first 200 matches. Narrow the search to see further in.'
+                           : dirState.matched + ' listing' + (dirState.matched === 1 ? '' : 's') + ' match')
+        : 'Nothing matches that search.';
+    }
+
+    grid.innerHTML = dirState.rows.map(function (l, i) {
+      var loc = l.address || (l.city + (l.state ? ', ' + l.state : ''));
+      return '<button type="button" class="dir-card" onclick="dirOpen(' + i + ')">' +
+        '<span class="dir-card-img">' +
+          '<img loading="lazy" src="' + escH(dirPhoto(l)) + '" alt="" onerror="this.style.display=\'none\'">' +
+          '<span class="dir-card-badge' + (l.claimed ? ' claimed' : '') + '">' +
+            (l.claimed ? 'Claimed' : 'Unclaimed') + '</span>' +
+        '</span>' +
+        '<span class="dir-card-body">' +
+          '<span class="dir-card-name">' + escH(l.name) + '</span>' +
+          '<span class="dir-card-meta">' + escH(l.category) + '<br>' + escH(loc) + '</span>' +
+          (l.rating ? '<span class="dir-card-rating">★ ' + Number(l.rating).toFixed(1) +
+            ' · ' + (l.reviewCount || 0) + ' Google reviews</span>' : '') +
+          (l.photoCount ? '<span class="dir-card-meta">' + l.photoCount + ' own photo' +
+            (l.photoCount === 1 ? '' : 's') + '</span>' : '') +
+        '</span>' +
+      '</button>';
+    }).join('');
+
+    if (pager) {
+      var hasPrev = dirState.page > 1;
+      var hasNext = dirState.rows.length >= 24;
+      pager.innerHTML =
+        '<button class="btn btn-sm" ' + (hasPrev ? '' : 'disabled ') + 'onclick="dirLoad(' + (dirState.page - 1) + ')">← Prev</button>' +
+        '<span style="font-size:12.5px;color:var(--text-muted);">Page ' + dirState.page + '</span>' +
+        '<button class="btn btn-sm" ' + (hasNext ? '' : 'disabled ') + 'onclick="dirLoad(' + (dirState.page + 1) + ')">Next →</button>';
+    }
+  }
+
+  window.dirLoad = dirLoad;
+
+  window.dirSearch = function () {
+    dirState.q = (document.getElementById('dirQ') || {}).value || '';
+    dirState.city = (document.getElementById('dirCity') || {}).value || '';
+    dirState.category = (document.getElementById('dirCat') || {}).value || '';
+    dirLoad(1).catch(function () {});
+  };
+
+  // One click: the same modal the Vendors table opens, so there is one place
+  // that knows how to show a listing.
+  window.dirOpen = function (i) {
+    var l = dirState.rows[i];
+    if (!l) return;
+    showVendorModal({
+      name: l.name,
+      owner: l.claimed ? 'Claimed business' : 'Unclaimed directory listing',
+      category: l.category,
+      location: l.city + (l.state ? ', ' + l.state : ''),
+      status: l.vendorStatus || (l.claimed ? 'CLAIMED' : 'UNCLAIMED'),
+      id: l.vendorId || null
+    });
+    loadListingDetail(l.id, l);
+  };
+
+  (function wireDirectory() {
+    ['dirQ', 'dirCity', 'dirCat'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') window.dirSearch(); });
+    });
+  })();
+
   // ---- Recipient picker for the mail console ----
   // Typing an address by hand is error-prone and there was no way to see who
   // exists, so the two audiences are loaded once and filtered in the browser.
@@ -5576,13 +5788,25 @@
       api.adminVendors().catch(function () { return { vendors: [] }; }),
       api.adminParents().catch(function () { return { parents: [] }; })
     ]).then(function (res) {
+      // Anyone with a real address. An unclaimed business is labelled rather
+      // than hidden: the recurring promotional sweeps still refuse to mail it,
+      // but a person writing one message by hand can decide for themselves.
+      var seen = {};
       var vendors = (res[0].vendors || [])
-        .filter(function (v) { return v.email && v.email !== '—' && v.source === 'REGISTERED_VENDOR'; })
-        .map(function (v) { return { label: v.name + ' · vendor', email: v.email }; });
+        .filter(function (v) { return v.email && v.email !== '—' && v.email.indexOf('@') > 0; })
+        .map(function (v) {
+          var claimed = v.source === 'REGISTERED_VENDOR';
+          return { label: v.name + (claimed ? ' · vendor' : ' · unclaimed listing'), email: v.email };
+        });
       var parents = (res[1].parents || [])
-        .filter(function (p) { return p.email && p.email !== '—'; })
+        .filter(function (p) { return p.email && p.email !== '—' && p.email.indexOf('@') > 0; })
         .map(function (p) { return { label: p.name + ' · pet parent', email: p.email }; });
-      mailPeople = vendors.concat(parents);
+      mailPeople = vendors.concat(parents).filter(function (x) {
+        var k = x.email.toLowerCase();
+        if (seen[k]) return false;
+        seen[k] = 1;
+        return true;
+      });
       renderMailPeople();
       return mailPeople;
     });
@@ -5606,7 +5830,16 @@
       ? list.slice(0, 200).map(function (x) {
           return '<option value="' + escH(x.email) + '">' + escH(x.label) + ' — ' + escH(x.email) + '</option>';
         }).join('')
-      : '<option value="">No one matches that</option>';
+      : (mailPeople.length
+          ? '<option value="">No one matches "' + escH(q) + '"</option>'
+          : '<option value="">Nobody on the platform has an email address yet</option>');
+
+    var count = document.getElementById('mailPickCount');
+    if (count) {
+      count.textContent = mailPeople.length
+        ? (q ? list.length + ' of ' + mailPeople.length + ' people' : mailPeople.length + ' people with an address')
+        : '';
+    }
   }
 
   (function wireMailPicker() {

@@ -28,7 +28,7 @@
   .header { background: #FFFFFF; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
   .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; }
   .brand { display: flex; align-items: center; gap: 10px; }
-  .brand-logo{height:30px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
+  .brand-logo{height:38px;width:auto;max-width:min(200px,46vw);border-radius:0;object-fit:contain;display:block}
   .brand-name { font-weight: 800; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; }
   .brand-name .tld { color: var(--text); }
   .header-nav { display: flex; align-items: center; gap: 8px; }
@@ -192,7 +192,7 @@
 <section class="page-hero">
   <div class="hero-eyebrow">PETS24X7 FOR VENDORS</div>
   <h1>Claim Your Business Listing</h1>
-  <p class="sub">Search over 34,000+ registered pet clinics, groomers, resorts &amp; stores across India and the USA to claim your official owner dashboard.</p>
+  <p class="sub">Search <span data-stat="listings">34,169</span> registered pet clinics, groomers, resorts &amp; stores across India and the USA to claim your official owner dashboard.</p>
   <div class="hero-badges">
     <span class="badge-item">⚡ Direct WhatsApp Enquiries</span>
     <span class="badge-item">⭐ Verified Owner Badge</span>
@@ -353,8 +353,8 @@
 
       <!-- Stats Banner -->
       <div class="stats-banner">
-        <div class="stat-num">34,000+</div>
-        <div class="stat-label">Verified Listings Across 570+ Cities</div>
+        <div class="stat-num" data-stat="listings">34,169</div>
+        <div class="stat-label">Verified listings across <span data-stat="cities">2,212</span> cities</div>
       </div>
     </div>
 
@@ -512,6 +512,37 @@
       $('emailBtn').disabled = false; $('emailBtn').textContent = 'Continue & Send Credentials →';
     });
   }
+</script>
+<script>
+/* Live directory counts. Any element with data-stat is filled from the API:
+   listings, cities, categories, vendors. The markup keeps a sensible number so
+   the page is never blank while the request is in flight, or if it fails. */
+(function () {
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com');
+
+  function fmt(v) { return Number(v || 0).toLocaleString('en-IN'); }
+
+  fetch(BASE + '/api/listings/_stats', { credentials: 'omit' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || typeof d.listings !== 'number') return;
+      var map = {
+        listings: fmt(d.listings),
+        cities: fmt(d.cities),
+        categories: fmt(d.categories),
+        vendors: fmt(d.activeVendors || 0)
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-stat]'), function (el) {
+        var v = map[el.getAttribute('data-stat')];
+        if (v === undefined) return;
+        var tpl = el.getAttribute('data-stat-template');
+        el.textContent = tpl ? tpl.replace('{n}', v) : v;
+      });
+    })
+    .catch(function () {});
+})();
 </script>
 </body>
 </html>

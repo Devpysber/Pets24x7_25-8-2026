@@ -275,6 +275,14 @@
     adminWaMessages:  function (dir)        { return req('GET',  '/api/admin/wa-messages' + (dir ? '?direction=' + encodeURIComponent(dir) : '')); },
     adminAudit:       function ()          { return req('GET',  '/api/admin/audit'); },
     adminActivity:    function (kind)      { return req('GET',  '/api/admin/activity' + (kind ? '?kind=' + encodeURIComponent(kind) : '')); },
+    adminDirectory:     function (opts)     {
+      var o = opts || {}, qs = [];
+      if (o.q)        qs.push('q=' + encodeURIComponent(o.q));
+      if (o.city)     qs.push('city=' + encodeURIComponent(o.city));
+      if (o.category) qs.push('category=' + encodeURIComponent(o.category));
+      if (o.page)     qs.push('page=' + encodeURIComponent(o.page));
+      return req('GET', '/api/admin/directory' + (qs.length ? '?' + qs.join('&') : ''));
+    },
     adminListing:       function (id)       { return req('GET',    '/api/admin/listings/' + encodeURIComponent(id)); },
     adminListingUpdate: function (id, body) { return req('PATCH',  '/api/admin/listings/' + encodeURIComponent(id), body); },
     adminListingDelete: function (id)       { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id)); },
