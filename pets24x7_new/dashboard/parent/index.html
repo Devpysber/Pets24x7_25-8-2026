@@ -49,7 +49,7 @@
   /* Desktop Left Sidebar */
   .sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; }
   .sidebar-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .brand-logo { width: 32px; height: 32px; border-radius: 8px; }
+  .brand-logo{height:30px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
   .brand-title { font-weight: 800; font-size: 19px; color: var(--primary); letter-spacing: -0.4px; }
   .brand-title .tld { color: var(--text-main); font-weight: 700; }
 
@@ -202,7 +202,6 @@
   <aside class="sidebar">
     <a class="sidebar-header" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
       <img src="/pets24x7_logo.png" alt="Pets24x7" class="brand-logo" />
-      <span class="brand-title">Pets24x7<span class="tld">.com</span></span>
     </a>
 
     <nav class="sidebar-nav">
@@ -240,7 +239,7 @@
   <!-- Mobile Top Bar -->
   <div class="mobile-top-bar">
     <a href="/" title="Go to Pets24x7.com" style="display: flex; align-items: center; gap: 10px; text-decoration:none;">
-      <img src="/pets24x7_logo.png" alt="Pets24x7" style="width:28px;height:28px;border-radius:6px;" />
+      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:24px;width:auto;max-width:120px;object-fit:contain;display:block;" />
       <span style="font-weight: 800; font-size: 17px; color: var(--primary);">Pets24x7</span>
     </a>
     <span style="font-size: 13px; font-weight: 600;" id="mobUserLabel">Pet Parent</span>
@@ -834,6 +833,7 @@
 </div>
 
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script src="/pets-data.js"></script>
 <script src="/api-client.js"></script>
 <script src="/ui-dialogs.js"></script>

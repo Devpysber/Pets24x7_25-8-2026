@@ -18,7 +18,7 @@
   header{border-bottom:1px solid var(--border);padding:16px 0;position:sticky;top:0;background:#fff;z-index:10}
   .header-in{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .brand{display:inline-flex;align-items:center;gap:10px}
-  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-logo{height:30px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
   .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
   .brand-name .tld{color:var(--text)}
   .nav-link{font-weight:600;font-size:14px;color:var(--text-muted);padding:6px 10px}
@@ -49,8 +49,7 @@
 <header>
   <div class="container header-in">
     <a href="/" class="brand">
-      <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
-      <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+      <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
     </a>
     <nav>
       <a href="/#cats" class="nav-link">Categories</a>
@@ -105,6 +104,7 @@
 </footer>
 
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script src="/pets-data.js"></script>
 <script src="/api-client.js"></script>
 <script>

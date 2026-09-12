@@ -182,11 +182,7 @@ def header_html(active=None):
     return f"""\
 <header class="hdr"><div class="hdr-in">
   <a href="/" class="brand">
-    <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" width="36" height="36" />
-    <span class="brand-mark">
-      <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
-      <span class="brand-tag">Pet Services Marketplace</span>
-    </span>
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" width="500" height="182" />
   </a>
   <div class="hdr-right">
     <nav class="hdr-nav">
@@ -622,6 +618,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script type="application/ld+json">{bc_jsonld}</script>
 <script type="application/ld+json">{list_jsonld}</script>
 </head>
@@ -737,6 +734,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script type="application/ld+json">{bc_jsonld}</script>
 <script type="application/ld+json">{list_jsonld}</script>
 </head>
@@ -941,6 +939,7 @@ def render_listing(biz, all_in_city, all_cats):
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script type="application/ld+json">{biz_jsonld}</script>
 <script type="application/ld+json">{bc_jsonld}</script>
 </head>
@@ -1087,6 +1086,19 @@ def render_listing(biz, all_in_city, all_cats):
   // something real, and support answer "who contacted us". Best effort: the
   // call is never held up by it, and a failure is ignored.
   function logTap(kind){{
+    // Google gets the same signal, so a conversion in Analytics and a row in
+    // our own activity table always agree. trackEvent is a no-op when
+    // analytics is off, which it is on localhost and in the dashboards.
+    try {{
+      if (window.trackEvent) {{
+        window.trackEvent(kind, {{
+          listing_id: biz.id,
+          listing_name: biz.name,
+          city: biz.city,
+          category: biz.category
+        }});
+      }}
+    }} catch (e) {{}}
     try {{
       var payload = JSON.stringify({{ listingId: biz.id, kind: kind, source: 'listing_page' }});
       if (navigator.sendBeacon) {{

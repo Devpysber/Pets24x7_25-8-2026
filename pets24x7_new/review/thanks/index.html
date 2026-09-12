@@ -23,18 +23,18 @@
   .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
   .btn-primary:hover{background:var(--primary-dark);color:#fff}
   .brand{display:inline-flex;align-items:center;gap:8px;margin-bottom:24px}
-  .brand img{width:28px;height:28px;border-radius:6px}
+  .brand img{height:28px;width:auto;max-width:140px;object-fit:contain;display:block}
   .brand span{font-weight:800;font-size:18px;color:var(--primary);letter-spacing:-0.5px}
   .brand .tld{color:var(--text)}
   .small{font-size:12px;color:var(--text-muted);margin-top:18px}
 </style>
+<script src="/analytics.js"></script>
 </head>
 <body>
 
 <div class="card">
   <div class="brand">
-    <img src="/pets24x7_logo.png" alt="" />
-    <span>Pets24x7<span class="tld">.com</span></span>
+    <img src="/pets24x7_logo.png" alt="Pets24x7" />
   </div>
   <div class="icon">✓</div>
   <h1>Thanks for your review!</h1>

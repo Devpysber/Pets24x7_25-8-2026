@@ -59,7 +59,7 @@
   .header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
   .header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
   .brand { display: flex; align-items: center; gap: 12px; line-height: 1; }
-  .brand-logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+  .brand-logo{height:38px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
   .brand-mark { display: flex; flex-direction: column; }
   .brand-name { font-weight: 800; font-size: 24px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
   .brand-name .tld { color: var(--text); }
@@ -297,11 +297,7 @@
 <header class="header">
   <div class="container header-inner">
     <a href="index.html" class="brand" aria-label="Pets24x7 home">
-      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7 logo" />
-      <span class="brand-mark">
-        <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
-        <span class="brand-tag">Pet Services Marketplace</span>
-      </span>
+      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
     </a>
     <nav class="header-nav">
       <a href="#cats" class="nav-link">Categories</a>
@@ -621,6 +617,7 @@
 </a>
 
 <script src="config.js"></script>
+<script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
 <script src="pets-data.js"></script>
 <script src="pets-loader.js"></script>

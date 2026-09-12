@@ -17,7 +17,7 @@
   a{color:var(--primary);text-decoration:none}
   .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
   .brand{display:inline-flex;align-items:center;gap:10px}
-  .brand-logo{width:32px;height:32px;border-radius:8px}
+  .brand-logo{height:30px;width:auto;max-width:min(170px,42vw);border-radius:0;object-fit:contain;display:block}
   .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
   .brand-name .tld{color:var(--text)}
   main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -50,8 +50,7 @@
 
 <header class="top">
   <a href="/" class="brand">
-    <img class="brand-logo" src="/pets24x7_logo.png" alt="" />
-    <span class="brand-name">Pets24x7<span class="tld">.com</span></span>
+    <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
   </a>
 </header>
 
@@ -121,6 +120,7 @@
 </footer>
 
 <script src="/config.js"></script>
+<script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
 <script src="/ui-dialogs.js"></script>
 <script>

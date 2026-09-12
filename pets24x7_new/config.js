@@ -29,6 +29,12 @@ window.PETS_CONFIG = {
   CSV_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vXXXX/pub?output=csv',
   */
 
+  /* --------- Google Analytics 4 measurement ID ---------
+     Set here to override the default baked into /analytics.js. Leave as is
+     unless the property changes. Localhost and the signed-in dashboards are
+     never tracked — see analytics.js for why. */
+  GA_ID: 'G-FC5WRMCXYG',
+
   /* --------- Brand constants (don't usually need to change) --------- */
   WHATSAPP_NUMBER: '919930090487',
   BRAND: 'Pets24x7'
