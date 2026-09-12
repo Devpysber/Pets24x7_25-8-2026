@@ -14,6 +14,7 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
+import { startRandomDailyJob } from './random-schedule.js';
 import { env } from '../env.js';
 import { notify } from '../mail/notify.js';
 import { isOptedOut } from '../mail/optout.js';
@@ -148,11 +149,19 @@ export async function runVendorEngagementSweep(): Promise<{ considered: number; 
       email: { not: null },
       emailVerified: true,
       status: { in: ['ACTIVE', 'CLAIMED'] },
-      // Claimed only. An unclaimed directory row never asked to hear from us —
-      // the one message those get is the claim invitation, sent by hand from
-      // scripts/claim-campaign.mjs, never this recurring sweep.
-      claimedAt: { not: null },
-      OR: [{ lastMarketingAt: null }, { lastMarketingAt: { lt: gapBefore } }],
+      // Real accounts only. 137 of the 139 vendor rows are scraped directory
+      // entries that were loaded with status ACTIVE and never opted in to
+      // anything, so status says nothing about consent. Either of two things
+      // does: the business claimed its listing, or it holds a password because
+      // it registered. Testing claimedAt alone also excluded a business that
+      // signed up and verified its address through a path that never set it.
+      //
+      // An unclaimed directory row still gets exactly one message ever, the
+      // claim invitation, sent by hand from scripts/claim-campaign.mjs.
+      AND: [
+        { OR: [{ claimedAt: { not: null } }, { passwordHash: { not: null } }] },
+        { OR: [{ lastMarketingAt: null }, { lastMarketingAt: { lt: gapBefore } }] },
+      ],
     },
     select: {
       id: true,
@@ -201,16 +210,26 @@ export async function runVendorEngagementSweep(): Promise<{ considered: number; 
   return { considered: candidates.length, sent };
 }
 
-let timer: NodeJS.Timeout | null = null;
-
-export function startVendorEngagementJob(intervalMs = 4 * 3600 * 1000): void {
-  if (timer) return;
-  // Deliberately late after boot, and offset from the parent sweep: a deploy
-  // restarts the API, and a restart loop must not translate into a mail loop.
-  setTimeout(() => {
-    runVendorEngagementSweep().catch((err) => logger.warn({ err }, 'vendor engagement sweep failed'));
-  }, 8 * 60_000);
-  timer = setInterval(() => {
-    runVendorEngagementSweep().catch((err) => logger.warn({ err }, 'vendor engagement sweep failed'));
-  }, intervalMs);
+/**
+  * Three or four times a day, at times picked fresh each morning inside
+  * business hours. A fixed four-hour interval from process boot meant a deploy
+  * at 03:00 mailed businesses at 03:00, and gave every send an identical
+  * rhythm.
+  *
+  * This does not change how often one business hears from us: that is one
+  * promotional email per vendor per MIN_GAP_DAYS, enforced on the row itself.
+  * More frequent sweeps only mean a vendor who becomes eligible at 10am is not
+  * waiting until the evening.
+  *
+  * Nothing runs on boot, so a crash loop cannot become a mail loop.
+  */
+export function startVendorEngagementJob(): void {
+  startRandomDailyJob('vendor-engagement', runVendorEngagementSweep, {
+    minRuns: 3,
+    maxRuns: 4,
+    // Business hours for the people receiving it, not for the server.
+    startHour: 10,
+    endHour: 19,
+    minGapMinutes: 90,
+  });
 }

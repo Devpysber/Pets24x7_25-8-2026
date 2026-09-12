@@ -2619,7 +2619,10 @@
     if (!v) return;
     showVendorModal(v);
     var id = v.listingId || v.id;
-    if (id) loadListingDetail(id, v);
+    if (id) {
+      loadListingDetail(id, v);
+      addListingModalActions(id, v.name, null, v.source === 'REGISTERED_VENDOR');
+    }
   }
 
   function loadListingDetail(id, row) {
@@ -2677,30 +2680,65 @@
     });
   }
 
-  window.adminDeleteListing = function (index) {
-    var v = (vendorState.filteredVendors || [])[index];
-    if (!v) return;
-    var id = v.listingId || v.id;
+  /**
+   * Remove a directory listing. Takes the listing id so it works from the
+   * Vendors table and from the Directory grid alike; the old version took a
+   * row index into one table's filtered array, which meant the wrong row or
+   * no row at all when called from anywhere else.
+   */
+  window.adminDeleteListingById = function (id, name) {
+    if (!id) return;
     uiConfirm({
       title: 'Delete this listing?',
-      body: '"' + v.name + '" is removed from the directory and from every city and category page it appears on. ' +
-            'This cannot be undone.',
+      body: '"' + (name || 'This listing') + '" is removed from the directory and from every city and ' +
+            'category page it appears on. This cannot be undone.',
       confirmLabel: 'Delete listing',
       danger: true
     }).then(function (ok) {
       if (!ok) return;
       api.adminListingDelete(id).then(function () {
-        toast('Deleted ' + v.name, 'ok');
+        toast('Deleted ' + (name || 'the listing'), 'ok');
+        closeModal('vendorModal');
+        // Refresh whichever screens are showing it.
+        if (loadedOnce.directory) dirLoad(dirState.page).catch(function () {});
         loadView('vendors', true);
         loadView('dash', true);
       }).catch(function (e) { uiAlert({ title: 'Could not delete', body: fmtErr(e) }); });
     });
   };
 
+  // Kept for the Vendors table, which passes a row index.
+  window.adminDeleteListing = function (index) {
+    var v = (vendorState.filteredVendors || [])[index];
+    if (!v) return;
+    window.adminDeleteListingById(v.listingId || v.id, v.name);
+  };
+
   function openVendorModal(json) {
     var v = {};
     try { v = JSON.parse(decodeURIComponent(json)); } catch (e) { try { v = JSON.parse(json); } catch (e2) { v = { name: String(json || '') }; } }
     showVendorModal(v);
+  }
+
+  /**
+   * Actions that belong to a listing rather than to a vendor account. Added on
+   * top of whatever showVendorModal put there, so approve/suspend still work
+   * for a claimed business.
+   */
+  function addListingModalActions(listingId, name, publicUrl, claimed) {
+    var acts = document.getElementById('vModalActions');
+    if (!acts || !listingId) return;
+    if (publicUrl) {
+      acts.insertAdjacentHTML('beforeend',
+        ' <a class="btn btn-sm" href="' + escH(publicUrl) + '" target="_blank" rel="noopener">Open public page ↗</a>');
+    }
+    // A claimed listing cannot be deleted from under its owner — the API
+    // refuses it too, and says which business holds the claim.
+    acts.insertAdjacentHTML('beforeend',
+      ' <button class="btn btn-sm btn-danger" ' +
+      (claimed ? 'title="Delete the vendor account first — a business has claimed this listing." disabled ' : '') +
+      'onclick="adminDeleteListingById(' + JSON.stringify(listingId).replace(/"/g, '&quot;') + ',' +
+      JSON.stringify(name || '').replace(/"/g, '&quot;') + ')">Delete listing</button>');
   }
 
   function showVendorModal(v) {
@@ -5768,6 +5806,7 @@
       id: l.vendorId || null
     });
     loadListingDetail(l.id, l);
+    addListingModalActions(l.id, l.name, l.publicUrl, l.claimed);
   };
 
   (function wireDirectory() {

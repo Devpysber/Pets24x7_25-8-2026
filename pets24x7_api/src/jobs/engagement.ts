@@ -21,6 +21,7 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
+import { startRandomDailyJob } from './random-schedule.js';
 import { notify } from '../mail/notify.js';
 import { isOptedOut } from '../mail/optout.js';
 import type { MailInput } from '../mail/mailer.js';
@@ -423,16 +424,23 @@ export async function runEngagementSweep(): Promise<{ considered: number; sent: 
   return { considered: candidates.length, sent };
 }
 
-let timer: NodeJS.Timeout | null = null;
-
-export function startEngagementJob(intervalMs = 4 * 3600 * 1000): void {
-  if (timer) return;
-  // Deliberately late after boot: a deploy restarts the API, and a restart loop
-  // must not translate into a mail loop.
-  setTimeout(() => {
-    runEngagementSweep().catch((err) => logger.warn({ err }, 'engagement sweep failed'));
-  }, 5 * 60_000);
-  timer = setInterval(() => {
-    runEngagementSweep().catch((err) => logger.warn({ err }, 'engagement sweep failed'));
-  }, intervalMs);
+/**
+ * Three or four times a day at unpredictable times, in the window pet parents
+ * are actually awake and looking at their phone. See vendor-engagement for why
+ * this is not a fixed interval, and note it does not change how often any one
+ * parent hears from us — that stays one promotional email per MIN_GAP_DAYS,
+ * enforced per row.
+ *
+ * Offset later than the vendor window so the two sweeps do not compete for the
+ * same SMTP minute.
+ */
+export function startEngagementJob(): void {
+  startRandomDailyJob('parent-engagement', runEngagementSweep, {
+    minRuns: 3,
+    maxRuns: 4,
+    startHour: 11,
+    endHour: 21,
+    minGapMinutes: 90,
+  });
 }
+

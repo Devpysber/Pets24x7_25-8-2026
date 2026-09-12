@@ -226,8 +226,8 @@ async function ensureSeedAdmin(): Promise<void> {
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
   startExpiryJob();         // periodic membership/campaign/featured/deal/event lifecycle sweep
   startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
-  startEngagementJob();       // 4-hourly promotional sweep, one mail per parent per 3 days
-  startVendorEngagementJob(); // the same for businesses, offset so the two do not collide
+  startEngagementJob();       // 3-4 random times a day; one mail per parent per 3 days
+  startVendorEngagementJob(); // the same for businesses, in an earlier window
   startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
   // Production must never fall back to the logged no-op: an unconfigured relay
   // there means verification links, receipts and invoices are silently dropped
