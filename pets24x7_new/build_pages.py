@@ -339,6 +339,60 @@ def biz_card_html(b, badge=None):
   </div>
 </article>"""
 
+def popular_strip_html():
+    """Empty until the activity data can carry the claim. See /api/listings/popular."""
+    return ('<div class="popular-strip" id="popularStrip" hidden>'
+            '<div class="popular-head">Most contacted this month '
+            '<span id="popularNote"></span></div>'
+            '<div class="popular-row" id="popularList"></div>'
+            '</div>')
+
+
+def popular_script(city_name, category_name=None):
+    """Ranks by phone, WhatsApp and website taps over the last 30 days.
+
+    Views are not counted: a view is where the reader already was, a tap is a
+    decision. The API returns nothing until enough people have tapped, so a
+    quiet city prints no leaderboard rather than a misleading one.
+    """
+    cat = f", category: {json.dumps(category_name)}" if category_name else ""
+    return f"""<script>
+(function(){{
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+  var BASE = (window.PETS_CONFIG && window.PETS_CONFIG.API_BASE) || (isLocal ? '' : 'https://api.pets24x7.com');
+  var params = {{ city: {json.dumps(city_name)}{cat} }};
+  var qs = Object.keys(params).map(function(k){{ return k + '=' + encodeURIComponent(params[k]); }}).join('&');
+
+  function esc(v){{
+    return String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }}
+
+  fetch(BASE + '/api/listings/popular?' + qs, {{ credentials: 'omit' }})
+    .then(function(r){{ return r.json(); }})
+    .then(function(d){{
+      if (!d || !d.enough || !(d.cards || []).length) return;
+      var strip = document.getElementById('popularStrip');
+      var list = document.getElementById('popularList');
+      var note = document.getElementById('popularNote');
+      if (!strip || !list) return;
+      if (note) note.textContent = 'Ranked by calls and WhatsApp messages in the last ' + (d.windowDays || 30) + ' days';
+      list.innerHTML = d.cards.map(function(c, i){{
+        return '<a class="popular-card" href="' + esc(c.url) + '">' +
+          '<span class="popular-rank">' + (i + 1) + '</span>' +
+          '<span class="popular-name">' + esc(c.name) + '</span>' +
+          '<span class="popular-meta">' + esc(c.category) + ' \u00b7 \u2605 ' + Number(c.rating || 0).toFixed(1) + '</span>' +
+          '<span class="popular-count">' + c.contacts + ' contacted</span>' +
+        '</a>';
+      }}).join('');
+      strip.hidden = false;
+    }})
+    .catch(function(){{}});
+}})();
+</script>"""
+
+
 def featured_strip_html():
     """Empty container. Filled at runtime — a placement bought this morning has
     to appear on a page that was built last month."""
@@ -588,6 +642,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
     <div class="results-count"><strong>{len(items):,}</strong> businesses in {e(full_city)}{f' — showing {(page-1)*page_size + 1}–{(page-1)*page_size + len(page_items)}' if total_pages > 1 else ''}</div>
   </div>
   {featured_strip_html()}
+  {popular_strip_html()}
   <div class="biz-list">{cards}</div>
   {pagination_html(country, city_slug, page, total_pages)}
   {seo_copy_city(full_city, country_n, len(items), categories)}
@@ -630,6 +685,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 </script>
 
 {featured_script(country, city_slug)}
+
+{popular_script(city)}
 
 {footer_html()}
 </body>
@@ -700,6 +757,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
     <div class="results-count"><strong>{len(items)}</strong> {e(category_name.lower())} provider{'s' if len(items) != 1 else ''} in {e(full_city)}</div>
   </div>
   {featured_strip_html()}
+  {popular_strip_html()}
   <div class="biz-list">{cards}</div>
   {seo_copy_category(category_name, full_city, country_n, len(items))}
   {related_cities_html(country, city_slug, all_cities)}
@@ -741,6 +799,8 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 </script>
 
 {featured_script(country, city_slug, category_slug)}
+
+{popular_script(city, category_name)}
 
 {footer_html()}
 </body>

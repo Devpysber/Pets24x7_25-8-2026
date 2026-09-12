@@ -33,6 +33,85 @@ listingsRouter.get(
   }),
 );
 
+// Ranked by what people actually did, not by what we think they should like.
+//
+//   GET /api/listings/popular?city=&category=
+//
+// Counts the contact taps of the last 30 days — phone, WhatsApp, website — and
+// returns the listings at the top. Views are deliberately excluded: a view is
+// where the reader already was, a tap is a decision.
+//
+// It returns nothing until the data can carry the claim. Ranking a city on
+// three taps would print a leaderboard that says more about which page a
+// developer opened than about which vet people call, and once a wrong name
+// sits under "most contacted" nobody trusts the next one either.
+const POPULAR_WINDOW_DAYS = 30;
+const POPULAR_MIN_TAPS_PER_LISTING = 3;
+const POPULAR_MIN_LISTINGS = 3;
+const CONTACT_KINDS = ['phone_click', 'whatsapp_click', 'website_click'];
+
+listingsRouter.get(
+  '/popular',
+  asyncHandler(async (req, res) => {
+    const city = String(req.query.city ?? '').trim();
+    const category = String(req.query.category ?? '').trim();
+    const since = new Date(Date.now() - POPULAR_WINDOW_DAYS * 24 * 3600 * 1000);
+
+    let grouped: Array<{ listingId: string; _count: { _all: number } }> = [];
+    try {
+      // Prisma's groupBy overload does not narrow with a spread `where`, so the
+      // call is cast and the result shape asserted below.
+      const groupBy = prisma.listingActivity.groupBy as unknown as (args: unknown) => Promise<unknown>;
+      grouped = (await groupBy({
+        by: ['listingId'],
+        where: {
+          kind: { in: CONTACT_KINDS },
+          createdAt: { gte: since },
+          ...(city ? { city } : {}),
+          ...(category ? { category } : {}),
+        },
+        _count: { _all: true },
+        orderBy: { _count: { listingId: 'desc' } },
+        take: 24,
+      })) as Array<{ listingId: string; _count: { _all: number } }>;
+    } catch {
+      // Activity table unavailable — say nothing rather than guess.
+      res.json({ ok: true, enough: false, cards: [] });
+      return;
+    }
+
+    const strong = grouped.filter((g) => g._count._all >= POPULAR_MIN_TAPS_PER_LISTING);
+    if (strong.length < POPULAR_MIN_LISTINGS) {
+      res.json({ ok: true, enough: false, cards: [], windowDays: POPULAR_WINDOW_DAYS });
+      return;
+    }
+
+    const cards = strong
+      .map((g) => {
+        const l = getListingById(g.listingId);
+        if (!l) return null;
+        return {
+          id: l.id,
+          name: l.name,
+          category: l.category,
+          categoryIcon: l.category_icon ?? null,
+          city: l.city,
+          state: l.state ?? null,
+          address: l.address ?? null,
+          phone: l.phone ?? null,
+          rating: l.rating,
+          reviewCount: l.review_count,
+          contacts: g._count._all,
+          url: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+
+    res.json({ ok: true, enough: cards.length >= POPULAR_MIN_LISTINGS, cards, windowDays: POPULAR_WINDOW_DAYS });
+  }),
+);
+
 listingsRouter.get(
   '/search',
   asyncHandler(async (req, res) => {
