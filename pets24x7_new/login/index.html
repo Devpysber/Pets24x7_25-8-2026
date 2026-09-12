@@ -5,31 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
 <title>Sign in — Pets24x7.com</title>
-<meta name="description" content="Sign in to Pets24x7 — pet parents, business owners and staff." />
+<meta name="description" content="Sign in to Pets24x7 — pet parents and business owners." />
 <meta name="robots" content="noindex" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 <style>
-  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --text:#1F2937; --text-muted:#6B7280; --border:#E5E7EB; }
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --text:#0F172A; --text-muted:#64748B; --border:#E2E8F0; }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',sans-serif;color:var(--text);background:linear-gradient(135deg,#EFF6FF 0%,#fff 50%,#ECFDF5 100%);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
-  a{color:var(--primary);text-decoration:none}
-  .top{padding:20px;max-width:1180px;margin:0 auto;width:100%}
-  .brand{display:inline-flex;align-items:center;gap:10px}
-  .brand-logo{width:32px;height:32px;border-radius:8px}
-  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
-  .brand-name .tld{color:var(--text)}
-  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#fff;max-width:460px;width:100%;border:1px solid var(--border);border-radius:18px;padding:36px 32px;box-shadow:0 24px 60px rgba(15,23,42,0.08)}
-  h1{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:8px}
-  p.sub{color:var(--text-muted);font-size:14px;margin-bottom:24px}
-  .choice{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:all .15s;color:var(--text)}
-  .choice:hover{border-color:var(--primary);background:#EFF6FF;transform:translateY(-1px)}
-  .choice .ic{font-size:22px}
-  .choice strong{display:block;font-size:15px;font-weight:700}
-  .choice span{font-size:13px;color:var(--text-muted)}
-  .small{font-size:13px;color:var(--text-muted);margin-top:14px;text-align:center}
+  body{
+    font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;
+    display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;
+    background:#0B1220;
+    position:relative;overflow-x:hidden;
+  }
+  /* Soft aurora behind everything — two blurred blobs, no images to load. */
+  body::before,body::after{
+    content:'';position:fixed;border-radius:50%;filter:blur(90px);opacity:.55;z-index:0;pointer-events:none;
+  }
+  body::before{width:640px;height:640px;background:#2563EB;top:-220px;left:-160px}
+  body::after{width:560px;height:560px;background:#10B981;bottom:-220px;right:-140px}
+
+  a{color:inherit;text-decoration:none}
+  .top{padding:22px 20px;max-width:1180px;margin:0 auto;width:100%;position:relative;z-index:1}
+  .brand{display:inline-flex;align-items:center;gap:11px}
+  .brand-logo{width:34px;height:34px;border-radius:9px}
+  .brand-name{font-weight:800;font-size:20px;color:#fff;letter-spacing:-0.5px}
+  .brand-name .tld{color:#93C5FD}
+
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px 20px 56px;position:relative;z-index:1}
+  .card{
+    background:rgba(255,255,255,0.97);max-width:470px;width:100%;
+    border:1px solid rgba(255,255,255,0.6);border-radius:22px;padding:40px 34px 32px;
+    box-shadow:0 30px 70px rgba(2,6,23,.45);
+    animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .eyebrow{font-size:11.5px;font-weight:800;color:var(--primary);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:27px;font-weight:800;letter-spacing:-0.7px;margin-bottom:8px;line-height:1.2}
+  p.sub{color:var(--text-muted);font-size:14.5px;line-height:1.55;margin-bottom:26px}
+
+  .choice{
+    display:flex;align-items:center;gap:16px;width:100%;
+    border:1px solid var(--border);border-radius:15px;padding:17px 18px;margin-bottom:12px;
+    background:#fff;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+  }
+  .choice:hover{transform:translateY(-2px);border-color:#BFDBFE;box-shadow:0 12px 26px rgba(37,99,235,.14)}
+  .choice .ic{
+    width:46px;height:46px;flex-shrink:0;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    font-size:23px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
+  }
+  .choice.biz .ic{background:linear-gradient(135deg,#ECFDF5,#D1FAE5)}
+  .choice .txt{flex:1;min-width:0}
+  .choice strong{display:block;font-size:15.5px;font-weight:700;letter-spacing:-0.2px}
+  .choice span{display:block;font-size:13px;color:var(--text-muted);margin-top:3px;line-height:1.45}
+  .choice .go{color:var(--primary);font-weight:800;font-size:18px;flex-shrink:0;transition:transform .16s ease}
+  .choice:hover .go{transform:translateX(3px)}
+
+  .hint{
+    display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-muted);
+    background:#F8FAFC;border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin:20px 0 18px;line-height:1.45;
+  }
+  .foot{font-size:13.5px;color:var(--text-muted);text-align:center;line-height:1.7}
+  .foot a{color:var(--primary);font-weight:700}
+  .foot a:hover{text-decoration:underline}
+  .back{display:block;text-align:center;margin-top:22px;font-size:13px;color:rgba(255,255,255,.72);position:relative;z-index:1}
+  .back:hover{color:#fff}
+  @media (max-width:430px){ .card{padding:32px 22px 26px} h1{font-size:24px} }
 </style>
 </head>
 <body>
@@ -43,33 +86,49 @@
 
 <main>
   <div class="card">
+    <div class="eyebrow">Welcome back</div>
     <h1>Sign in to Pets24x7</h1>
-    <p class="sub">Pick the account you are signing in to. Every account signs in the same way — with a code we email you, or your password.</p>
+    <p class="sub">Choose your account type. Both sign in the same way — a code we email you, your password, or Google.</p>
 
-    <a class="choice" href="/parent-login/" id="cParent">
+    <a class="choice" href="/parent-login/">
       <span class="ic">🐕</span>
-      <span><strong>Pet parent</strong><span>Manage your pets, enquiries and membership.</span></span>
-    </a>
-    <a class="choice" href="/vendor-login/" id="cVendor">
-      <span class="ic">🏪</span>
-      <span><strong>Business owner</strong><span>Manage your listing, enquiries and subscription.</span></span>
-    </a>
-    <a class="choice" href="/admin-login/" id="cAdmin">
-      <span class="ic">🛡️</span>
-      <span><strong>Pets24x7 staff</strong><span>Admin portal.</span></span>
+      <span class="txt">
+        <strong>Pet parent</strong>
+        <span>Your pets, enquiries, saved businesses and membership.</span>
+      </span>
+      <span class="go">→</span>
     </a>
 
-    <p class="small">New business? <a href="/register-business/">Register your business</a> or <a href="/find-my-listing/">claim your listing</a>.</p>
+    <a class="choice biz" href="/vendor-login/">
+      <span class="ic">🏪</span>
+      <span class="txt">
+        <strong>Business owner</strong>
+        <span>Your listing, customer enquiries and subscription.</span>
+      </span>
+      <span class="go">→</span>
+    </a>
+
+    <div class="hint">
+      <span>🔒</span>
+      <span>We never ask for your password over email or WhatsApp.</span>
+    </div>
+
+    <p class="foot">
+      New business? <a href="/register-business/">Register your business</a><br/>
+      Already listed? <a href="/find-my-listing/">Claim your listing</a>
+    </p>
   </div>
 </main>
+
+<a class="back" href="/">← Back to Pets24x7.com</a>
 
 <script src="/config.js"></script>
 <script src="/api-client.js"></script>
 <script>
-  // This page used to host its own sign-in forms. There is now one sign-in page
-  // per role, so old links (and the #parent / #vendor / #admin hashes they
-  // carried) jump straight to the right one instead of a second, older form.
-  var BY_HASH = { '#parent': '/parent-login/', '#vendor': '/vendor-login/', '#admin': '/admin-login/' };
+  // This page used to host its own sign-in forms and a staff option. There is
+  // now one sign-in page per role, and the admin portal is deliberately not
+  // linked from anywhere public — staff reach it at its own address.
+  var BY_HASH = { '#parent': '/parent-login/', '#vendor': '/vendor-login/' };
   var target = BY_HASH[location.hash];
   if (target) location.replace(target);
 

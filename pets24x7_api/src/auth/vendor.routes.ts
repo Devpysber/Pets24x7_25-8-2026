@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { OAuth2Client } from 'google-auth-library';
 
 import { prisma } from '../db.js';
 import { issueOtp, verifyOtp } from '../whatsapp/otp.js';
@@ -113,6 +114,85 @@ vendorAuthRouter.post(
         emailVerified: true,
         emailVerifiedAt: vendor.emailVerifiedAt ?? new Date(),
       },
+    });
+    await prisma.vendorEmailToken
+      .updateMany({ where: { vendorId: vendor.id, usedAt: null }, data: { usedAt: new Date() } })
+      .catch(() => {});
+
+    setAuthCookie(res, { sub: updated.id, role: 'vendor' });
+    notifyIf(updated.email, (to) =>
+      loginAlertEmail(
+        to,
+        updated.businessName,
+        new Date(),
+        req.ip ?? null,
+        (req.headers['user-agent'] as string | undefined) ?? null,
+      ),
+    );
+    res.json({
+      ok: true,
+      vendor: {
+        id: updated.id,
+        status: updated.status,
+        businessName: updated.businessName,
+        listingId: updated.listingId,
+        emailVerified: updated.emailVerified,
+      },
+    });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Google Sign-In for an ALREADY-CLAIMED business.
+//   POST /api/vendor/google { credential }
+//
+// Sign-in only, never sign-up: a business account exists after a claim or a
+// registration, both of which prove something Google cannot (control of the
+// listing's phone number). An address Google vouches for but that owns no
+// vendor row is told to claim or register instead of being handed an account.
+// ---------------------------------------------------------------------------
+const vendorGoogleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
+
+vendorAuthRouter.post(
+  '/google',
+  emailOtpLimiter,
+  asyncHandler(async (req, res) => {
+    const { credential } = z.object({ credential: z.string().min(10) }).parse(req.body);
+    if (!vendorGoogleClient) throw new BadRequestError('Google Sign-In is not configured');
+
+    let payload;
+    try {
+      const ticket = await vendorGoogleClient.verifyIdToken({
+        idToken: credential,
+        audience: env.GOOGLE_CLIENT_ID!,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new UnauthorizedError('Invalid Google credential');
+    }
+
+    // Google has to vouch for the address itself: an unverified Google email is
+    // no better than a typed-in string.
+    if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+      throw new UnauthorizedError('That Google account has no verified email');
+    }
+
+    const email = normEmail(payload.email);
+    const vendor = await prisma.vendor.findFirst({ where: { email }, orderBy: { claimedAt: 'desc' } });
+    if (!vendor) {
+      throw new UnauthorizedError(
+        'No business account uses that Google address yet. Claim your listing or register your business first.',
+      );
+    }
+    if (vendor.status === 'SUSPENDED' || vendor.status === 'REJECTED') {
+      throw new UnauthorizedError('This business account is not active. Contact support.');
+    }
+
+    // Google proved the address, so a self-declared claim-time email is now
+    // verified — the same conclusion the emailed code reaches.
+    const updated = await prisma.vendor.update({
+      where: { id: vendor.id },
+      data: { emailVerified: true, emailVerifiedAt: vendor.emailVerifiedAt ?? new Date() },
     });
     await prisma.vendorEmailToken
       .updateMany({ where: { vendorId: vendor.id, usedAt: null }, data: { usedAt: new Date() } })

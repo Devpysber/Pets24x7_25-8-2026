@@ -83,6 +83,10 @@ model PetParent {
   // lastDigestAt paces the weekly recommendations digest specifically.
   lastMarketingAt DateTime?
   lastDigestAt    DateTime?
+  // Ids featured in the last promotional mails, newest first, as JSON text.
+  // The next pick skips them, so two mails in a row never show the same
+  // businesses — which is what made the old digest look like a repeat.
+  recentPromoIds  String?   @db.Text
 
   // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
@@ -173,6 +177,9 @@ model Pet {
   lastCheckupAt    DateTime?
   notes            String?    @db.Text
   avatarUrl        String?    @db.Text
+  // Up to 4 more photos beyond the avatar, as a JSON array of data URLs.
+  // Text rather than a table: they are shown together and never queried apart.
+  photos           String?    @db.Text
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
@@ -226,6 +233,10 @@ model Vendor {
   servicesList      String?   @db.Text // Tokens issued before this instant are rejected. Signing out everywhere, or
   // an admin disabling the account, bumps it — a JWT alone is no longer proof.
   sessionsRevokedAt DateTime?
+
+  // Paces promotional mail to this business, exactly like PetParent.
+  lastMarketingAt   DateTime?
+  lastPromoKind     String?   @db.VarChar(40)
 
   // Profile completion bookkeeping
   profileCompletion Int       @default(20) // 0-100

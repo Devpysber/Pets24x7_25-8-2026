@@ -331,6 +331,17 @@ const PetBody = z.object({
   lastVaccinatedAt: z.union([z.literal(''), z.coerce.date()]).optional(),
   lastCheckupAt: z.union([z.literal(''), z.coerce.date()]).optional(),
   notes: z.string().max(500).optional(),
+  // Extra photos beyond the avatar, at most four. The dashboard resizes each
+  // one before upload, same as the avatar.
+  photos: z
+    .array(
+      z.string().max(600_000).refine(
+        (v) => /^data:image\/(png|jpe?g|webp);base64,/.test(v) || /^https?:\/\//.test(v),
+        'must be an image URL or image data URL',
+      ),
+    )
+    .max(4, 'You can keep at most 5 photos in total')
+    .optional(),
   // Either a hosted URL or a small resized data: URL (the dashboard downsizes
   // the file before upload). '' clears the photo.
   avatarUrl: z
@@ -358,8 +369,17 @@ parentDashboardRouter.post(
   '/pets',
   asyncHandler(async (req, res) => {
     const body = PetBody.parse(req.body);
+    const { photos, ...rest } = body;
     const pet = await prisma.pet.create({
-      data: { ...body, ...dateFields(body), avatarUrl: body.avatarUrl || null, ownerId: req.auth!.sub },
+      data: {
+        ...rest,
+        ...dateFields(body),
+        avatarUrl: body.avatarUrl || null,
+        // Stored as JSON text; the column is one blob because the photos are
+        // only ever read together with the pet.
+        ...(photos !== undefined ? { photos: JSON.stringify(photos) } : {}),
+        ownerId: req.auth!.sub,
+      },
     });
     const owner = await ownerContact(req.auth!.sub);
     notifyIf(owner?.email, (to) =>
@@ -390,12 +410,14 @@ parentDashboardRouter.patch(
     const existing = await prisma.pet.findUnique({ where: { id: req.params.id ?? '' } });
     if (!existing) throw new NotFoundError('Pet not found');
     if (existing.ownerId !== req.auth!.sub) throw new ForbiddenError();
+    const { photos: nextPhotos, ...restBody } = body;
     const pet = await prisma.pet.update({
       where: { id: existing.id },
       data: {
-        ...body,
+        ...restBody,
         ...dateFields(body),
         ...(body.avatarUrl !== undefined ? { avatarUrl: body.avatarUrl || null } : {}),
+        ...(nextPhotos !== undefined ? { photos: JSON.stringify(nextPhotos) } : {}),
       },
     });
     const owner = await ownerContact(req.auth!.sub);

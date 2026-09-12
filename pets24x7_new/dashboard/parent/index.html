@@ -489,6 +489,14 @@
         </div>
       </div>
       <div class="form-group">
+        <label>More photos (up to 5 in total)</label>
+        <div id="petPhotoGrid" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;"></div>
+        <input type="file" id="petPhotoFile" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+        <button type="button" class="btn btn-sm" id="petPhotoAdd" onclick="document.getElementById('petPhotoFile').click()">+ Add photo</button>
+        <div id="petPhotoMsg" style="font-size:12px; color:var(--text-muted); margin-top:6px;"></div>
+      </div>
+
+      <div class="form-group">
         <label>Pet Name *</label>
         <input type="text" id="pName" placeholder="e.g. Buddy" required />
       </div>
@@ -2181,12 +2189,106 @@
     return bits.length ? bits.join(' ') : (fallback || 'Age n/a');
   }
 
+  /** The API stores the gallery as JSON text; never let a bad row break the form. */
+  function parsePetPhotos(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.slice(0, 4);
+    try {
+      var arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter(function (x) { return typeof x === 'string'; }).slice(0, 4) : [];
+    } catch (e) { return []; }
+  }
+
+  function resizePetImage(file, maxDim, quality) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return reject(new Error('Use a JPG, PNG or WebP image.'));
+      if (file.size > 12 * 1024 * 1024) return reject(new Error('That image is too large (max 12MB).'));
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.round(w * scale), ch = Math.round(h * scale);
+        var c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        resolve(c.toDataURL('image/jpeg', quality || 0.82));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not read that image.')); };
+      img.src = url;
+    });
+  }
+
+  // ---- Pet photo gallery (avatar + up to 4 more) ----
+  var PET_PHOTO_MAX = 4;
+  var petPhotos = [];
+
+  function renderPetPhotos() {
+    var grid = document.getElementById('petPhotoGrid');
+    if (!grid) return;
+    grid.innerHTML = petPhotos.map(function (src, i) {
+      return '<div style="position:relative; width:88px; height:66px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">' +
+        '<img src="' + esc(src) + '" alt="Pet photo ' + (i + 1) + '" style="width:100%; height:100%; object-fit:cover;">' +
+        '<button type="button" onclick="removePetPhoto(' + i + ')" title="Remove" ' +
+        'style="position:absolute; top:3px; right:3px; border:none; background:rgba(15,23,42,.75); color:#fff; ' +
+        'border-radius:6px; font-size:11px; padding:1px 6px; cursor:pointer;">&times;</button>' +
+      '</div>';
+    }).join('');
+    var add = document.getElementById('petPhotoAdd');
+    if (add) {
+      var full = petPhotos.length >= PET_PHOTO_MAX;
+      add.disabled = full;
+      add.textContent = full ? 'Photo limit reached' : '+ Add photo';
+    }
+  }
+
+  function removePetPhoto(index) {
+    petPhotos.splice(index, 1);
+    renderPetPhotos();
+  }
+
+  (function wirePetPhotoUpload() {
+    var input = document.getElementById('petPhotoFile');
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      this.value = '';
+      if (!file) return;
+      var msg = document.getElementById('petPhotoMsg');
+      if (petPhotos.length >= PET_PHOTO_MAX) {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'That is the limit. Remove one first.';
+        return;
+      }
+      msg.style.color = 'var(--text-muted)';
+      msg.textContent = 'Resizing...';
+      // Same downscale the avatar uses, so a phone photo does not blow the
+      // request size limit.
+      resizePetImage(file, 600, 0.8).then(function (dataUrl) {
+        if (dataUrl.length > 480000) return resizePetImage(file, 460, 0.7);
+        return dataUrl;
+      }).then(function (dataUrl) {
+        if (dataUrl.length > 560000) throw new Error('Still too large after resizing - try another photo.');
+        petPhotos.push(dataUrl);
+        renderPetPhotos();
+        msg.textContent = 'Added. Save the pet to keep it.';
+      }).catch(function (err) {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = fmtErr(err);
+      });
+    });
+  })();
+
   // Add / Edit Pet Modal Actions
   function openAddPetModal() {
     document.getElementById('petEditId').value = '';
     document.getElementById('petModalTitle').textContent = 'Add Pet';
     document.getElementById('petForm').reset();
     setPetAvatar('');
+    petPhotos = [];
+    renderPetPhotos();
+    document.getElementById('petPhotoMsg').textContent = '';
     document.getElementById('petModal').classList.add('show');
   }
 
@@ -2217,6 +2319,9 @@
     document.getElementById('pCheckup').value = isoDay(pet.lastCheckupAt);
     document.getElementById('pNotes').value = pet.notes || '';
     setPetAvatar(pet.avatarUrl || '');
+    petPhotos = parsePetPhotos(pet.photos);
+    renderPetPhotos();
+    document.getElementById('petPhotoMsg').textContent = '';
     document.getElementById('petModal').classList.add('show');
   }
 
@@ -2309,7 +2414,8 @@
       lastVaccinatedAt: document.getElementById('pVacDate').value || '',
       lastCheckupAt: document.getElementById('pCheckup').value || '',
       notes: document.getElementById('pNotes').value.trim() || undefined,
-      avatarUrl: document.getElementById('pAvatar').value || ''
+      avatarUrl: document.getElementById('pAvatar').value || '',
+      photos: petPhotos
     };
 
     if (!payload.name) { alert('Pet name is required.'); return; }

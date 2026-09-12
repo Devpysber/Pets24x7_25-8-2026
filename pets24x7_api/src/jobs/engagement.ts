@@ -28,6 +28,7 @@ import { env } from '../env.js';
 import { listingsInCity } from '../listings/index.js';
 import { recommend } from '../feed/recommend.js';
 import { recommendationsEmail } from '../mail/action-templates.js';
+import { parentNewNearbyEmail } from '../mail/promo-templates.js';
 import {
   dealNearbyEmail,
   eventReminderEmail,
@@ -69,6 +70,7 @@ interface Parent {
   createdAt: Date;
   lastMarketingAt: Date | null;
   lastDigestAt: Date | null;
+  recentPromoIds: string | null;
 }
 
 interface Choice {
@@ -207,7 +209,39 @@ async function pickMessage(p: Parent, now: Date): Promise<Choice | null> {
     }
   }
 
-  // 7. The weekly digest, personalised from their pets and past enquiries.
+  // 7. Businesses that joined in their city since the last mail. This is the
+  //    only message here carrying genuinely new information rather than a
+  //    re-ranking of what was already on the site, so it outranks the digest.
+  if (p.city) {
+    const since = p.lastMarketingAt ?? p.createdAt;
+    const added = await prisma.listing
+      .findMany({
+        where: { city: p.city, importedAt: { gt: since } },
+        orderBy: { importedAt: 'desc' },
+        take: 5,
+        select: { id: true, name: true, category: true, rating: true, citySlug: true, country: true },
+      })
+      .catch(() => []);
+    if (added.length >= 2) {
+      const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+      return {
+        mail: parentNewNearbyEmail(
+          email,
+          p.name,
+          p.city,
+          added.map((l) => ({
+            name: l.name,
+            category: l.category,
+            rating: l.rating,
+            url: `${site}/${l.country.toLowerCase()}/${l.citySlug}/${l.id}/`,
+          })),
+        ),
+        digest: false,
+      };
+    }
+  }
+
+  // 8. The weekly digest, personalised from their pets and past enquiries.
   if (daysSince(p.lastDigestAt, now) >= DIGEST_EVERY_DAYS) {
     const digest = await recommendationsFor(p, now);
     if (digest) return { mail: digest, digest: true };
@@ -256,8 +290,18 @@ async function recommendationsFor(p: Parent, now: Date): Promise<MailInput | nul
     }),
   ]);
 
+  // Whatever the last digests showed is dropped from the pool before ranking.
+  // Without this the same top-rated businesses win every week and the mail
+  // reads as a duplicate, which is exactly how a digest earns an unsubscribe.
+  const alreadyShown = new Set(parseRecentPromoIds(p.recentPromoIds));
+  const pool = listingsInCity(p.city, country);
+  const fresh = pool.filter((l) => !alreadyShown.has(l.id));
+  // Fall back to the full pool once a small city is exhausted — a repeat beats
+  // no mail at all, and by then enough weeks have passed for it to read as new.
+  const candidatePool = fresh.length >= 5 ? fresh : pool;
+
   const picks = recommend(
-    listingsInCity(p.city, country),
+    candidatePool,
     {
       pets: pets.map((pet) => ({
         species: String(pet.species),
@@ -280,6 +324,14 @@ async function recommendationsFor(p: Parent, now: Date): Promise<MailInput | nul
   if (picks.length < 3) return null;
 
   const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+  // Remember what went out, so the next one differs.
+  await prisma.petParent
+    .update({
+      where: { id: p.id },
+      data: { recentPromoIds: nextPromoIds(parseRecentPromoIds(p.recentPromoIds), picks.map((r) => r.listing.id)) },
+    })
+    .catch(() => {});
+
   return recommendationsEmail(
     p.email!,
     p.name,
@@ -294,6 +346,24 @@ async function recommendationsFor(p: Parent, now: Date): Promise<MailInput | nul
       url: `${site}/${String(r.listing.country).toLowerCase()}/${r.listing.city_slug}/${r.listing.id}/`,
     })),
   );
+}
+
+/** Ids featured in recent digests, newest first. Text column, so be defensive. */
+function parseRecentPromoIds(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Keeps the last two digests' worth, so a third mail may reuse the first's. */
+const PROMO_MEMORY = 10;
+
+function nextPromoIds(previous: string[], justSent: string[]): string {
+  return JSON.stringify([...justSent, ...previous].slice(0, PROMO_MEMORY));
 }
 
 export async function runEngagementSweep(): Promise<{ considered: number; sent: number }> {
@@ -319,6 +389,7 @@ export async function runEngagementSweep(): Promise<{ considered: number; sent: 
       createdAt: true,
       lastMarketingAt: true,
       lastDigestAt: true,
+      recentPromoIds: true,
     },
     orderBy: { lastMarketingAt: { sort: 'asc', nulls: 'first' } },
     take: MAX_PER_SWEEP,
@@ -354,7 +425,7 @@ export async function runEngagementSweep(): Promise<{ considered: number; sent: 
 
 let timer: NodeJS.Timeout | null = null;
 
-export function startEngagementJob(intervalMs = 6 * 3600 * 1000): void {
+export function startEngagementJob(intervalMs = 4 * 3600 * 1000): void {
   if (timer) return;
   // Deliberately late after boot: a deploy restarts the API, and a restart loop
   // must not translate into a mail loop.

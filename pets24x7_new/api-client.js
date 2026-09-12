@@ -73,6 +73,7 @@
     parentEmailOtpVerify:  function (p)                  { return req('POST', '/api/parent/email/otp/verify',  p); },
     vendorEmailOtpRequest: function (email)              { return req('POST', '/api/vendor/email/otp/request', { email: email }); },
     vendorEmailOtpVerify:  function (email, code)        { return req('POST', '/api/vendor/email/otp/verify',  { email: email, code: code }); },
+    vendorGoogle:          function (credential)        { return req('POST', '/api/vendor/google', { credential: credential }); },
     adminEmailOtpRequest:  function (email)              { return req('POST', '/api/admin/email/otp/request',  { email: email }); },
     adminEmailOtpVerify:   function (email, code)        { return req('POST', '/api/admin/email/otp/verify',   { email: email, code: code }); },
 

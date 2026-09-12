@@ -42,6 +42,9 @@
   .tabs{display:flex;gap:6px;background:var(--bg-alt);border-radius:12px;padding:5px;margin-bottom:24px}
   .tabs button{flex:1;background:transparent;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:9px;cursor:pointer;color:var(--text-muted)}
   .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0 4px;color:var(--text-muted);font-size:12px;font-weight:600}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  #gBtn{margin-top:14px;display:flex;justify-content:center;min-height:44px}
   .links{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
   .links a{flex:1;text-align:center;border:1px solid var(--border);border-radius:10px;padding:10px;font-weight:700;font-size:13px;color:var(--primary);background:#fff}
 </style>
@@ -74,6 +77,9 @@
 
         <div class="err" id="eErr1"></div>
         <button class="btn btn-primary" id="eSendBtn" type="button">Email me a code &rarr;</button>
+
+        <div class="divider" id="gDivider" hidden>or</div>
+        <div id="gBtn"></div>
 
         <p class="small">Pet parent? <a href="/parent-login/">Sign in here</a></p>
       </section>
@@ -229,6 +235,31 @@
 
   byId('pPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('pLoginBtn').click(); });
   byId('pKey').addEventListener('keydown', function (e) { if (e.key === 'Enter') byId('pLoginBtn').click(); });
+
+  // ---------------- Google sign-in ----------------
+  // Sign-in only: the API refuses an address that owns no business account,
+  // because claiming or registering is what proves the listing is yours.
+  api.siteConfig().then(function (cfg) {
+    if (!cfg || !cfg.googleClientId) return;
+    var el = document.createElement('script');
+    el.src = 'https://accounts.google.com/gsi/client';
+    el.async = true;
+    el.onload = function () {
+      if (!window.google || !google.accounts || !google.accounts.id) return;
+      google.accounts.id.initialize({
+        client_id: cfg.googleClientId,
+        callback: function (resp) {
+          clearErr(eErr1);
+          api.vendorGoogle(resp.credential).then(function () {
+            location.href = '/dashboard/vendor/';
+          }).catch(function (e) { showErr(eErr1, fmtErr(e)); });
+        }
+      });
+      google.accounts.id.renderButton(byId('gBtn'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      byId('gDivider').hidden = false;
+    };
+    document.head.appendChild(el);
+  }).catch(function () {});
 
   // Already signed in? Go straight through.
   api.me().then(function (r) {
