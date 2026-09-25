@@ -15,7 +15,17 @@ import { env } from '../env.js';
 import { logger } from '../logger.js';
 
 export function isRazorpayConfigured(): boolean {
-  return !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET) || env.NODE_ENV === 'development';
+  return hasRazorpayKeys() || env.NODE_ENV === 'development';
+}
+
+/**
+ * True only when real API credentials are present. isRazorpayConfigured() also
+ * answers true on a development box with no keys (so createRazorpayOrder can
+ * hand back a local test order); anything that must actually call Razorpay, or
+ * read the key id, has to check this instead.
+ */
+export function hasRazorpayKeys(): boolean {
+  return !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
 }
 
 function authHeader(): string {
@@ -95,13 +105,49 @@ export async function createRazorpayOrder(opts: {
 export async function fetchPaymentStatus(
   paymentId: string,
 ): Promise<{ status: string; order_id?: string; amount?: number; currency?: string } | null> {
-  if (!isRazorpayConfigured() || !env.RAZORPAY_KEY_ID) return null;
+  if (!hasRazorpayKeys()) return null;
   const res = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: { Authorization: authHeader() },
   });
   const data: any = await res.json().catch(() => ({}));
   if (!res.ok || !data.id) return null;
   return { status: data.status, order_id: data.order_id, amount: data.amount, currency: data.currency };
+}
+
+/**
+ * One order as Razorpay holds it — amount, what has been paid against it, and
+ * the notes we attached at creation. Used to recover a checkout's context when
+ * our own in-process record of it is gone (a restart between pay and verify).
+ */
+export async function fetchRazorpayOrder(orderId: string): Promise<{
+  id: string;
+  amount: number;
+  amount_paid: number;
+  currency: string;
+  status: string;
+  receipt?: string;
+  notes: Record<string, string>;
+} | null> {
+  if (!hasRazorpayKeys()) return null;
+  const res = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`, {
+    headers: { Authorization: authHeader() },
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok || !data.id) {
+    logger.warn({ status: res.status, orderId }, 'razorpay.fetchOrder failed');
+    return null;
+  }
+  // Razorpay returns an empty array rather than an object when no notes exist.
+  const notes = data.notes && !Array.isArray(data.notes) && typeof data.notes === 'object' ? data.notes : {};
+  return {
+    id: data.id,
+    amount: Number(data.amount) || 0,
+    amount_paid: Number(data.amount_paid) || 0,
+    currency: String(data.currency || ''),
+    status: String(data.status || ''),
+    receipt: data.receipt,
+    notes,
+  };
 }
 
 /**
@@ -112,7 +158,7 @@ export async function fetchPaymentStatus(
 export async function fetchOrderPayments(
   orderId: string,
 ): Promise<Array<{ id: string; status: string; amount: number }>> {
-  if (!isRazorpayConfigured() || !env.RAZORPAY_KEY_ID) return [];
+  if (!hasRazorpayKeys()) return [];
   const res = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}/payments`, {
     headers: { Authorization: authHeader() },
   });
@@ -171,7 +217,9 @@ export async function createRefund(opts: {
   /** Our own key, so a retried request cannot refund twice. */
   idempotencyKey?: string;
 }): Promise<RzpRefund> {
-  if (!isRazorpayConfigured()) throw new Error('Razorpay is not configured');
+  // Without keys the call below would go out with empty credentials and fail
+  // with an opaque 401 — say what is actually wrong.
+  if (!hasRazorpayKeys()) throw new Error('Razorpay is not configured');
   const res = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(opts.paymentId)}/refund`, {
     method: 'POST',
     headers: {

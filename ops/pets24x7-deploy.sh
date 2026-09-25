@@ -3,8 +3,11 @@
 # early when the remote has not moved, so it is safe to run on a short timer.
 #
 # Rebuilds the API only when pets24x7_api/ changed, and re-renders the static
-# site only when pets24x7_new/ changed, because a full page render is ~36k
-# files and takes a couple of minutes.
+# site only when pets24x7_new/ changed, because a full page render is ~40k
+# files and takes a few minutes. The render itself is pets24x7-publish.sh — the
+# same script the nightly timer and the admin "Publish site" button run — so
+# every release is built from the listings table the same way, and a git
+# deploy can never put back data that was hidden or edited in the admin panel.
 set -Eeuo pipefail
 
 REPO=/opt/pets24x7/app
@@ -89,10 +92,18 @@ as_app "git reset -q --hard origin/$BRANCH"
 
 # Units and nginx config are copies too. They need a reload rather than a
 # re-exec, and nginx is only reloaded when its own config actually parses.
-if grep -q '^ops/.*\.\(service\|timer\)$' <<<"$CHANGED"; then
+if grep -q '^ops/.*\.\(service\|timer\|path\)$' <<<"$CHANGED"; then
   echo "-- systemd units changed, reinstalling"
-  install -m 644 "$REPO"/ops/*.service "$REPO"/ops/*.timer /etc/systemd/system/
+  install -m 644 "$REPO"/ops/*.service "$REPO"/ops/*.timer "$REPO"/ops/*.path /etc/systemd/system/
   systemctl daemon-reload
+fi
+# The publish script is a copy as well, and the site stage below runs it.
+# Compared on every run (not only when it changed in this diff), so a box that
+# missed an update converges.
+PUBLISH=/usr/local/bin/pets24x7-publish.sh
+if ! cmp -s "$REPO/ops/pets24x7-publish.sh" "$PUBLISH"; then
+  echo "-- publish script changed, reinstalling"
+  install -m 700 "$REPO/ops/pets24x7-publish.sh" "$PUBLISH"
 fi
 # nginx configs are deliberately NOT auto-installed. The api vhost is
 # certbot-managed: certbot rewrites its listen-443 and certificate lines on
@@ -140,61 +151,13 @@ if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
 fi
 
 if grep -q '^pets24x7_new/' <<<"$CHANGED"; then
-  echo "-- site changed, building release ${NEW:0:7}"
-  # Build into a fresh release directory and swap the symlink, so the live
-  # site never serves a half-rendered tree. Rendering in place would 404
-  # every city URL for the couple of minutes build_pages.py takes.
-  REL=$RELEASES/${NEW:0:7}
-
-  # Prune BEFORE building, not after. A rendered release is ~950 MB, and the
-  # cleanup used to sit on the last line of the block: it only ran when
-  # everything succeeded, so every failed deploy abandoned a full release on
-  # disk and left the next build with less room than the last. One failure
-  # snowballs into a full disk that then fails every deploy after it.
-  # Keep the two newest, and never delete whatever the symlink points at.
-  LIVE=$(readlink -f "$SITE_LINK" 2>/dev/null || true)
-  ls -1dt "$RELEASES"/*/ 2>/dev/null | tail -n +3 | while read -r d; do
-    if [ "$(readlink -f "$d")" != "$LIVE" ]; then rm -rf "$d"; fi
-  done
-
-  # Die with a legible message rather than halfway through a 36k-file render
-  # with a bare ENOSPC.
-  FREE_MB=$(df -Pm "$RELEASES" | awk 'NR==2 {print $4}')
-  if [ "$FREE_MB" -lt 2500 ]; then
-    echo "FAILED: ${FREE_MB}MB free under $RELEASES; a release needs ~950MB"
-    df -h "$RELEASES"
-    exit 1
-  fi
-
-  # A half-built release is dead weight. Drop it if any step below fails, so a
-  # failure costs nothing on disk and the next run starts clean.
-  trap 'rm -rf "$REL"' ERR
-  rm -rf "$REL"
-  mkdir -p "$REL"
-  rsync -a "$SITE_SRC/" "$REL/"
-  ( cd "$REL" && python3 build_pages.py >/dev/null )
-  chown -R www-data:www-data "$REL"
-  find "$REL" -type d -exec chmod 755 {} +
-  find "$REL" -type f -exec chmod 644 {} +
-
-  # Clear the cleanup trap BEFORE the swap: past this line $REL is the live
-  # site, and a trap that deletes it would take the site down with it.
-  trap - ERR
-  # One-time migration. DEPLOY.md builds $SITE_LINK as a real directory
-  # (mkdir -p, untar into it, render in place); this script has always assumed
-  # it is a symlink into $RELEASES. `mv -T` a symlink onto a non-empty
-  # directory fails with "Directory not empty", so the swap below failed on
-  # every single run -- after rendering the whole ~950MB release -- and the
-  # directory from the original manual deploy kept serving. That is why the
-  # site stayed on its first-deploy content while the API updated normally.
-  if [ -e "$SITE_LINK" ] && [ ! -L "$SITE_LINK" ]; then
-    echo "-- $SITE_LINK is a directory, not a release symlink; migrating"
-    mv "$SITE_LINK" "$SITE_LINK.pre-releases.$(date +%Y%m%d%H%M%S)"
-    echo "-- previous tree kept alongside it; delete it by hand to reclaim the space"
-  fi
-  ln -sfn "$REL" "$SITE_LINK.tmp" && mv -Tf "$SITE_LINK.tmp" "$SITE_LINK"
-  curl -fsS -m 10 -o /dev/null -H 'Host: pets24x7.com' http://127.0.0.1/ || { echo "FAILED: site check"; exit 1; }
-  echo "-- site ok ($(find "$REL" -type f | wc -l) files)"
+  echo "-- site changed, publishing release ${NEW:0:7}"
+  # Export the listings table, render into a fresh release, check it, swap the
+  # docroot symlink, prune old releases -- see ops/pets24x7-publish.sh. It
+  # waits for a publish already in progress (nightly or admin-triggered)
+  # instead of racing it, and exits non-zero on any failure, which fails this
+  # deploy before the state file is written, so the next run retries.
+  "$PUBLISH" --trigger deploy --tag "${NEW:0:7}"
 fi
 
 mkdir -p "$(dirname "$STATE")"

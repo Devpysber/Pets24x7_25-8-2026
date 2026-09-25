@@ -10,10 +10,11 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { env } from '../env.js';
+import { mailSite } from '../mail/components.js';
 import { notify } from '../mail/notify.js';
 import { adminNotifyEmails } from '../mail/admin-notify.js';
 import { adminDailyDigestEmail } from '../mail/lifecycle-templates.js';
+import { startRandomDailyJob } from './random-schedule.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -107,20 +108,28 @@ export async function runAdminDigest(): Promise<{ sent: number }> {
     return { sent: 0 };
   }
 
-  for (const to of admins) notify(adminDailyDigestEmail(to, digest, env.PUBLIC_SITE_URL));
+  for (const to of admins) notify(adminDailyDigestEmail(to, digest, mailSite()));
   logger.info({ admins: admins.length }, 'admin digest sent');
   return { sent: admins.length };
 }
 
-let timer: NodeJS.Timeout | null = null;
-
-export function startAdminDigestJob(intervalMs = DAY): void {
-  if (timer) return;
-  // Late enough after boot that a restart loop cannot turn into a mail loop.
-  setTimeout(() => {
-    runAdminDigest().catch((err) => logger.warn({ err }, 'admin digest failed'));
-  }, 10 * 60_000);
-  timer = setInterval(() => {
-    runAdminDigest().catch((err) => logger.warn({ err }, 'admin digest failed'));
-  }, intervalMs);
+/**
+ * Once a day at a fixed 08:00 IST, so the briefing is waiting at the start of
+ * the working day and covers the same 24 hours every time.
+ *
+ * This used to fire ten minutes after every boot and then every 24h from boot:
+ * each deploy or restart mailed the admins another digest, and the send time
+ * drifted with every restart. A fixed wall-clock slot fixes both — a restart
+ * after 08:00 plans tomorrow's slot, one before 08:00 plans today's, and
+ * neither sends twice. (One run in a one-hour window with a 60-minute gap
+ * leaves the slot no room to jitter, so it lands exactly on the hour.)
+ */
+export function startAdminDigestJob(): void {
+  startRandomDailyJob('admin-digest', runAdminDigest, {
+    minRuns: 1,
+    maxRuns: 1,
+    startHour: 8,
+    endHour: 9,
+    minGapMinutes: 60,
+  });
 }

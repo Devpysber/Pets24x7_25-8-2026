@@ -12,7 +12,6 @@
 // ownership of the address.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
@@ -21,10 +20,12 @@ import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { setAuthCookie } from './jwt.js';
 import { normalizePhone } from '../shared/phone.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, UnauthorizedError } from '../shared/errors.js';
 import {
   VERIFY_TTL_MIN,
+  type ConsumeResult,
   consumeVerificationToken,
   sendVerificationEmail,
   sendWelcomeEmailOnce,
@@ -37,11 +38,53 @@ import { passwordChangedEmail, emailVerifiedEmail } from '../mail/lifecycle-temp
 export const parentEmailAuthRouter = Router();
 
 const isDev = env.NODE_ENV === 'development';
-const limiter = (max: number) =>
-  rateLimit({ windowMs: 60_000, max: isDev ? 10_000 : max, standardHeaders: true });
+// One limiter per route, each with its own name (and so its own shared counter).
+const limiter = (name: string, max: number) =>
+  makeLimiter(`parent-email-${name}`, { windowMs: 60_000, max: isDev ? 10_000 : max, standardHeaders: true });
 
 const SITE = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
 const normEmail = (e: string) => e.trim().toLowerCase();
+
+/**
+ * Finds the account an address belongs to, for a caller who has just PROVEN
+ * that address (email code, Google). An address on a row that never verified
+ * it is only a claim someone typed, so the prover must not inherit whatever
+ * else that row carries:
+ *  - a row that also signs in some other way (phone, Google) keeps its
+ *    credentials but loses the unproven address, and the prover gets a fresh
+ *    account — otherwise whoever owns that phone would be signed into the
+ *    prover's account from then on;
+ *  - a bare unverified signup keeps its row, but its password is dropped by
+ *    the caller, since nobody has shown the password belongs to the address
+ *    owner (the classic pre-registration takeover).
+ */
+async function accountForProvenEmail(email: string) {
+  const row = await prisma.petParent.findUnique({ where: { email } });
+  if (!row || row.emailVerified) return row;
+  if (row.phone || row.googleId) {
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.petParent.update({ where: { id: row.id }, data: { email: null } }),
+      prisma.emailVerificationToken.updateMany({ where: { parentId: row.id, usedAt: null }, data: { usedAt: now } }),
+      prisma.passwordResetToken.updateMany({ where: { parentId: row.id, usedAt: null }, data: { usedAt: now } }),
+    ]);
+    return null;
+  }
+  return row;
+}
+
+/** A unique-constraint clash on a user-supplied field, as a readable 400. */
+function uniqueClash(err: unknown): never {
+  if ((err as { code?: string })?.code === 'P2002') {
+    const target = String((err as { meta?: { target?: unknown } }).meta?.target ?? '');
+    throw new BadRequestError(
+      target.includes('phone')
+        ? 'That phone number is already registered to another account.'
+        : 'That email address is already registered to another account.',
+    );
+  }
+  throw err;
+}
 
 function publicParent(p: { id: string; name: string; email: string | null; phone: string | null; emailVerified: boolean }) {
   return { id: p.id, name: p.name, email: p.email, phone: p.phone, emailVerified: p.emailVerified };
@@ -59,7 +102,7 @@ function publicParent(p: { id: string; name: string; email: string | null; phone
 
 parentEmailAuthRouter.post(
   '/email/otp/request',
-  limiter(5),
+  limiter('otp-request', 5),
   asyncHandler(async (req, res) => {
     const { email: raw } = z.object({ email: z.string().email() }).parse(req.body);
     const email = normEmail(raw);
@@ -75,7 +118,9 @@ parentEmailAuthRouter.post(
       ok: true,
       email,
       // A new address is signed up on verify; the UI uses this to ask for a name.
-      isNewAccount: !parent,
+      // An unproven address on a phone/Google account also gets a fresh account
+      // on verify (see accountForProvenEmail), so it counts as new too.
+      isNewAccount: !parent || (!parent.emailVerified && Boolean(parent.phone || parent.googleId)),
       expiresInMinutes: EMAIL_OTP_TTL_MIN,
       ...(issued.devCode ? { devCode: issued.devCode } : {}),
     });
@@ -93,7 +138,7 @@ const OtpVerifyBody = z.object({
 
 parentEmailAuthRouter.post(
   '/email/otp/verify',
-  limiter(10),
+  limiter('otp-verify', 10),
   asyncHandler(async (req, res) => {
     const body = OtpVerifyBody.parse(req.body);
     const email = normEmail(body.email);
@@ -102,23 +147,26 @@ parentEmailAuthRouter.post(
     if (!ok) throw new UnauthorizedError('Incorrect code');
 
     const now = new Date();
-    const existing = await prisma.petParent.findUnique({ where: { email } });
+    const existing = await accountForProvenEmail(email);
     const phone = body.phone ? normalizePhone(body.phone, body.country ?? 'IN') : null;
 
-    const parent = existing
-      ? await prisma.petParent.update({
+    const parent = await (existing
+      ? prisma.petParent.update({
           where: { id: existing.id },
           data: {
             // The code proved the address — settle verification either way.
             emailVerified: true,
             emailVerifiedAt: existing.emailVerifiedAt ?? now,
+            // A password set before the address was proven may not be the
+            // owner's — see accountForProvenEmail.
+            ...(!existing.emailVerified && { passwordHash: null }),
             ...(body.name && { name: body.name }),
             ...(phone && { phone }),
             ...(body.city && { city: body.city }),
             ...(body.country && { country: body.country }),
           },
         })
-      : await prisma.petParent.create({
+      : prisma.petParent.create({
           data: {
             email,
             name: body.name?.trim() || email.split('@')[0] || 'Pet Parent',
@@ -128,7 +176,8 @@ parentEmailAuthRouter.post(
             emailVerified: true,
             emailVerifiedAt: now,
           },
-        });
+        })
+    ).catch(uniqueClash);
 
     // Any pending verification link is moot now that the address is proven.
     await prisma.emailVerificationToken.updateMany({
@@ -136,11 +185,11 @@ parentEmailAuthRouter.post(
       data: { usedAt: now },
     });
 
-    const firstTime = await sendWelcomeEmailOnce(parent);
+    // First verified sign-in gets the welcome mail; later ones get nothing.
+    // Not awaited: the SMTP round trip (seconds on a slow relay) sat between
+    // a correct code or password and the session cookie.
+    void sendWelcomeEmailOnce(parent).catch((err) => req.log.warn({ err }, 'welcome mail failed'));
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
-    // Welcome mail already covers a first sign-in; don't send both at once.
-    if (!firstTime) {
-    }
     res.json({ ok: true, isNewAccount: !existing, parent: publicParent(parent) });
   }),
 );
@@ -157,22 +206,25 @@ const SignupBody = z.object({
 
 parentEmailAuthRouter.post(
   '/email/signup',
-  limiter(5),
+  limiter('signup', 5),
   asyncHandler(async (req, res) => {
     const body = SignupBody.parse(req.body);
     const email = normEmail(body.email);
     const phone = body.phone ? normalizePhone(body.phone, body.country ?? 'IN') : null;
 
-    const existing = await prisma.petParent.findUnique({ where: { email } });
+    let existing = await prisma.petParent.findUnique({ where: { email } });
     if (existing?.emailVerified) {
       throw new BadRequestError('An account with this email already exists. Please log in.');
     }
+    // An unverified address sitting on an account that signs in by phone or
+    // Google is not this signup's to take over: detach it and start fresh.
+    if (existing && (existing.phone || existing.googleId)) existing = await accountForProvenEmail(email);
 
     const passwordHash = await bcrypt.hash(body.password, 12);
 
     // Re-signing up on an unverified account just refreshes it — no duplicate row.
-    const parent = existing
-      ? await prisma.petParent.update({
+    const parent = await (existing
+      ? prisma.petParent.update({
           where: { id: existing.id },
           data: {
             name: body.name,
@@ -182,7 +234,7 @@ parentEmailAuthRouter.post(
             ...(body.country && { country: body.country }),
           },
         })
-      : await prisma.petParent.create({
+      : prisma.petParent.create({
           data: {
             email,
             name: body.name,
@@ -191,7 +243,8 @@ parentEmailAuthRouter.post(
             city: body.city ?? null,
             country: body.country ?? null,
           },
-        });
+        })
+    ).catch(uniqueClash);
 
     await sendVerificationEmail({ id: parent.id, name: parent.name, email });
 
@@ -209,7 +262,7 @@ const LoginBody = z.object({ email: z.string().email(), password: z.string().min
 
 parentEmailAuthRouter.post(
   '/email/login',
-  limiter(10),
+  limiter('login', 10),
   asyncHandler(async (req, res) => {
     const body = LoginBody.parse(req.body);
     const email = normEmail(body.email);
@@ -230,11 +283,10 @@ parentEmailAuthRouter.post(
       return;
     }
 
-    const firstTime = await sendWelcomeEmailOnce(parent);
+    // Not awaited: the SMTP round trip (seconds on a slow relay) sat between
+    // a correct code or password and the session cookie.
+    void sendWelcomeEmailOnce(parent).catch((err) => req.log.warn({ err }, 'welcome mail failed'));
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
-    // Welcome mail already covers a first sign-in; don't send both at once.
-    if (!firstTime) {
-    }
     res.json({ ok: true, parent: publicParent(parent) });
   }),
 );
@@ -242,7 +294,7 @@ parentEmailAuthRouter.post(
 // ----- Resend verification -----
 parentEmailAuthRouter.post(
   '/email/resend',
-  limiter(3),
+  limiter('resend', 3),
   asyncHandler(async (req, res) => {
     const { email: raw } = z.object({ email: z.string().email() }).parse(req.body);
     const email = normEmail(raw);
@@ -261,7 +313,7 @@ parentEmailAuthRouter.post(
 // cannot be used to find out who has an account.
 parentEmailAuthRouter.post(
   '/email/forgot',
-  limiter(3),
+  limiter('forgot', 3),
   asyncHandler(async (req, res) => {
     const { email: raw } = z.object({ email: z.string().email() }).parse(req.body);
     const email = normEmail(raw);
@@ -287,7 +339,7 @@ const ResetBody = z.object({
 
 parentEmailAuthRouter.post(
   '/email/reset',
-  limiter(10),
+  limiter('reset', 10),
   asyncHandler(async (req, res) => {
     const body = ResetBody.parse(req.body);
 
@@ -305,7 +357,16 @@ parentEmailAuthRouter.post(
       where: { id: result.parentId },
       // Reaching the mailed link proves the address, so an account that was
       // still unverified becomes verified here.
-      data: { passwordHash, emailVerified: true, emailVerifiedAt: new Date() },
+      data: {
+        passwordHash,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        // A reset is what someone does when they think the account is exposed:
+        // end every existing session. Backdated to just before this second,
+        // because token issue times are whole seconds and the cookie set below
+        // must survive (see tokenRevoked in actor.ts).
+        sessionsRevokedAt: new Date(Math.floor(Date.now() / 1000) * 1000 - 1),
+      },
     });
 
     notifyIf(parent.email, (to) => passwordChangedEmail(to, parent.name, new Date(), req.ip ?? null));
@@ -320,12 +381,16 @@ parentEmailAuthRouter.post(
 // ----- Verify link target -----
 parentEmailAuthRouter.get(
   '/email/verify',
-  limiter(20),
+  limiter('verify', 20),
   asyncHandler(async (req, res) => {
     const token = typeof req.query.token === 'string' ? req.query.token : '';
     if (!token) return res.redirect(`${SITE}/login/?verified=invalid`);
 
-    const result = await consumeVerificationToken(token);
+    // Opened from a mail client: a failure must land on a page, never on JSON.
+    const result = await consumeVerificationToken(token).catch((err): ConsumeResult => {
+      req.log.warn({ err }, 'email verification consume failed');
+      return { ok: false, reason: 'invalid' };
+    });
     if (!result.ok) return res.redirect(`${SITE}/login/?verified=${result.reason}`);
 
     const parent = await prisma.petParent.findUnique({ where: { id: result.parentId } });
@@ -347,7 +412,7 @@ const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_I
 
 parentEmailAuthRouter.post(
   '/google',
-  limiter(20),
+  limiter('google', 20),
   asyncHandler(async (req, res) => {
     const { credential } = z.object({ credential: z.string().min(10) }).parse(req.body);
     if (!googleClient) throw new BadRequestError('Google Sign-In is not configured');
@@ -370,23 +435,26 @@ parentEmailAuthRouter.post(
     const name = payload.name?.trim() || email.split('@')[0] || 'Pet Parent';
     const now = new Date();
 
-    const existing =
-      (await prisma.petParent.findUnique({ where: { googleId: payload.sub } })) ??
-      (await prisma.petParent.findUnique({ where: { email } }));
+    const byGoogle = await prisma.petParent.findUnique({ where: { googleId: payload.sub } });
+    const existing = byGoogle ?? (await accountForProvenEmail(email));
 
-    const parent = existing
-      ? await prisma.petParent.update({
+    const parent = await (existing
+      ? prisma.petParent.update({
           where: { id: existing.id },
           data: {
             googleId: payload.sub,
             email,
             emailVerified: true,
             emailVerifiedAt: existing.emailVerifiedAt ?? now,
+            // Linking by address to a row that never proved it: the password on
+            // it was set by whoever typed the address, not necessarily its owner.
+            ...(!byGoogle && !existing.emailVerified && { passwordHash: null }),
           },
         })
-      : await prisma.petParent.create({
+      : prisma.petParent.create({
           data: { email, name, googleId: payload.sub, emailVerified: true, emailVerifiedAt: now },
-        });
+        })
+    ).catch(uniqueClash);
 
     // Any pending link verification is moot now.
     await prisma.emailVerificationToken.updateMany({
@@ -394,12 +462,10 @@ parentEmailAuthRouter.post(
       data: { usedAt: now },
     });
 
-    const firstGoogleSignIn = await sendWelcomeEmailOnce(parent);
+    // Not awaited: the SMTP round trip (seconds on a slow relay) sat between
+    // a correct code or password and the session cookie.
+    void sendWelcomeEmailOnce(parent).catch((err) => req.log.warn({ err }, 'welcome mail failed'));
     setAuthCookie(res, { sub: parent.id, role: 'pet_parent' });
-    // Same rule as the password path: welcome covers a first sign-in, every
-    // later one gets the security alert instead.
-    if (!firstGoogleSignIn) {
-    }
-    res.json({ ok: true, parent: publicParent(parent) });
+    res.json({ ok: true, isNewAccount: !existing, parent: publicParent(parent) });
   }),
 );

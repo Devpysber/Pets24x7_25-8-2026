@@ -8,12 +8,16 @@ import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
+import { makeLimiter } from '../shared/rate-limit.js';
+import { NotFoundError, ForbiddenError, BadRequestError, HttpError } from '../shared/errors.js';
 import { sendVerificationEmail } from '../auth/email-verification.js';
 import { notifyIf } from '../mail/notify.js';
-import { listingsInCity } from '../listings/index.js';
+import { getListingById, listingsInCity, shownRating } from '../listings/index.js';
 import { normalizePhone } from '../shared/phone.js';
 import { recommend } from '../feed/recommend.js';
+import { invalidateParent } from '../feed/reco/cache.js';
+import { whatsappConfigured } from '../whatsapp/cloud-api.js';
+import { issueOtp, verifyOtp } from '../whatsapp/otp.js';
 import {
   listingSavedEmail,
   listingUnsavedEmail,
@@ -47,16 +51,24 @@ async function sendFirstPetRecommendations(
   if (!city) return;
   const country = (parent?.country || 'IN').toUpperCase();
 
+  // Only this city's listings can be picked, so only their featured/claimed
+  // flags are looked up — not every featured slot and claimed vendor on file.
+  const candidates = listingsInCity(city, country);
+  if (!candidates.length) return;
+  const candidateIds = candidates.map((l) => l.id);
   const [featuredRows, claimedRows] = await Promise.all([
     prisma.featuredListing.findMany({
-      where: { status: 'ACTIVE', endsAt: { gt: new Date() } },
+      where: { status: 'ACTIVE', endsAt: { gt: new Date() }, listingId: { in: candidateIds } },
       select: { listingId: true },
     }),
-    prisma.vendor.findMany({ where: { status: 'ACTIVE', listingId: { not: null }, claimedAt: { not: null } }, select: { listingId: true } }),
+    prisma.vendor.findMany({
+      where: { status: 'ACTIVE', listingId: { in: candidateIds }, claimedAt: { not: null } },
+      select: { listingId: true },
+    }),
   ]);
 
   const picks = recommend(
-    listingsInCity(city, country),
+    candidates,
     {
       pets: [{
         species: String(pet.species),
@@ -83,7 +95,7 @@ async function sendFirstPetRecommendations(
         name: p.listing.name,
         category: p.listing.category,
         city: p.listing.city,
-        rating: p.listing.rating,
+        rating: shownRating(p.listing),
         reviewCount: p.listing.review_count,
         reasons: p.reasons,
         url: `${env.PUBLIC_SITE_URL}/${String(p.listing.country).toLowerCase()}/${p.listing.city_slug}/${p.listing.id}/`,
@@ -124,8 +136,10 @@ parentDashboardRouter.get(
           orderBy: { createdAt: 'desc' },
           take: 20,
         }),
+        // Same rule as /api/memberships/me: an ACTIVE row past endsAt (the
+        // expiry sweep has not run yet) is not a membership.
         prisma.membership.findFirst({
-          where: { parentId, status: 'ACTIVE' },
+          where: { parentId, status: 'ACTIVE', OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] },
           orderBy: { createdAt: 'desc' },
           include: { plan: true },
         }),
@@ -136,31 +150,9 @@ parentDashboardRouter.get(
       // DB connection offline
     }
 
-    if (!parent) {
-      if (process.env.NODE_ENV === 'development') {
-        parent = {
-          id: parentId,
-          name: 'Dev Pet Parent',
-          phone: '+91 9876543210',
-          email: 'alex.parent@example.com',
-          city: 'Mumbai',
-          country: 'IN',
-        };
-        pets = [
-          {
-            id: 'pet-dev-1',
-            name: 'Buddy',
-            species: 'DOG',
-            breed: 'Golden Retriever',
-            ageYears: 3,
-            vaccinated: true,
-            notes: 'Friendly and vaccinated',
-          },
-        ];
-      } else {
-        throw new NotFoundError('Parent record missing');
-      }
-    }
+    // No invented fallback data: a fake parent with a fake pet id hid real
+    // DB/missing-record failures and broke every pet edit made against it.
+    if (!parent) throw new NotFoundError('Parent record missing');
 
     // Nearby feed — deals + events for the parent's city (best-effort).
     let nearbyDeals: any[] = [];
@@ -193,13 +185,15 @@ parentDashboardRouter.get(
     const membership = membershipRow
       ? {
           active: true,
+          planId: membershipRow.plan?.id ?? null,
           plan: membershipRow.plan?.name ?? 'Membership',
+          discountPercent: membershipRow.plan?.discountPercent ?? 0,
           tier: membershipRow.plan?.tier ?? null,
           renewsAt: membershipRow.endsAt ?? null,
           autoRenew: membershipRow.autoRenew ?? false,
           cancelledAt: membershipRow.cancelledAt ?? null,
         }
-      : { active: false, plan: null, tier: null, renewsAt: null, autoRenew: false, cancelledAt: null };
+      : { active: false, planId: null, plan: null, discountPercent: 0, tier: null, renewsAt: null, autoRenew: false, cancelledAt: null };
 
     res.json({
       ok: true,
@@ -223,9 +217,44 @@ parentDashboardRouter.get(
 const ProfileBody = z.object({
   name: z.string().min(1).max(80).optional(),
   phone: z.string().max(30).optional().or(z.literal('')),
+  // WhatsApp code proving the new phone (see POST /profile/phone-otp).
+  phoneCode: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code').optional(),
   city: z.string().max(80).optional(),
   country: z.enum(['IN', 'US']).optional(),
+  digestFrequency: z.enum(['DAILY', 'WEEKLY', 'OFF']).optional(),
 });
+
+// The phone is a sign-in identifier (WhatsApp OTP login finds the account by
+// it), so attaching a number nobody proved would let its real owner later sign
+// straight into this parent's account. When WhatsApp OTP is live, a new number
+// must be verified first. When it is not configured, phone sign-in is off too
+// and there is nothing to hijack, so the number is saved as before.
+const PhoneOtpBody = z.object({
+  phone: z.string().min(6).max(30),
+  country: z.enum(['IN', 'US']).optional(),
+});
+
+// Each call sends a WhatsApp message to a number the caller chose; the per-phone
+// cool-down in issueOtp does not stop one session cycling through numbers.
+const phoneOtpLimiter = makeLimiter('parent-profile-phone-otp', {
+  windowMs: 60 * 60_000,
+  max: env.NODE_ENV === 'development' ? 10_000 : 6,
+  standardHeaders: true,
+});
+
+parentDashboardRouter.post(
+  '/profile/phone-otp',
+  phoneOtpLimiter,
+  asyncHandler(async (req, res) => {
+    const body = PhoneOtpBody.parse(req.body);
+    const current = await prisma.petParent.findUnique({ where: { id: req.auth!.sub }, select: { country: true } });
+    const phone = normalizePhone(body.phone, (body.country || current?.country || 'IN') as 'IN' | 'US');
+    const taken = await prisma.petParent.findFirst({ where: { phone, NOT: { id: req.auth!.sub } }, select: { id: true } });
+    if (taken) throw new BadRequestError('That phone number is already registered to another account');
+    await issueOtp(phone, 'PARENT_SIGNUP', { ip: req.ip, ua: req.headers['user-agent'] });
+    res.json({ ok: true, phone });
+  }),
+);
 
 parentDashboardRouter.patch(
   '/profile',
@@ -233,19 +262,27 @@ parentDashboardRouter.patch(
     const body = ProfileBody.parse(req.body);
     const current = await prisma.petParent.findUnique({
       where: { id: req.auth!.sub },
-      select: { email: true, phone: true, country: true },
+      select: { email: true, phone: true, country: true, city: true, name: true },
     });
 
     const data: Record<string, unknown> = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.city !== undefined) data.city = body.city;
     if (body.country !== undefined) data.country = body.country;
+    if (body.digestFrequency !== undefined) data.digestFrequency = body.digestFrequency;
 
     if (body.phone !== undefined) {
       const rawPhone = body.phone.trim();
       if (rawPhone) {
         const country = (body.country || current?.country || 'IN') as 'IN' | 'US';
         data.phone = normalizePhone(rawPhone, country);
+        if (data.phone !== (current?.phone ?? null) && whatsappConfigured()) {
+          if (!body.phoneCode) {
+            throw new HttpError(400, 'Verify the new phone number with the WhatsApp code we send to it.', 'phone_otp_required');
+          }
+          const ok = await verifyOtp(data.phone as string, body.phoneCode, 'PARENT_SIGNUP');
+          if (!ok) throw new BadRequestError('That code is not right. Check WhatsApp and try again.');
+        }
       } else {
         data.phone = null;
       }
@@ -259,7 +296,7 @@ parentDashboardRouter.patch(
       parent = await prisma.petParent.update({
         where: { id: req.auth!.sub },
         data,
-        select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true },
+        select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, digestFrequency: true },
       });
     } catch (err) {
       if ((err as { code?: string }).code === 'P2002') {
@@ -280,9 +317,28 @@ parentDashboardRouter.patch(
     // `data` also carries the emailVerified reset, which is bookkeeping rather
     // than something the parent edited — listing it reads as an unexplained
     // change in the mail.
-    const changed = Object.keys(data).filter((k) => k !== 'emailVerified' && k !== 'emailVerifiedAt');
+    // Only fields whose value really moved: the dashboard re-sends the whole
+    // form, which mailed "name, phone, city, country changed" on every save.
+    const before = (current ?? {}) as Record<string, unknown>;
+    const changed = Object.keys(data).filter(
+      (k) => k !== 'emailVerified' && k !== 'emailVerifiedAt' && (before[k] ?? null) !== (data[k] ?? null),
+    );
     if (changed.length > 0) {
       notifyIf(parent.email, (to) => profileUpdatedEmail(to, parent.name ?? 'there', changed));
+    }
+    // A dashboard request without ?city= ranks for the city on the profile,
+    // under a key that does not name it: drop what was ranked for the old one.
+    if (changed.includes('city') || changed.includes('country')) invalidateParent(parent.id);
+
+    // sendFirstPetRecommendations skips a parent with no city and promises the
+    // picks "as soon as they set a city" — nothing kept that promise. Setting a
+    // city for the first time, with a pet already on the account, is that moment.
+    const hadCity = !!current?.city?.trim();
+    if (!hadCity && parent.city?.trim() && parent.email) {
+      const firstPet = await prisma.pet.findFirst({ where: { ownerId: parent.id }, orderBy: { createdAt: 'asc' } });
+      if (firstPet) {
+        void sendFirstPetRecommendations(parent.id, parent.email, parent.name ?? 'there', firstPet).catch(() => {});
+      }
     }
     res.json({ ok: true, parent, verificationSent: emailChanged && Boolean(parent.email) });
   }),
@@ -310,13 +366,22 @@ function dateFields(body: {
   return out;
 }
 
+/**
+ * A pet photo is rendered as <img src> on the dashboard, and a prefix-only
+ * check let anything (quotes, markup) follow "base64,". Accept a hosted http(s)
+ * URL without markup characters, or a complete base64 image data URL.
+ */
+const IMAGE_SRC =
+  /^(?:https?:\/\/[^\s"'<>`]+|data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+)$/;
+
 const PetBody = z.object({
   name: z.string().min(1).max(40),
   species: z.enum(['DOG','CAT','BIRD','RABBIT','REPTILE','SMALL_MAMMAL','OTHER']),
   breed: z.string().max(60).optional(),
-  ageYears: z.number().int().min(0).max(50).optional(),
+  // null clears a previously set age (undefined means "unchanged").
+  ageYears: z.number().int().min(0).max(50).nullable().optional(),
   // Under-a-year pets need months, not a rounded-down 0 years.
-  ageMonths: z.number().int().min(0).max(11).optional(),
+  ageMonths: z.number().int().min(0).max(11).nullable().optional(),
   gender: z.enum(['Male', 'Female', 'Unspecified']).optional(),
   vaccinated: z.boolean().optional(),
   // Health dates the reminder mails key off. '' clears one; an ISO date sets it.
@@ -330,10 +395,7 @@ const PetBody = z.object({
   // one before upload, same as the avatar.
   photos: z
     .array(
-      z.string().max(600_000).refine(
-        (v) => /^data:image\/(png|jpe?g|webp);base64,/.test(v) || /^https?:\/\//.test(v),
-        'must be an image URL or image data URL',
-      ),
+      z.string().max(600_000).refine((v) => IMAGE_SRC.test(v), 'must be an image URL or image data URL'),
     )
     .max(4, 'You can keep at most 5 photos in total')
     .optional(),
@@ -342,10 +404,7 @@ const PetBody = z.object({
   avatarUrl: z
     .string()
     .max(600_000)
-    .refine(
-      (v) => v === '' || /^data:image\/(png|jpe?g|webp);base64,/.test(v) || /^https?:\/\//.test(v),
-      'must be an image URL or image data URL',
-    )
+    .refine((v) => v === '' || IMAGE_SRC.test(v), 'must be an image URL or image data URL')
     .optional(),
 });
 
@@ -376,6 +435,8 @@ parentDashboardRouter.post(
         ownerId: req.auth!.sub,
       },
     });
+    // Recommendations are cached per parent; a new pet changes what fits.
+    invalidateParent(req.auth!.sub);
     const owner = await ownerContact(req.auth!.sub);
     notifyIf(owner?.email, (to) =>
       petAddedEmail(to, owner!.name ?? 'there', {
@@ -415,14 +476,25 @@ parentDashboardRouter.patch(
         ...(nextPhotos !== undefined ? { photos: JSON.stringify(nextPhotos) } : {}),
       },
     });
-    const owner = await ownerContact(req.auth!.sub);
+    invalidateParent(req.auth!.sub);
     const photoChanged = body.avatarUrl !== undefined && body.avatarUrl !== (existing.avatarUrl ?? '');
-    const onlyPhoto = photoChanged && Object.keys(body).length === 1;
-    notifyIf(owner?.email, (to) =>
-      onlyPhoto
-        ? petPhotoUpdatedEmail(to, owner!.name ?? 'there', pet.name, !body.avatarUrl)
-        : petUpdatedEmail(to, owner!.name ?? 'there', pet.name),
-    );
+    // The edit form re-sends every field, so "a PATCH arrived" is not "the pet
+    // changed": saving an untouched form mailed "your pet was updated" each
+    // time. Compare what was stored before and after instead.
+    const comparable = (p: typeof existing) =>
+      JSON.stringify([
+        p.name, p.species, p.breed, p.ageYears, p.ageMonths, p.gender, p.vaccinated, p.notes, p.photos,
+        p.dateOfBirth?.getTime() ?? null, p.lastVaccinatedAt?.getTime() ?? null, p.lastCheckupAt?.getTime() ?? null,
+      ]);
+    const otherChanged = comparable(existing) !== comparable(pet);
+    if (photoChanged || otherChanged) {
+      const owner = await ownerContact(req.auth!.sub);
+      notifyIf(owner?.email, (to) =>
+        photoChanged && !otherChanged
+          ? petPhotoUpdatedEmail(to, owner!.name ?? 'there', pet.name, !body.avatarUrl)
+          : petUpdatedEmail(to, owner!.name ?? 'there', pet.name),
+      );
+    }
     res.json({ ok: true, pet });
   }),
 );
@@ -434,6 +506,7 @@ parentDashboardRouter.delete(
     if (!existing) throw new NotFoundError('Pet not found');
     if (existing.ownerId !== req.auth!.sub) throw new ForbiddenError();
     await prisma.pet.delete({ where: { id: existing.id } });
+    invalidateParent(req.auth!.sub);
     const owner = await ownerContact(req.auth!.sub);
     notifyIf(owner?.email, (to) => petRemovedEmail(to, owner!.name ?? 'there', existing.name));
     res.json({ ok: true });
@@ -465,26 +538,31 @@ parentDashboardRouter.post(
   '/saved',
   asyncHandler(async (req, res) => {
     const body = SaveBody.parse(req.body);
+    const key = { parentId_listingId: { parentId: req.auth!.sub, listingId: body.listingId } };
+    const existing = await prisma.savedListing.findUnique({ where: key, select: { id: true } });
+    // The index knows the listing better than a client that may have sent only
+    // the id (the recommender and the saved grid both read these columns).
+    const listing = getListingById(body.listingId);
+    const country = body.country ?? (String(listing?.country ?? '').toUpperCase() === 'US' ? 'US' : listing ? 'IN' : null);
+    const fields = {
+      listingName: body.listingName ?? listing?.name ?? null,
+      category: body.category ?? listing?.category ?? null,
+      city: body.city ?? listing?.city ?? null,
+      country,
+    };
     const saved = await prisma.savedListing.upsert({
-      where: { parentId_listingId: { parentId: req.auth!.sub, listingId: body.listingId } },
-      update: {
-        listingName: body.listingName ?? null,
-        category: body.category ?? null,
-        city: body.city ?? null,
-        country: body.country ?? null,
-      },
-      create: {
-        parentId: req.auth!.sub,
-        listingId: body.listingId,
-        listingName: body.listingName ?? null,
-        category: body.category ?? null,
-        city: body.city ?? null,
-        country: body.country ?? null,
-      },
+      where: key,
+      update: fields,
+      create: { parentId: req.auth!.sub, listingId: body.listingId, ...fields },
     });
-    const owner = await ownerContact(req.auth!.sub);
-    notifyIf(owner?.email, (to) => listingSavedEmail(to, owner!.name ?? 'there', saved.listingName));
-    res.status(201).json({ ok: true, saved });
+    invalidateParent(req.auth!.sub);
+    // Mail on the first save only; re-saving (double tap, a second tab) is a
+    // no-op for the parent and must not mail "saved" again.
+    if (!existing) {
+      const owner = await ownerContact(req.auth!.sub);
+      notifyIf(owner?.email, (to) => listingSavedEmail(to, owner!.name ?? 'there', saved.listingName));
+    }
+    res.status(existing ? 200 : 201).json({ ok: true, saved });
   }),
 );
 
@@ -497,6 +575,7 @@ parentDashboardRouter.delete(
       })
       .catch(() => null); // idempotent — no-op if it wasn't saved
     if (removed) {
+      invalidateParent(req.auth!.sub);
       const owner = await ownerContact(req.auth!.sub);
       notifyIf(owner?.email, (to) => listingUnsavedEmail(to, owner!.name ?? 'there', removed.listingName));
     }

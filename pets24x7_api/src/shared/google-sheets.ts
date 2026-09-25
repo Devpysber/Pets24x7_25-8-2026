@@ -50,8 +50,9 @@ export async function syncListingsToGoogleSheets(listings: GoogleSheetsListingPa
   }));
 
   if (!webhookUrl) {
-    logger.info({ count: sanitizedRows.length }, 'Google Sheets sync (dev mode/unconfigured): logged rows safely');
-    return { synced: sanitizedRows.length, failed: 0 };
+    // Nothing is sent when no webhook is configured, so nothing counts as synced.
+    logger.info({ count: sanitizedRows.length }, 'Google Sheets sync skipped: GOOGLE_SHEETS_WEBHOOK_URL not set');
+    return { synced: 0, failed: 0 };
   }
 
   try {

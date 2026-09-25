@@ -6,6 +6,20 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Search pet services — Pets24x7.com</title>
 <meta name="description" content="Search verified vets, groomers, boarding, training and more across India and the USA." />
+<!-- Result pages for arbitrary queries are thin, near-duplicate content; the
+     city and category pages are what should rank. Links are still followed. -->
+<meta name="robots" content="noindex,follow" />
+<link rel="canonical" href="https://pets24x7.com/search/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Search pet services — Pets24x7.com" />
+<meta property="og:description" content="Search verified vets, groomers, boarding, training and more across India and the USA." />
+<meta property="og:url" content="https://pets24x7.com/search/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Search pet services — Pets24x7.com" />
+<meta name="twitter:description" content="Search verified vets, groomers, boarding, training and more across India and the USA." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -39,9 +53,36 @@
   .body{padding:14px 16px 16px}
   .body h3{font-size:15.5px;font-weight:700;line-height:1.3;margin-bottom:6px}
   .body p{font-size:12.5px;color:var(--text-muted);line-height:1.45}
+  .sp-wrap{margin-bottom:18px}
+  .sp-wrap .grid{margin-bottom:0}
+  .card.is-sponsored{border-color:#FDE68A;background:linear-gradient(180deg,#FFFBEB,#fff)}
+  .badge-sponsored{position:absolute;top:10px;right:10px;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px}
   .empty{border:1px dashed var(--border);border-radius:14px;padding:36px;text-align:center;color:var(--text-muted);margin-bottom:48px}
   footer{border-top:1px solid var(--border);padding:22px 0;color:var(--text-muted);font-size:13px}
   @media (max-width:760px){ .searchbar{grid-template-columns:1fr} }
+  .header-in{position:relative}
+  .nav-links{display:flex;align-items:center;gap:2px}
+  .nav-link{border-radius:8px;display:inline-flex;align-items:center;min-height:40px}
+  .nav-link:hover{background:var(--bg-alt);color:var(--primary)}
+  .nav-toggle{display:none;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);cursor:pointer}
+  .nav-toggle svg{width:20px;height:20px}
+  .searchbar button{min-height:44px}
+  .card .body h3{overflow-wrap:anywhere}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(37,99,235,.55);outline-offset:2px}
+  @media (max-width:760px){
+    .container{padding:0 16px}
+    header{padding:10px 0}
+    .header-in{flex-wrap:nowrap}
+    .nav-toggle{display:inline-flex}
+    .nav-links{display:none}
+    .nav-links.nav-open{display:flex;flex-direction:column;align-items:stretch;position:absolute;top:calc(100% + 10px);left:0;right:0;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 14px 28px rgba(2,6,23,.10);padding:6px 16px 12px;z-index:20}
+    .nav-links.nav-open .nav-link{min-height:48px;font-size:15px;color:var(--text);border-bottom:1px solid var(--bg-alt);border-radius:0}
+    .nav-links.nav-open .nav-link:last-child{border-bottom:none}
+    .searchbar{margin:16px 0;padding:14px}
+    .searchbar input,.searchbar select{font-size:16px;min-height:44px}
+    h1{font-size:21px}
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -51,12 +92,15 @@
     <a href="/" class="brand">
       <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
     </a>
-    <nav>
+    <nav class="nav-links" id="siteNav" aria-label="Main">
       <a href="/#cats" class="nav-link">Categories</a>
       <a href="/#destinations" class="nav-link">Destinations</a>
       <a href="/membership/" class="nav-link">Membership</a>
       <a href="/login/" class="nav-link">Sign In</a>
     </nav>
+    <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -94,7 +138,8 @@
   </form>
 
   <h1 id="sTitle">Search results</h1>
-  <div class="count" id="sCount">Searching…</div>
+  <div class="count" id="sCount" aria-live="polite">Searching…</div>
+  <div class="sp-wrap" id="sSponsored" hidden><div class="grid" id="sSponsoredGrid"></div></div>
   <div class="grid" id="sGrid"></div>
   <div class="empty" id="sEmpty" hidden></div>
 </div>
@@ -107,6 +152,8 @@
 <script src="/analytics.js"></script>
 <script src="/pets-data.js"></script>
 <script src="/api-client.js"></script>
+<script src="/pet-images.js"></script>
+<script src="/reco-track.js" defer></script>
 <script>
   // A city page only exists for cities that were part of the last static build,
   // so sending every search to /in/<slug>/ produced a 404 for any other city —
@@ -123,9 +170,14 @@
     'pet-grooming-spa':'photo-1516734212186-a967f81ad0d7','pet-boarding-daycare':'photo-1543466835-00a7907e9de1',
     'pet-walking':'photo-1450778869180-41d0601e046e','pet-training-obedience-behavior':'photo-1587300003388-59208cc962cb',
     'pet-sitting-in-home-care':'photo-1596492784531-6e6eb5ea9993','pet-relocation-services':'photo-1518717758536-85ae29035b6d',
-    'pet-taxi-transport':'photo-1425082661705-1834bfd09dca'
+    'pet-taxi-transport':'photo-1425082661705-1834bfd09dca',
+    'specialty-vets-exotics-avian-reptiles':'photo-1452857297128-d9c29adba80b','veterinary-labs-diagnostics':'photo-1559190394-df5a28aab5c5',
+    'pet-therapy-services':'photo-1541599540903-216a46ca1dc0'
   };
+  // /pet-images.js holds the verified per-category photo pools (varied per
+  // listing); the single-photo map below is only a fallback if it failed to load.
   function cardImg(b) {
+    if (window.PetImages) return window.PetImages.cardImg(b, 560, 420);
     if (b && b.imageUrl) return b.imageUrl;
     var id = CATEGORY_IMG[b && b.category_slug] || 'photo-1583337130417-3346a1be7dee';
     return 'https://images.unsplash.com/' + id + '?w=560&h=420&fit=crop&q=70';
@@ -159,9 +211,78 @@
     }
   }
 
+  // Each search bumps this; a slow earlier response must not overwrite the
+  // results of the search the user typed after it.
+  var searchSeq = 0;
+
+  // One labelled sponsored card above the organic results, only when both a
+  // city and a service are chosen (GET /api/reco/city, limit 1). Paid listings
+  // never enter the organic list; the same business is not shown twice.
+  function countryFor(rawCity, cityName) {
+    if (/,\s*(US|USA)\s*$/i.test(rawCity)) return 'US';
+    if (/,\s*(IN|INDIA)\s*$/i.test(rawCity)) return 'IN';
+    var want = cityName.toLowerCase();
+    var m = (window.PETS_INDEX || []).filter(function (c) { return String(c.city || '').toLowerCase() === want; })[0];
+    return m && m.country === 'US' ? 'US' : 'IN';
+  }
+  function sponsoredFor(rawCity, city, category) {
+    if (!city || !category || !api.recoCity) return Promise.resolve(null);
+    return api.recoCity({ city: city, country: countryFor(rawCity, city), category: category, limit: 1, sort: 'top' })
+      .then(function (d) {
+        var it = d && d.items && d.items[0];
+        return it && it.sponsored && d.rid ? { item: it, rid: d.rid } : null;
+      })
+      .catch(function () { return null; });
+  }
+  function spHref(it) {
+    var u = String(it.url || '');
+    if (!/^\/(?!\/)/.test(u)) u = listingUrl(it);
+    return u.indexOf('src=') === -1 ? u + (u.indexOf('?') === -1 ? '?' : '&') + 'src=reco_search_sponsored' : u;
+  }
+  function renderSponsored(sp) {
+    var wrap = document.getElementById('sSponsored');
+    var box = document.getElementById('sSponsoredGrid');
+    if (!sp) { wrap.hidden = true; box.innerHTML = ''; return; }
+    var it = sp.item;
+    // Drop the organic copy so the business is not listed twice.
+    Array.prototype.forEach.call(document.querySelectorAll('#sGrid [data-lid]'), function (el) {
+      if (el.getAttribute('data-lid') === it.id) el.parentNode.removeChild(el);
+    });
+    var rating = (Number(it.review_count) || 0) >= 1 ? (Number(it.rating) || 0) : 0;
+    box.innerHTML = '<a class="card is-sponsored" href="' + esc(spHref(it)) + '"' +
+        ' data-rid="' + esc(sp.rid) + '" data-lid="' + esc(it.id) + '" data-pos="' + (Number(it.pos) || 1) + '"' +
+        ' data-reason="SPONSORED" data-sp="1" data-surface="search_sponsored">' +
+      '<div class="img">' +
+        '<span class="chip">' + esc(it.category || 'Pet Service') + '</span>' +
+        '<span class="badge-sponsored" aria-label="Sponsored listing">' + esc(it.label || 'Sponsored') + '</span>' +
+        (rating ? '<span class="rate">★ ' + rating.toFixed(1) + '</span>' : '') +
+        '<img loading="lazy" src="' + esc(cardImg(it)) + '" alt="" onerror="this.remove()" />' +
+      '</div>' +
+      '<div class="body">' +
+        '<h3>' + esc(it.name) + '</h3>' +
+        '<p>📍 ' + esc(it.address || [it.city, it.state].filter(Boolean).join(', ') || it.city || '') + '</p>' +
+        (it.review_count ? '<p style="margin-top:6px;">' + (Number(it.review_count) || 0) + ' Google ratings</p>' : '') +
+      '</div>' +
+    '</a>';
+    wrap.hidden = false;
+    if (window.recoTrack && recoTrack.observe) { try { recoTrack.observe(box, 'search_sponsored'); } catch (e) {} }
+    else window.addEventListener('load', function () { if (window.recoTrack && recoTrack.observe) { try { recoTrack.observe(box, 'search_sponsored'); } catch (e) {} } });
+  }
+  document.getElementById('sSponsoredGrid').addEventListener('click', function (ev) {
+    var el = ev.target && ev.target.closest ? ev.target.closest('[data-rid]') : null;
+    if (!el) return;
+    var d = el.dataset;
+    try { if (window.trackEvent) window.trackEvent('sponsored_click', { surface: 'search_sponsored', reason: 'SPONSORED', listing_id: d.lid }); } catch (e) {}
+    if (window.recoTrack && recoTrack.click) { try { recoTrack.click(el); } catch (e) {} return; }
+    var evt = { rid: d.rid, type: 'click', listingId: d.lid, pos: Number(d.pos) || 1, reason: 'SPONSORED', sponsored: true, surface: 'search_sponsored' };
+    try { sessionStorage.setItem('reco:last', JSON.stringify({ rid: d.rid, listingId: d.lid, surface: 'search_sponsored', pos: evt.pos, reason: 'SPONSORED', sponsored: true, ts: Date.now() })); } catch (e) {}
+    if (api.recoEvents) api.recoEvents([evt]);
+  });
+
   function runSearch(pushUrl) {
     var q = document.getElementById('fq').value.trim();
-    var city = document.getElementById('fcity').value.trim().replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
+    var rawCity = document.getElementById('fcity').value.trim();
+    var city = rawCity.replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
     var category = document.getElementById('fcat').value;
 
     if (pushUrl && history.replaceState) {
@@ -180,10 +301,19 @@
     document.getElementById('sCount').textContent = 'Searching…';
     document.getElementById('sGrid').innerHTML = '';
     document.getElementById('sEmpty').hidden = true;
+    renderSponsored(null);
 
+    var mySeq = ++searchSeq;
+    if (window.trackEvent && (q || city || category)) {
+      window.trackEvent('search', { search_term: q, city: city, category: category });
+    }
+    var spP = sponsoredFor(rawCity, city, category);
     api.listingsSearch({ q: q, city: city, category: category, limit: 60 }).then(function (r) {
+      if (mySeq !== searchSeq) return;
       render(r.listings || []);
+      spP.then(function (sp) { if (mySeq === searchSeq) renderSponsored(sp); });
     }).catch(function (err) {
+      if (mySeq !== searchSeq) return;
       document.getElementById('sCount').textContent = '';
       var box = document.getElementById('sEmpty');
       box.hidden = false;
@@ -206,8 +336,9 @@
     }
     count.textContent = list.length + (list.length === 60 ? '+' : '') + ' businesses found';
     grid.innerHTML = list.map(function (b) {
-      var rating = Number(b.rating) || 0;
-      return '<a class="card" href="' + listingUrl(b) + '">' +
+      // No review count, no score (same rule as the city and listing pages).
+      var rating = (Number(b.review_count) || 0) >= 1 ? (Number(b.rating) || 0) : 0;
+      return '<a class="card" href="' + listingUrl(b) + '" data-lid="' + esc(b.id) + '">' +
         '<div class="img">' +
           '<span class="chip">' + esc(b.category || 'Pet Service') + '</span>' +
           (rating ? '<span class="rate">★ ' + rating.toFixed(1) + '</span>' : '') +
@@ -216,7 +347,7 @@
         '<div class="body">' +
           '<h3>' + esc(b.name) + '</h3>' +
           '<p>📍 ' + esc(b.address || [b.city, b.state].filter(Boolean).join(', ') || b.city || '') + '</p>' +
-          (b.review_count ? '<p style="margin-top:6px;">' + b.review_count + ' Google ratings</p>' : '') +
+          (b.review_count ? '<p style="margin-top:6px;">' + (Number(b.review_count) || 0) + ' Google ratings</p>' : '') +
         '</div>' +
       '</a>';
     }).join('');

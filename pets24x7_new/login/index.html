@@ -7,6 +7,17 @@
 <title>Sign in — Pets24x7.com</title>
 <meta name="description" content="Sign in to Pets24x7 — pet parents and business owners." />
 <meta name="robots" content="noindex" />
+<link rel="canonical" href="https://pets24x7.com/login/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Sign in — Pets24x7.com" />
+<meta property="og:description" content="Sign in to Pets24x7 — pet parents and business owners." />
+<meta property="og:url" content="https://pets24x7.com/login/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Sign in — Pets24x7.com" />
+<meta name="twitter:description" content="Sign in to Pets24x7 — pet parents and business owners." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -66,12 +77,20 @@
     display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-muted);
     background:#F8FAFC;border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin:20px 0 18px;line-height:1.45;
   }
+  .notice{font-size:13.5px;line-height:1.5;border-radius:12px;padding:12px 14px;margin:0 0 20px;font-weight:600}
+  .notice.warn{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
+  .notice.info{background:#EFF6FF;color:#1E3A8A;border:1px solid #BFDBFE}
+  .notice a{color:inherit;text-decoration:underline}
   .foot{font-size:13.5px;color:var(--text-muted);text-align:center;line-height:1.7}
   .foot a{color:var(--primary);font-weight:700}
   .foot a:hover{text-decoration:underline}
   .back{display:block;text-align:center;margin-top:22px;font-size:13px;color:var(--text-muted);position:relative;z-index:1}
   .back:hover{color:var(--primary)}
   @media (max-width:430px){ main{padding:12px 16px 40px} .card{padding:28px 20px 24px;border-radius:18px} h1{font-size:22px} .choice{padding:14px} .choice .ic{width:42px;height:42px;font-size:21px} }
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+  .choice{min-height:64px}
+  .notice{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -87,6 +106,8 @@
     <div class="eyebrow">Welcome back</div>
     <h1>Sign in to Pets24x7</h1>
     <p class="sub">Choose your account type. Both sign in the same way — a code we email you, your password, or Google.</p>
+
+    <div class="notice" id="verifyNotice" hidden></div>
 
     <a class="choice" href="/parent-login/">
       <span class="ic">🐕</span>
@@ -128,12 +149,43 @@
   // now one sign-in page per role, and the admin portal is deliberately not
   // linked from anywhere public — staff reach it at its own address.
   var BY_HASH = { '#parent': '/parent-login/', '#vendor': '/vendor-login/' };
+  // Carry a ?next= return address through to the parent sign-in page, which
+  // validates it and sends the person back there once signed in.
+  var nx = /[?&]next=[^&#]*/.exec(location.search);
+  var parentUrl = '/parent-login/' + (nx ? '?' + nx[0].slice(1) : '');
+  BY_HASH['#parent'] = parentUrl;
+  document.querySelector('a.choice[href="/parent-login/"]').setAttribute('href', parentUrl);
   var target = BY_HASH[location.hash];
   if (target) location.replace(target);
 
+  // Landing from an email-verification link that could not be used. The API
+  // (GET /api/parent/email/verify) sends a good link straight to the parent
+  // dashboard and a bad one here with ?verified=<invalid|expired|used>; without
+  // this the person saw a plain sign-in chooser and no idea what went wrong.
+  (function () {
+    var m = /[?&]verified=([a-z]+)/.exec(location.search);
+    if (!m) return;
+    var el = document.getElementById('verifyNotice');
+    var codeLink = '<a href="/parent-login/">sign in with an emailed code</a>';
+    var alt = ' You can ' + codeLink + ' instead — the code confirms your address too.';
+    var msg = {
+      used:    { cls: 'info', html: 'That verification link was already used, so your email is confirmed. Please ' + codeLink + ' or your password.' },
+      expired: { cls: 'warn', html: 'That verification link has expired.' + alt },
+      invalid: { cls: 'warn', html: 'That verification link is not valid. It may have been replaced by a newer one.' + alt }
+    }[m[1]];
+    if (!msg) return;
+    el.className = 'notice ' + msg.cls;
+    el.innerHTML = msg.html;   // static strings only — nothing from the URL is inserted
+    el.hidden = false;
+  })();
+
   // Already signed in? Go to the matching dashboard rather than asking again.
   var DASH = { pet_parent: '/dashboard/parent/', vendor: '/dashboard/vendor/', admin: '/dashboard/admin/' };
+  // A signed-in parent who arrived with ?next= goes through the parent sign-in
+  // page, which validates the return address and forwards them there, rather
+  // than being dropped on the dashboard and losing where they were headed.
   api.me().then(function (r) {
+    if (r && r.role === 'pet_parent' && nx) return location.replace(parentUrl);
     if (r && r.role && DASH[r.role]) location.replace(DASH[r.role]);
   }).catch(function () {});
 </script>

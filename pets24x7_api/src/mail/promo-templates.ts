@@ -9,22 +9,22 @@
 // own account, and links to the exact page that acts on it. A promotional mail
 // with no number and no destination is the kind people unsubscribe from.
 
-import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
-import { Button, InfoBox, Note, Text, esc, h, page } from './components.js';
+import { Button, InfoBox, Note, Text, esc, h, page, siteUrl, track as trackLink, vendorDash, who } from './components.js';
 
-const SITE = () => env.PUBLIC_SITE_URL.replace(/\/+$/, '');
-const VENDOR_DASH = () => `${SITE()}/dashboard/vendor/`;
+const SITE = () => siteUrl('/').replace(/\/+$/, '');
+const VENDOR_DASH = () => vendorDash();
 
 /**
- * Tags a link so clicks from mail are attributable in analytics.
+ * Tags a link so clicks from mail are attributable in analytics. Thin wrapper
+ * over the shared helper in components.ts: the template tag becomes
+ * utm_medium, and the campaign groups parent vs vendor engagement mail.
  *
  * Without this every visit from these campaigns lands in "direct" and there is
  * no way to tell which message actually brought anyone back.
  */
-export function track(url: string, campaign: string, medium = 'email'): string {
-  const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}utm_source=pets24x7&utm_medium=${encodeURIComponent(medium)}&utm_campaign=${encodeURIComponent(campaign)}`;
+export function track(url: string, tag: string): string {
+  return trackLink(url, tag, tag.startsWith('parent_') ? 'parent_engagement' : 'vendor_engagement');
 }
 
 export interface VendorPromoContext {
@@ -43,6 +43,8 @@ export function vendorListingLiveEmail(to: string, ctx: VendorPromoContext, city
   const url = ctx.listingUrl ? track(ctx.listingUrl, 'vendor_listing_live') : track(VENDOR_DASH(), 'vendor_listing_live');
   const where = ctx.city ? `in ${ctx.city}` : 'in your city';
   return {
+    tag: 'vendor_listing_live',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: `${ctx.businessName} is live on Pets24x7 — see your page`,
@@ -70,9 +72,11 @@ export function vendorListingLiveEmail(to: string, ctx: VendorPromoContext, city
 // Profile completion — names the specific gaps rather than a percentage.
 // ---------------------------------------------------------------------------
 export function vendorProfileGapsEmail(to: string, ctx: VendorPromoContext, missing: string[]): MailInput {
-  const url = track(`${VENDOR_DASH()}?view=listing`, 'vendor_profile_gaps');
+  const url = track(vendorDash('listing'), 'vendor_profile_gaps');
   const list = missing.map((m) => `<li style="margin-bottom:6px">${esc(m)}</li>`).join('');
   return {
+    tag: 'vendor_profile_gaps',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: `${missing.length} thing${missing.length === 1 ? '' : 's'} missing from your Pets24x7 listing`,
@@ -95,8 +99,10 @@ export function vendorProfileGapsEmail(to: string, ctx: VendorPromoContext, miss
 // Unanswered enquiries — the only promo mail with real money behind it.
 // ---------------------------------------------------------------------------
 export function vendorOpenEnquiriesEmail(to: string, ctx: VendorPromoContext, openCount: number): MailInput {
-  const url = track(`${VENDOR_DASH()}?view=enquiries`, 'vendor_open_enquiries');
+  const url = track(vendorDash('enquiries'), 'vendor_open_enquiries');
   return {
+    tag: 'vendor_open_enquiries',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: `${openCount} customer${openCount === 1 ? '' : 's'} waiting on ${ctx.businessName}`,
@@ -118,9 +124,11 @@ export function vendorOpenEnquiriesEmail(to: string, ctx: VendorPromoContext, op
 // Reviews — asking is the only thing that reliably produces them.
 // ---------------------------------------------------------------------------
 export function vendorCollectReviewsEmail(to: string, ctx: VendorPromoContext): MailInput {
-  const url = track(`${VENDOR_DASH()}?view=performance`, 'vendor_collect_reviews');
+  const url = track(vendorDash('reviews'), 'vendor_collect_reviews');
   const has = (ctx.reviewCount ?? 0) > 0;
   return {
+    tag: 'vendor_collect_reviews',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: has
@@ -146,15 +154,17 @@ export function vendorCollectReviewsEmail(to: string, ctx: VendorPromoContext): 
 // Visibility upsell — honest about what it does and does not buy.
 // ---------------------------------------------------------------------------
 export function vendorVisibilityEmail(to: string, ctx: VendorPromoContext, cityListings: number): MailInput {
-  const url = track(`${VENDOR_DASH()}?view=subscriptions`, 'vendor_visibility');
+  const url = track(vendorDash('grow'), 'vendor_visibility');
   const where = ctx.city || 'your city';
   return {
+    tag: 'vendor_visibility',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: `Get ${ctx.businessName} seen first in ${where}`,
     html: page({
       eyebrow: 'Grow',
-      heading: `You are one of ${cityListings > 0 ? cityListings : 'many'} in ${esc(where)}`,
+      heading: `You are one of ${cityListings > 0 ? cityListings : 'many'} in ${where}`,
       intro: h`Pet owners rarely scroll past the first few results. A featured placement puts ${ctx.businessName} at the top of its category in ${where}.`,
       blocks: [
         Button('See placement options', url),
@@ -179,20 +189,23 @@ export function parentNewNearbyEmail(
   const rows = businesses
     .map(
       (b) =>
-        `<tr><td style="padding:10px 0;border-bottom:1px solid #E5E7EB">
-           <a href="${track(b.url, 'parent_new_nearby')}" style="color:#2563EB;font-weight:700;text-decoration:none">${esc(b.name)}</a>
-           <div style="color:#6B7280;font-size:13px;margin-top:2px">${esc(b.category)}${b.rating ? ` · ★ ${esc(b.rating)}` : ''}</div>
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #e5e7eb">
+           <a href="${esc(track(b.url, 'parent_new_nearby'))}" style="color:#111827;font-weight:700;text-decoration:none">${esc(b.name)}</a>
+           <div style="color:#6b7280;font-size:13px;margin-top:2px">${esc(b.category)}${b.rating ? ` · ★ ${esc(b.rating)}` : ''}</div>
          </td></tr>`,
     )
     .join('');
   const browse = track(`${SITE()}/search/?city=${encodeURIComponent(city)}`, 'parent_new_nearby');
+  name = who(name);
   return {
+    tag: 'parent_new_nearby',
+    campaign: 'parent_engagement',
     to,
     kind: 'marketing',
     subject: `${businesses.length} new pet business${businesses.length === 1 ? '' : 'es'} in ${city}`,
     html: page({
       eyebrow: 'New near you',
-      heading: `Just added in ${esc(city)}`,
+      heading: `Just added in ${city}`,
       intro: h`Hi ${name} — these joined Pets24x7 in ${city} recently. They were not on the site last time you looked.`,
       blocks: [
         Text(`<table role="presentation" width="100%" style="border-collapse:collapse">${rows}</table>`),
@@ -217,6 +230,8 @@ export function claimListingEmail(to: string, ctx: VendorPromoContext): MailInpu
   const listingUrl = ctx.listingUrl ? track(ctx.listingUrl, 'vendor_claim_listing') : null;
   const where = ctx.city ? ` in ${ctx.city}` : '';
   return {
+    tag: 'vendor_claim_listing',
+    campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
     subject: `${ctx.businessName} is listed on Pets24x7 — claim it free`,
@@ -240,7 +255,7 @@ export function claimListingEmail(to: string, ctx: VendorPromoContext): MailInpu
           '</ul>',
         ),
         Button('Claim my listing', claimUrl),
-        ...(listingUrl ? [Note(`Prefer to look first? <a href="${listingUrl}">See your listing as it appears today</a>.`)] : []),
+        ...(listingUrl ? [Note(`Prefer to look first? <a href="${esc(listingUrl)}" style="color:#c2410c;font-weight:600">See your listing as it appears today</a>.`)] : []),
         Note('We verify with the phone number already on the listing, so nobody else can claim your business.'),
       ],
       preheader: `Claim ${ctx.businessName} on Pets24x7 — free.`,

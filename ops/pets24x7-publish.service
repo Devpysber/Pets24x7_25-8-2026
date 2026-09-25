@@ -1,0 +1,14 @@
+[Unit]
+Description=Publish the pets24x7 listings from MySQL to the static site
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The script takes /run/pets24x7-publish.lock itself and waits for a publish
+# that pets24x7-deploy.sh started, so runs never overlap.
+ExecStart=/usr/local/bin/pets24x7-publish.sh
+# A render is a few minutes of CPU; keep it behind the API and nginx.
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=45min

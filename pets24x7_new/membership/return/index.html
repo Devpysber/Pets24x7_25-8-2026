@@ -6,6 +6,16 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Confirming payment — Pets24x7.com</title>
 <meta name="robots" content="noindex" />
+<meta name="description" content="Confirming your Pets24x7 membership payment." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Confirming payment — Pets24x7.com" />
+<meta property="og:description" content="Confirming your Pets24x7 membership payment." />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Confirming payment — Pets24x7.com" />
+<meta name="twitter:description" content="Confirming your Pets24x7 membership payment." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -31,6 +41,21 @@
   .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
   .btn-primary:hover{background:var(--primary-dark);color:#fff}
   .small{font-size:13px;color:var(--text-muted);margin-top:18px}
+  /* The hidden attribute must win over component display rules (flex banners,
+     dividers, buttons); without this they render even while hidden. */
+  [hidden]{display:none !important}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+  .btn{min-height:44px;justify-content:center}
+  p{overflow-wrap:anywhere}
+  .meta div{gap:12px}
+  .meta div span{flex-shrink:0}
+  .meta div strong{min-width:0;text-align:right;overflow-wrap:anywhere}
+  @media (max-width:430px){
+    body{padding:16px}
+    .card{padding:36px 20px;border-radius:16px}
+    .actions .btn{flex:1 1 100%}
+  }
 </style>
 </head>
 <body>
@@ -51,6 +76,7 @@
     <div class="meta" id="okMeta"></div>
     <div class="actions">
       <a href="/dashboard/parent/" class="btn btn-primary">Open my dashboard →</a>
+      <a href="#" class="btn" id="invoiceLink" target="_blank" rel="noopener" hidden>Download invoice</a>
     </div>
   </section>
 
@@ -82,14 +108,39 @@
 <script src="/api-client.js"></script>
 <script>
   function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
-  function fmtINR(p){return '₹' + (p/100).toLocaleString('en-IN', {maximumFractionDigits:0})}
+  // The payment row carries its currency (INR or USD) — format with it.
+  function fmtMoney(minor, currency){
+    var cur = (currency || 'INR').toUpperCase();
+    var n = (Number(minor) || 0) / 100;
+    if (cur === 'INR') return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0});
+    try { return n.toLocaleString('en-US', {style:'currency', currency:cur, maximumFractionDigits: n % 1 ? 2 : 0}); }
+    catch (e) { return cur + ' ' + n.toFixed(2); }
+  }
   function show(id) {
     ['sLoad','sOk','sFail','sPending'].forEach(function(x){ document.getElementById(x).hidden = (x !== id); });
   }
 
   function qs(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
-    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    // A malformed escape would throw here and strand the payer on the spinner.
+    try { return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; } catch (e) { return ''; }
+  }
+
+  // GA4 `purchase`, once per transaction: a reload of this page (or opening it
+  // again from history) must not count the same sale twice. The transaction_id
+  // also lets GA de-duplicate on its side.
+  function reportPurchase(p, plan) {
+    var key = 'p24:purchase:' + (p.merchantTxnId || txn);
+    try { if (localStorage.getItem(key)) return; } catch (e) {}
+    try {
+      if (window.trackEvent) window.trackEvent('purchase', {
+        transaction_id: p.merchantTxnId || txn,
+        currency: (p.currency || 'INR').toUpperCase(),
+        value: (Number(p.amountMinor) || 0) / 100,
+        items: [{ item_id: plan ? plan.id : 'membership', item_name: plan ? plan.name : 'Membership', item_category: 'membership', price: (Number(p.amountMinor) || 0) / 100, quantity: 1 }]
+      });
+    } catch (e) {}
+    try { localStorage.setItem(key, '1'); } catch (e) {}
   }
 
   var txn = qs('txn');
@@ -111,10 +162,16 @@
           : 'Your Pets24x7 membership is active.';
         document.getElementById('okMeta').innerHTML =
           (plan ? '<div><span>Plan</span><strong>' + esc(plan.name) + '</strong></div>' : '') +
-          '<div><span>Amount</span><strong>' + fmtINR(p.amountMinor) + '</strong></div>' +
+          '<div><span>Amount</span><strong>' + fmtMoney(p.amountMinor, p.currency) + '</strong></div>' +
           (p.membership && p.membership.endsAt ? '<div><span>Valid until</span><strong>' + new Date(p.membership.endsAt).toLocaleDateString('en-IN', {month:'short',day:'numeric',year:'numeric'}) + '</strong></div>' : '') +
           '<div><span>Transaction</span><strong style="font-family:monospace;font-size:11px">' + esc(txn) + '</strong></div>';
+        // The invoice is served by the API (GET /api/memberships/invoice/:txn)
+        // and only once the payment has settled, which it now has.
+        var inv = document.getElementById('invoiceLink');
+        inv.href = (api.base || '') + '/api/memberships/invoice/' + encodeURIComponent(p.merchantTxnId || txn);
+        inv.hidden = false;
         show('sOk');
+        reportPurchase(p, plan);
         return;
       }
       if (p.status === 'FAILED' || p.status === 'CANCELLED') {
@@ -128,8 +185,24 @@
       } else {
         show('sPending');
       }
-    }).catch(function () {
-      // If not signed in or other error, retry a couple times then bail
+    }).catch(function (e) {
+      var status = e && e.status;
+      // Signed out (cookie expired mid-checkout): retrying cannot help. The
+      // payment itself is safe — the gateway webhook and the dashboard both
+      // settle it — so ask them to sign in and send them back here after.
+      if (status === 401 || status === 403) {
+        show('sFail');
+        document.getElementById('failMsg').innerHTML =
+          'Please <a href="/parent-login/?next=' + encodeURIComponent(location.pathname + location.search) +
+          '">sign in</a> to see this payment. If you completed it, your membership activates automatically.';
+        return;
+      }
+      if (status === 404) {
+        show('sFail');
+        document.getElementById('failMsg').textContent = 'We could not find this payment on your account. If you completed it, check your dashboard or WhatsApp us with the reference ' + txn + '.';
+        return;
+      }
+      // Network blip or server error: retry a couple of times, then bail.
       if (tries < 5) { setTimeout(function(){ poll(tries + 1); }, 2000); return; }
       show('sFail');
       document.getElementById('failMsg').textContent = 'Could not confirm payment automatically. Open your dashboard to check.';

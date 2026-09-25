@@ -41,6 +41,21 @@ model Listing {
   googleCid    String?   @db.VarChar(64)
   gmbLink      String?   @db.Text
   claimStatus  String    @default("UNCLAIMED") @db.VarChar(16)
+  // Detail an admin (or an import) can hold for an unclaimed listing. Once a
+  // business claims it, the vendor's own profile fields take precedence on the
+  // public page; these stay as the directory's copy.
+  description  String?   @db.Text
+  openingHours String?   @db.Text
+  services     String?   @db.Text
+  email        String?   @db.VarChar(191)
+  whatsapp     String?   @db.VarChar(32)
+  locality     String?   @db.VarChar(160)
+  // JSON array of image sources (hosted URL or resized data URL), same rule as
+  // Vendor.galleryImages. Not loaded into the in-memory index.
+  photos       Json?
+  // Hidden listings stay in the admin directory but are left out of every
+  // public API (search, recent, popular, detail, recommendations, featured).
+  hidden       Boolean   @default(false)
   // Set for rows that arrived through an admin import or a vendor edit, so the
   // newest entries can be listed first without scanning the whole table.
   importedAt   DateTime?
@@ -52,6 +67,7 @@ model Listing {
   @@index([phoneLast10])
   @@index([city])
   @@index([importedAt])
+  @@index([hidden])
   @@map("listings")
 }
 
@@ -82,6 +98,9 @@ model ListingActivity {
   @@index([listingId, kind])
   @@index([vendorId, createdAt])
   @@index([createdAt])
+  @@index([parentId, createdAt]) // parent viewed-history for recommendations
+  @@index([kind, createdAt]) // 30-day popularity snapshot + /api/listings/popular
+  @@index([city, kind, createdAt]) // trends by city, city-scoped popular
   @@map("listing_activity")
 }
 
@@ -113,6 +132,9 @@ model PetParent {
   // lastDigestAt paces the weekly recommendations digest specifically.
   lastMarketingAt DateTime?
   lastDigestAt    DateTime?
+  // Recommendations digest cadence: 'DAILY' | 'WEEKLY' | 'OFF'. Null means the
+  // admin default in Setting 'reco:config' (digest.defaultFrequency).
+  digestFrequency String?   @db.VarChar(8)
   reviews         Review[]
 
   // Ids featured in the last promotional mails, newest first, as JSON text.
@@ -185,6 +207,7 @@ model SavedListing {
 
   @@unique([parentId, listingId])
   @@index([parentId])
+  @@index([listingId]) // save-count popularity signal
   @@map("saved_listings")
 }
 
@@ -294,7 +317,10 @@ model Vendor {
   events Event[]
 
   @@index([status])
+  @@index([email]) // vendor email sign-in + register-business duplicate check
+  @@index([createdAt]) // admin overview counts / newest-first lists
   @@index([country, city])
+  @@index([claimedAt]) // GET /api/admin/listings orders claimed vendors by claimedAt desc
   @@map("vendors")
 }
 
@@ -421,6 +447,9 @@ model Enquiry {
   source        String? // "listing_page" | "city_page" | "marketing_modal"
   status        EnquiryStatus @default(NEW)
   respondedAt   DateTime?
+  // First time it was marked COMPLETED. The parent is told once; a vendor
+  // reopening and closing it again must not mail "your enquiry is closed" twice.
+  closedAt      DateTime?
   handledBy     String? // vendor id or admin id that actioned it
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @default(now()) @updatedAt
@@ -429,6 +458,8 @@ model Enquiry {
   @@index([listingId])
   @@index([status])
   @@index([createdAt])
+  @@index([petParentId, createdAt]) // per-parent recommendations + digest
+  @@index([city, createdAt]) // admin demand trends
   @@map("enquiries")
 }
 
@@ -698,6 +729,7 @@ model FeaturedListing {
 
   @@index([status, endsAt])
   @@index([citySlug, categorySlug, status])
+  @@index([vendorId, status]) // vendor upsell / renewal checks
   @@map("featured_listings")
 }
 
@@ -962,4 +994,55 @@ model VendorEmailToken {
 
   @@index([vendorId])
   @@map("vendor_email_tokens")
+}
+
+// -----------------------------------------------------------
+// Recommendation + sponsored-slot delivery, one row per day and cell.
+//
+// Written only by src/feed/reco/events.ts as atomic upsert-increments, so
+// several API instances can flush into the same row. Impressions and clicks
+// are validated against the request id that actually served the listing, so a
+// forged beacon cannot inflate a sponsored slot's numbers.
+// -----------------------------------------------------------
+model RecoStatDaily {
+  id          String   @id @default(cuid())
+  day         DateTime @db.Date
+  // parent_home | parent_feed | listing_similar | listing_nearby | city_top |
+  // home_top | search_sponsored | featured_strip | email_digest
+  surface     String   @db.VarChar(32)
+  variant     String   @default("A") @db.VarChar(8)
+  listingId   String   @db.VarChar(191)
+  reason      String   @db.VarChar(32) // reason code enum
+  sponsored   Boolean  @default(false)
+  featuredId  String?  @db.VarChar(191)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([day, surface, variant, listingId, reason, sponsored])
+  @@index([listingId, day])
+  @@index([surface, day])
+  @@index([featuredId, day])
+  @@index([day])
+  @@map("reco_stats_daily")
+}
+
+// -----------------------------------------------------------
+// Cluster-wide lease for scheduled jobs (src/shared/job-lock.ts).
+//
+// Every API instance runs the same schedulers, so without this N servers mean
+// N reminder sweeps and N admin digests. A run first takes the row for its job
+// name: an atomic conditional UPDATE (only when the lease has expired or is
+// already ours) or, for a job never seen before, an INSERT that the primary
+// key lets only one instance win. The holder renews the lease while it works;
+// a crashed holder's lease simply runs out.
+// -----------------------------------------------------------
+model JobLock {
+  name       String   @id @db.VarChar(120)
+  holder     String   @db.VarChar(191)
+  expiresAt  DateTime @db.DateTime(3)
+  acquiredAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt  DateTime @updatedAt @db.DateTime(3)
+
+  @@map("job_locks")
 }

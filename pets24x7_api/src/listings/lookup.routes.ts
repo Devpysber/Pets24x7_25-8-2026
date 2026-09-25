@@ -2,22 +2,27 @@
 //   GET /api/listings/:id          → one listing by id
 //   GET /api/listings/search?q=    → name/city fuzzy (Phase 2)
 //   GET /api/listings/by-phone?p=  → claim helper (rate-limited, no PII leakage)
+//
+// A listing an admin has hidden (listings.hidden) is absent from all of these:
+// search/recent skip it, popular drops it, by-phone leaves it out and /:id 404s.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import { asyncHandler } from '../shared/async-handler.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 import { NotFoundError } from '../shared/errors.js';
-import { findListingByPhone, getListingById, searchListings, indexStats, recentListings } from './index.js';
+import { findPublicListingsByPhone, getPublicListingById, searchListingsPage, indexStats, recentListings, publicListing, shownRating } from './index.js';
+import { parsePhotos } from './photos.js';
 import { normalizePhone } from '../shared/phone.js';
 import { prisma } from '../db.js';
+import { isVendorApproved } from '../shared/vendor-status.js';
 
 export const listingsRouter = Router();
 
 const MAX_SEARCH_RESULTS = 100;
 
-const phoneLookupLimiter = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true });
+const phoneLookupLimiter = makeLimiter('listing-phone-lookup', { windowMs: 60_000, max: 10, standardHeaders: true });
 
 // Public directory counters. Used by the home and marketing pages, so the
 // figures they print are the real ones rather than numbers typed into markup.
@@ -50,11 +55,38 @@ const POPULAR_MIN_TAPS_PER_LISTING = 3;
 const POPULAR_MIN_LISTINGS = 3;
 const CONTACT_KINDS = ['phone_click', 'whatsapp_click', 'website_click'];
 
+// Every generated city/category page asks for this on load, and the answer
+// only moves as taps accumulate over 30 days — so it is cached briefly per
+// (city, category) instead of re-running the groupBy for every page view.
+const POPULAR_CACHE_MS = 5 * 60 * 1000;
+const POPULAR_CACHE_MAX = 2000;
+const popularCache = new Map<string, { at: number; body: unknown }>();
+
+/** Drops the cached leaderboards (after an admin hides a listing). */
+export function clearPopularCache(): void {
+  popularCache.clear();
+}
+
 listingsRouter.get(
   '/popular',
   asyncHandler(async (req, res) => {
-    const city = String(req.query.city ?? '').trim();
-    const category = String(req.query.category ?? '').trim();
+    const city = (typeof req.query.city === 'string' ? req.query.city : '').trim().slice(0, 160);
+    const category = (typeof req.query.category === 'string' ? req.query.category : '').trim().slice(0, 160);
+    const cacheKey = `${city.toLowerCase()}|${category.toLowerCase()}`;
+    const hit = popularCache.get(cacheKey);
+    if (hit && Date.now() - hit.at < POPULAR_CACHE_MS) {
+      res.json(hit.body);
+      return;
+    }
+    const remember = (body: unknown) => {
+      if (popularCache.size >= POPULAR_CACHE_MAX) {
+        // Oldest first: a Map iterates in insertion order.
+        const oldest = popularCache.keys().next().value;
+        if (oldest !== undefined) popularCache.delete(oldest);
+      }
+      popularCache.set(cacheKey, { at: Date.now(), body });
+      res.json(body);
+    };
     const since = new Date(Date.now() - POPULAR_WINDOW_DAYS * 24 * 3600 * 1000);
 
     let grouped: Array<{ listingId: string; _count: { _all: number } }> = [];
@@ -82,13 +114,13 @@ listingsRouter.get(
 
     const strong = grouped.filter((g) => g._count._all >= POPULAR_MIN_TAPS_PER_LISTING);
     if (strong.length < POPULAR_MIN_LISTINGS) {
-      res.json({ ok: true, enough: false, cards: [], windowDays: POPULAR_WINDOW_DAYS });
+      remember({ ok: true, enough: false, cards: [], windowDays: POPULAR_WINDOW_DAYS });
       return;
     }
 
     const cards = strong
       .map((g) => {
-        const l = getListingById(g.listingId);
+        const l = getPublicListingById(g.listingId);
         if (!l) return null;
         return {
           id: l.id,
@@ -99,7 +131,7 @@ listingsRouter.get(
           state: l.state ?? null,
           address: l.address ?? null,
           phone: l.phone ?? null,
-          rating: l.rating,
+          rating: shownRating(l),
           reviewCount: l.review_count,
           contacts: g._count._all,
           url: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
@@ -108,26 +140,59 @@ listingsRouter.get(
       .filter(Boolean)
       .slice(0, 6);
 
-    res.json({ ok: true, enough: cards.length >= POPULAR_MIN_LISTINGS, cards, windowDays: POPULAR_WINDOW_DAYS });
+    remember({ ok: true, enough: cards.length >= POPULAR_MIN_LISTINGS, cards, windowDays: POPULAR_WINDOW_DAYS });
   }),
 );
+
+// Query strings are untrusted: ?q[]=a&q[]=b arrives as an array and used to
+// throw inside .toLowerCase() (a 500). Anything that is not a plain string is
+// read as empty; lengths are capped so a 1 MB "q" cannot drive the scan.
+const qs = (max: number) =>
+  z.preprocess((v) => (typeof v === 'string' ? v : ''), z.string().max(max).catch(''));
+const SearchQuery = z.object({
+  q: qs(200),
+  category: qs(120),
+  city: qs(120),
+  citySlug: qs(160),
+  country: qs(4),
+  newest: qs(8),
+  limit: qs(8),
+  offset: qs(8),
+});
 
 listingsRouter.get(
   '/search',
   asyncHandler(async (req, res) => {
-    const q = (req.query.q as string) || '';
-    const category = (req.query.category as string) || '';
-    const city = (req.query.city as string) || '';
+    const query = SearchQuery.parse(req.query);
     // Clamp hard: the index holds 34k rows, so an unbounded (or NaN, which
     // compares false against every ceiling) limit would serve ~15 MB per
     // request to an anonymous caller.
-    const raw = Number(req.query.limit);
+    const raw = Number(query.limit || NaN);
     const limit = Number.isFinite(raw) ? Math.min(Math.max(Math.trunc(raw), 1), MAX_SEARCH_RESULTS) : 60;
+    // Paging: `offset` matches are skipped; `hasMore` says whether to ask again.
+    const rawOffset = Number(query.offset || 0);
+    const offset = Number.isFinite(rawOffset) ? Math.min(Math.max(Math.trunc(rawOffset), 0), 5_000) : 0;
     // `newest=1` surfaces freshly imported or edited listings first, which a
     // capped walk over 34k scraped rows would otherwise never reach.
-    const newestFirst = req.query.newest === '1' || req.query.newest === 'true';
-    const results = searchListings({ q, category, city, limit, newestFirst });
-    res.json({ ok: true, count: results.length, listings: results });
+    const newestFirst = query.newest === '1' || query.newest === 'true';
+    const { listings, hasMore } = searchListingsPage({
+      q: query.q,
+      category: query.category,
+      city: query.city,
+      citySlug: query.citySlug,
+      country: query.country,
+      limit,
+      offset,
+      newestFirst,
+    });
+    res.json({
+      ok: true,
+      count: listings.length,
+      offset,
+      hasMore,
+      nextOffset: hasMore ? offset + listings.length : null,
+      listings: listings.map(publicListing),
+    });
   }),
 );
 
@@ -138,7 +203,7 @@ listingsRouter.get(
     const raw = Number(req.query.limit);
     const limit = Number.isFinite(raw) ? Math.min(Math.max(Math.trunc(raw), 1), 48) : 12;
     const listings = recentListings(limit);
-    res.json({ ok: true, count: listings.length, listings });
+    res.json({ ok: true, count: listings.length, listings: listings.map(publicListing) });
   }),
 );
 
@@ -150,7 +215,7 @@ listingsRouter.get(
   asyncHandler(async (req, res) => {
     const { p } = ByPhoneQuery.parse(req.query);
     const phone = normalizePhone(p);
-    const matches = findListingByPhone(phone);
+    const matches = findPublicListingsByPhone(phone);
     // Return only the fields needed for the claim preview — keep response slim.
     res.json({
       ok: true,
@@ -163,7 +228,7 @@ listingsRouter.get(
         state: m.state ?? '',
         country: m.country,
         address: m.address ?? '',
-        rating: m.rating,
+        rating: shownRating(m),
         review_count: m.review_count,
         url: `/${(m.country || 'in').toLowerCase()}/${m.city_slug}/${m.id}/`,
       })),
@@ -175,12 +240,27 @@ listingsRouter.get(
 listingsRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {
-    const r = getListingById(req.params.id ?? '');
+    const r = getPublicListingById(req.params.id ?? '');
     if (!r) throw new NotFoundError('Listing not found');
+
+    // Directory detail kept in the table only (admin form / import).
+    let detail:
+      | { description: string | null; openingHours: string | null; services: string | null; whatsapp: string | null; locality: string | null; photos: unknown; hidden: boolean }
+      | null = null;
+    try {
+      detail = await prisma.listing.findUnique({
+        where: { id: r.id },
+        select: { description: true, openingHours: true, services: true, whatsapp: true, locality: true, photos: true, hidden: true },
+      });
+    } catch {
+      // DB offline — the index record alone.
+    }
+    // Hidden by another instance since this one last synced.
+    if (detail?.hidden) throw new NotFoundError('Listing not found');
 
     // Merge in the claimed vendor's uploaded image + verified state, if any.
     let claimed:
-      | { imageUrl: string | null; status: string; businessName: string; galleryImages: string | null; about: string | null; openingHours: string | null; servicesList: string | null; website: string | null }
+      | { imageUrl: string | null; status: string; businessName: string; galleryImages: string | null; about: string | null; openingHours: string | null; servicesList: string | null; website: string | null; whatsapp: string | null; phone: string }
       | null = null;
     try {
       claimed = await prisma.vendor.findFirst({
@@ -194,23 +274,44 @@ listingsRouter.get(
           openingHours: true,
           servicesList: true,
           website: true,
+          whatsapp: true,
+          phone: true,
         },
       });
     } catch {
       // DB offline — serve the static record as-is.
     }
+    // A suspended or rejected account (or a claim still awaiting approval) must
+    // not keep its photos and copy on the public page.
+    if (claimed && !isVendorApproved(claimed.status)) claimed = null;
+
+    // Photos: the verified business's own, when it has any; otherwise the ones
+    // an admin attached to the directory listing. Never a mix of the two.
+    const vendorPhotos = claimed ? [claimed.imageUrl, ...parseGallery(claimed.galleryImages)].filter((x): x is string => !!x) : [];
+    const listingPhotos = parsePhotos(detail?.photos);
+    const photos = vendorPhotos.length ? vendorPhotos : listingPhotos;
+    const photosFrom = vendorPhotos.length ? 'vendor' : listingPhotos.length ? 'listing' : null;
 
     res.json({
       ok: true,
       listing: {
-        ...r,
-        imageUrl: claimed?.imageUrl ?? null,
-        gallery: parseGallery(claimed?.galleryImages),
-        about: claimed?.about ?? null,
-        openingHours: claimed?.openingHours ?? null,
-        servicesList: claimed?.servicesList ?? null,
+        ...publicListing(r),
+        // imageUrl + gallery keep their old meaning (cover, then the rest) so
+        // existing pages show admin photos without a change.
+        imageUrl: vendorPhotos.length ? claimed?.imageUrl ?? null : photos[0] ?? null,
+        gallery: vendorPhotos.length ? parseGallery(claimed?.galleryImages) : photos.slice(1),
+        photos,
+        photosFrom,
+        // A verified business's own copy wins; the directory's fills the gap.
+        about: claimed?.about || detail?.description || null,
+        openingHours: claimed?.openingHours || detail?.openingHours || null,
+        servicesList: claimed?.servicesList || detail?.services || null,
+        locality: detail?.locality ?? null,
         website: claimed?.website ?? r.website ?? null,
-        claimed: !!claimed && (claimed.status === 'ACTIVE' || claimed.status === 'CLAIMED'),
+        // A claimed vendor's own WhatsApp/phone — the enquiry CTA prefers this
+        // over the platform's own number once the listing is verified.
+        whatsapp: claimed?.whatsapp ?? null,
+        claimed: !!claimed,
       },
     });
   }),

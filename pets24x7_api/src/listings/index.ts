@@ -32,7 +32,47 @@ export interface ListingRecord {
   google_cid?: string;
   gmb_link?: string;
   claimStatus?: 'UNCLAIMED' | 'CLAIMED';
+  /** Left out of every public API; still visible to admins and its owner. */
+  hidden?: boolean;
+  // Directory detail (admin form or import). Written to MySQL but NOT kept in
+  // the in-memory index (see indexRecord) — they are read from the table when a
+  // single listing is served. Absent means "leave the stored value alone".
+  description?: string | null;
+  opening_hours?: string | null;
+  services?: string | null;
+  email?: string | null;
+  whatsapp?: string | null;
+  locality?: string | null;
 }
+
+/** The detail fields above: persisted, never held in memory. */
+const DETAIL_KEYS = ['description', 'opening_hours', 'services', 'email', 'whatsapp', 'locality'] as const;
+
+/**
+ * The rating to show or rank by: a score with at least one review behind it,
+ * else 0 (unknown). The same rule as has_rating() in build_pages.py. Many rows
+ * keep a source score with review_count 0, which must not be presented as a
+ * Google rating. The stored value is left alone; only what is shown changes.
+ */
+export function shownRating(l: { rating?: number | string | null; review_count?: number | string | null }): number {
+  const rating = Number(l.rating) || 0;
+  return rating > 0 && (Number(l.review_count) || 0) >= 1 ? rating : 0;
+}
+
+/** A listing as the public API serves it: the record with shownRating applied. */
+export function publicListing<T extends ListingRecord>(l: T): T {
+  const { hidden: _hidden, ...rest } = l;
+  return { ...rest, rating: shownRating(l) } as T;
+}
+
+/** Columns the in-memory index is built from: never photos or the long text. */
+const INDEX_SELECT = {
+  id: true, name: true, category: true, categorySlug: true, categoryIcon: true,
+  city: true, citySlug: true, state: true, country: true, address: true,
+  phone: true, website: true, pincode: true, rating: true, reviewCount: true,
+  googleCid: true, gmbLink: true, claimStatus: true, hidden: true,
+  importedAt: true, updatedAt: true,
+} as const;
 
 // In-memory shape: map last-10-digits → list of listings (collisions exist
 // because same scrape phone can be re-listed under multiple categories).
@@ -44,16 +84,44 @@ const byId = new Map<string, ListingRecord>();
 const recentIds: string[] = [];
 
 let booted = false;
+// Set when the index came from the listings table (not the JSON fallback);
+// only then can startListingsSync() trust the table as the full set.
+let loadedFromDb = false;
+// Newest listings.updatedAt this process has seen. Prisma stamps updatedAt on
+// the writing instance's clock, so the sync reads a little behind it.
+let syncCursor = new Date(0);
 
 const slugify = (value: string | undefined, fallback: string) =>
   String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
 
+/** The city/category slug rule every writer uses (import, admin form, vendor edit). */
+export const listingSlug = slugify;
+
+// A spreadsheet round-trip turned ~580 Google CIDs into "6.60859E+18": as a
+// Maps link that opens nothing. Such a CID (and a link built from it) is
+// dropped on the way in and on the way out, so no page or email serves it.
+const cleanCid = (cid: string | null | undefined): string | undefined => {
+  const v = (cid ?? '').trim();
+  return /^\d+$/.test(v) ? v : undefined;
+};
+const cleanGmbLink = (link: string | null | undefined): string | undefined => {
+  const v = (link ?? '').trim();
+  if (!v) return undefined;
+  const m = /[?&]cid=([^&#]*)/.exec(v);
+  return m && !/^\d+$/.test(m[1] ?? '') ? undefined : v;
+};
+
 /** listings row -> the shape every caller already expects. */
+export function listingRecordFromRow(row: Parameters<typeof fromRow>[0]): ListingRecord {
+  return fromRow(row);
+}
+
 function fromRow(row: {
   id: string; name: string; category: string; categorySlug: string; categoryIcon: string | null;
   city: string; citySlug: string; state: string | null; country: string; address: string | null;
   phone: string | null; website: string | null; pincode: string | null; rating: number;
   reviewCount: number; googleCid: string | null; gmbLink: string | null; claimStatus: string;
+  hidden?: boolean | null;
 }): ListingRecord {
   return {
     id: row.id,
@@ -71,11 +139,19 @@ function fromRow(row: {
     ...(row.pincode ? { pincode: row.pincode } : {}),
     rating: row.rating,
     review_count: row.reviewCount,
-    ...(row.googleCid ? { google_cid: row.googleCid } : {}),
-    ...(row.gmbLink ? { gmb_link: row.gmbLink } : {}),
+    ...(cleanCid(row.googleCid) ? { google_cid: cleanCid(row.googleCid) } : {}),
+    ...(cleanGmbLink(row.gmbLink) ? { gmb_link: cleanGmbLink(row.gmbLink) } : {}),
     claimStatus: row.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
+    ...(row.hidden ? { hidden: true } : {}),
   };
 }
+
+const optText = (v: string | null | undefined, max?: number): string | null | undefined => {
+  if (v === undefined) return undefined;
+  const t = (v ?? '').trim();
+  if (!t) return null;
+  return max ? t.slice(0, max) : t;
+};
 
 /** The inverse, for writing an imported or edited listing back to MySQL. */
 function toRow(record: ListingRecord) {
@@ -96,16 +172,51 @@ function toRow(record: ListingRecord) {
     pincode: record.pincode ? record.pincode.slice(0, 20) : null,
     rating: Number(record.rating) || 0,
     reviewCount: Number(record.review_count) || 0,
-    googleCid: record.google_cid ? record.google_cid.slice(0, 64) : null,
-    gmbLink: record.gmb_link ?? null,
+    googleCid: cleanCid(record.google_cid)?.slice(0, 64) ?? null,
+    gmbLink: cleanGmbLink(record.gmb_link) ?? null,
     claimStatus: record.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
     importedAt: new Date(),
+    // Only what the caller set: an edit that re-writes a record from the index
+    // (which holds none of these) must not wipe them.
+    ...(record.hidden !== undefined ? { hidden: !!record.hidden } : {}),
+    ...(record.description !== undefined ? { description: optText(record.description) } : {}),
+    ...(record.opening_hours !== undefined ? { openingHours: optText(record.opening_hours) } : {}),
+    ...(record.services !== undefined ? { services: optText(record.services) } : {}),
+    ...(record.email !== undefined ? { email: optText(record.email, 191) } : {}),
+    ...(record.whatsapp !== undefined ? { whatsapp: optText(record.whatsapp, 32) } : {}),
+    ...(record.locality !== undefined ? { locality: optText(record.locality, 160) } : {}),
   };
 }
 
-function indexRecord(record: ListingRecord, recent = false): void {
+// indexStats() walks the whole index; the home page and admin overview call it
+// on every load. Cached until the index changes.
+let statsCache: ReturnType<typeof computeIndexStats> | null = null;
+
+function indexRecord(input: ListingRecord, recent = false): void {
+  statsCache = null;
+  // Detail text lives in MySQL only; 34k copies of it would sit in every
+  // search walk for nothing.
+  let record = input;
+  if (DETAIL_KEYS.some((k) => k in input)) {
+    record = { ...input };
+    for (const k of DETAIL_KEYS) delete record[k];
+  }
+  if (!record.hidden) delete record.hidden;
+  // Every way in (table, JSON fallback, import, vendor edit) passes here.
+  if (record.google_cid !== undefined && !cleanCid(record.google_cid)) delete record.google_cid;
+  if (record.gmb_link !== undefined && !cleanGmbLink(record.gmb_link)) delete record.gmb_link;
+  // Re-indexing an id (every vendor save, every re-import) must replace the old
+  // entry, not sit beside it: the stale copy stayed in its phone bucket, so a
+  // claim-by-phone kept offering the old name, or the old number's owner.
+  const existed = byId.has(record.id);
+  if (existed) removeListingFromIndex(record.id);
   byId.set(record.id, record);
-  if (recent) recentIds.push(record.id);
+  if (recent) {
+    // Only a re-index can have left an older entry behind; skip the scan at boot.
+    const at = existed ? recentIds.indexOf(record.id) : -1;
+    if (at >= 0) recentIds.splice(at, 1);
+    recentIds.push(record.id);
+  }
   if (!record.phone) return;
   const key = lastDigits(record.phone, 10);
   if (!key || key.length < 10) return;
@@ -116,10 +227,14 @@ function indexRecord(record: ListingRecord, recent = false): void {
 
 export async function initListingsIndex(): Promise<void> {
   try {
-    const rows = await prisma.listing.findMany({ orderBy: [{ importedAt: 'asc' }, { createdAt: 'asc' }] });
+    const rows = await prisma.listing.findMany({ select: INDEX_SELECT, orderBy: [{ importedAt: 'asc' }, { createdAt: 'asc' }] });
     if (rows.length > 0) {
-      for (const row of rows) indexRecord(fromRow(row), row.importedAt !== null);
+      for (const row of rows) {
+        indexRecord(fromRow(row), row.importedAt !== null);
+        if (row.updatedAt > syncCursor) syncCursor = row.updatedAt;
+      }
       booted = true;
+      loadedFromDb = true;
       logger.info(`listings index loaded from MySQL: ${byId.size} listings · ${phoneIndex.size} distinct phones`);
       return;
     }
@@ -168,15 +283,11 @@ async function loadFromJsonFiles(): Promise<void> {
       // across restarts, so they stay visible in capped searches.
       const isImportFile = f === 'imported_listings.json';
       for (const r of arr) {
-        byId.set(r.id, r);
-        if (isImportFile) recentIds.push(r.id);
-        if (!r.phone) continue;
-        const k = lastDigits(r.phone, 10);
-        if (!k || k.length < 10) continue;
-        const bucket = phoneIndex.get(k);
-        if (bucket) bucket.push(r);
-        else phoneIndex.set(k, [r]);
-        total++;
+        if (!r || typeof r.id !== 'string' || typeof r.name !== 'string') continue;
+        // indexRecord replaces an id seen in an earlier file instead of
+        // leaving a second copy in its phone bucket.
+        indexRecord(r, isImportFile);
+        if (r.phone && lastDigits(r.phone, 10).length >= 10) total++;
       }
     } catch (err) {
       logger.warn({ err, file: f }, 'listings index: skip unparseable file');
@@ -193,32 +304,80 @@ export function findListingByPhone(phone: string): ListingRecord[] {
   return phoneIndex.get(k) ?? [];
 }
 
+/** Any listing, hidden or not: for admin, owner and internal lookups. */
 export function getListingById(id: string): ListingRecord | undefined {
   return byId.get(id);
 }
 
-/** Recently added/edited listings first, then the boot-time index. */
-function iterateListings(newestFirst?: boolean): Iterable<ListingRecord> {
-  if (!newestFirst || recentIds.length === 0) return byId.values();
-  const seen = new Set<string>();
+/** A listing the public may see: undefined for an unknown or hidden id. */
+export function getPublicListingById(id: string): ListingRecord | undefined {
+  const r = byId.get(id);
+  return r && !r.hidden ? r : undefined;
+}
+
+/**
+ * Listings with this name in this city, compared the way the importer's
+ * duplicate check does (letters and digits only, any case). Hidden included.
+ */
+export function findListingsByNameCity(name: string, city: string, limit = 5): ListingRecord[] {
+  const norm = (v: string) => (v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const n = norm(name);
+  const c = (city || '').toLowerCase().trim();
+  if (!n || !c) return [];
   const out: ListingRecord[] = [];
+  for (const item of byId.values()) {
+    if (item.city.toLowerCase().trim() !== c) continue;
+    if (norm(item.name) !== n) continue;
+    out.push(item);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** Phone matches the public may see (the claim preview): hidden ones left out. */
+export function findPublicListingsByPhone(phone: string): ListingRecord[] {
+  return findListingByPhone(phone).filter((r) => !r.hidden);
+}
+
+/**
+ * Hides or shows a listing in the running index. The caller has already
+ * written listings.hidden; this only brings memory in step (and invalidates
+ * the stats object, which the reco city caches key on).
+ */
+export function setListingHiddenInIndex(id: string, hidden: boolean): void {
+  const r = byId.get(id);
+  if (!r) return;
+  statsCache = null;
+  if (hidden) r.hidden = true;
+  else delete r.hidden;
+}
+
+/**
+ * Recently added/edited listings first, then the boot-time index. A generator,
+ * so a search that fills its page early stops early: this used to copy all 34k
+ * records into a fresh array on every newest-first request.
+ */
+function* iterateListings(newestFirst?: boolean): Iterable<ListingRecord> {
+  if (!newestFirst || recentIds.length === 0) {
+    yield* byId.values();
+    return;
+  }
+  const seen = new Set<string>();
   for (let i = recentIds.length - 1; i >= 0; i--) {
     const id = recentIds[i]!;
     if (seen.has(id)) continue;
     const rec = byId.get(id);
     if (!rec) continue;
     seen.add(id);
-    out.push(rec);
+    yield rec;
   }
   for (const rec of byId.values()) {
-    if (seen.has(rec.id)) continue;
-    out.push(rec);
+    if (!seen.has(rec.id)) yield rec;
   }
-  return out;
 }
 
-/** Newest-first listings, for "what was just added" views. */
-export function recentListings(limit = 24): ListingRecord[] {
+/** Newest-first listings, for "what was just added" views. Hidden ones left out. */
+export function recentListings(limit = 24, opts: { includeHidden?: boolean } = {}): ListingRecord[] {
   const out: ListingRecord[] = [];
   const seen = new Set<string>();
   for (let i = recentIds.length - 1; i >= 0 && out.length < limit; i--) {
@@ -226,47 +385,89 @@ export function recentListings(limit = 24): ListingRecord[] {
     if (seen.has(id)) continue;
     seen.add(id);
     const rec = byId.get(id);
-    if (rec) out.push(rec);
+    if (rec && (opts.includeHidden || !rec.hidden)) out.push(rec);
   }
   return out;
 }
 
-export function searchListings(opts: { q?: string; category?: string; city?: string; limit?: number; newestFirst?: boolean }): ListingRecord[] {
+export function searchListings(opts: {
+  q?: string;
+  category?: string;
+  city?: string;
+  /** Exact city slug ("navi-mumbai"): unlike `city`, never matches a neighbouring town. */
+  citySlug?: string;
+  /** "IN" | "US" */
+  country?: string;
+  limit?: number;
+  /** Matches to skip, for paging. */
+  offset?: number;
+  newestFirst?: boolean;
+  /**
+   * Hidden listings are skipped unless this is set (admin views only).
+   * 'only' returns nothing but hidden ones.
+   */
+  includeHidden?: boolean | 'only';
+}): ListingRecord[] {
+  return searchListingsPage(opts).listings;
+}
+
+/** searchListings plus whether another page exists. */
+export function searchListingsPage(opts: Parameters<typeof searchListings>[0]): { listings: ListingRecord[]; hasMore: boolean } {
   const q = (opts.q || '').toLowerCase().trim();
   const qDigits = /^[\d\s+()-]+$/.test(q) ? q.replace(/\D/g, '') : '';
   const cat = (opts.category || '').toLowerCase().trim();
   const city = (opts.city || '').toLowerCase().trim();
+  const citySlug = (opts.citySlug || '').toLowerCase().trim();
+  const country = (opts.country || '').toUpperCase().trim();
   // Defence in depth: a caller that forgets to clamp must not be able to walk
   // the whole 34k index in one response.
   const requested = Number(opts.limit);
   const limit = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 1), 200) : 60;
+  const rawOffset = Number(opts.offset);
+  const offset = Number.isFinite(rawOffset) ? Math.min(Math.max(Math.trunc(rawOffset), 0), 10_000) : 0;
 
+  // Every word must match somewhere (name, category, city or address), so
+  // "grooming mumbai" or "vet bandra" works; before, the whole query had to
+  // appear as one substring of a single field and those returned nothing.
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  // Duplicates are collapsed per city, not across the whole index: a name-only
+  // key hid every other branch of a chain once one city had shown it.
   const seenNames = new Set<string>();
   const results: ListingRecord[] = [];
+  let skipped = 0;
+  let hasMore = false;
+  const hiddenMode = opts.includeHidden ?? false;
   for (const item of iterateListings(opts.newestFirst)) {
-    const normName = item.name.toLowerCase().trim();
+    if (hiddenMode === 'only' ? !item.hidden : !hiddenMode && item.hidden) continue;
+    const normName = item.name.toLowerCase().trim() + '|' + item.city.toLowerCase().trim();
     if (seenNames.has(normName)) continue;
+    if (country && String(item.country || '').toUpperCase() !== country) continue;
+    if (citySlug && (item.city_slug || '').toLowerCase() !== citySlug) continue;
 
     if (cat && cat !== 'all' && !item.category.toLowerCase().includes(cat) && !(item.category_slug || '').toLowerCase().includes(cat)) {
       continue;
     }
-    if (city && city !== 'all' && !item.city.toLowerCase().includes(city)) {
+    // city.html passes the URL slug ("navi-mumbai"), other callers the display
+    // name ("Navi Mumbai"); a name-only match dropped every multi-word city.
+    if (city && city !== 'all' && !item.city.toLowerCase().includes(city) && (item.city_slug || '').toLowerCase() !== city) {
       continue;
     }
     if (q) {
-      const match = item.name.toLowerCase().includes(q) ||
-                    item.category.toLowerCase().includes(q) ||
-                    item.city.toLowerCase().includes(q) ||
-                    (item.address && item.address.toLowerCase().includes(q)) ||
-                    // A pasted phone number, with or without spaces or +91.
-                    (qDigits.length >= 5 && !!item.phone && String(item.phone).replace(/\D/g, '').includes(qDigits));
-      if (!match) continue;
+      // A pasted phone number, with or without spaces or +91.
+      const phoneHit = qDigits.length >= 5 && !!item.phone && String(item.phone).replace(/\D/g, '').includes(qDigits);
+      if (!phoneHit) {
+        const hay = `${item.name} ${item.category} ${item.city} ${item.city_slug || ''} ${item.address || ''}`.toLowerCase();
+        if (!tokens.every((t) => hay.includes(t))) continue;
+      }
     }
     seenNames.add(normName);
+    if (skipped < offset) { skipped++; continue; }
+    // One match past the page proves there is a next one.
+    if (results.length >= limit) { hasMore = true; break; }
     results.push(item);
-    if (results.length >= limit) break;
   }
-  return results;
+  return { listings: results, hasMore };
 }
 
 /**
@@ -331,6 +532,8 @@ export function suggestListings(
 /**
  * Every listing in a city, de-duplicated by name. The recommender scores these
  * itself, so unlike searchListings() this applies no ranking and no limit.
+ * Hidden listings are left out: every caller (recommendations, city mails)
+ * shows the result to the public.
  */
 export function listingsInCity(city: string, country?: string): ListingRecord[] {
   const c = (city || '').toLowerCase().trim();
@@ -339,20 +542,49 @@ export function listingsInCity(city: string, country?: string): ListingRecord[] 
   const seen = new Set<string>();
   const out: ListingRecord[] = [];
   for (const item of byId.values()) {
+    if (item.hidden) continue;
     if (cc && String(item.country).toUpperCase() !== cc) continue;
     if (item.city.toLowerCase() !== c && (item.city_slug || '').toLowerCase() !== c) continue;
+    // One Google business once, whether the scrape repeated it under the same
+    // name or under a second category with a CID in common.
     const key = item.name.toLowerCase().trim();
-    if (seen.has(key)) continue;
+    const cidKey = item.google_cid ? `cid:${item.google_cid}` : '';
+    if (seen.has(key) || (cidKey && seen.has(cidKey))) continue;
     seen.add(key);
+    if (cidKey) seen.add(cidKey);
     out.push(item);
   }
   return out;
 }
 
+/**
+ * Public directory counters (GET /api/listings/_stats, the home and marketing
+ * pages). Hidden listings are left out, like from every other public API: a
+ * hidden row must not count, or put its city or category on the site. Admin
+ * totals that include them use indexSize().
+ */
 export function indexStats() {
+  if (!statsCache) statsCache = computeIndexStats();
+  return statsCache;
+}
+
+/** Every listing in the index, hidden included: for admin figures. */
+export function indexSize(): number {
+  return byId.size;
+}
+
+function computeIndexStats() {
   const cities = new Map<string, number>();
   const categories = new Map<string, number>();
+  const phones = new Set<string>();
+  let listings = 0;
   for (const item of byId.values()) {
+    if (item.hidden) continue;
+    listings++;
+    if (item.phone) {
+      const key = lastDigits(item.phone, 10);
+      if (key.length >= 10) phones.add(key);
+    }
     if (item.city) {
       const c = item.city.trim();
       cities.set(c, (cities.get(c) || 0) + 1);
@@ -374,8 +606,8 @@ export function indexStats() {
 
   return {
     booted,
-    listings: byId.size,
-    phones: phoneIndex.size,
+    listings,
+    phones: phones.size,
     cities: cities.size || 570,
     categories: categories.size || 42,
     topCities,
@@ -387,7 +619,10 @@ export function indexStats() {
 export function removeListingFromIndex(id: string): void {
   const record = byId.get(id);
   if (!record) return;
+  statsCache = null;
   byId.delete(id);
+  const at = recentIds.lastIndexOf(id);
+  if (at >= 0) recentIds.splice(at, 1);
   if (record.phone) {
     const key = lastDigits(record.phone, 10);
     const bucket = phoneIndex.get(key);
@@ -400,38 +635,228 @@ export function removeListingFromIndex(id: string): void {
 }
 
 export async function addAndPersistImportedListing(record: ListingRecord): Promise<void> {
-  indexRecord(record, true);
+  await addAndPersistImportedListings([record]);
+}
+
+// Read-modify-write of the JSON mirror is serialised: two saves landing
+// together (two vendors editing, an import during an edit) each read the old
+// file and the second write dropped the first one's row.
+let mirrorQueue: Promise<void> = Promise.resolve();
+
+// Ids indexed here whose MySQL write has not finished yet (a count, since two
+// imports can carry the same id). The sync's deletion pass would otherwise
+// see them missing from the table mid-import and drop them from the index.
+const persistInFlight = new Map<string, number>();
+
+function markPersisting(ids: string[], delta: 1 | -1): void {
+  for (const id of ids) {
+    const n = (persistInFlight.get(id) ?? 0) + delta;
+    if (n > 0) persistInFlight.set(id, n);
+    else persistInFlight.delete(id);
+  }
+}
+
+/**
+ * Bulk form for imports. Indexes every record, writes MySQL in chunked
+ * transactions, and rewrites the JSON mirror once — the single-row version
+ * re-read and re-wrote the whole (growing) file per row, so a 10k-row import
+ * did 10k full rewrites and timed the request out.
+ */
+export async function addAndPersistImportedListings(records: ListingRecord[]): Promise<void> {
+  if (records.length === 0) return;
+  markPersisting(records.map((r) => r.id), 1);
+  for (const record of records) indexRecord(record, true);
 
   // MySQL is the system of record now.
-  try {
-    const row = toRow(record);
-    const { id: _id, ...rest } = row;
-    await prisma.listing.upsert({ where: { id: row.id }, update: rest, create: row });
-  } catch (err) {
-    logger.warn({ err, id: record.id }, 'failed to persist listing to MySQL');
+  const CHUNK = 200;
+  for (let i = 0; i < records.length; i += CHUNK) {
+    const chunk = records.slice(i, i + CHUNK);
+    try {
+      await prisma.$transaction(
+        chunk.map((record) => {
+          const row = toRow(record);
+          const { id: _id, ...rest } = row;
+          return prisma.listing.upsert({ where: { id: row.id }, update: rest, create: row });
+        }),
+      );
+    } catch (err) {
+      logger.warn({ err, from: i, count: chunk.length }, 'failed to persist listings to MySQL');
+    } finally {
+      markPersisting(chunk.map((r) => r.id), -1);
+    }
   }
 
   // The JSON mirror is kept so a database-less environment still boots with
   // whatever was imported.
-  try {
-    const dir = path.resolve(env.STATIC_DATA_DIR);
-    const targetFile = path.join(dir, 'imported_listings.json');
-    let current: ListingRecord[] = [];
+  await updateJsonMirror((current) => {
+    const pos = new Map<string, number>();
+    current.forEach((x, i) => pos.set(x.id, i));
+    for (const record of records) {
+      const idx = pos.get(record.id);
+      if (idx !== undefined) current[idx] = record;
+      else { pos.set(record.id, current.length); current.push(record); }
+    }
+    return current;
+  });
+}
+
+/**
+ * The mirror row for a record: what the index holds, nothing more. The detail
+ * fields are never read back from the file (indexRecord drops them), so
+ * writing them only left business email addresses, WhatsApp numbers and
+ * descriptions in a file that lives in the site's data directory.
+ */
+function mirrorRow(record: ListingRecord): ListingRecord {
+  const row = { ...record };
+  for (const k of DETAIL_KEYS) delete row[k];
+  if (!row.hidden) delete row.hidden;
+  return row;
+}
+
+/**
+ * Read-modify-write of STATIC_DATA_DIR/imported_listings.json, serialised on
+ * mirrorQueue. `mutate` gets the current rows and returns the new list, or
+ * null when nothing changed (then the file is left alone, and a missing file
+ * is not created). Failures are logged, never thrown: MySQL is the record.
+ */
+async function updateJsonMirror(mutate: (rows: ListingRecord[]) => ListingRecord[] | null): Promise<void> {
+  const run = mirrorQueue.then(async () => {
     try {
-      const raw = await readFile(targetFile, 'utf8');
-      current = JSON.parse(raw);
-    } catch {
-      current = [];
+      const targetFile = path.join(path.resolve(env.STATIC_DATA_DIR), 'imported_listings.json');
+      let current: ListingRecord[] = [];
+      try {
+        const parsed = JSON.parse(await readFile(targetFile, 'utf8'));
+        current = Array.isArray(parsed) ? parsed.filter((x) => x && typeof x.id === 'string') : [];
+      } catch {
+        current = [];
+      }
+      const next = mutate(current);
+      if (!next) return;
+      await writeFile(targetFile, JSON.stringify(next.map(mirrorRow), null, 2), 'utf8');
+    } catch (err) {
+      logger.warn({ err }, 'failed to persist imported listings to JSON file');
     }
-    const idx = current.findIndex((x) => x.id === record.id);
-    if (idx >= 0) {
-      current[idx] = record;
-    } else {
-      current.push(record);
+  });
+  mirrorQueue = run;
+  await run;
+}
+
+/** Drops a deleted listing from the JSON mirror (a DB-less boot reads it). */
+export async function removeListingFromJsonMirror(id: string): Promise<void> {
+  await updateJsonMirror((rows) => {
+    const rest = rows.filter((r) => r.id !== id);
+    return rest.length === rows.length ? null : rest;
+  });
+}
+
+/** Brings a hide/unhide into the JSON mirror, for a listing it holds. */
+export async function setListingHiddenInJsonMirror(id: string, hidden: boolean): Promise<void> {
+  await updateJsonMirror((rows) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !!row.hidden === hidden) return null;
+    if (hidden) row.hidden = true;
+    else delete row.hidden;
+    return rows;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cross-instance freshness
+// ---------------------------------------------------------------------------
+// Every write above updates this process's index and MySQL. With several API
+// instances the others only learn about it here: each tick pulls rows whose
+// updatedAt moved and re-indexes the ones that actually changed, and when the
+// table holds fewer rows than the index it drops ids that are gone (an admin
+// deletion). On one server there is nothing to learn, so it stays off unless
+// REDIS_URL or LISTINGS_SYNC_MS says otherwise.
+
+// updatedAt comes from the writing instance's clock and a slow transaction can
+// commit after a newer one, so each tick re-reads this far behind the cursor.
+// Rows in that window that match the index are skipped, so re-reading them
+// does not touch the index (or bump indexVersion() for the reco caches).
+const SYNC_OVERLAP_MS = 5 * 60_000;
+const SYNC_PAGE_ROWS = 2_000;
+
+const sameRecord = (a: ListingRecord, b: ListingRecord): boolean =>
+  a.name === b.name && a.category === b.category && a.category_slug === b.category_slug &&
+  (a.category_icon ?? '') === (b.category_icon ?? '') && a.city === b.city && a.city_slug === b.city_slug &&
+  (a.state ?? '') === (b.state ?? '') && a.country === b.country && (a.address ?? '') === (b.address ?? '') &&
+  (a.phone ?? '') === (b.phone ?? '') && (a.website ?? '') === (b.website ?? '') &&
+  (a.pincode ?? '') === (b.pincode ?? '') && Number(a.rating) === Number(b.rating) &&
+  Number(a.review_count) === Number(b.review_count) && (a.google_cid ?? '') === (b.google_cid ?? '') &&
+  (a.gmb_link ?? '') === (b.gmb_link ?? '') && (a.claimStatus ?? 'UNCLAIMED') === (b.claimStatus ?? 'UNCLAIMED') &&
+  !!a.hidden === !!b.hidden;
+
+let syncRunning = false;
+
+/** One pass of the cross-instance sync. Exported for tests. */
+export async function syncListingsFromDb(): Promise<{ updated: number; removed: number }> {
+  if (!loadedFromDb || syncRunning) return { updated: 0, removed: 0 };
+  syncRunning = true;
+  try {
+    let updated = 0;
+    const since = new Date(syncCursor.getTime() - SYNC_OVERLAP_MS);
+    // Paged, so a large import (thousands of rows stamped within seconds) is
+    // read in full rather than the same first page every tick.
+    let after: string | undefined;
+    for (;;) {
+      const rows = await prisma.listing.findMany({
+        select: INDEX_SELECT,
+        where: { updatedAt: { gt: since } },
+        orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+        take: SYNC_PAGE_ROWS,
+        ...(after ? { cursor: { id: after }, skip: 1 } : {}),
+      });
+      for (const row of rows) {
+        if (row.updatedAt > syncCursor) syncCursor = row.updatedAt;
+        const next = fromRow(row);
+        const current = byId.get(row.id);
+        if (current && sameRecord(current, next)) continue;
+        indexRecord(next, row.importedAt !== null);
+        updated++;
+      }
+      if (rows.length < SYNC_PAGE_ROWS) break;
+      after = rows[rows.length - 1]!.id;
     }
-    await writeFile(targetFile, JSON.stringify(current, null, 2), 'utf8');
-  } catch (err) {
-    logger.warn({ err }, 'failed to persist imported listing to JSON file');
+
+    let removed = 0;
+    const total = await prisma.listing.count();
+    if (total < byId.size) {
+      // Taken before the read: an id whose chunk commits after the read but
+      // before this loop is missing from `ids` and already out of the map.
+      const writing = new Set(persistInFlight.keys());
+      const ids = new Set((await prisma.listing.findMany({ select: { id: true } })).map((r) => r.id));
+      for (const id of Array.from(byId.keys())) {
+        // Still being written by an import on this instance: not a deletion.
+        if (!ids.has(id) && !writing.has(id) && !persistInFlight.has(id)) {
+          removeListingFromIndex(id);
+          removed++;
+        }
+      }
+    }
+    if (updated || removed) logger.info({ updated, removed }, 'listings index synced from MySQL');
+    return { updated, removed };
+  } finally {
+    syncRunning = false;
   }
 }
 
+let syncTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Starts the periodic pull (see above). `intervalMs` defaults to
+ * LISTINGS_SYNC_MS, else 60s with REDIS_URL, else off. Returns whether it runs.
+ */
+export function startListingsSync(intervalMs = env.LISTINGS_SYNC_MS ?? (env.REDIS_URL ? 60_000 : 0)): boolean {
+  if (syncTimer || intervalMs <= 0) return false;
+  if (!loadedFromDb) {
+    logger.warn('listings sync not started: the index was loaded from the JSON files, not MySQL');
+    return false;
+  }
+  syncTimer = setInterval(() => {
+    void syncListingsFromDb().catch((err) => logger.warn({ err }, 'listings index sync failed'));
+  }, Math.max(5_000, intervalMs));
+  syncTimer.unref?.();
+  logger.info(`listings index sync every ${Math.round(Math.max(5_000, intervalMs) / 1000)}s`);
+  return true;
+}

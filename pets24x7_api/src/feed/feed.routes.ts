@@ -5,14 +5,14 @@
 //   GET /api/events?city=&limit=          (upcoming only, soonest first)
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 
 import { prisma } from '../db.js';
 import { asyncHandler } from '../shared/async-handler.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 
 export const feedRouter = Router();
 
-const limiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true });
+const limiter = makeLimiter('feed', { windowMs: 60_000, max: 120, standardHeaders: true });
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

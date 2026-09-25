@@ -49,7 +49,9 @@ CATEGORY_SLUGS = {
 
 CITY_RE     = re.compile(r"^/(in|us)/([a-z0-9-]+)/?$")
 PAGE_RE     = re.compile(r"^/(in|us)/([a-z0-9-]+)/page/(\d+)/?$")
-SUB_RE      = re.compile(r"^/(in|us)/([a-z0-9-]+)/([a-z0-9-]+)/?$")
+# Third segment as .htaccess has it ([^/]+): self-registered listings have ids
+# like listing_new_<ts>_<rand>, which a [a-z0-9-] match sent to a 404.
+SUB_RE      = re.compile(r"^/(in|us)/([a-z0-9-]+)/([^/]+)/?$")
 REVIEW_RE   = re.compile(r"^/review/([A-Z0-9]{4,16})/?$")
 REVIEW_FORM = re.compile(r"^/review/([A-Z0-9]{4,16})/form/?$")
 REVIEW_THX  = re.compile(r"^/review/([A-Z0-9]{4,16})/thanks/?$")
@@ -240,4 +242,8 @@ if __name__ == "__main__":
     print("  /in/mumbai/            -> city.html?country=IN&city=mumbai")
     print("  /in/mumbai/pet-grooming-spa/  -> city.html ...&cat=")
     print("  /in/mumbai/<id>/       -> listing.html ...&id=")
+    # The default listen backlog (5) refuses connections when a browser opens
+    # a page's dozen asset requests at once; Windows reports that as
+    # ERR_CONNECTION_REFUSED on random scripts.
+    ThreadingHTTPServer.request_queue_size = 128
     ThreadingHTTPServer(("", PORT), Handler).serve_forever()

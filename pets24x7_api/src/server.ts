@@ -2,7 +2,6 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import pinoHttp from 'pino-http';
-import rateLimit from 'express-rate-limit';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +12,8 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 import { prisma } from './db.js';
 import { HttpError } from './shared/errors.js';
+import { makeLimiter } from './shared/rate-limit.js';
+import { warmKv } from './shared/kv.js';
 import { ZodError } from 'zod';
 
 import { whatsappRouter } from './whatsapp/webhook.routes.js';
@@ -21,9 +22,10 @@ import { parentEmailAuthRouter } from './auth/email.routes.js';
 import { vendorAuthRouter } from './auth/vendor.routes.js';
 import { vendorClaimRegistrationRouter } from './auth/vendor-claim-registration.routes.js';
 import { adminAuthRouter } from './auth/admin.routes.js';
-import { adminApiRouter } from './admin/admin.api.routes.js';
+import { adminApiRouter, loadPersistedPlanStores } from './admin/admin.api.routes.js';
 import { adminMailRouter } from './admin/mail.routes.js';
 import { adminImportRouter } from './admin/import.routes.js';
+import { adminPublishRouter } from './admin/publish.routes.js';
 import { adminExtraRouter } from './admin/admin.extra.routes.js';
 import { meRouter } from './auth/me.routes.js';
 import { parentDashboardRouter } from './pets/parent.routes.js';
@@ -31,7 +33,7 @@ import { vendorDashboardRouter } from './vendors/dashboard.routes.js';
 import { adminPanelRouter } from './admin/panel.routes.js';
 import { listingsRouter } from './listings/lookup.routes.js';
 import { activityRouter, adminActivityRouter } from './listings/activity.routes.js';
-import { initListingsIndex } from './listings/index.js';
+import { initListingsIndex, startListingsSync } from './listings/index.js';
 import { membershipRouter } from './payments/membership.routes.js';
 import { razorpayRouter } from './payments/razorpay.routes.js';
 import { vendorReviewsRouter } from './reviews/vendor.routes.js';
@@ -43,6 +45,9 @@ import { featuredPublicRouter, vendorFeaturedRouter } from './featured/featured.
 import { vendorSubscriptionsRouter } from './vendors/vendor.subscriptions.routes.js';
 import { recommendRouter } from './feed/recommend.routes.js';
 import { feedRouter } from './feed/feed.routes.js';
+import { recoRouter } from './feed/reco/reco.routes.js';
+import { adminRecoRouter } from './feed/reco/admin.reco.routes.js';
+import { startRecoJobs } from './jobs/reco-jobs.js';
 import { unsubscribeRouter } from './mail/unsubscribe.routes.js';
 import { startReminderJob } from './jobs/reminders.js';
 import { startEngagementJob } from './jobs/engagement.js';
@@ -56,8 +61,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// ---- Trust proxy (Railway/Cloudflare put us behind one) ----
-app.set('trust proxy', 1);
+// ---- Trust proxy (nginx, and Cloudflare in front of it in production) ----
+// Hop count comes from TRUST_PROXY; see env.ts for why it matters.
+app.set('trust proxy', env.TRUST_PROXY);
+
+// A wrong hop count fails silently: req.ip becomes a Cloudflare edge address
+// and every visitor on that edge shares one OTP / verify / login budget. When
+// Cloudflare names the client and req.ip disagrees, say so once, loudly.
+if (env.NODE_ENV === 'production') {
+  let warned = false;
+  app.use((req, _res, next) => {
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (!warned && typeof cfIp === 'string' && cfIp && req.ip !== cfIp) {
+      warned = true;
+      logger.warn(
+        { trustProxy: env.TRUST_PROXY, reqIp: req.ip, cfConnectingIp: cfIp },
+        'req.ip does not match CF-Connecting-IP: rate limits are keyed on a proxy address. Set TRUST_PROXY=2 for Cloudflare -> nginx -> Node (see DEPLOY.md).',
+      );
+    }
+    next();
+  });
+}
 
 // ---- View engine for admin panel ----
 // Prefer the compiled copy (dist/admin/views, populated by scripts/copy-assets.mjs);
@@ -82,7 +106,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Aggressive default limit in production; relaxed in dev mode for testing.
-app.use('/api', rateLimit({
+// Shared across instances when REDIS_URL is set (shared/rate-limit.ts).
+app.use('/api', makeLimiter('api-global', {
   windowMs: 60_000,
   max: process.env.NODE_ENV === 'development' ? 10_000 : 120,
   standardHeaders: true,
@@ -116,11 +141,13 @@ app.use('/api/parent',  parentEmailAuthRouter);
 app.use('/api/vendor',  vendorAuthRouter);
 app.use('/api/vendor',  vendorClaimRegistrationRouter);
 app.use('/api/vendor/subscriptions', vendorSubscriptionsRouter);
+app.use('/api/admin/reco', adminRecoRouter);   // before the generic /api/admin routers
 app.use('/api/admin',   adminAuthRouter);
 app.use('/api/admin',   adminApiRouter);
 app.use('/api/admin',   adminExtraRouter);
 app.use('/api/admin',   adminMailRouter);
 app.use('/api/admin',   adminImportRouter);
+app.use('/api/admin',   adminPublishRouter);
 app.use('/api/me',      meRouter);
 app.use('/api/parent',  parentDashboardRouter);
 app.use('/api/vendor',  vendorDashboardRouter);
@@ -140,6 +167,7 @@ app.use('/api/featured', featuredPublicRouter);
 app.use('/api', unsubscribeRouter);
 app.use('/api', feedRouter);
 app.use('/api', recommendRouter);
+app.use('/api/reco', recoRouter);
 app.use('/r', reviewShortLinkRouter);
 app.use('/admin', adminPanelRouter);
 // Dev-only one-click auth portal. NEVER mount outside development — these
@@ -162,7 +190,27 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
   }
   if (err instanceof ZodError) {
     req.log.warn({ issues: err.issues }, 'validation error');
-    return res.status(400).json({ ok: false, error: 'validation_failed', issues: err.issues });
+    // api-client.js shows `message`; without one the user saw "validation_failed".
+    const first = err.issues[0];
+    const where = first?.path?.length ? `${first.path.join('.')}: ` : '';
+    return res.status(400).json({
+      ok: false,
+      error: 'validation_failed',
+      message: first ? `${where}${first.message}` : 'Some fields are invalid.',
+      issues: err.issues,
+    });
+  }
+  // body-parser failures carry their own status (400 malformed JSON, 413 body
+  // over the limit). They are the caller's fault, not a server fault, and used
+  // to fall through to a 500 internal_error.
+  const parserType = (err as { type?: string })?.type;
+  if (parserType === 'entity.parse.failed') {
+    req.log.warn({ err }, 'malformed request body');
+    return res.status(400).json({ ok: false, error: 'bad_json', message: 'The request body is not valid JSON.' });
+  }
+  if (parserType === 'entity.too.large') {
+    req.log.warn({ err }, 'request body too large');
+    return res.status(413).json({ ok: false, error: 'payload_too_large', message: 'The request is too large. Try a smaller image.' });
   }
   // A bare "internal_error" is what made the pet-photo failure invisible: the
   // dashboard showed it, the cause was a column too narrow for the value, and
@@ -178,11 +226,13 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
   // production so it never leaks a column name or a constraint to the public.
   const code = (err as { code?: string })?.code;
   const meta = (err as { meta?: { target?: unknown; column_name?: unknown } })?.meta;
-  const field = String(meta?.column_name ?? (Array.isArray(meta?.target) ? meta!.target.join(', ') : meta?.target ?? ''));
+  const rawField = String(meta?.column_name ?? (Array.isArray(meta?.target) ? meta!.target.join(', ') : meta?.target ?? ''));
+  // Column names stay in the log; the public response only names them off-production.
+  const field = env.NODE_ENV === 'production' ? '' : rawField;
 
   // P2000 value too long for the column, P2005/P2006 invalid value for the field.
   if (code === 'P2000' || code === 'P2005' || code === 'P2006') {
-    req.log.error({ err, code, field }, 'value rejected by the database');
+    req.log.error({ err, code, field: rawField }, 'value rejected by the database');
     return res.status(400).json({
       ok: false,
       error: 'value_too_large',
@@ -191,6 +241,26 @@ app.use((err: unknown, req: express.Request, res: express.Response, _next: expre
         : 'One of the values sent is larger than the field allows.',
       requestId: req.id,
     });
+  }
+
+  // P2002 unique constraint — a duplicate the caller can fix (phone or email
+  // already on another account), not a server failure.
+  if (code === 'P2002') {
+    req.log.warn({ err, code, field: rawField }, 'unique constraint violated');
+    return res.status(409).json({
+      ok: false,
+      error: 'conflict',
+      message: field
+        ? `That ${field} is already in use.`
+        : 'That value is already used by another record.',
+      requestId: req.id,
+    });
+  }
+
+  // P2025 the row an update/delete targeted is gone (deleted in another tab).
+  if (code === 'P2025') {
+    req.log.warn({ err, code }, 'record not found');
+    return res.status(404).json({ ok: false, error: 'not_found', message: 'That record no longer exists.', requestId: req.id });
   }
 
   req.log.error({ err, code }, 'unhandled error');
@@ -223,12 +293,28 @@ async function ensureSeedAdmin(): Promise<void> {
 // Deployed by pets24x7-deploy.timer from the deploy branch; see ops/README.md.
 (async () => {
   await initListingsIndex();   // load static-frontend listings into memory for phone lookups
+  startListingsSync();         // pulls other instances' listing writes; off on a single server (LISTINGS_SYNC_MS)
   await ensureSeedAdmin();     // make sure an admin account exists for /admin/login
-  startExpiryJob();         // periodic membership/campaign/featured/deal/event lifecycle sweep
-  startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
-  startEngagementJob();       // 3-4 random times a day; at most one promo per parent per day
-  startVendorEngagementJob(); // the same for businesses, in an earlier window
-  startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
+  // Admin-saved plan prices must be live before the first checkout quote;
+  // otherwise the first requests after boot are priced from the defaults.
+  await loadPersistedPlanStores().catch(() => {});
+  warmKv();                   // opens the Redis connection early when REDIS_URL is set
+  // Scheduled sweeps. Each run takes a cluster-wide lease first (shared/job-lock.ts),
+  // so several instances never duplicate a sweep; RUN_JOBS=false keeps a
+  // web-only instance out of the rotation entirely.
+  if (env.RUN_JOBS) {
+    startExpiryJob();         // periodic membership/campaign/featured/deal/event lifecycle sweep
+    startReminderJob();       // hourly "about to lapse" and unanswered-enquiry reminders
+    startEngagementJob();       // 3-4 random times a day; at most one promo per parent per day
+    startVendorEngagementJob(); // the same for businesses, in an earlier window
+    startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
+  } else {
+    logger.info('RUN_JOBS=false: scheduled sweeps are not started on this instance');
+  }
+  // Not behind RUN_JOBS: the reco stats flush drains this process's own
+  // in-memory counters and the signals snapshot feeds this process's cache,
+  // so every serving instance needs them.
+  startRecoJobs();            // reco signals snapshot (5 min), admin insights (15 min), stats flush (60 s)
   // Production must never fall back to the logged no-op: an unconfigured relay
   // there means verification links, receipts and invoices are silently dropped
   // while every request still returns 200. Refuse to boot instead.

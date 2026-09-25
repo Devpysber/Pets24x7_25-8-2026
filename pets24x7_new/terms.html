@@ -8,6 +8,16 @@
 <meta name="description" content="Terms and conditions governing the use of Pets24x7.com — pet services marketplace and marketing platform." />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://pets24x7.com/terms.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Terms of Service — Pets24x7.com" />
+<meta property="og:description" content="The terms that govern using Pets24x7.com, the pet services marketplace for India and the USA." />
+<meta property="og:url" content="https://pets24x7.com/terms.html" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Terms of Service — Pets24x7.com" />
+<meta name="twitter:description" content="The terms that govern using Pets24x7.com, the pet services marketplace for India and the USA." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,8 +61,29 @@
   footer a { color: #94A3B8; }
   footer a:hover { color: #fff; text-decoration: none; }
 
-  @media (max-width: 640px) { .nav-links { display: none; } }
+  .header-inner { position: relative; }
+  .nav-links a { display: inline-flex; align-items: center; min-height: 40px; }
+  .nav-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); cursor: pointer; }
+  .nav-toggle svg { width: 20px; height: 20px; }
+  main, footer { overflow-wrap: anywhere; }
+  footer a { display: inline-block; padding: 4px 0; }
+  a:focus-visible, button:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
+  @media (max-width: 640px) {
+    .header-inner { height: 64px; padding: 0 16px; }
+    .brand-logo { height: 40px; }
+    .container { padding: 0 16px; }
+    .nav-toggle { display: inline-flex; }
+    .nav-links { display: none; }
+    .nav-links.nav-open { display: flex; flex-direction: column; gap: 0; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--border); box-shadow: 0 14px 28px rgba(2,6,23,.10); padding: 6px 16px 12px; }
+    .nav-links.nav-open a { min-height: 48px; font-size: 15px; border-bottom: 1px solid var(--bg-alt); }
+    .nav-links.nav-open a:last-child { border-bottom: none; }
+    .legal-hero { padding: 40px 0 32px; }
+    main { padding: 36px 0 56px; }
+    main h2 { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
+<script src="/config.js"></script>
 <script src="/analytics.js"></script>
 </head>
 <body>
@@ -62,11 +93,14 @@
     <a href="index.html" class="brand">
       <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
     </a>
-    <nav class="nav-links">
+    <nav class="nav-links" id="siteNav" aria-label="Main">
       <a href="marketing.html">For Pet Businesses</a>
       <a href="/in/mumbai/">Browse Listings</a>
       <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp</a>
     </nav>
+    <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -218,5 +252,6 @@
   </div>
 </footer>
 
+<script src="/nav-auth.js" defer></script>
 </body>
 </html>

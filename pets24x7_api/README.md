@@ -211,6 +211,15 @@ We'll generate these pages + JS modules in **Phase 1.5** once the API is deploye
 | 4 | FB / Instagram / GMB OAuth · Vendor draft → admin approve → publish via Meta Marketing API |
 | 5 | Deals + events tables · "Nearby deals" feed for parents · email/WhatsApp digest |
 
+### Running more than one instance
+
+One server needs nothing extra. For several instances behind a load balancer,
+set `REDIS_URL` (shared rate limits and cache — `src/shared/kv.ts`,
+`src/shared/rate-limit.ts`) and run `prisma db push` so the `job_locks` table
+exists (scheduled jobs run once cluster-wide — `src/shared/job-lock.ts`).
+`RUN_JOBS=false` keeps a web-only instance out of the job rotation. Details and
+known gaps: `../DEPLOY.md` → "Scaling to multiple servers".
+
 ---
 
 ## 8 · Files in this repo

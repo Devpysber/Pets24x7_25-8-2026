@@ -1,27 +1,36 @@
 // Business Registration + Listing Claim + Vendor Auth API Routes
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
-import randomBytes from 'node:crypto';
+import { randomInt } from 'node:crypto';
 
 import { prisma } from '../db.js';
 import { setAuthCookie } from './jwt.js';
-import { addAndPersistImportedListing, getListingById, searchListings } from '../listings/index.js';
+import { addAndPersistImportedListing, findListingByPhone, getListingById, searchListings } from '../listings/index.js';
 import { lastDigits, normalizePhone } from '../shared/phone.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { BadRequestError, ConflictError, UnauthorizedError, NotFoundError } from '../shared/errors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  UnauthorizedError,
+  TooManyRequestsError,
+} from '../shared/errors.js';
 import { env } from '../env.js';
 import { notify, notifyIf } from '../mail/notify.js';
 import { adminNotifyEmails } from '../mail/admin-notify.js';
 import { adminNewClaimEmail } from '../mail/lifecycle-templates.js';
-import { businessRegisteredEmail, claimCredentialsEmail } from '../mail/action-templates.js';
+import { businessRegisteredEmail, claimCredentialsEmail, vendorWelcomeEmail } from '../mail/action-templates.js';
+import { issueOtp, verifyOtp } from '../whatsapp/otp.js';
+import { whatsappConfigured } from '../whatsapp/cloud-api.js';
 import { normEmail } from './email-otp.js';
+import { sendVendorVerificationEmail } from './vendor-email-verification.js';
 import { logger } from '../logger.js';
 
 export const vendorClaimRegistrationRouter = Router();
 
-const limiter = rateLimit({
+const limiter = makeLimiter('vendor-claim-registration', {
   windowMs: 60_000,
   max: env.NODE_ENV === 'development' ? 10_000 : 15,
   standardHeaders: true,
@@ -37,14 +46,38 @@ function maskPhone(raw?: string): string {
   return `${start} ${middle} ${end}`;
 }
 
+// The temporary password is a real credential until it is replaced, so it
+// comes from the CSPRNG, not Math.random().
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let rand = '';
-  for (let i = 0; i < 6; i++) {
-    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 8; i++) {
+    rand += chars.charAt(randomInt(chars.length));
   }
   return `P24x7#${rand}`;
 }
+
+/**
+ * A listing is taken once any business account holds it, except one still
+ * waiting for its owner's first login (credentials mailed, temp password not
+ * yet replaced) — that claimant may need to run the flow again after a typo.
+ * Claims made by phone OTP (/api/vendor/verify) have no ownerName, so the old
+ * "ownerName is set" test reported them as unclaimed and let a second person
+ * start a claim that could only fail at the last step.
+ */
+function holdsListing(v: { mustChangePassword: boolean } | null | undefined): boolean {
+  return !!v && !v.mustChangePassword;
+}
+
+/** A claim session is only good for this long after the phone step. */
+const CLAIM_SESSION_MS = 60 * 60_000;
+
+/** ListingClaim.verificationCode markers for the WhatsApp possession check. */
+const OTP_PENDING = 'wa_otp_pending';
+const OTP_OK = 'wa_otp_ok';
+
+/** Optional form fields arrive as '' when left blank; store them as absent. */
+const opt = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
 
 // ---------------------------------------------------------------------------
 // PART A — Find My Listing (Search real database & static index)
@@ -75,11 +108,17 @@ vendorClaimRegistrationRouter.post(
       take: 60,
     });
 
+    // Only the listings on this page of results can be flagged, so only those
+    // are looked up. Loading every claimed vendor here made each keystroke of
+    // the search box a full scan of the vendor table.
     const claimedListingIds = new Set<string>();
-    const claimedVendors = await prisma.vendor.findMany({
-      where: { listingId: { not: null }, mustChangePassword: false, ownerName: { not: null } },
-      select: { listingId: true },
-    });
+    const staticIds = staticResults.map((r) => r.id);
+    const claimedVendors = staticIds.length
+      ? await prisma.vendor.findMany({
+          where: { listingId: { in: staticIds }, mustChangePassword: false },
+          select: { listingId: true },
+        })
+      : [];
     claimedVendors.forEach((v) => {
       if (v.listingId) claimedListingIds.add(v.listingId);
     });
@@ -103,7 +142,7 @@ vendorClaimRegistrationRouter.post(
     // Add DB vendors
     for (const v of dbVendors) {
       const lid = v.listingId || v.id;
-      const isClaimed = !v.mustChangePassword && !!v.ownerName;
+      const isClaimed = holdsListing(v);
       combinedMap.set(lid, {
         id: lid,
         name: v.businessName,
@@ -143,7 +182,7 @@ vendorClaimRegistrationRouter.post(
     const dbVendor = await prisma.vendor.findFirst({
       where: { OR: [{ listingId }, { id: listingId }] },
     });
-    if (dbVendor && !dbVendor.mustChangePassword && !!dbVendor.ownerName) {
+    if (holdsListing(dbVendor)) {
       throw new BadRequestError('This listing has already been claimed.');
     }
 
@@ -172,13 +211,29 @@ vendorClaimRegistrationRouter.post(
       );
     }
 
-    // Phone matches! Create claim record with status PHONE_VERIFIED
+    // The number on a listing is public, so typing it proves nothing about who
+    // holds it. When WhatsApp is set up, a code goes to that number and the
+    // credentials step refuses to run until the code comes back. The number we
+    // text is the listing's own, in E.164 when the listing carries a country
+    // code, otherwise as the owner typed it (the trailing digits already match).
+    const otpPhone = storedPhone.trim().startsWith('+') ? normalizePhone(storedPhone) : normSubmitted;
+    const needsOtp = whatsappConfigured();
+    if (needsOtp) {
+      try {
+        await issueOtp(otpPhone, 'VENDOR_CLAIM', { ip: req.ip, ua: req.headers['user-agent'] as string | undefined });
+      } catch (err) {
+        // A code sent less than a minute ago is still valid — carry on with it.
+        if (!(err instanceof TooManyRequestsError)) throw err;
+      }
+    }
+
     const claim = await prisma.listingClaim.create({
       data: {
         listingId,
-        listingName: listing?.name || 'Listing',
-        phone: normSubmitted,
+        listingName: storedListingName,
+        phone: otpPhone,
         status: 'PHONE_VERIFIED',
+        verificationCode: needsOtp ? OTP_PENDING : null,
       },
     });
 
@@ -187,6 +242,9 @@ vendorClaimRegistrationRouter.post(
       claimId: claim.id,
       listingId,
       verified: true,
+      // The client must collect the 6-digit WhatsApp code and send it as
+      // `code` with /claim/submit-email.
+      otpRequired: needsOtp,
       maskedPhone: maskPhone(storedPhone || normSubmitted),
     });
   }),
@@ -199,11 +257,12 @@ vendorClaimRegistrationRouter.post(
   '/claim/submit-email',
   limiter,
   asyncHandler(async (req, res) => {
-    const { listingId, claimId, email: rawEmail } = z
+    const { listingId, claimId, email: rawEmail, code } = z
       .object({
         listingId: z.string().min(1),
         claimId: z.string().min(1),
         email: z.string().email(),
+        code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code').optional(),
       })
       .parse(req.body);
 
@@ -217,23 +276,53 @@ vendorClaimRegistrationRouter.post(
     if (claim.status !== 'PHONE_VERIFIED' && claim.status !== 'CREDENTIALS_SENT') {
       throw new BadRequestError('Phone verification required before submitting email.');
     }
+    if (Date.now() - claim.createdAt.getTime() > CLAIM_SESSION_MS) {
+      throw new BadRequestError('This claim session has expired. Please verify your phone again.');
+    }
+    if (!claim.phone) {
+      throw new BadRequestError('Invalid or expired claim session.');
+    }
+    const phone = claim.phone;
 
-    // Double-check listing is not claimed
-    const existingClaimed = await prisma.vendor.findFirst({
-      where: { listingId },
-    });
-    if (existingClaimed) {
+    // Possession of the listing's phone, proven by the WhatsApp code.
+    if (claim.verificationCode === OTP_PENDING) {
+      if (!code) throw new BadRequestError('Enter the 6-digit code we sent to the listing\'s WhatsApp number.');
+      const ok = await verifyOtp(phone, code, 'VENDOR_CLAIM');
+      if (!ok) throw new UnauthorizedError('Incorrect code');
+      await prisma.listingClaim.update({ where: { id: claim.id }, data: { verificationCode: OTP_OK } });
+    }
+    // Without WhatsApp there was no code: the caller only typed the listing's
+    // public number, which proves nothing. Such a claim still gets its login,
+    // but lands PENDING (no leads, no spending) until an admin approves it, and
+    // it may never take over an account that already signed in.
+    const phoneProven = claim.verificationCode === OTP_PENDING || claim.verificationCode === OTP_OK;
+
+    // The listing must still be free — or held by this same claim, still
+    // waiting for its first login (re-sending after a typo in the address).
+    const existingClaimed = await prisma.vendor.findFirst({ where: { listingId } });
+    if (existingClaimed && (holdsListing(existingClaimed) || existingClaimed.phone !== phone)) {
       throw new BadRequestError('This listing has already been claimed.');
     }
+    // The proven phone may already run a business account. A suspended or
+    // rejected one must not be revived by claiming, and a live one for another
+    // listing must not be silently moved onto this one with a reset password.
+    const existingByPhone = await prisma.vendor.findUnique({ where: { phone } });
+    if (existingByPhone && (existingByPhone.status === 'SUSPENDED' || existingByPhone.status === 'REJECTED')) {
+      throw new ForbiddenError('This business account is not active. Contact support@pets24x7.com.');
+    }
+    if (existingByPhone && existingByPhone.listingId && existingByPhone.listingId !== listingId && holdsListing(existingByPhone)) {
+      throw new ConflictError('This phone number already manages another business. Sign in at /vendor-login/ instead.');
+    }
+    if (!phoneProven && holdsListing(existingByPhone)) {
+      throw new ConflictError('A business account already uses this phone number. Sign in at /vendor-login/ or contact support@pets24x7.com.');
+    }
+    const claimStatus = phoneProven ? 'CLAIMED' : 'PENDING';
 
     const listing = getListingById(listingId);
     const businessName = listing?.name || claim.listingName || 'Your Pet Business';
 
-    // Generate secure 10-char temporary password
     const tempPass = generateTempPassword();
     const hashedTempPass = await bcrypt.hash(tempPass, 12);
-
-    const phone = claim.phone || normalizePhone('9930090487');
 
     // Create or update Vendor account
     const vendor = await prisma.vendor.upsert({
@@ -246,8 +335,11 @@ vendorClaimRegistrationRouter.post(
         category: listing?.category || 'Pet Service',
         passwordHash: hashedTempPass,
         mustChangePassword: true,
-        status: 'CLAIMED',
+        status: claimStatus,
         claimedAt: new Date(),
+        // A different address has not been proven — drop any verified badge
+        // that belonged to the one it replaces.
+        ...(existingByPhone?.email !== email && { emailVerified: false, emailVerifiedAt: null }),
       },
       create: {
         phone,
@@ -258,7 +350,7 @@ vendorClaimRegistrationRouter.post(
         category: listing?.category || 'Pet Service',
         passwordHash: hashedTempPass,
         mustChangePassword: true,
-        status: 'CLAIMED',
+        status: claimStatus,
         claimedAt: new Date(),
       },
     });
@@ -277,13 +369,25 @@ vendorClaimRegistrationRouter.post(
     // Send temporary credentials email
     notifyIf(email, (to) => claimCredentialsEmail(to, businessName, tempPass));
 
+    // Ops hear about every claim, as they already do for a registration.
+    void adminNotifyEmails()
+      .then((admins) => {
+        for (const admin of admins) {
+          notify(adminNewClaimEmail(admin, 'Admin', { businessName, phone, city: listing?.city ?? null, listingName: businessName }, 'claim', !phoneProven));
+        }
+      })
+      .catch(() => {});
+
     res.json({
       ok: true,
       claimId: claim.id,
       email,
       businessName,
       status: 'CREDENTIALS_SENT',
-      message: `Temporary login credentials sent to ${email}`,
+      reviewRequired: !phoneProven,
+      message: phoneProven
+        ? `Temporary login credentials sent to ${email}`
+        : `Temporary login credentials sent to ${email}. Our team will confirm the listing is yours before leads are shown.`,
     });
   }),
 );
@@ -295,9 +399,12 @@ vendorClaimRegistrationRouter.post(
   '/claim/first-login-change-password',
   limiter,
   asyncHandler(async (req, res) => {
-    const { email: rawEmail, tempPassword, newPassword, confirmPassword } = z
+    const { email: rawEmail, loginKey, tempPassword, newPassword, confirmPassword } = z
       .object({
-        email: z.string().email(),
+        email: z.string().email().optional(),
+        // Email or phone, as typed at /login — lets an account without an
+        // email address finish the forced change too.
+        loginKey: z.string().min(1).optional(),
         tempPassword: z.string().min(1),
         newPassword: z.string().min(8, 'Password must be at least 8 characters'),
         confirmPassword: z.string().min(8),
@@ -308,10 +415,22 @@ vendorClaimRegistrationRouter.post(
       throw new BadRequestError('Passwords do not match.');
     }
 
-    const email = normEmail(rawEmail);
-    const vendor = await prisma.vendor.findFirst({
-      where: { email },
-    });
+    const key = (rawEmail ?? loginKey ?? '').trim();
+    if (!key) throw new BadRequestError('Enter your business email or phone number.');
+    const last10 = lastDigits(key, 10);
+    // Same matching as /login: exact email, or the phone by its last 10 digits.
+    const where = key.includes('@')
+      ? { email: normEmail(key) }
+      : last10.length >= 10
+        ? { phone: { endsWith: last10 } }
+        : { phone: normalizePhone(key) };
+    // Vendor.email is not unique: prefer the account that is actually waiting
+    // for its first password, newest claim first.
+    const vendor =
+      (await prisma.vendor.findFirst({
+        where: { ...where, mustChangePassword: true },
+        orderBy: { claimedAt: 'desc' },
+      })) ?? (await prisma.vendor.findFirst({ where, orderBy: { claimedAt: 'desc' } }));
 
     if (!vendor || !vendor.passwordHash) {
       throw new UnauthorizedError('Account not found or password not set.');
@@ -319,6 +438,9 @@ vendorClaimRegistrationRouter.post(
 
     if (!vendor.mustChangePassword) {
       throw new BadRequestError('Password change is not required for this account.');
+    }
+    if (vendor.status === 'SUSPENDED' || vendor.status === 'REJECTED') {
+      throw new ForbiddenError('This business account is not active. Contact support@pets24x7.com.');
     }
 
     // Verify temp password
@@ -336,8 +458,11 @@ vendorClaimRegistrationRouter.post(
       data: {
         passwordHash: newPasswordHash,
         mustChangePassword: false,
-        status: 'ACTIVE',
-        claimedAt: new Date(),
+        // A claim whose phone was never proven lands PENDING and stays there
+        // until an admin approves it; setting a password is not an approval.
+        // Only a proven (CLAIMED) claim goes live here.
+        status: vendor.status === 'PENDING' ? 'PENDING' : 'ACTIVE',
+        claimedAt: vendor.claimedAt ?? new Date(),
       },
     });
 
@@ -353,13 +478,26 @@ vendorClaimRegistrationRouter.post(
       });
     }
 
+    // The claim is complete only now: this is the "your listing is claimed"
+    // moment, and the mailed temp password was merely the key to it.
+    const listingName = (vendor.listingId && getListingById(vendor.listingId)?.name) || vendor.businessName;
+    // A PENDING claim is not live yet: its "approved and live" mail comes from
+    // the admin approve action instead.
+    if (vendor.status !== 'PENDING') {
+      notifyIf(vendor.email, (to) => vendorWelcomeEmail(to, vendor.businessName, listingName));
+    }
+
     // Set active Vendor JWT auth cookie
     setAuthCookie(res, { sub: vendor.id, role: 'vendor' });
 
     res.json({
       ok: true,
-      active: true,
-      message: 'Password created successfully. Redirecting to Vendor Dashboard...',
+      active: vendor.status !== 'PENDING',
+      reviewRequired: vendor.status === 'PENDING',
+      message:
+        vendor.status === 'PENDING'
+          ? 'Password created. Our team will confirm the listing is yours before leads are shown. Redirecting to Vendor Dashboard...'
+          : 'Password created successfully. Redirecting to Vendor Dashboard...',
       redirect: '/dashboard/vendor/',
     });
   }),
@@ -372,6 +510,9 @@ const BusinessRegistrationBody = z.object({
   businessName: z.string().min(2, 'Business Name is required').max(100),
   category: z.string().min(2, 'Category is required'),
   city: z.string().min(2, 'City is required'),
+  // Decides the default dialling code for a bare 10-digit number and whether
+  // the public page is filed under /in/ or /us/.
+  country: z.enum(['IN', 'US']).optional().default('IN'),
   locality: z.string().optional(),
   address: z.string().min(5, 'Full Address is required'),
   pincode: z.string().optional(),
@@ -398,13 +539,21 @@ vendorClaimRegistrationRouter.post(
       throw new BadRequestError('Passwords do not match.');
     }
 
-    const normPhone = normalizePhone(body.phone);
+    const normPhone = normalizePhone(body.phone, body.country);
     const email = normEmail(body.email);
 
     // Check for existing vendor by phone or email
     const existingByPhone = await prisma.vendor.findUnique({ where: { phone: normPhone } });
     if (existingByPhone) {
       throw new BadRequestError('That phone number is already registered to another business account.');
+    }
+    // Vendor.phone is unique, so registering on a listed business's number
+    // would lock its owner out of claiming that listing. The owner claims it
+    // (which proves the number); anyone else needs their own number.
+    if (findListingByPhone(normPhone).length) {
+      throw new ConflictError(
+        'A business with this phone number is already listed on Pets24x7. Claim it at /find-my-listing/ instead of registering a new one.',
+      );
     }
 
     const existingByEmail = await prisma.vendor.findFirst({ where: { email } });
@@ -425,15 +574,16 @@ vendorClaimRegistrationRouter.post(
         ownerName: body.ownerName,
         category: body.category,
         city: body.city,
-        locality: body.locality,
+        country: body.country,
+        locality: opt(body.locality),
         address: body.address,
-        pincode: body.pincode,
-        website: body.website,
-        whatsapp: body.whatsapp ? normalizePhone(body.whatsapp) : undefined,
-        about: body.about,
-        openingHours: body.openingHours,
-        servicesList: body.servicesList,
-        imageUrl: body.imageUrl,
+        pincode: opt(body.pincode),
+        website: opt(body.website),
+        whatsapp: opt(body.whatsapp) ? normalizePhone(body.whatsapp!, body.country) : undefined,
+        about: opt(body.about),
+        openingHours: opt(body.openingHours),
+        servicesList: opt(body.servicesList),
+        imageUrl: opt(body.imageUrl),
         listingId: newListingId,
         passwordHash,
         mustChangePassword: false,
@@ -463,11 +613,11 @@ vendorClaimRegistrationRouter.post(
           categorySlug,
           city: body.city,
           citySlug,
-          country: 'IN',
+          country: body.country,
           address: body.address ?? null,
           phone: normPhone,
-          website: body.website ?? null,
-          pincode: body.pincode ?? null,
+          website: opt(body.website) ?? null,
+          pincode: opt(body.pincode) ?? null,
           rating: 0,
           reviewCount: 0,
           claimStatus: 'CLAIMED',
@@ -482,11 +632,11 @@ vendorClaimRegistrationRouter.post(
         category_slug: categorySlug,
         city: body.city,
         city_slug: citySlug,
-        country: 'IN',
+        country: body.country,
         address: body.address ?? undefined,
         phone: normPhone,
-        website: body.website ?? undefined,
-        pincode: body.pincode ?? undefined,
+        website: opt(body.website),
+        pincode: opt(body.pincode),
         rating: 0,
         review_count: 0,
         claimStatus: 'CLAIMED',
@@ -513,9 +663,17 @@ vendorClaimRegistrationRouter.post(
     // Send Registration Confirmation Email
     notifyIf(email, (to) => businessRegisteredEmail(to, body.businessName, body.city));
 
-    // A self-service registration lands as PENDING and sits there until someone
-    // approves it, so tell the ops team it is waiting rather than relying on
-    // anyone happening to open the admin dashboard.
+    // The address was only typed, never proven, and email sign-in prefers a
+    // verified row (vendorByEmail in vendor.routes.ts). Send the proof link
+    // now; sign-in is not blocked, and the dashboard shows "Not verified" with
+    // a resend button until it is clicked.
+    void sendVendorVerificationEmail({ id: vendor.id, businessName: vendor.businessName, email }).catch((err) =>
+      req.log.warn({ err, vendorId: vendor.id }, 'registration verification email failed'),
+    );
+
+    // A self-service registration goes live at once (status ACTIVE), so tell
+    // the ops team about it rather than relying on anyone happening to open
+    // the admin dashboard to review what was published.
     void adminNotifyEmails()
       .then((admins) => {
         for (const admin of admins) {
@@ -525,7 +683,7 @@ vendorClaimRegistrationRouter.post(
               phone: normPhone,
               city: body.city ?? null,
               listingName: body.businessName,
-            }),
+            }, 'registration'),
           );
         }
       })
@@ -541,6 +699,7 @@ vendorClaimRegistrationRouter.post(
         businessName: vendor.businessName,
         listingId: vendor.listingId,
         email: vendor.email,
+        emailVerified: false,
       },
       redirect: '/dashboard/vendor/',
     });
@@ -565,28 +724,45 @@ vendorClaimRegistrationRouter.post(
     const isEmail = keyClean.includes('@');
     const normPhone = isEmail ? '' : normalizePhone(keyClean);
 
-    let vendor = await prisma.vendor.findFirst({
+    // Vendor.email is not unique (two listings can share an owner's address),
+    // so every account on that address is a candidate and the password picks
+    // the one being signed into.
+    let candidates = await prisma.vendor.findMany({
       where: isEmail
-        ? { email: keyClean }
-        : { phone: normPhone },
+        ? { email: keyClean, passwordHash: { not: null } }
+        : { phone: normPhone, passwordHash: { not: null } },
+      orderBy: { claimedAt: 'desc' },
+      take: 10,
     });
 
-    if (!vendor && !isEmail) {
+    if (!candidates.length && !isEmail) {
       const last10 = lastDigits(keyClean, 10);
       if (last10.length >= 10) {
-        vendor = await prisma.vendor.findFirst({
-          where: { phone: { endsWith: last10 } },
+        candidates = await prisma.vendor.findMany({
+          where: { phone: { endsWith: last10 }, passwordHash: { not: null } },
+          take: 10,
         });
       }
     }
 
-    if (!vendor || !vendor.passwordHash) {
+    let vendor: (typeof candidates)[number] | null = null;
+    for (const c of candidates) {
+      if (c.passwordHash && (await bcrypt.compare(password, c.passwordHash))) {
+        vendor = c;
+        break;
+      }
+    }
+    if (!vendor) {
       throw new UnauthorizedError('Invalid login email/phone or password.');
     }
-
-    const isMatch = await bcrypt.compare(password, vendor.passwordHash);
-    if (!isMatch) {
-      throw new UnauthorizedError('Invalid login email/phone or password.');
+    // Refuse up front with the reason, instead of handing out a cookie that
+    // every vendor route will then reject.
+    if (vendor.status === 'SUSPENDED' || vendor.status === 'REJECTED') {
+      throw new ForbiddenError(
+        vendor.status === 'SUSPENDED'
+          ? 'This business account is suspended. Contact support@pets24x7.com.'
+          : 'This listing claim was not approved. Contact support@pets24x7.com.',
+      );
     }
 
     if (vendor.mustChangePassword) {

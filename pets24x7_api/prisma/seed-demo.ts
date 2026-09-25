@@ -13,12 +13,22 @@ async function main() {
   const parentPhone = '+919876543210';
   const passwordHash = await bcrypt.hash(parentPassword, 12);
 
+  // Both email and phone are unique. A parent who already signed in with the
+  // demo phone (OTP flow, no email) would make an email-keyed upsert fail with
+  // P2002, so reuse that row when there is no email row; if both rows exist,
+  // leave the phone on the row that already has it.
+  const byEmail = await prisma.petParent.findUnique({ where: { email: parentEmail } });
+  const byPhone = await prisma.petParent.findUnique({ where: { phone: parentPhone } });
+  const target = byEmail ?? byPhone;
+  const phoneFree = !byPhone || byPhone.id === target?.id;
+
   const parent = await prisma.petParent.upsert({
-    where: { email: parentEmail },
+    where: target ? { id: target.id } : { email: parentEmail },
     update: {
+      email: parentEmail,
       name: 'Demo Pet Parent',
       passwordHash,
-      phone: parentPhone,
+      ...(phoneFree && { phone: parentPhone }),
       city: 'Mumbai',
       country: 'IN',
       emailVerified: true,

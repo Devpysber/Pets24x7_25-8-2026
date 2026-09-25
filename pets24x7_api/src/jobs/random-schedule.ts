@@ -14,8 +14,20 @@
 // parent equivalent, one promotional email every MIN_GAP_DAYS). Running the
 // sweep four times a day means it catches whoever became eligible since the
 // last run — not that anybody gets four emails.
+//
+// Several API instances must agree on the day's slots, or N servers would run
+// N random schedules. So the "random" draw is seeded from the job name, the
+// local day and a server secret: every instance computes the same slots, which
+// outsiders still cannot predict. Every run then takes the cluster-wide lease
+// for the job name (shared/job-lock.ts) and holds it for minGapMinutes after
+// starting, so the instances that wake at the same minute skip — one run per
+// slot across the cluster, whatever the instance count.
 
+import crypto from 'node:crypto';
+
+import { env } from '../env.js';
 import { logger } from '../logger.js';
+import { withJobLock } from '../shared/job-lock.js';
 
 /** Minutes past midnight, in the target timezone. */
 const IST_OFFSET_MIN = 5 * 60 + 30;
@@ -33,6 +45,11 @@ export interface RandomDailyOptions {
   minGapMinutes?: number;
   /** Minutes offset from UTC for the audience's timezone. Defaults to IST. */
   timezoneOffsetMinutes?: number;
+  /**
+   * How long a run keeps the cluster lease after it starts, so other
+   * instances skip their slots meanwhile. Defaults to minGapMinutes.
+   */
+  clusterHoldMinutes?: number;
 }
 
 interface Plan {
@@ -41,9 +58,28 @@ interface Plan {
 }
 
 const running = new Map<string, Plan>();
+/** Jobs with a run in flight right now. */
+const busy = new Set<string>();
 
-function randInt(lo: number, hi: number): number {
-  return lo + Math.floor(Math.random() * (hi - lo + 1));
+/** A uniform draw in [0, 1). */
+type Rng = () => number;
+
+/**
+ * Deterministic generator (mulberry32) seeded from the job, the day and
+ * JWT_SECRET, so every instance draws the same slots for the same day.
+ */
+function seededRng(name: string, dayKey: string): Rng {
+  let a = crypto.createHash('sha256').update(`${env.JWT_SECRET}:${name}:${dayKey}`).digest().readUInt32LE(0);
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randInt(rng: Rng, lo: number, hi: number): number {
+  return lo + Math.floor(rng() * (hi - lo + 1));
 }
 
 /**
@@ -51,7 +87,7 @@ function randInt(lo: number, hi: number): number {
  * jittered inside their own slice. Slicing first is what keeps four sends from
  * clustering into one hour, which pure random picks do often.
  */
-function pickSlots(count: number, startHour: number, endHour: number, minGap: number): number[] {
+function pickSlots(rng: Rng, count: number, startHour: number, endHour: number, minGap: number): number[] {
   const from = startHour * 60;
   const to = endHour * 60;
   const span = Math.max(0, to - from);
@@ -63,7 +99,7 @@ function pickSlots(count: number, startHour: number, endHour: number, minGap: nu
     const base = from + i * slice;
     // Leave room so the jitter cannot push a slot into the next slice.
     const top = Math.max(base, base + slice - minGap);
-    slots.push(randInt(base, top));
+    slots.push(randInt(rng, base, top));
   }
   return slots.sort((a, b) => a - b);
 }
@@ -100,6 +136,7 @@ export function startRandomDailyJob(
   const endHour = opts.endHour ?? 20;
   const minGap = opts.minGapMinutes ?? 90;
   const tz = opts.timezoneOffsetMinutes ?? IST_OFFSET_MIN;
+  const holdMs = (opts.clusterHoldMinutes ?? minGap) * 60_000;
 
   const plan = () => {
     const previous = running.get(name);
@@ -107,8 +144,9 @@ export function startRandomDailyJob(
 
     const now = new Date();
     const dayKey = localDayKey(now, tz);
-    const runs = randInt(minRuns, maxRuns);
-    const slots = pickSlots(runs, startHour, endHour, minGap);
+    const rng = seededRng(name, dayKey);
+    const runs = randInt(rng, minRuns, maxRuns);
+    const slots = pickSlots(rng, runs, startHour, endHour, minGap);
 
     const timers: NodeJS.Timeout[] = [];
     const planned: string[] = [];
@@ -121,7 +159,18 @@ export function startRandomDailyJob(
       planned.push(`${hh}:${mm}`);
       timers.push(
         setTimeout(() => {
-          task().catch((err) => logger.warn({ err, job: name }, 'scheduled job failed'));
+          // A sweep that is still running when the next slot arrives (a large
+          // list, a slow SMTP relay) is left to finish; the slot is dropped
+          // rather than starting a second, overlapping pass.
+          if (busy.has(name)) {
+            logger.warn({ job: name }, 'previous run still in progress; skipping this slot');
+            return;
+          }
+          busy.add(name);
+          withJobLock(name, task, { minHoldMs: holdMs })
+            .then((r) => { if (!r.ran) logger.info({ job: name }, 'another instance ran this slot; skipped'); })
+            .catch((err) => logger.warn({ err, job: name }, 'scheduled job failed'))
+            .finally(() => busy.delete(name));
         }, delay),
       );
     }

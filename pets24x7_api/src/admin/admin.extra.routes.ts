@@ -9,8 +9,9 @@ import bcrypt from 'bcrypt';
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { setAuthCookie } from '../auth/jwt.js';
+import { revocationCutoff } from '../auth/actor.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { BadRequestError, NotFoundError } from '../shared/errors.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { getListingById } from '../listings/index.js';
 import { getFeaturedOptions } from '../payments/pricing.js';
@@ -21,6 +22,7 @@ import { createRefund } from '../payments/razorpay.js';
 import {
   enquiryStatusEmail,
   featuredEndedEmail,
+  featuredLiveEmail,
   paymentRefundedEmail,
   serviceModeratedEmail,
   vendorWelcomeEmail,
@@ -323,64 +325,110 @@ adminExtraRouter.post(
     await audit(req, 'featured.grant', {
       featuredId: f.id, vendorId: vendor.id, durationDays: body.durationDays, note: body.note ?? null,
     });
+    // The business should know it is (or will be) at the top of its page —
+    // otherwise a comped slot sold over the phone goes unconfirmed. The mail
+    // itself says "booked" instead of "live" when the slot is queued.
+    notifyIf(vendor.email, (to) =>
+      featuredLiveEmail(
+        to,
+        vendor.businessName,
+        { priceMinor: 0, currency: 'INR', durationDays: body.durationDays },
+        endsAt,
+        'Complimentary placement',
+        startsAt,
+      ),
+    );
     res.json({ ok: true, featured: { id: f.id, startsAt, endsAt }, vendor: vendor.businessName });
   }),
 );
 
 const FeaturedStatusBody = z.object({ status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELLED']) });
+
+/**
+ * One featured-slot status change, shared by the Featured tab and the Grow
+ * Business buyers tab. Returns null when no slot has that id.
+ */
+export async function applyFeaturedStatus(
+  req: any,
+  id: string,
+  status: z.infer<typeof FeaturedStatusBody>['status'],
+) {
+  const existing = await prisma.featuredListing.findUnique({
+    where: { id },
+    include: { payment: { select: { merchantTxnId: true } } },
+  });
+  if (!existing) return null;
+  // Status and window must agree. Flipping a live slot to EXPIRED/CANCELLED
+  // while endsAt stays in the future leaves a row that reads "expired" in the
+  // vendor's history but still looks live to every date-based check.
+  const now = new Date();
+  const data: {
+    status: typeof status; startsAt?: Date; endsAt?: Date;
+    city?: string; citySlug?: string | null; category?: string | null; categorySlug?: string | null;
+  } = { status };
+  if (status === 'ACTIVE') {
+    // A slot whose window already closed (cancelled, expired) restarts today
+    // for its full duration. Reusing the old start produced a window that ended
+    // before it began, so "Activate" appeared to do nothing.
+    if (!existing.endsAt || existing.endsAt <= now) {
+      data.startsAt = now;
+      data.endsAt = new Date(now.getTime() + existing.durationDays * 24 * 3600 * 1000);
+    }
+    // Backfill a missing city: without its slug the city page never shows it.
+    if (!existing.citySlug) {
+      const vendor = await prisma.vendor.findUnique({
+        where: { id: existing.vendorId }, select: { city: true, category: true, businessName: true },
+      });
+      const listing = existing.listingId ? getListingById(existing.listingId) : null;
+      const slugify = (v: string | null | undefined) =>
+        v ? v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || null : null;
+      const city = existing.city ?? listing?.city ?? vendor?.city ?? null;
+      if (!city) {
+        throw new BadRequestError(
+          `${vendor?.businessName ?? 'This vendor'} has no city on its record, so the placement has no page to appear on. Set the city first.`,
+        );
+      }
+      const category = existing.category ?? listing?.category ?? vendor?.category ?? null;
+      data.city = city;
+      data.citySlug = listing?.city_slug ?? slugify(city);
+      data.category = category;
+      data.categorySlug = existing.categorySlug ?? listing?.category_slug ?? slugify(category);
+    }
+  } else if (existing.endsAt && existing.endsAt > now) {
+    data.endsAt = now;
+  }
+  const f = await prisma.featuredListing.update({ where: { id: existing.id }, data });
+  if (status !== existing.status) {
+    const vendor = await prisma.vendor
+      .findUnique({ where: { id: f.vendorId }, select: { email: true, businessName: true } })
+      .catch(() => null);
+    if (status === 'ACTIVE') {
+      // Reactivated by an admin: the business is back at the top and should
+      // hear so, the same way a paid activation is announced.
+      notifyIf(vendor?.email, (to) =>
+        featuredLiveEmail(
+          to,
+          vendor!.businessName,
+          { priceMinor: f.priceMinor, currency: f.currency, durationDays: f.durationDays },
+          f.endsAt,
+          existing.payment?.merchantTxnId ?? 'Reactivated by Pets24x7',
+          f.startsAt,
+        ),
+      );
+    } else {
+      notifyIf(vendor?.email, (to) => featuredEndedEmail(to, vendor!.businessName, status === 'CANCELLED'));
+    }
+  }
+  await audit(req, `featured.${status.toLowerCase()}`, { featuredId: f.id });
+  return f;
+}
+
 adminExtraRouter.post(
   '/featured/:id/status',
   asyncHandler(async (req, res) => {
     const { status } = FeaturedStatusBody.parse(req.body);
-    const existing = await prisma.featuredListing.findUnique({ where: { id: req.params.id ?? '' } });
-    if (!existing) throw new NotFoundError('Featured listing not found');
-    // Status and window must agree. Flipping a live slot to EXPIRED/CANCELLED
-    // while endsAt stays in the future leaves a row that reads "expired" in the
-    // vendor's history but still looks live to every date-based check.
-    const now = new Date();
-    const data: {
-      status: typeof status; startsAt?: Date; endsAt?: Date;
-      city?: string; citySlug?: string | null; category?: string | null; categorySlug?: string | null;
-    } = { status };
-    if (status === 'ACTIVE') {
-      // A slot whose window already closed (cancelled, expired) restarts today
-      // for its full duration. Reusing the old start produced a window that ended
-      // before it began, so "Activate" appeared to do nothing.
-      if (!existing.endsAt || existing.endsAt <= now) {
-        data.startsAt = now;
-        data.endsAt = new Date(now.getTime() + existing.durationDays * 24 * 3600 * 1000);
-      }
-      // Backfill a missing city: without its slug the city page never shows it.
-      if (!existing.citySlug) {
-        const vendor = await prisma.vendor.findUnique({
-          where: { id: existing.vendorId }, select: { city: true, category: true, businessName: true },
-        });
-        const listing = existing.listingId ? getListingById(existing.listingId) : null;
-        const slugify = (v: string | null | undefined) =>
-          v ? v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || null : null;
-        const city = existing.city ?? listing?.city ?? vendor?.city ?? null;
-        if (!city) {
-          throw new BadRequestError(
-            `${vendor?.businessName ?? 'This vendor'} has no city on its record, so the placement has no page to appear on. Set the city first.`,
-          );
-        }
-        const category = existing.category ?? listing?.category ?? vendor?.category ?? null;
-        data.city = city;
-        data.citySlug = listing?.city_slug ?? slugify(city);
-        data.category = category;
-        data.categorySlug = existing.categorySlug ?? listing?.category_slug ?? slugify(category);
-      }
-    } else if (existing.endsAt && existing.endsAt > now) {
-      data.endsAt = now;
-    }
-    const f = await prisma.featuredListing.update({ where: { id: existing.id }, data });
-    if (status !== existing.status && status !== 'ACTIVE') {
-      const vendor = await prisma.vendor
-        .findUnique({ where: { id: f.vendorId }, select: { email: true, businessName: true } })
-        .catch(() => null);
-      notifyIf(vendor?.email, (to) => featuredEndedEmail(to, vendor!.businessName, status === 'CANCELLED'));
-    }
-    await audit(req, `featured.${status.toLowerCase()}`, { featuredId: f.id });
+    const f = await applyFeaturedStatus(req, req.params.id ?? '', status);
+    if (!f) throw new NotFoundError('Featured listing not found');
     res.json({ ok: true, id: f.id, status: f.status });
   }),
 );
@@ -415,11 +463,22 @@ adminExtraRouter.post(
     if (!existing) throw new NotFoundError('Enquiry not found');
     const e = await prisma.enquiry.update({
       where: { id: existing.id },
-      data: { status, handledBy: req.auth!.sub, respondedAt: status === 'RESPONDED' ? new Date() : existing.respondedAt },
+      data: {
+        status,
+        handledBy: req.auth!.sub,
+        respondedAt: status === 'RESPONDED' && !existing.respondedAt ? new Date() : existing.respondedAt,
+        ...(status === 'COMPLETED' && !existing.closedAt ? { closedAt: new Date() } : {}),
+      },
     });
-    if (status !== existing.status) {
+    // Same rule as the vendor dashboard: forward moves only, once each. Any
+    // change used to mail the parent, including a reopen (NEW) or an archive.
+    const firstResponse = status === 'RESPONDED' && !existing.respondedAt;
+    const completedNow =
+      status === 'COMPLETED' && !existing.closedAt && existing.status !== 'COMPLETED' && existing.status !== 'ARCHIVED';
+    if (firstResponse || completedNow) {
       notifyIf(e.email, (to) => enquiryStatusEmail(to, e.name, e.listingName, status));
     }
+    await audit(req, `enquiry.${status.toLowerCase()}`, { enquiryId: e.id, from: existing.status });
     res.json({ ok: true, id: e.id, status: e.status });
   }),
 );
@@ -441,10 +500,17 @@ adminExtraRouter.post(
     const b = VendorCreateBody.parse(req.body);
     const phone = normalizePhone(b.phone, b.country ?? 'IN');
     const listing = b.listingId ? getListingById(b.listingId) : undefined;
-    const vendor = await prisma.vendor.upsert({
-      where: { phone },
-      update: { businessName: b.businessName, email: b.email ?? null },
-      create: {
+    // This is "Add vendor". An existing account on the same phone used to be
+    // silently renamed and re-addressed; now the admin is told, and edits
+    // that vendor instead.
+    const already = await prisma.vendor.findUnique({ where: { phone }, select: { businessName: true } });
+    if (already) throw new ConflictError(`A vendor with this phone already exists: ${already.businessName}`);
+    if (b.listingId) {
+      const holder = await prisma.vendor.findUnique({ where: { listingId: b.listingId }, select: { businessName: true } });
+      if (holder) throw new ConflictError(`That listing is already claimed by ${holder.businessName}`);
+    }
+    const vendor = await prisma.vendor.create({
+      data: {
         phone,
         businessName: b.businessName,
         email: b.email ?? null,
@@ -461,9 +527,22 @@ adminExtraRouter.post(
       vendorWelcomeEmail(to, vendor.businessName, listing?.name ?? vendor.businessName),
     );
     await audit(req, 'vendor.create', { vendorId: vendor.id });
-    res.status(201).json({ ok: true, vendor });
+    res.status(201).json({ ok: true, vendor, created: true });
   }),
 );
+
+/** The city slug the feed routes and the engagement job build for a city
+ *  ("Delhi " -> "delhi"); a trailing dash would match no city page. */
+function citySlugOf(city: string | null | undefined): string | null {
+  return city ? city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || null : null;
+}
+
+/** Parses an admin-typed date; a bad one is a 400, not a database error. */
+function parseDate(v: string, field: string): Date {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) throw new BadRequestError(`${field} is not a valid date`);
+  return d;
+}
 
 // ---------------- Deals CRUD ----------------
 const DealBody = z.object({
@@ -498,10 +577,10 @@ adminExtraRouter.post(
         vendorId: b.vendorId ?? null,
         title: b.title, description: b.description, offerLabel: b.offerLabel,
         category: b.category ?? null, city: b.city ?? null,
-        citySlug: b.citySlug ?? (b.city ? b.city.toLowerCase().replace(/[^a-z0-9]+/g, '-') : null),
+        citySlug: b.citySlug ?? citySlugOf(b.city),
         country: b.country ?? null, listingId: b.listingId ?? null, code: b.code ?? null,
-        startsAt: b.startsAt ? new Date(b.startsAt) : new Date(),
-        endsAt: b.endsAt ? new Date(b.endsAt) : null,
+        startsAt: b.startsAt ? parseDate(b.startsAt, 'Start date') : new Date(),
+        endsAt: b.endsAt ? parseDate(b.endsAt, 'End date') : null,
         status: b.status ?? 'ACTIVE',
         createdBy: req.auth!.sub,
       },
@@ -520,8 +599,11 @@ adminExtraRouter.patch(
     for (const k of ['title', 'description', 'offerLabel', 'category', 'city', 'citySlug', 'country', 'listingId', 'code', 'status', 'vendorId'] as const) {
       if (b[k] !== undefined) data[k] = b[k];
     }
-    if (b.startsAt) data.startsAt = new Date(b.startsAt);
-    if (b.endsAt) data.endsAt = new Date(b.endsAt);
+    // A new city with no explicit slug re-derives it; otherwise the deal keeps
+    // filtering onto the old city's page.
+    if (b.city !== undefined && b.citySlug === undefined) data.citySlug = citySlugOf(b.city);
+    if (b.startsAt) data.startsAt = parseDate(b.startsAt, 'Start date');
+    if (b.endsAt) data.endsAt = parseDate(b.endsAt, 'End date');
     const deal = await prisma.deal.update({ where: { id: existing.id }, data });
     await audit(req, 'deal.update', { dealId: deal.id });
     res.json({ ok: true, deal });
@@ -568,10 +650,10 @@ adminExtraRouter.post(
         vendorId: b.vendorId ?? null,
         title: b.title, description: b.description, venue: b.venue ?? null,
         city: b.city ?? null,
-        citySlug: b.citySlug ?? (b.city ? b.city.toLowerCase().replace(/[^a-z0-9]+/g, '-') : null),
+        citySlug: b.citySlug ?? citySlugOf(b.city),
         country: b.country ?? null,
-        startsAt: new Date(b.startsAt),
-        endsAt: b.endsAt ? new Date(b.endsAt) : null,
+        startsAt: parseDate(b.startsAt, 'Start time'),
+        endsAt: b.endsAt ? parseDate(b.endsAt, 'End time') : null,
         rsvpUrl: b.rsvpUrl ?? null, bannerUrl: b.bannerUrl ?? null,
         status: b.status ?? 'PUBLISHED',
         createdBy: req.auth!.sub,
@@ -591,8 +673,9 @@ adminExtraRouter.patch(
     for (const k of ['title', 'description', 'venue', 'city', 'citySlug', 'country', 'rsvpUrl', 'bannerUrl', 'status', 'vendorId'] as const) {
       if (b[k] !== undefined) data[k] = b[k];
     }
-    if (b.startsAt) data.startsAt = new Date(b.startsAt);
-    if (b.endsAt) data.endsAt = new Date(b.endsAt);
+    if (b.city !== undefined && b.citySlug === undefined) data.citySlug = citySlugOf(b.city);
+    if (b.startsAt) data.startsAt = parseDate(b.startsAt, 'Start time');
+    if (b.endsAt) data.endsAt = parseDate(b.endsAt, 'End time');
     const event = await prisma.event.update({ where: { id: existing.id }, data });
     await audit(req, 'event.update', { eventId: event.id });
     res.json({ ok: true, event });
@@ -667,12 +750,17 @@ adminExtraRouter.patch(
     if (!admin) throw new NotFoundError('Admin not found');
 
     const data: Record<string, unknown> = {};
+    let lockRow: { key: string; value: { email: string; setAt: string }; updatedBy: string } | null = null;
     if (body.name) data.name = body.name.trim();
 
     // ----- email: once -----
     if (body.email) {
       const nextEmail = body.email.trim().toLowerCase();
       if (nextEmail !== admin.email) {
+        // The sign-in address is where security notices go: a stolen session
+        // alone must not be able to move it.
+        const pwOk = body.currentPassword ? await bcrypt.compare(body.currentPassword, admin.passwordHash) : false;
+        if (!pwOk) throw new BadRequestError('Enter your current password to change your sign-in email');
         const lockKey = `admin_email_set:${admin.id}`;
         const locked = await prisma.setting.findUnique({ where: { key: lockKey } }).catch(() => null);
         if (locked) {
@@ -684,9 +772,10 @@ adminExtraRouter.patch(
         if (taken) throw new BadRequestError('Another admin already uses that address');
 
         data.email = nextEmail;
-        await prisma.setting.create({
-          data: { key: lockKey, value: { email: nextEmail, setAt: new Date().toISOString() }, updatedBy: admin.id },
-        });
+        // The lock row is written in the same transaction as the address
+        // below: writing it first let a failed update (the address taken by a
+        // concurrent change) burn the one-time change with nothing to show.
+        lockRow = { key: lockKey, value: { email: nextEmail, setAt: new Date().toISOString() }, updatedBy: admin.id };
       }
     }
 
@@ -699,13 +788,19 @@ adminExtraRouter.patch(
       }
       data.passwordHash = await bcrypt.hash(body.newPassword, 12);
       // Every other session made with the old password stops working.
-      data.sessionsRevokedAt = new Date();
+      // Backdated so the cookie re-issued below survives (see revocationCutoff).
+      data.sessionsRevokedAt = revocationCutoff();
     }
 
-    const updated = await prisma.admin.update({
-      where: { id: admin.id },
-      data,
-      select: { id: true, name: true, email: true, role: true },
+    // Setting.key is the primary key, so two concurrent email changes cannot
+    // both create the lock: the loser's transaction fails and changes nothing.
+    const updated = await prisma.$transaction(async (tx) => {
+      if (lockRow) await tx.setting.create({ data: lockRow });
+      return tx.admin.update({
+        where: { id: admin.id },
+        data,
+        select: { id: true, name: true, email: true, role: true },
+      });
     });
 
     // The revoke above would sign this admin out of the tab they are using.
@@ -740,12 +835,21 @@ adminExtraRouter.get(
   }),
 );
 
-const SettingsBody = z.record(z.string(), z.any());
+const SettingsBody = z.record(z.string().min(1).max(120), z.any());
+// Keep in step with RESERVED_SETTING_PREFIXES in admin.api.routes.ts.
+const RESERVED_SETTING_PREFIXES = ['plans:', 'admin_email_set:', 'vendor_pay:'];
 adminExtraRouter.put(
   '/settings',
   asyncHandler(async (req, res) => {
     const body = SettingsBody.parse(req.body ?? {});
     const keys = Object.keys(body);
+    // Server-owned keys (saved plan catalogues, the one-time admin email lock)
+    // are written by their own endpoints. Letting the free-form settings editor
+    // overwrite them would bypass that validation — e.g. set a plan price to
+    // a string that checkout then charges.
+    const reserved = keys.filter((k) => RESERVED_SETTING_PREFIXES.some((p) => k.startsWith(p)));
+    if (reserved.length) throw new BadRequestError(`These settings cannot be changed here: ${reserved.join(', ')}`);
+    if (keys.length > 100) throw new BadRequestError('Too many settings in one request');
     await Promise.all(
       keys.map((key) =>
         prisma.setting.upsert({

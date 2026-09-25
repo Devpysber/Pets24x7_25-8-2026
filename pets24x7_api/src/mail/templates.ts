@@ -2,13 +2,14 @@
 // Everything else lives in action-templates.ts.
 
 import type { MailInput } from './mailer.js';
-import { Button, esc, h, mailSite, Note, page, Text } from './components.js';
+import { Button, esc, h, mailSite, Note, page, Text, who } from './components.js';
 
 export { BRAND, esc as escapeHtml } from './components.js';
 
 export function welcomeEmail(to: string, name: string): MailInput {
   const dash = `${mailSite()}/dashboard/parent/`;
   return {
+    tag: 'welcome',
     to,
     subject: 'Welcome to Pets24x7 🐾',
     html: page({
@@ -27,7 +28,9 @@ export function welcomeEmail(to: string, name: string): MailInput {
 }
 
 export function verifyEmail(to: string, name: string, link: string, ttlMinutes: number): MailInput {
+  name = who(name);
   return {
+    tag: 'verify',
     to,
     subject: 'Verify your Pets24x7 email',
     html: page({
@@ -50,7 +53,9 @@ export function verifyEmail(to: string, name: string, link: string, ttlMinutes: 
  * vendor dashboard rather than a pet-parent account.
  */
 export function vendorVerifyEmail(to: string, businessName: string, link: string, ttlMinutes: number): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_verify',
     to,
     subject: 'Verify your Pets24x7 business email',
     html: page({

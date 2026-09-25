@@ -8,6 +8,16 @@
 <meta name="description" content="Pets24x7.com Privacy Policy — how we collect, use and protect your personal information. Compliant with the Information Technology Act, 2000 and the SPDI Rules, 2011." />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://pets24x7.com/privacy.html" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Privacy Policy — Pets24x7.com" />
+<meta property="og:description" content="How Pets24x7.com collects, uses and protects your personal information." />
+<meta property="og:url" content="https://pets24x7.com/privacy.html" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Privacy Policy — Pets24x7.com" />
+<meta name="twitter:description" content="How Pets24x7.com collects, uses and protects your personal information." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,8 +61,29 @@
   footer a { color: #94A3B8; }
   footer a:hover { color: #fff; text-decoration: none; }
 
-  @media (max-width: 640px) { .nav-links { display: none; } }
+  .header-inner { position: relative; }
+  .nav-links a { display: inline-flex; align-items: center; min-height: 40px; }
+  .nav-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); cursor: pointer; }
+  .nav-toggle svg { width: 20px; height: 20px; }
+  main, footer { overflow-wrap: anywhere; }
+  footer a { display: inline-block; padding: 4px 0; }
+  a:focus-visible, button:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
+  @media (max-width: 640px) {
+    .header-inner { height: 64px; padding: 0 16px; }
+    .brand-logo { height: 40px; }
+    .container { padding: 0 16px; }
+    .nav-toggle { display: inline-flex; }
+    .nav-links { display: none; }
+    .nav-links.nav-open { display: flex; flex-direction: column; gap: 0; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--border); box-shadow: 0 14px 28px rgba(2,6,23,.10); padding: 6px 16px 12px; }
+    .nav-links.nav-open a { min-height: 48px; font-size: 15px; border-bottom: 1px solid var(--bg-alt); }
+    .nav-links.nav-open a:last-child { border-bottom: none; }
+    .legal-hero { padding: 40px 0 32px; }
+    main { padding: 36px 0 56px; }
+    main h2 { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
+<script src="/config.js"></script>
 <script src="/analytics.js"></script>
 </head>
 <body>
@@ -62,11 +93,14 @@
     <a href="index.html" class="brand">
       <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
     </a>
-    <nav class="nav-links">
+    <nav class="nav-links" id="siteNav" aria-label="Main">
       <a href="marketing.html">For Pet Businesses</a>
       <a href="/in/mumbai/">Browse Listings</a>
       <a href="https://wa.me/919930090487" target="_blank" rel="noopener">WhatsApp</a>
     </nav>
+    <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -79,7 +113,7 @@
 
 <main>
   <div class="container">
-    <p class="last-updated"><strong>Last updated:</strong> 17 May 2026</p>
+    <p class="last-updated"><strong>Last updated:</strong> 24 September 2026</p>
 
     <p>Pets24x7.com (<strong>"we"</strong>, <strong>"us"</strong>, <strong>"our"</strong>) operates the website <a href="https://pets24x7.com">https://pets24x7.com</a> (the <strong>"Platform"</strong>). This Privacy Policy explains how we collect, use, disclose, and protect your personal information when you use the Platform or interact with us on WhatsApp, phone, or email.</p>
 
@@ -141,12 +175,35 @@
     <p>We do <strong>not</strong> sell, rent, or trade your personal information to third parties for their independent marketing purposes.</p>
 
     <h2>5. Cookies &amp; Tracking</h2>
-    <p>The Platform uses minimal browser storage:</p>
+    <p>The Platform uses minimal browser storage and a small set of measurement tools:</p>
     <ul>
       <li><strong>localStorage cache</strong> for listing data (described in §1.2 above).</li>
-      <li><strong>Analytics</strong> (e.g. Google Analytics) <em>may</em> be enabled to measure aggregate traffic patterns. If enabled, you will be informed via a cookie banner with the option to opt out.</li>
+      <li><strong>Google Analytics</strong> measures aggregate traffic patterns (pages viewed, searches, enquiries sent, sign-ups and membership purchases).</li>
+      <li><strong>Advertising measurement</strong> (Meta Pixel and Google Ads conversion tracking) <em>may</em> be enabled to measure whether our own ads bring visitors who go on to enquire, sign up or buy.</li>
     </ul>
-    <p>We do not currently use third-party advertising trackers.</p>
+    <p>Email addresses and phone numbers are stripped out before anything is sent to these tools, one-time review links are never sent, and the signed-in dashboards are not tracked. If your browser sends a <strong>Global Privacy Control</strong> signal, advertising measurement is switched off automatically. Visitors in the European Economic Area, the United Kingdom and Switzerland are not tracked with cookies.</p>
+    <div class="callout" id="consentBox">
+      <p><strong>Your choice on this browser:</strong> <span id="consentState">tracking follows the defaults above.</span></p>
+      <p>
+        <button type="button" id="consentOff" style="font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--primary);background:#fff;color:var(--primary);cursor:pointer;margin:4px 6px 0 0">Turn off analytics &amp; ad tracking</button>
+        <button type="button" id="consentOn" style="font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--border, #E5E7EB);background:#fff;color:var(--text);cursor:pointer;margin:4px 0 0">Allow</button>
+      </p>
+    </div>
+    <script>
+      // The switch is /analytics.js's p24Consent(); it takes effect at once and
+      // is remembered for every later page on this browser.
+      (function () {
+        var state = document.getElementById('consentState');
+        function paint(c) {
+          if (!c) return;
+          state.textContent = c.analytics || c.ads ? 'analytics and ad tracking allowed.' : 'analytics and ad tracking turned off.';
+        }
+        if (!window.p24Consent) { document.getElementById('consentBox').hidden = true; return; }
+        paint(window.p24Consent.current());
+        document.getElementById('consentOff').addEventListener('click', function () { paint(window.p24Consent({ analytics: false, ads: false })); });
+        document.getElementById('consentOn').addEventListener('click', function () { paint(window.p24Consent({ analytics: true, ads: true })); });
+      })();
+    </script>
 
     <h2>6. Your Rights</h2>
     <p>Subject to applicable law, you have the right to:</p>
@@ -204,5 +261,6 @@
   </div>
 </footer>
 
+<script src="/nav-auth.js" defer></script>
 </body>
 </html>

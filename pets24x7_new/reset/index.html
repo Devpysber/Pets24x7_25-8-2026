@@ -6,6 +6,18 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Choose a new password — Pets24x7.com</title>
 <meta name="robots" content="noindex" />
+<meta name="description" content="Choose a new password for your Pets24x7 account." />
+<link rel="canonical" href="https://pets24x7.com/reset/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Choose a new password — Pets24x7.com" />
+<meta property="og:description" content="Choose a new password for your Pets24x7 account." />
+<meta property="og:url" content="https://pets24x7.com/reset/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Choose a new password — Pets24x7.com" />
+<meta name="twitter:description" content="Choose a new password for your Pets24x7 account." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -30,6 +42,16 @@
   .err{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
   .ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
   .hint{font-size:12.5px;color:var(--text-muted);margin-top:-6px;margin-bottom:14px}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+  input{font-size:16px}
+  .btn{min-height:48px}
+  .btn-link{min-height:44px}
+  .msg,p.sub{overflow-wrap:anywhere}
+  @media (max-width:430px){
+    body{padding:16px;align-items:flex-start;padding-top:max(24px,8vh)}
+    .card{padding:28px 20px;border-radius:16px}
+  }
 </style>
 </head>
 <body>
@@ -52,7 +74,7 @@
     <button class="btn" id="saveBtn">Set my password</button>
   </div>
 
-  <button class="btn-link" id="backLink" onclick="location.href='/login/#parent'">Back to sign in</button>
+  <button class="btn-link" id="backLink" onclick="location.href='/parent-login/#password'">Back to sign in</button>
 </div>
 
 <script src="/config.js"></script>
@@ -63,11 +85,19 @@
   function show(el, msg) { el.textContent = msg; el.classList.add('show'); }
   function hide(el) { el.classList.remove('show'); }
   function fmtErr(e) {
+    // Schema failures come back as { error: 'validation_failed', issues } with
+    // no message; the password is checked here first, so it is the token.
+    if (e && e.data && e.data.error === 'validation_failed') {
+      return 'This reset link is not valid. Please request a new one.';
+    }
     return (e && (e.message || (e.data && e.data.message) || (e.data && e.data.error))) || 'Something went wrong.';
   }
 
   var token = (/[?&]token=([^&]+)/.exec(location.search) || [])[1] || '';
-  if (token) token = decodeURIComponent(token);
+  // A mangled link (stray "%" from a mail client's rewrap) makes
+  // decodeURIComponent throw, which used to kill the whole script and leave a
+  // form whose button did nothing. Treat it as a missing token instead.
+  if (token) { try { token = decodeURIComponent(token); } catch (e) { token = ''; } }
 
   // No token means the link was mangled in transit, or someone opened the page
   // directly. There is nothing to reset, so send them back to ask for a link.
@@ -83,6 +113,7 @@
     var pw = $('pw').value;
     var pw2 = $('pw2').value;
     if (pw.length < 8) return show($('err'), 'Password must be at least 8 characters.');
+    if (pw.length > 200) return show($('err'), 'Password must be 200 characters or fewer.');
     if (pw !== pw2) return show($('err'), 'The two passwords do not match.');
 
     var btn = this;
@@ -95,6 +126,14 @@
       show($('ok'), 'Your new password is saved. We emailed you a confirmation.');
       setTimeout(function () { location.href = '/dashboard/parent/'; }, 900);
     }).catch(function (e) {
+      // A dead token (expired / used / superseded) will never work, so stop
+      // offering the form and point them at a fresh link instead.
+      if (e && e.status === 400 && /reset link/i.test(e.message || '')) {
+        $('form').style.display = 'none';
+        $('title').textContent = 'This link can no longer be used';
+        $('sub').textContent = 'Ask for a new reset link from the sign-in page (“Forgot your password?”).';
+        $('backLink').textContent = 'Request a new link';
+      }
       show($('err'), fmtErr(e));
       btn.disabled = false;
       btn.textContent = 'Set my password';

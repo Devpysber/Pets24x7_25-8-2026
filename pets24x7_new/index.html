@@ -11,23 +11,48 @@
 <link rel="icon" type="image/png" href="pets24x7_logo.png" />
 
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
 <meta property="og:title" content="Pets24x7.com — Pet Services Marketplace | Vets, Groomers, Boarding & More" />
 <meta property="og:description" content="34,000+ verified pet businesses across 570+ cities in India and the USA. Book direct on WhatsApp. List your pet business free." />
 <meta property="og:url" content="https://pets24x7.com/" />
-<meta property="og:image" content="https://pets24x7.com/pets24x7_logo.png" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Pets24x7.com — Pet Services Marketplace | Vets, Groomers, Boarding & More" />
+<meta name="twitter:description" content="34,000+ verified pet businesses across 570+ cities in India and the USA. Book direct on WhatsApp. List your pet business free." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 
+<!-- Organization + WebSite (with a sitelinks search box pointing at /search/).
+     No aggregateRating here: a rating the site gives itself is exactly what
+     Google's review-snippet policy calls self-serving, and it can cost the
+     whole domain its rich results. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "name": "Pets24x7.com",
-  "image": "https://pets24x7.com/pets24x7_logo.png",
-  "url": "https://pets24x7.com",
-  "telephone": "+91-9930090487",
-  "description": "Marketplace for pet services — vets, groomers, boarding, walking, training and pet taxi — across India and the USA.",
-  "areaServed": ["IN","US"],
-  "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "612" }
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://pets24x7.com/#org",
+      "name": "Pets24x7.com",
+      "url": "https://pets24x7.com/",
+      "logo": "https://pets24x7.com/pets24x7_logo.png",
+      "email": "hello@pets24x7.com",
+      "telephone": "+91-9930090487",
+      "description": "Marketplace for pet services — vets, groomers, boarding, walking, training and pet taxi — across India and the USA.",
+      "areaServed": ["IN","US"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://pets24x7.com/#website",
+      "url": "https://pets24x7.com/",
+      "name": "Pets24x7",
+      "publisher": { "@id": "https://pets24x7.com/#org" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": { "@type": "EntryPoint", "urlTemplate": "https://pets24x7.com/search/?q={search_term_string}" },
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ]
 }
 </script>
 
@@ -108,7 +133,7 @@
   .cats { padding: 56px 0 24px; background: #fff; }
   .cats h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .cats .sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
-  .cat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .cat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
   .cat-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; transition: all 0.2s; cursor: pointer; background: #fff; }
   .cat-item:hover { background: var(--primary-light); border-color: rgba(37,99,235,0.3); transform: translateY(-2px); box-shadow: var(--shadow); }
   .cat-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #DBEAFE, #BFDBFE); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
@@ -144,6 +169,12 @@
   .feat-body h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; color: var(--text); }
   .feat-loc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
   .feat-rating { display: inline-flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+  .feat-why { font-size: 12.5px; font-weight: 600; color: #B45309; margin: -4px 0 10px; line-height: 1.35; }
+  .feat-img .badge-sponsored { position: absolute; top: 10px; right: 10px; z-index: 2; background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; box-shadow: var(--shadow-sm); }
+  .feat-card.is-sponsored { border-color: #FDE68A; }
+  .feat-skel { border-radius: var(--radius-lg); min-height: 300px; background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 37%, #F3F4F6 63%); background-size: 400% 100%; animation: featShimmer 1.4s ease infinite; }
+  @keyframes featShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @media (prefers-reduced-motion: reduce) { .feat-skel { animation: none; } }
   .rating-pill { background: var(--success); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
   .google-badge { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--border); padding: 2px 8px 2px 4px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text); }
   .google-badge .gscore { background: var(--success); color: #fff; padding: 1px 5px; border-radius: 4px; font-weight: 800; font-size: 10px; }
@@ -258,7 +289,24 @@
   .float-wa span { display: none; }
 
   /* MOBILE */
-  @media (max-width: 900px) { .header-nav .nav-link { display: none; } }
+  .nav-toggle { display: none; }
+  @media (max-width: 900px) {
+    .nav-toggle { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); cursor: pointer; order: 3; flex-shrink: 0; }
+    .header-nav .nav-link { display: none; }
+    .header-nav .nav-link.nav-keep { display: inline-block; padding: 8px 8px; }
+    .header-nav.nav-open { position: absolute; top: 100%; left: 0; right: 0; background: #fff; flex-direction: column; align-items: stretch; gap: 0; padding: 6px 16px 16px; border-bottom: 1px solid var(--border); box-shadow: 0 14px 28px rgba(2,6,23,.10); max-height: calc(100vh - 72px); overflow-y: auto; }
+    .header-nav.nav-open .nav-link, .header-nav.nav-open .nav-link.nav-keep { display: flex; align-items: center; width: 100%; min-height: 48px; padding: 10px 8px; font-size: 15px; text-align: left; border-bottom: 1px solid var(--bg-alt); border-radius: 0; }
+    .header-nav.nav-open .nav-dropdown { width: 100%; }
+    /* The desktop dropdown is hover-revealed (opacity/visibility); inside the
+       open mobile menu it must simply show, or its two links are invisible. */
+    .header-nav.nav-open .dropdown-menu { position: static; box-shadow: none; border: none; padding: 0 0 6px 12px; display: block; opacity: 1; visibility: visible; transform: none; min-width: 0; }
+    .header-nav.nav-open .dropdown-toggle svg { display: none; }
+    .header-nav.nav-open .dropdown-item { min-height: 44px; }
+    .header-nav.nav-open .header-cta { margin-top: 10px; justify-content: center; min-height: 48px; }
+    .header-nav.nav-open .header-cta span { display: inline; }
+    .header-inner { position: relative; }
+    .header-nav { margin-left: auto; }
+  }
   @media (max-width: 768px) {
     section { padding: 56px 0; }
     .traveler-hero { padding: 40px 0 56px; }
@@ -271,13 +319,54 @@
     .premium-card { grid-template-columns: 1fr; padding: 28px; }
     footer .footer-grid { grid-template-columns: 1fr 1fr; }
     .header-cta span { display: none; }
-    .header-cta { padding: 10px 12px; }
+    .header-cta { padding: 10px 12px; min-height: 40px; }
     .float-wa { bottom: 16px; right: 16px; }
     .btn { padding: 14px 22px; font-size: 15px; }
     .hero-ctas { flex-direction: column; align-items: stretch; }
     .hero-ctas .btn { width: 100%; }
   }
-  @media (max-width: 480px) { footer .footer-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .container { padding: 0 16px; }
+    .search-field input, .search-field select { font-size: 16px; min-height: 40px; }
+    .featured-head > a { display: inline-flex; align-items: center; min-height: 44px; }
+    footer li a { display: inline-block; padding: 3px 0; }
+  }
+  @media (max-width: 480px) {
+    footer .footer-grid { grid-template-columns: 1fr; }
+    /* Two categories per row instead of a single long column of twelve. */
+    .cat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .cat-item { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+    .cat-icon { width: 40px; height: 40px; font-size: 20px; }
+    .dest-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dest-item { padding: 8px; gap: 8px; min-width: 0; }
+    .dest-circle { width: 38px; height: 38px; font-size: 18px; }
+    .dest-info { min-width: 0; }
+    .dest-info strong { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .traveler-hero h1 { letter-spacing: -0.5px; }
+    .urgency-bar { font-size: 13px; padding: 8px 14px; }
+    /* Signed in, "Sign In" becomes "My Dashboard": tighten the header so the
+       logo, that link, the WhatsApp button and the menu button fit at 360px. */
+    .header-inner { gap: 8px; }
+    .header-nav:not(.nav-open) .nav-dropdown { display: none; }
+    .header-nav:not(.nav-open) .nav-link.nav-keep { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 6px; white-space: nowrap; }
+  }
+  /* Phones: the 8 recommended cards become a swipeable rail instead of a
+     ~3000px single column (the next card peeks in to show there is more). */
+  @media (max-width: 640px) {
+    .feat-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 4px 16px 12px; scroll-padding: 0 16px; scrollbar-width: thin; }
+    .feat-grid > * { scroll-snap-align: start; min-width: 0; }
+    .feat-card:hover { transform: none; }
+  }
+  @media (max-width: 400px) {
+    .brand-logo { height: 40px; }
+    .header-nav:not(.nav-open) .nav-link.nav-keep { font-size: 13px; }
+  }
+  a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
+  .search-card:focus-within { box-shadow: 0 24px 60px rgba(15,23,42,0.18), 0 0 0 3px rgba(251,191,36,.6); }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
   @media (min-width: 769px) { .float-wa { display: none; } }
 </style>
 </head>
@@ -299,7 +388,7 @@
     <a href="index.html" class="brand" aria-label="Pets24x7 home">
       <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
     </a>
-    <nav class="header-nav">
+    <nav class="header-nav" id="siteNav" aria-label="Main">
       <a href="#cats" class="nav-link">Categories</a>
       <a href="#destinations" class="nav-link">Destinations</a>
       <div class="nav-dropdown">
@@ -318,12 +407,15 @@
         </div>
       </div>
       <a href="/membership/" class="nav-link">Membership</a>
-      <a href="/login/" class="nav-link">Sign In</a>
+      <a href="/login/" class="nav-link nav-keep">Sign In</a>
       <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=header&utm_campaign=business_signup" class="header-cta" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.149-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
         <span>List My Business</span>
       </a>
     </nav>
+    <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -331,7 +423,7 @@
 <section class="traveler-hero">
   <div class="container">
     <h1>Find trusted pet services near you — vets, groomers, boarding & more</h1>
-    <p class="lead"><span data-stat="listings">34,169</span> verified pet businesses across <span data-stat="cities">2,212</span> cities in India &amp; the USA. Real Google ratings. Zero booking fees. Direct WhatsApp enquiries.</p>
+    <p class="lead"><span data-stat="listings">34,169</span> verified pet businesses across <span data-stat="cities">2,212</span> cities in India &amp; the USA. Linked to their Google Maps profiles. Zero booking fees. Direct WhatsApp enquiries.</p>
 
     <form class="search-card" id="searchForm" onsubmit="event.preventDefault(); doSearch();">
       <div class="search-field">
@@ -375,19 +467,19 @@
   <div class="container">
     <h2>Pet services we cover</h2>
     <p class="sub">From a grooming appointment to a 24x7 emergency vet — find verified providers in seconds.</p>
-    <div class="cat-grid">
-      <a class="cat-item" href="/in/mumbai/veterinary-clinics/"><span class="cat-icon">🩺</span><span class="cat-info"><strong>Veterinary Clinics</strong><span>2,500+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-grooming-spa/"><span class="cat-icon">🛁</span><span class="cat-info"><strong>Grooming &amp; Spa</strong><span>2,900+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-boarding-daycare/"><span class="cat-icon">🏠</span><span class="cat-info"><strong>Boarding &amp; Daycare</strong><span>3,200+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-walking/"><span class="cat-icon">🐕</span><span class="cat-info"><strong>Pet Walking</strong><span>2,300+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-training-obedience-behavior/"><span class="cat-icon">🎓</span><span class="cat-info"><strong>Training</strong><span>2,600+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-sitting-in-home-care/"><span class="cat-icon">🛏️</span><span class="cat-info"><strong>In-home Sitting</strong><span>1,900+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/emergency-animal-hospital/"><span class="cat-icon">🚑</span><span class="cat-info"><strong>Emergency Vet</strong><span>2,300+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/vaccination-centers/"><span class="cat-icon">💉</span><span class="cat-info"><strong>Vaccination</strong><span>3,200+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/mobile-vet-services/"><span class="cat-icon">🚐</span><span class="cat-info"><strong>Mobile Vet</strong><span>1,700+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-dental-care/"><span class="cat-icon">🦷</span><span class="cat-info"><strong>Dental Care</strong><span>1,400+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-taxi-transport/"><span class="cat-icon">🚕</span><span class="cat-info"><strong>Pet Taxi</strong><span>500+ listings</span></span></a>
-      <a class="cat-item" href="/in/mumbai/pet-relocation-services/"><span class="cat-icon">✈️</span><span class="cat-info"><strong>Pet Relocation</strong><span>1,400+ listings</span></span></a>
+    <div class="cat-grid" id="catGrid">
+      <a class="cat-item" data-cat="veterinary-clinics" href="/in/mumbai/veterinary-clinics/"><span class="cat-icon">🩺</span><span class="cat-info"><strong>Veterinary Clinics</strong><span>2,500+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-grooming-spa" href="/in/mumbai/pet-grooming-spa/"><span class="cat-icon">🛁</span><span class="cat-info"><strong>Grooming &amp; Spa</strong><span>2,900+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-boarding-daycare" href="/in/mumbai/pet-boarding-daycare/"><span class="cat-icon">🏠</span><span class="cat-info"><strong>Boarding &amp; Daycare</strong><span>3,200+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-walking" href="/in/mumbai/pet-walking/"><span class="cat-icon">🐕</span><span class="cat-info"><strong>Pet Walking</strong><span>2,300+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-training-obedience-behavior" href="/in/mumbai/pet-training-obedience-behavior/"><span class="cat-icon">🎓</span><span class="cat-info"><strong>Training</strong><span>2,600+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-sitting-in-home-care" href="/in/mumbai/pet-sitting-in-home-care/"><span class="cat-icon">🛏️</span><span class="cat-info"><strong>In-home Sitting</strong><span>1,900+ listings</span></span></a>
+      <a class="cat-item" data-cat="emergency-animal-hospital" href="/in/mumbai/emergency-animal-hospital/"><span class="cat-icon">🚑</span><span class="cat-info"><strong>Emergency Vet</strong><span>2,300+ listings</span></span></a>
+      <a class="cat-item" data-cat="vaccination-centers" href="/in/mumbai/vaccination-centers/"><span class="cat-icon">💉</span><span class="cat-info"><strong>Vaccination</strong><span>3,200+ listings</span></span></a>
+      <a class="cat-item" data-cat="mobile-vet-services" href="/in/mumbai/mobile-vet-services/"><span class="cat-icon">🚐</span><span class="cat-info"><strong>Mobile Vet</strong><span>1,700+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-dental-care" href="/in/mumbai/pet-dental-care/"><span class="cat-icon">🦷</span><span class="cat-info"><strong>Dental Care</strong><span>1,400+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-taxi-transport" href="/in/mumbai/pet-taxi-transport/"><span class="cat-icon">🚕</span><span class="cat-info"><strong>Pet Taxi</strong><span>500+ listings</span></span></a>
+      <a class="cat-item" data-cat="pet-relocation-services" href="/in/mumbai/pet-relocation-services/"><span class="cat-icon">✈️</span><span class="cat-info"><strong>Pet Relocation</strong><span>1,400+ listings</span></span></a>
     </div>
   </div>
 </section>
@@ -413,8 +505,8 @@
   <div class="container">
     <div class="featured-head">
       <div>
-        <h2>Top-rated this month</h2>
-        <p>Hand-picked highly-rated pet businesses based on Google reviews.</p>
+        <h2>Pet businesses near you</h2>
+        <p>Vets, groomers, boarders and trainers listed on Pets24x7.</p>
       </div>
       <a href="/in/mumbai/" style="color:var(--primary);font-weight:700;font-size:14px;">Browse all listings →</a>
     </div>
@@ -439,7 +531,7 @@
     <div class="trust-badges">
       <span class="trust-badge"><span class="check">✓</span> No upfront cost</span>
       <span class="trust-badge"><span class="check">✓</span> Direct customer chats</span>
-      <span class="trust-badge"><span class="check">✓</span> Google ratings shown</span>
+      <span class="trust-badge"><span class="check">✓</span> Google Maps profile linked</span>
       <span class="trust-badge"><span class="check">✓</span> SEO-Optimised Listing</span>
     </div>
 
@@ -478,7 +570,7 @@
     </div>
     <div class="steps-grid">
       <div class="step-card"><div class="step-num">1</div><h3>Submit Your Business</h3><p>Send us your business details on WhatsApp — name, address, services, phone, Google reviews link. We handle the rest.</p></div>
-      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team SEO-optimises your listing, syncs Google ratings, embeds your map, and pushes you to relevant city + category pages.</p></div>
+      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team SEO-optimises your listing, links your Google Business profile, embeds your map, and pushes you to relevant city + category pages.</p></div>
       <div class="step-card"><div class="step-num">3</div><h3>Get Direct Enquiries</h3><p>Pet parents WhatsApp you directly. You confirm bookings. No commission. No middlemen. No surprises.</p></div>
     </div>
   </div>
@@ -492,7 +584,7 @@
       <h2>From Boutique Groomers to 24x7 Animal Hospitals</h2>
     </div>
     <div class="testimonials">
-      <div class="testimonial"><div class="stars">🔍</div><blockquote>Your listing is built to rank for the searches pet parents actually type — &ldquo;vet near me&rdquo;, &ldquo;dog grooming in <em>your city</em>&rdquo; — with your real Google rating on it.</blockquote><cite><span class="avatar">1</span> SEO-optimised listing page</cite></div><div class="testimonial"><div class="stars">💬</div><blockquote>Every enquiry lands in your WhatsApp with the pet parent&rsquo;s name, number and what they need. You quote, you confirm, you keep the client.</blockquote><cite><span class="avatar">2</span> Direct WhatsApp leads</cite></div><div class="testimonial"><div class="stars">💸</div><blockquote>No setup fee, no commission on what you earn, no lock-in. Featured placement is the only paid extra, and only if you want it.</blockquote><cite><span class="avatar">3</span> Zero commission</cite></div>
+      <div class="testimonial"><div class="stars">🔍</div><blockquote>Your listing is built to rank for the searches pet parents actually type — &ldquo;vet near me&rdquo;, &ldquo;dog grooming in <em>your city</em>&rdquo; — linked to your Google Business profile.</blockquote><cite><span class="avatar">1</span> SEO-optimised listing page</cite></div><div class="testimonial"><div class="stars">💬</div><blockquote>Every enquiry lands in your WhatsApp with the pet parent&rsquo;s name, number and what they need. You quote, you confirm, you keep the client.</blockquote><cite><span class="avatar">2</span> Direct WhatsApp leads</cite></div><div class="testimonial"><div class="stars">💸</div><blockquote>No setup fee, no commission on what you earn, no lock-in. Featured placement is the only paid extra, and only if you want it.</blockquote><cite><span class="avatar">3</span> Zero commission</cite></div>
     </div>
   </div>
 </section>
@@ -535,7 +627,7 @@
     </div>
     <div class="faq-list">
       <details class="faq-item" open><summary>Is there a setup fee or monthly cost?</summary><div class="faq-answer">Nope. Listing is 100% free. You only pay for the optional Featured Listing upgrade — and only if you want top-of-page visibility. No commissions. No subscriptions.</div></details>
-      <details class="faq-item"><summary>How do you display Google ratings?</summary><div class="faq-answer">We link your listing to your existing Google Business profile (via your Google CID). Your live rating, review count and recent customer scores show up on your Pets24x7 listing — and refresh automatically.</div></details>
+      <details class="faq-item"><summary>How do Google reviews work with my listing?</summary><div class="faq-answer">We link your listing to your existing Google Business profile (via your Google CID), so pet parents can open your map and your Google reviews in one tap. A star rating appears on Pets24x7 only when it comes with a review count behind it, and you can collect reviews from your customers through your dashboard.</div></details>
       <details class="faq-item"><summary>Can I list multiple locations or branches?</summary><div class="faq-answer">Yes. Each branch gets its own SEO-optimised listing page, with its own Google reviews and WhatsApp routing. We offer bulk-listing discounts for chains.</div></details>
       <details class="faq-item"><summary>What categories of pet businesses can list?</summary><div class="faq-answer">Veterinary clinics, emergency animal hospitals, groomers, boarders, daycare, dog walkers, trainers, sitters, pet taxi &amp; transport, relocators, dental care, physiotherapy, mobile vets, vaccination centres, exotic/avian vets — and more. If you serve pets, we'll find you a category.</div></details>
       <details class="faq-item"><summary>How long does it take to receive my first enquiry?</summary><div class="faq-answer">Most businesses get their first WhatsApp enquiry within 5-7 days of going live. Featured listings often see traction in 24-48 hours.</div></details>
@@ -556,7 +648,7 @@
       </a>
       <a href="tel:+919930090487" class="btn btn-outline">📞 Call +91 99300 90487</a>
     </div>
-    <p class="micro-copy">No spam. No calls. Just WhatsApp.</p>
+    <p class="micro-copy">No spam. No cold calls. WhatsApp or call — whichever suits you.</p>
   </div>
 </section>
 
@@ -616,15 +708,21 @@
   <span>Chat to Get Started</span>
 </a>
 
-<script src="config.js"></script>
+<script src="/config.js"></script>
 <script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
-<script src="pets-data.js"></script>
-<script src="pets-loader.js"></script>
+<script src="/pets-data.js"></script>
+<script src="/pets-loader.js"></script>
+<script src="/pet-images.js"></script>
+<script src="/reco-track.js" defer></script>
 <script>
   // ---- Shared image pool by category ----
   // Pet-themed Unsplash photos so cards look relevant (vet → vet pic, groom → groom pic, etc.)
   function seedOf(s) { return (s || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
+
+  function escHtml(s){ return (s == null ? '' : String(s)).replace(/[<>&"']/g, function(c){
+    return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];
+  }); }
 
   // ---- Render city groups + featured ----
   function renderCities() {
@@ -636,9 +734,9 @@
     function card(c){
       var icon = {'mumbai':'🌊','bengaluru':'🌳','hyderabad':'🍛','pune':'🎓','delhi':'🏛️','new-delhi':'🏛️','ahmedabad':'🪁','thane':'🏞️','navi-mumbai':'🌆','surat':'💎','pimpri-chinchwad':'🏙️','mira-bhayandar':'🌅','secunderabad':'🚂',
                    'dallas':'🤠','houston':'🚀','san-antonio':'🌵','fort-worth':'🐴','los-angeles':'🌴','el-paso':'⛰️','manhattan':'🗽','denton':'🎓','brooklyn':'🌉','corpus-christi':'🐚','las-vegas':'🎰','jacksonville':'🌊','orlando':'🎢','queens':'🛫','san-francisco':'🌉','charlotte':'🌳','arlington':'🏟️','miami':'🏖️','phoenix':'🔥','tampa':'⛵','seattle':'☕','garland':'🌹','philadelphia':'🔔','denver':'🏔️','atlanta':'🍑','portland':'🌲','san-jose':'💻','west-palm-beach':'🌴','naples':'🏝️','riverside':'🌉','port-st-lucie':'🏖️','sarasota':'⛱️','lubbock':'🌾','minneapolis':'❄️','sacramento':'🌳','daytona-beach':'🏎️','midland':'🛢️','fort-myers':'🌴','white-plains':'⛅','bridgeport':'🌉','killeen':'⭐','orange-county':'🍊','boston':'🍀','amarillo':'🌪️','beaumont':'⚓','brownsville':'🌊','tyler':'🌹','santa-barbara':'🏖️','melbourne':'🚀','pensacola':'⚓','abilene':'🌵','mineola':'🌳','mcallen':'🌴','college-station':'🎓','washington':'🏛️','waco':'🐄','laredo':'🌵','trenton':'🏛️'}[c.city_slug] || '📍';
-      return '<a class="dest-item" href="/' + c.country.toLowerCase() + '/' + encodeURIComponent(c.city_slug) + '/">' +
+      return '<a class="dest-item" href="/' + String(c.country || 'in').toLowerCase() + '/' + encodeURIComponent(c.city_slug) + '/">' +
              '<span class="dest-circle">' + icon + '</span>' +
-             '<span class="dest-info"><strong>' + c.city + '</strong><span>' + c.count + '+ listings</span></span>' +
+             '<span class="dest-info"><strong>' + escHtml(c.city) + '</strong><span>' + (Number(c.count) || 0) + '+ listings</span></span>' +
              '</a>';
     }
 
@@ -649,11 +747,11 @@
     // populate the search datalist
     var dl = document.getElementById('cityList');
     dl.innerHTML = idx.slice(0, 200).map(function(c){
-      return '<option value="' + (c.city + (c.country === 'US' ? ', US' : '')) + '"></option>';
+      return '<option value="' + escHtml(c.city + (c.country === 'US' ? ', US' : '')) + '"></option>';
     }).join('');
   }
 
-  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function escapeAttr(s){ return escHtml(s); }
 
   var CATEGORY_IMG = {
     'veterinary-clinics':'photo-1628009368231-7bb7cfcb0def','emergency-animal-hospital':'photo-1583337130417-3346a1be7dee',
@@ -665,7 +763,10 @@
     'pet-sitting-in-home-care':'photo-1596492784531-6e6eb5ea9993','pet-relocation-services':'photo-1518717758536-85ae29035b6d',
     'pet-taxi-transport':'photo-1425082661705-1834bfd09dca','pet-therapy-services':'photo-1541599540903-216a46ca1dc0'
   };
+  // /pet-images.js holds the verified per-category photo pools (varied per
+  // listing); the single-photo map below is only a fallback if it failed to load.
   function cardImg(b) {
+    if (window.PetImages) return window.PetImages.cardImg(b, 560, 420);
     if (b && b.imageUrl) return b.imageUrl;
     var id = CATEGORY_IMG[b && b.category_slug] || 'photo-1583337130417-3346a1be7dee';
     return 'https://images.unsplash.com/' + id + '?w=560&h=420&fit=crop&q=70';
@@ -677,34 +778,86 @@
     return q ? 'https://www.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed' : null;
   }
 
+  // Items from /api/reco/city carry rid/pos/reason/sponsored; the bundled
+  // snapshot and the search fallback do not, and render exactly as before.
+  // Kept apart from PETS_FEATURED, which /pets-loader.js overwrites with the
+  // bundled snapshot on petsUpdated.
+  var homeRecoRid = '';
+  var homeRecoItems = null;
+  function featHref(p) {
+    var u = String(p.url || '');
+    if (homeRecoRid && /^\/(?!\/)/.test(u)) {
+      return u.indexOf('src=') === -1 ? u + (u.indexOf('?') === -1 ? '?' : '&') + 'src=reco_home_top' : u;
+    }
+    var h = '/' + String(p.country || 'in').toLowerCase() + '/' + encodeURIComponent(p.city_slug || '') + '/' + encodeURIComponent(p.id) + '/';
+    return homeRecoRid ? h + '?src=reco_home_top' : h;
+  }
   function renderFeatured() {
-    var list = (window.PETS_FEATURED || []).slice(0, 8);
+    var list = (homeRecoItems || window.PETS_FEATURED || []).slice(0, 8);
+    var grid = document.getElementById('featGrid');
+    if (!list.length) {
+      // Nothing bundled yet: hold the space with a skeleton until the API answers.
+      if (!grid.children.length) grid.innerHTML = new Array(5).join('<div class="feat-skel" aria-hidden="true"></div>');
+      return;
+    }
     var html = list.map(function(p, i){
-      var pRating = Number(p.rating) || 0;
-      var pIcon = p.category_icon || '🐾';
-      return '<a class="feat-card" href="/' + String(p.country || 'in').toLowerCase() + '/' + encodeURIComponent(p.city_slug || '') + '/' + encodeURIComponent(p.id) + '/">' +
+      var pReviews = Number(p.review_count) || 0;
+      // A score with no review count behind it is not shown (the same rule as
+      // build_pages.has_rating): many listings keep a source score with count 0.
+      var pRating = pReviews >= 1 ? (Number(p.rating) || 0) : 0;
+      var pIcon = escHtml(p.category_icon || '🐾');
+      var sp = !!(homeRecoRid && p.sponsored);
+      var why = (homeRecoRid && !sp && p.reason && p.reason.text) ? p.reason.text : '';
+      // Only listings merged in from /api/listings/recent are new; a listing
+      // with no reviews is not, so that alone no longer earns the badge.
+      var badge = (pRating >= 4.5 && pReviews >= 25) ? '★ Top Rated' : (p._recent ? 'New on Pets24x7' : '');
+      var track = homeRecoRid
+        ? ' data-rid="' + escapeAttr(homeRecoRid) + '" data-lid="' + escapeAttr(p.id) + '" data-pos="' + (Number(p.pos) || i + 1) + '"' +
+          ' data-reason="' + escapeAttr(sp ? 'SPONSORED' : ((p.reason && p.reason.code) || '')) + '" data-sp="' + (sp ? '1' : '0') + '" data-surface="home_top"'
+        : '';
+      return '<a class="feat-card' + (sp ? ' is-sponsored' : '') + '" href="' + escapeAttr(featHref(p)) + '"' + track + '>' +
              '<div class="feat-img">' +
-                '<span class="badge-top">★ Top Rated</span>' +
+                (badge ? '<span class="badge-top">' + badge + '</span>' : '') +
+                (sp ? '<span class="badge-sponsored" aria-label="Sponsored listing">' + escapeAttr(p.label || 'Sponsored') + '</span>' : '') +
                 '<span class="cat-chip">' + pIcon + ' ' + escapeAttr(p.category) + '</span>' +
                 '<span class="feat-icon" aria-hidden="true">' + pIcon + '</span>' +
                 '<img loading="lazy" src="' + escapeAttr(cardImg(p)) + '" alt="" onerror="this.remove()">' +
              '</div>' +
              '<div class="feat-body">' +
                 '<h3>' + escapeAttr(p.name) + '</h3>' +
-                '<div class="feat-loc">📍 ' + escapeAttr(p.city) + (p.country==='US' && p.state ? ', ' + p.state : '') + '</div>' +
+                '<div class="feat-loc">📍 ' + escapeAttr(p.city) + (p.country==='US' && p.state ? ', ' + escapeAttr(p.state) : '') + '</div>' +
+                (why ? '<div class="feat-why">' + escapeAttr(why) + '</div>' : '') +
                 '<div class="feat-rating">' +
-                  '<span class="rating-pill">★ ' + pRating.toFixed(1) + '</span>' +
+                  (pRating ? '<span class="rating-pill">★ ' + pRating.toFixed(1) + '</span>' +
                   '<span class="google-badge">' +
                     '<span class="gscore">' + pRating.toFixed(1) + '/5</span>' +
                     '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
-                    '<span>' + (p.review_count || 0) + ' ratings</span>' +
-                  '</span>' +
+                    '<span>' + pReviews + ' ratings</span>' +
+                  '</span>' : '<span class="google-badge">Verified listing</span>') +
                 '</div>' +
              '</div>' +
              '</a>';
     }).join('');
-    document.getElementById('featGrid').innerHTML = html;
+    grid.innerHTML = html;
+    if (homeRecoRid) recoObserve(grid, 'home_top');
   }
+
+  // Reco tracking: /reco-track.js handles impressions and clicks when it has
+  // loaded; a click without it still goes out as one keepalive event.
+  function recoObserve(box, surface) {
+    function go() { if (window.recoTrack && window.recoTrack.observe) { try { window.recoTrack.observe(box, surface); } catch (e) {} return true; } return false; }
+    if (!go()) window.addEventListener('load', go);
+  }
+  document.getElementById('featGrid').addEventListener('click', function (ev) {
+    var el = ev.target && ev.target.closest ? ev.target.closest('[data-rid]') : null;
+    if (!el) return;
+    var d = el.dataset, sp = d.sp === '1';
+    try { if (window.trackEvent) window.trackEvent(sp ? 'sponsored_click' : 'reco_click', { surface: 'home_top', reason: d.reason, listing_id: d.lid }); } catch (e) {}
+    if (window.recoTrack && window.recoTrack.click) { try { window.recoTrack.click(el); } catch (e) {} return; }
+    var evt = { rid: d.rid, type: 'click', listingId: d.lid, pos: Number(d.pos) || undefined, reason: d.reason || undefined, sponsored: sp, surface: 'home_top' };
+    try { sessionStorage.setItem('reco:last', JSON.stringify({ rid: d.rid, listingId: d.lid, surface: 'home_top', pos: evt.pos, reason: d.reason, sponsored: sp, ts: Date.now() })); } catch (e) {}
+    if (window.api && api.recoEvents) api.recoEvents([evt]);
+  });
 
   function doSearch() {
     var raw = document.getElementById('searchCity').value.trim();
@@ -729,7 +882,11 @@
       }
     }
 
-    if (!q && !cityName && !cat) return;
+    if (!q && !cityName && !cat) {
+      if (window.toast) toast('Type a business, city or service to search.', 'error');
+      else location.href = '/search/';
+      return;
+    }
     var qs = [];
     if (q) qs.push('q=' + encodeURIComponent(q));
     if (cityName) qs.push('city=' + encodeURIComponent(cityName));
@@ -745,6 +902,7 @@
     api.get('/api/listings/recent?limit=8').then(function (r) {
       var fresh = (r && r.listings) || [];
       if (!fresh.length) return;
+      fresh.forEach(function (f) { f._recent = true; });
       var existing = (window.PETS_FEATURED || []).filter(function (p) {
         return !fresh.some(function (f) { return f.id === p.id; });
       });
@@ -756,40 +914,117 @@
   // The bundled snapshot's "top rated" list is the same eight businesses on
   // every visit, because it is a fixed sort by rating and thousands of listings
   // share a 5.0. Pull a wider pool and rotate through it, so the section is
-  // different hour to hour and across visitors, while still only ever showing
-  // well-reviewed places.
+  // different hour to hour and across visitors. Well-reviewed places are used
+  // when a city has eight of them; otherwise the city's listings rotate and the
+  // heading makes no rating claim.
   function loadFeaturedPool() {
     if (!window.api || !api.listingsSearch) return;
     var cities = (window.PETS_INDEX || []).slice(0, 24);
     var pick = cities.length ? cities[Math.floor(Math.random() * cities.length)] : null;
 
     api.listingsSearch({ city: pick ? pick.city : '', limit: 60 }).then(function (r) {
-      var pool = (r.listings || []).filter(function (b) {
-        return (Number(b.rating) || 0) >= 4.5 && (b.review_count || 0) >= 25;
+      var all = r.listings || [];
+      var rated = all.filter(function (b) {
+        return (Number(b.rating) || 0) >= 4.5 && (Number(b.review_count) || 0) >= 25;
       });
+      var pool = rated.length >= 8 ? rated : all;
       if (pool.length < 8) return;
 
       // Rotate by the hour so the page changes through the day without being
       // random on every reload, then shuffle within that window.
       var offset = (new Date().getHours() * 3) % pool.length;
       var rotated = pool.slice(offset).concat(pool.slice(0, offset));
-      window.PETS_FEATURED = rotated.slice(0, 8);
+      // loadRecentListings() runs alongside this; whichever answers last must
+      // not drop the other's cards. Newly added listings stay at the front.
+      var recent = (window.PETS_FEATURED || []).filter(function (p) { return p._recent; });
+      window.PETS_FEATURED = recent.concat(rotated.filter(function (p) {
+        return !recent.some(function (f) { return f.id === p.id; });
+      })).slice(0, 8);
       renderFeatured();
 
       var head = document.querySelector('.featured-head p');
-      if (head && pick) head.textContent = 'Highly-rated pet businesses in ' + pick.city + ', by real Google reviews.';
+      if (head && pick) {
+        head.textContent = pool === rated
+          ? 'Highly-rated pet businesses in ' + pick.city + ', by Google reviews.'
+          : 'Pet businesses in ' + pick.city + ' listed on Pets24x7.';
+      }
       var browseAll = document.querySelector('.featured-head a');
       if (browseAll && pick) {
-        browseAll.href = '/' + String(pick.country || 'in').toLowerCase() + '/' + pick.city_slug + '/';
+        browseAll.href = '/' + String(pick.country || 'in').toLowerCase() + '/' + encodeURIComponent(pick.city_slug) + '/';
       }
     }).catch(function () { /* keep the bundled snapshot */ });
+  }
+
+  // "Recommended near you" from the recommendation engine: ranked on reviews
+  // (where a listing has them), owner-managed listings and real contact taps,
+  // with paid placements only in
+  // labelled slots. Falls back to the old recent + search pool if the API is
+  // unavailable or too thin, so the section never goes empty.
+  function detectCountry() {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if (/^America\//.test(tz) || /^US\//.test(tz) || tz === 'Pacific/Honolulu') return 'US';
+    } catch (e) {}
+    return 'IN';
+  }
+  function loadHomeReco() {
+    if (!window.api || !api.recoCity) { loadRecentListings(); loadFeaturedPool(); return; }
+    var cc = detectCountry();
+    var cities = (window.PETS_INDEX || []).filter(function (c) { return c.country === cc; }).slice(0, 12);
+    var pick = cities.length ? cities[Math.floor(Math.random() * cities.length)] : null;
+    api.recoCity({ surface: 'home', limit: 8, country: cc, city: pick ? pick.city : '' }).then(function (d) {
+      var items = (d && d.items) || [];
+      if (items.length < 4) throw new Error('thin');
+      homeRecoRid = d.rid || '';
+      homeRecoItems = items;
+      renderFeatured();
+      var h2 = document.querySelector('.featured-head h2');
+      if (h2) h2.textContent = 'Recommended near you';
+      var cityName = d.city || (pick && pick.city) || '';
+      var head = document.querySelector('.featured-head p');
+      if (head && cityName) head.textContent = 'Pet businesses in ' + cityName + ', ranked on reviews and what pet parents contact.';
+      var browseAll = document.querySelector('.featured-head a');
+      var first = items.filter(function (it) { return !it.sponsored && it.city_slug; })[0];
+      if (browseAll && first) {
+        browseAll.href = '/' + String(first.country || cc).toLowerCase() + '/' + encodeURIComponent(first.city_slug) + '/';
+      }
+    }).catch(function () {
+      homeRecoRid = ''; homeRecoItems = null;
+      loadRecentListings();
+      loadFeaturedPool();
+    });
+  }
+
+  // Point each category tile at the visitor's own city instead of a fixed
+  // "mumbai" fallback, so "Veterinary Clinics" etc. actually lead somewhere
+  // relevant. Prefers a saved/last-searched city, then geo-detected country's
+  // largest indexed city; mumbai only survives if neither is available.
+  function patchCategoryHrefs() {
+    var grid = document.getElementById('catGrid');
+    if (!grid) return;
+    var cc = detectCountry();
+    var pick = null;
+    try {
+      var savedSlug = localStorage.getItem('p24_last_city');
+      if (savedSlug) pick = (window.PETS_INDEX || []).filter(function(c){ return c.city_slug === savedSlug; })[0] || null;
+    } catch (e) {}
+    if (!pick) {
+      var inCountry = (window.PETS_INDEX || []).filter(function(c){ return c.country === cc; });
+      pick = inCountry[0] || null;
+    }
+    if (!pick) return; // index not loaded yet — mumbai fallback stays
+    var country = pick.country.toLowerCase();
+    var citySlug = encodeURIComponent(pick.city_slug);
+    grid.querySelectorAll('.cat-item[data-cat]').forEach(function(a){
+      a.href = '/' + country + '/' + citySlug + '/' + a.getAttribute('data-cat') + '/';
+    });
   }
 
   // initial render
   renderCities();
   renderFeatured();
-  loadRecentListings();
-  loadFeaturedPool();
+  patchCategoryHrefs();
+  loadHomeReco();
   window.addEventListener('petsUpdated', function(){ renderCities(); renderFeatured(); });
 </script>
 

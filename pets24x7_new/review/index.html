@@ -6,6 +6,18 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Leave a review — Pets24x7.com</title>
 <meta name="robots" content="noindex" />
+<!-- The path carries a one-time review code: pass on only the origin as a referrer. -->
+<meta name="referrer" content="origin" />
+<meta name="description" content="Tell us how your visit went — your review helps other pet parents." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="How was your visit? Leave a review — Pets24x7.com" />
+<meta property="og:description" content="Tell us how your visit went. It takes a minute and helps other pet parents choose." />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="How was your visit? Leave a review — Pets24x7.com" />
+<meta name="twitter:description" content="Tell us how your visit went. It takes a minute and helps other pet parents choose." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -37,6 +49,16 @@
   .err a{color:#991B1B;text-decoration:underline}
   .done{background:#DCFCE7;color:#166534;border-radius:8px;padding:16px;font-size:14px;text-align:center;margin-bottom:14px}
   .done strong{display:block;font-size:16px;margin-bottom:4px}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+  .opt{min-height:44px}
+  .biz,.err{overflow-wrap:anywhere}
+  .opt:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  @media (max-width:430px){
+    body{padding:16px;align-items:flex-start;padding-top:max(20px,6vh)}
+    .card{padding:28px 20px;border-radius:16px}
+    h1{font-size:21px}
+  }
 </style>
 </head>
 <body>
@@ -120,22 +142,28 @@
         return;
       }
 
+      var choosing = false;
+      function choose(kind, el) {
+        if (choosing) return;
+        choosing = true;
+        el.style.opacity = '.6';
+        api.reviewChoose(code, kind).then(function (rr) {
+          if (window.trackEvent) window.trackEvent('review_choice', { choice: kind });
+          location.href = rr.nextUrl;
+        }).catch(function (err) {
+          choosing = false;
+          el.style.opacity = '';
+          toast(fmtErr(err), 'error');
+        });
+      }
       // Wire Google option
       document.getElementById('optGoogle').addEventListener('click', function (e) {
         e.preventDefault();
-        api.reviewChoose(code, 'GOOGLE').then(function (rr) {
-          location.href = rr.nextUrl;
-        }).catch(function (err) {
-          toast(fmtErr(err), 'error');
-        });
+        choose('GOOGLE', this);
       });
       // Wire Pets24x7 option
       document.getElementById('optPets').addEventListener('click', function () {
-        api.reviewChoose(code, 'PETS24X7').then(function (rr) {
-          location.href = rr.nextUrl;
-        }).catch(function (err) {
-          toast(fmtErr(err), 'error');
-        });
+        choose('PETS24X7', this);
       });
     }).catch(function (err) {
       document.getElementById('loading').hidden = true;
@@ -143,7 +171,7 @@
       document.getElementById('errBox').innerHTML =
         (err && err.status === 404)
           ? 'This review link has expired or is invalid. <a href="/">Visit Pets24x7</a>'
-          : fmtErr(err);
+          : esc(fmtErr(err)) + ' <a href="">Try again</a>';
     });
   }
 </script>

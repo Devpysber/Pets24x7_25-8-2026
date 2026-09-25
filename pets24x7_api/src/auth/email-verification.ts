@@ -57,8 +57,13 @@ export async function consumeVerificationToken(token: string): Promise<ConsumeRe
   if (row.expiresAt.getTime() <= Date.now()) return { ok: false, reason: 'expired' };
 
   const now = new Date();
+  // Conditional claim so a double click cannot verify twice (see password-reset.ts).
+  const claimed = await prisma.emailVerificationToken.updateMany({
+    where: { id: row.id, usedAt: null },
+    data: { usedAt: now },
+  });
+  if (claimed.count === 0) return { ok: false, reason: 'used' };
   await prisma.$transaction([
-    prisma.emailVerificationToken.update({ where: { id: row.id }, data: { usedAt: now } }),
     // Any sibling token is void too — one click retires the whole batch.
     prisma.emailVerificationToken.updateMany({
       where: { parentId: row.parentId, usedAt: null },
@@ -78,8 +83,20 @@ export async function consumeVerificationToken(token: string): Promise<ConsumeRe
 export async function sendWelcomeEmailOnce(parent: { id: string; name: string; email: string | null; welcomeEmailAt: Date | null }): Promise<boolean> {
   if (!parent.email || parent.welcomeEmailAt) return false;
 
+  // Claim the send first. Checking the flag and stamping it after the SMTP
+  // round trip let two sign-ins a moment apart (verify link, then login) both
+  // see it unset and both mail the welcome.
+  const claimed = await prisma.petParent.updateMany({
+    where: { id: parent.id, welcomeEmailAt: null },
+    data: { welcomeEmailAt: new Date() },
+  });
+  if (claimed.count === 0) return false;
+
   const sent = await sendMail(welcomeEmail(parent.email, parent.name));
-  if (!sent) return false; // leave the flag unset so a later attempt can retry
-  await prisma.petParent.update({ where: { id: parent.id }, data: { welcomeEmailAt: new Date() } });
+  if (!sent) {
+    // Release the claim so a later sign-in can retry.
+    await prisma.petParent.update({ where: { id: parent.id }, data: { welcomeEmailAt: null } }).catch(() => {});
+    return false;
+  }
   return true;
 }

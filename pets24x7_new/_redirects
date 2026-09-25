@@ -2,16 +2,18 @@
 # Format: <from>  <to>  <status>
 
 # 301 legacy query-string URLs to clean URLs (server-side, before JS runs).
-# Netlify supports query-param matching via the splat + query syntax.
+# Netlify supports query-param matching via the splat + query syntax. The
+# 3-param (country+city+cat) rule must come before the 2-param one — Netlify
+# matches rules in file order and a &cat= link must not fall through to the
+# city-only rule and lose its category segment.
+/city.html       /:country/:city/:cat/     301  country=:country  city=:city  cat=:cat
 /city.html       /:country/:city/          301  country=:country  city=:city
 /listing.html    /:country/:city/:id/      301  country=:country  city=:city  id=:id
 
-# Force trailing slash on directory URLs (Google treats them as same anyway,
-# but explicit is safer for canonical signals).
-/in/:city           /in/:city/         301!
-/us/:city           /us/:city/         301!
-/in/:city/:cat      /in/:city/:cat/    301!
-/us/:city/:cat      /us/:city/:cat/    301!
+# Trailing slashes: NOT done here. Netlify normalises the trailing slash before
+# matching, so "/in/:city  /in/:city/  301!" matches its own target and loops
+# (ERR_TOO_MANY_REDIRECTS on every city page). Pretty URLs in netlify.toml
+# already serve /in/mumbai/ from /in/mumbai/index.html.
 
 # Phase 3.1 — Review short-link routing (mirrors .htaccess; Apache hosts use that).
 # /review/<CODE>/ and its /form/ + /thanks/ steps are one static page each,
@@ -26,6 +28,43 @@
 # Listings and cities added after the last static build have no pre-built
 # folder. These rewrites (200, so the clean URL is kept) hand the request to the
 # generic pages, which resolve the record from the API instead of 404ing.
+# A city+category URL has the same shape as a listing URL (/in/<city>/<x>/),
+# so the known category slugs are routed to the city page first; everything
+# else in that position is a listing id.
+/in/:city/veterinary-clinics/   /city.html   200
+/us/:city/veterinary-clinics/   /city.html   200
+/in/:city/emergency-animal-hospital/   /city.html   200
+/us/:city/emergency-animal-hospital/   /city.html   200
+/in/:city/vaccination-centers/   /city.html   200
+/us/:city/vaccination-centers/   /city.html   200
+/in/:city/mobile-vet-services/   /city.html   200
+/us/:city/mobile-vet-services/   /city.html   200
+/in/:city/specialty-vets-exotics-avian-reptiles/   /city.html   200
+/us/:city/specialty-vets-exotics-avian-reptiles/   /city.html   200
+/in/:city/veterinary-labs-diagnostics/   /city.html   200
+/us/:city/veterinary-labs-diagnostics/   /city.html   200
+/in/:city/pet-dental-care/   /city.html   200
+/us/:city/pet-dental-care/   /city.html   200
+/in/:city/pet-physiotherapy-rehab/   /city.html   200
+/us/:city/pet-physiotherapy-rehab/   /city.html   200
+/in/:city/pet-grooming-spa/   /city.html   200
+/us/:city/pet-grooming-spa/   /city.html   200
+/in/:city/pet-boarding-daycare/   /city.html   200
+/us/:city/pet-boarding-daycare/   /city.html   200
+/in/:city/pet-walking/   /city.html   200
+/us/:city/pet-walking/   /city.html   200
+/in/:city/pet-training-obedience-behavior/   /city.html   200
+/us/:city/pet-training-obedience-behavior/   /city.html   200
+/in/:city/pet-sitting-in-home-care/   /city.html   200
+/us/:city/pet-sitting-in-home-care/   /city.html   200
+/in/:city/pet-relocation-services/   /city.html   200
+/us/:city/pet-relocation-services/   /city.html   200
+/in/:city/pet-taxi-transport/   /city.html   200
+/us/:city/pet-taxi-transport/   /city.html   200
+/in/:city/pet-therapy-services/   /city.html   200
+/us/:city/pet-therapy-services/   /city.html   200
+/in/:city/page/:n/  /city.html         200
+/us/:city/page/:n/  /city.html         200
 /in/:city/:id/      /listing.html      200
 /us/:city/:id/      /listing.html      200
 /in/:city/          /city.html         200

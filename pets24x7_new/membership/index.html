@@ -7,6 +7,16 @@
 <title>Pets24x7 Membership — vet consults, vendor deals, priority support</title>
 <meta name="description" content="Join Pets24x7 Membership. Vendor deals, free vet consults, priority WhatsApp support. Bronze · Silver · Gold." />
 <link rel="canonical" href="https://pets24x7.com/membership/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Pets24x7 Membership — vet consults, vendor deals, priority support" />
+<meta property="og:description" content="Vendor deals, free vet consults and priority WhatsApp support for pet parents. Bronze, Silver and Gold plans." />
+<meta property="og:url" content="https://pets24x7.com/membership/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Pets24x7 Membership — vet consults, vendor deals, priority support" />
+<meta name="twitter:description" content="Vendor deals, free vet consults and priority WhatsApp support for pet parents. Bronze, Silver and Gold plans." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -63,6 +73,34 @@
   footer{background:#0F172A;color:#94A3B8;padding:36px 24px 20px;font-size:14px}
   footer .foot-in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;max-width:1180px;margin:0 auto}
   footer a{color:#94A3B8}footer a:hover{color:#fff;text-decoration:none}
+  /* The hidden attribute must win over component display rules (flex banners,
+     dividers, buttons); without this they render even while hidden. */
+  [hidden]{display:none !important}
+  .header-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+  .header-nav a{min-height:44px;display:inline-flex;align-items:center}
+  .ab-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .toggle button{min-height:44px}
+  .buy{min-height:48px}
+  summary{min-height:24px;padding:4px 0}
+  .plan-skel{height:420px;border-radius:18px;border:1px solid var(--border);background:linear-gradient(90deg,#F8FAFC 0%,#EEF2F7 50%,#F8FAFC 100%);background-size:200% 100%;animation:skel 1.2s ease-in-out infinite}
+  @keyframes skel{from{background-position:200% 0}to{background-position:-200% 0}}
+  button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  /* Lift-on-hover only where there is a real hover; on touch it stuck on after a tap. */
+  @media (hover:none){ .plan:hover,.plan.silver:hover,.plan.current:hover,.buy:hover{transform:none} }
+  @media (max-width:640px){
+    .hdr{padding:10px 16px}
+    .hero{padding:36px 16px 20px}
+    .hero p{font-size:15.5px}
+    .container{padding:0 16px 56px}
+    .grid{grid-template-columns:minmax(0,1fr);gap:24px}
+    .plan{padding:28px 22px}
+    .plan.silver,.plan.silver:hover{transform:none}
+    .active-banner{padding:16px 18px}
+    details{padding:14px 16px}
+    footer{padding:28px 16px 20px}
+  }
+  @media (max-width:380px){ .toggle button{padding:8px 14px} .toggle .save{display:block;margin:0} }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
 <body>
@@ -71,22 +109,27 @@
   <a href="/" class="brand">
     <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
   </a>
-  <a href="/dashboard/parent/" id="dashLink" hidden style="font-size:13px;font-weight:600;color:var(--primary)">My dashboard &rarr;</a>
+  <!-- nav-auth.js adds "My Dashboard" + "Sign out" here once signed in. This
+       page used to add its own dashboard link as well, which doubled the link
+       and pushed the header past the edge of a 360px phone. -->
+  <nav class="header-nav" aria-label="Account"></nav>
 </header>
 
 <section class="hero">
   <h1>Save on every vet visit, groom and boarding.</h1>
   <p>Join Pets24x7 Membership. Vendor deals across 34,000+ verified businesses, free vet consults, and priority WhatsApp support.</p>
   <div class="toggle">
-    <button id="tMonthly" class="on">Monthly</button>
-    <button id="tAnnual">Annual <span class="save">save 2 months</span></button>
+    <button id="tMonthly" class="on" type="button" aria-pressed="true">Monthly</button>
+    <button id="tAnnual" type="button" aria-pressed="false">Annual <span class="save">save 2 months</span></button>
   </div>
 </section>
 
 <div class="container">
   <div id="activeBanner" class="active-banner" hidden></div>
-  <div class="err" id="err"></div>
-  <div class="grid" id="planGrid"></div>
+  <div class="err" id="err" role="alert"></div>
+  <div class="grid" id="planGrid" aria-live="polite" aria-busy="true">
+    <div class="plan-skel"></div><div class="plan-skel"></div><div class="plan-skel"></div>
+  </div>
 
   <section class="faq">
     <h2>Common questions</h2>
@@ -116,7 +159,16 @@
 <script src="/ui-dialogs.js"></script>
 <script>
   function esc(s){return (s||'').toString().replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];})}
-  function fmtINR(paise){return '₹' + (paise/100).toLocaleString('en-IN', {maximumFractionDigits:0})}
+  // Plans carry their own currency (INR for India, USD for the US site), so
+  // format with it rather than always printing rupees.
+  function fmtMoney(minor, currency){
+    var cur = (currency || 'INR').toUpperCase();
+    var n = (Number(minor) || 0) / 100;
+    if (cur === 'INR') return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0});
+    try { return n.toLocaleString('en-US', {style:'currency', currency:cur, maximumFractionDigits: n % 1 ? 2 : 0}); }
+    catch (e) { return cur + ' ' + n.toFixed(2); }
+  }
+  var SIGN_IN_URL = '/parent-login/?next=' + encodeURIComponent('/membership/');
 
   var allPlans = [];
   var currentPeriod = 'MONTHLY';
@@ -127,6 +179,7 @@
     var list = allPlans.filter(function(p){ return p.billingPeriod === currentPeriod; });
     list.sort(function(a,b){ return a.sortOrder - b.sortOrder; });
     var grid = document.getElementById('planGrid');
+    grid.removeAttribute('aria-busy');
     if (!list.length) {
       var other = allPlans.length ? 'Try the ' + (currentPeriod === 'MONTHLY' ? 'Annual' : 'Monthly') + ' tab.'
                                   : 'Plans are being updated — <a href="https://wa.me/919930090487">message us on WhatsApp</a> and we’ll set you up.';
@@ -137,9 +190,9 @@
     var activePlanId = activeMembership && activeMembership.plan ? activeMembership.plan.id : null;
 
     grid.innerHTML = list.map(function(p) {
-      var t = p.tier.toLowerCase();
+      var t = String(p.tier || '').toLowerCase().replace(/[^a-z]/g, '');
       var isPopular = (p.tier === 'SILVER');
-      var perks = (p.perks || []).map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
+      var perks = (Array.isArray(p.perks) ? p.perks : []).map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
       var isCurrent = activePlanId && p.id === activePlanId;
 
       var label, disabled = false;
@@ -159,10 +212,10 @@
       return '<article class="plan ' + t + (isCurrent ? ' current' : '') + '">' +
         (isCurrent ? '<span class="badge" style="background:linear-gradient(135deg,#34D399,#10B981)">✓ Current plan</span>'
                    : (isPopular ? '<span class="badge">★ Most popular</span>' : '')) +
-        '<div class="tier ' + t + '">' + p.tier + '</div>' +
+        '<div class="tier ' + t + '">' + esc(p.tier) + '</div>' +
         '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">' + esc(p.name) + '</h3>' +
         (p.tagline ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">' + esc(p.tagline) + '</p>' : '') +
-        '<div class="price"><span class="amt">' + fmtINR(p.priceMinor) + '</span><span class="unit">' +
+        '<div class="price"><span class="amt">' + fmtMoney(p.priceMinor, p.currency) + '</span><span class="unit">' +
           (p.billingPeriod === 'MONTHLY' ? '/month' : '/year') + '</span></div>' +
         '<div class="price-sub">Billed ' + (p.billingPeriod === 'MONTHLY' ? 'monthly' : 'yearly') + ' &middot; cancel anytime</div>' +
         '<ul class="perks">' + perks + '</ul>' +
@@ -200,13 +253,14 @@
   }
 
   function buy(planId, btn) {
-    if (!signedIn) { location.href = '/login/#parent'; return; }
+    // Send them back here after signing in, not to the dashboard.
+    if (!signedIn) { location.href = SIGN_IN_URL; return; }
     if (activeMembership) {
       var curId = activeMembership.plan && activeMembership.plan.id;
       if (planId === curId) { failBuy(btn, 'You are already on this plan.'); return; }
       var target = allPlans.filter(function(p){ return p.id === planId; })[0];
       var tName = target ? target.name : 'the new plan';
-      var tPrice = target ? fmtINR(target.priceMinor) : '';
+      var tPrice = target ? fmtMoney(target.priceMinor, target.currency) : '';
       var curName = (activeMembership.plan && activeMembership.plan.name) || 'your current plan';
       uiConfirm({
         title: 'Move to ' + tName + '?',
@@ -221,9 +275,18 @@
   }
 
   function startCheckout(planId, btn) {
+    document.getElementById('err').classList.remove('show');   // drop a previous attempt's error
     btn.disabled = true; btn.textContent = 'Starting…';
     api.membershipCheckout(planId).then(function (r) {
       var c = r.checkout;
+      // GA4 ecommerce funnel: the matching `purchase` fires on the return page.
+      try {
+        var p = allPlans.filter(function (x) { return x.id === planId; })[0];
+        if (p && window.trackEvent) window.trackEvent('begin_checkout', {
+          currency: (p.currency || 'INR').toUpperCase(), value: (Number(p.priceMinor) || 0) / 100,
+          items: [{ item_id: p.id, item_name: p.name, item_category: 'membership', price: (Number(p.priceMinor) || 0) / 100, quantity: 1 }]
+        });
+      } catch (e) {}
       if (c && c.mode === 'razorpay') {
         return loadRazorpay().then(function () {
           var rzp = new Razorpay({
@@ -243,7 +306,13 @@
                 razorpay_signature: resp.razorpay_signature
               }).then(function () {
                 location.href = '/membership/return/?txn=' + encodeURIComponent(r.merchantTxnId);
-              }).catch(function (e) { failBuy(btn, 'Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + r.merchantTxnId); });
+              }).catch(function () {
+                // Razorpay has already taken the money at this point. The return
+                // page re-asks Razorpay about the order (reconcilePayment) and
+                // activates the membership if it was captured, so hand over to it
+                // rather than stranding the payer on an error message.
+                location.href = '/membership/return/?txn=' + encodeURIComponent(r.merchantTxnId);
+              });
             },
             modal: { ondismiss: function () { btn.disabled = false; btn.textContent = btn.dataset.label || 'Subscribe →'; } }
           });
@@ -262,15 +331,15 @@
     var b = document.getElementById('activeBanner');
     var ends = active.endsAt ? new Date(active.endsAt).toLocaleDateString('en-IN', {month:'short',day:'numeric',year:'numeric'}) : 'soon';
     var cancelled = !!active.cancelledAt;
-    var btnCss = 'background:#fff;border:1px solid #166534;color:#166534;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer';
+    var btnCss = 'background:#fff;border:1px solid #166534;color:#166534;padding:10px 14px;min-height:44px;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer';
     b.innerHTML =
-      '<span><strong>You&rsquo;re already a member.</strong> ' + esc(active.plan.name) +
+      '<span><strong>You&rsquo;re already a member.</strong> ' + esc(active.plan && active.plan.name) +
       ' &middot; ' + (cancelled ? 'ends ' : 'renews ') + ends + (cancelled ? ' &middot; auto-renew cancelled' : '') + '</span>' +
-      '<span style="display:flex;gap:8px">' +
+      '<span class="ab-actions">' +
       (cancelled
         ? '<button id="resumeMembershipBtn" style="' + btnCss + '">Resume auto-renew</button>'
         : '<button id="cancelMembershipBtn" style="' + btnCss + '">Cancel</button>') +
-      '<a href="/dashboard/parent/" style="background:#166534;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px">Open dashboard &rarr;</a></span>';
+      '<a href="/dashboard/parent/" style="background:#166534;color:#fff;padding:10px 14px;min-height:44px;display:inline-flex;align-items:center;border-radius:8px;font-weight:700;font-size:13px">Open dashboard &rarr;</a></span>';
     b.hidden = false;
     render();                                     // re-lock / re-label the plan cards
 
@@ -305,32 +374,37 @@
   document.getElementById('tMonthly').addEventListener('click', function() {
     currentPeriod = 'MONTHLY';
     this.classList.add('on'); document.getElementById('tAnnual').classList.remove('on');
+    this.setAttribute('aria-pressed', 'true'); document.getElementById('tAnnual').setAttribute('aria-pressed', 'false');
     render();
   });
   document.getElementById('tAnnual').addEventListener('click', function() {
     currentPeriod = 'ANNUAL';
     this.classList.add('on'); document.getElementById('tMonthly').classList.remove('on');
+    this.setAttribute('aria-pressed', 'true'); document.getElementById('tMonthly').setAttribute('aria-pressed', 'false');
     render();
   });
 
   // Boot
   Promise.all([
     api.membershipPlans(),
-    api.me().catch(function(){ return {role:null}; }),
+    // Scoped to the parent role: unscoped, a leftover admin/vendor cookie
+    // outranks the parent session and the page showed "Sign in to subscribe".
+    api.me('pet_parent').catch(function(){ return {role:null}; }),
   ]).then(function (results) {
     allPlans = results[0].plans || [];
-    var me = results[1];
+    var me = results[1] || {};
     signedIn = me.role === 'pet_parent';
     if (!signedIn) { render(); return; }
 
-    document.getElementById('dashLink').hidden = false;
     // Resolve membership BEFORE first paint so the plan cards never flash a live "Subscribe" button.
     return api.membershipMe().then(function(m){
       if (m && m.active) { showActiveBanner(m.active); }   // showActiveBanner calls render()
       else { render(); }
     }).catch(function(){ render(); });
   }).catch(function (e) {
-    document.getElementById('planGrid').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px">' + fmtErr(e) + '</p>';
+    document.getElementById('planGrid').removeAttribute('aria-busy');
+    document.getElementById('planGrid').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;grid-column:1/-1">' +
+      'Could not load plans right now (' + esc(fmtErr(e)) + '). <a href="/membership/">Try again</a></p>';
   });
 </script>
 

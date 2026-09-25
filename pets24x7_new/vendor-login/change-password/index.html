@@ -7,6 +7,17 @@
 <title>Create Your Permanent Password — Pets24x7.com</title>
 <meta name="description" content="Set up your new password on your first login." />
 <meta name="robots" content="noindex" />
+<link rel="canonical" href="https://pets24x7.com/vendor-login/change-password/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Create your password — Pets24x7.com" />
+<meta property="og:description" content="Set up your Pets24x7 business account password." />
+<meta property="og:url" content="https://pets24x7.com/vendor-login/change-password/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Create your password — Pets24x7.com" />
+<meta name="twitter:description" content="Set up your Pets24x7 business account password." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -38,6 +49,23 @@
   .ok.show{display:block}
   .foot{text-align:center;color:var(--text-muted);font-size:13px;padding:20px}
   .foot a{color:var(--text-muted);margin:0 8px}
+
+  /* Phones: 16px inputs stop iOS zooming on focus; 44px tap targets; a card
+     that gives the form its width back instead of spending it on padding. */
+  input,select,textarea{font-size:16px}
+  .btn-link{min-height:44px;display:inline-flex;align-items:center;margin-right:18px}
+  .btn-link:last-child{margin-right:0}
+  .tabs button,.tabs .tab{min-height:44px}
+  p.sub,.err,.ok{overflow-wrap:anywhere}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  #gBtn{max-width:100%;overflow:hidden}
+  @media (max-width:430px){
+    .top{padding:16px}
+    main{padding:8px 16px 32px}
+    .card{padding:26px 20px;border-radius:16px}
+    h1{font-size:21px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
 <body>
@@ -55,11 +83,11 @@
     <p class="sub">For security, please create a permanent password to access your Vendor Dashboard.</p>
 
     <form id="passForm" onsubmit="handlePassSubmit(event)">
-      <label for="cEmail">Login Email *</label>
-      <input type="email" id="cEmail" placeholder="your@email.com" required autocomplete="email" />
+      <label for="cEmail">Business email or phone *</label>
+      <input type="text" id="cEmail" placeholder="your@email.com or phone number" required autocomplete="username" autocapitalize="off" spellcheck="false" />
 
       <label for="cTemp">Temporary Password *</label>
-      <input type="text" id="cTemp" placeholder="e.g. P24x7#A8K9" required />
+      <input type="text" id="cTemp" placeholder="e.g. P24x7#A8K9" required autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
 
       <label for="cNew">New Password (8+ chars) *</label>
       <input type="password" id="cNew" placeholder="••••••••" required autocomplete="new-password" minlength="8" />
@@ -87,18 +115,23 @@
   function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
   function clearErr(el){ el.classList.remove('show'); }
 
-  // Parse query params for prefilled email
+  // Parse query params for the prefilled sign-in key. ?email= carries the
+  // account's address; ?key= carries the phone number an account without an
+  // address signed in with (the API accepts either as loginKey).
   (function initEmailParam() {
-    var m = /[?&]email=([^&]+)/i.exec(location.search);
-    if (m && m[1]) {
-      $('cEmail').value = decodeURIComponent(m[1]);
-    }
+    var m = /[?&](?:email|key)=([^&]+)/i.exec(location.search);
+    var v = '';
+    try { v = m && m[1] ? decodeURIComponent(m[1]).trim() : ''; } catch (e) { v = ''; }
+    if (v && v.length <= 160) $('cEmail').value = v;
+    // Focus the first field still needing input.
+    ($('cEmail').value ? $('cTemp') : $('cEmail')).focus();
   })();
 
   function handlePassSubmit(e) {
     e.preventDefault();
     clearErr($('passErr'));
-    var email = $('cEmail').value.trim();
+    var key = $('cEmail').value.trim();
+    if (!key) return showErr($('passErr'), 'Enter your business email or phone number.');
     var tempPass = $('cTemp').value.trim();
     var newPass = $('cNew').value;
     var confirmPass = $('cConfirm').value;
@@ -112,18 +145,22 @@
 
     $('passBtn').disabled = true; $('passBtn').textContent = 'Creating Password…';
 
-    api.claimFirstLoginPassword({
-      email: email,
+    // An email goes as `email`; a phone number as `loginKey`, which the API
+    // matches by its last 10 digits exactly like the sign-in page does.
+    var payload = key.indexOf('@') > 0 ? { email: key } : { loginKey: key };
+    api.claimFirstLoginPassword(Object.assign(payload, {
       tempPassword: tempPass,
       newPassword: newPass,
       confirmPassword: confirmPass
-    }).then(function(r) {
+    })).then(function(r) {
       $('passOk').classList.add('show');
       setTimeout(function() {
         location.href = r.redirect || '/dashboard/vendor/';
       }, 500);
     }).catch(function(err) {
-      showErr($('passErr'), err.message || 'Could not update password. Please check your credentials.');
+      showErr($('passErr'), (err && err.status === 400 && err.data && err.data.error === 'validation_failed')
+        ? 'Please check the email and passwords you entered.'
+        : ((err && err.message) || 'Could not update password. Please check your credentials.'));
       $('passBtn').disabled = false; $('passBtn').textContent = 'Create Password →';
     });
   }

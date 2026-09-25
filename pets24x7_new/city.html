@@ -5,8 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
 <title id="pageTitle">Pet Services in your city | Pets24x7.com</title>
-<meta name="description" id="pageDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Real Google ratings. Direct WhatsApp enquiries." />
-<link rel="icon" type="image/png" href="pets24x7_logo.png" />
+<meta name="description" id="pageDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Google Maps profiles. Direct WhatsApp enquiries." />
+<!-- No static canonical: this template serves every /in/ and /us/ URL that has
+     no pre-built page, and a fixed href pointed all of them at the home page.
+     The clean path is set here at once; the script below refines it. -->
+<script>(function(){var p=location.pathname;if(!/^\/(in|us)\/[a-z0-9-]/.test(p))return;if(p.slice(-1)!=='/')p+='/';var l=document.createElement('link');l.rel='canonical';l.id='pageCanonical';l.href='https://pets24x7.com'+p;document.head.appendChild(l);})();</script>
+<!-- Social cards. Scrapers mostly do not run JS, so these defaults are what a
+     shared fallback URL shows; the script below fills in the city once loaded.
+     Pre-built /in/ and /us/ pages carry their own (build_pages.social_meta).
+     No static og:url: a scraper would take the home page as this page's
+     canonical; without one it uses the URL it fetched. JS adds the real one. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" id="ogTitle" content="Pet Services in your city | Pets24x7.com" />
+<meta property="og:description" id="ogDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta property="og:image:alt" content="Pets24x7" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" id="twTitle" content="Pet Services in your city | Pets24x7.com" />
+<meta name="twitter:description" id="twDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -53,6 +72,7 @@
   .city-hero { background: linear-gradient(120deg, #1E40AF, #2563EB); color: #fff; padding: 28px 0; }
   .breadcrumb { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
   .breadcrumb a { color: rgba(255,255,255,0.85); }
+  @media (pointer: coarse), (max-width: 768px) { .breadcrumb a { display: inline-block; padding: 14px 3px; margin: -14px -3px; } }
   .city-hero h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
   .city-hero p { font-size: 14px; opacity: 0.85; }
 
@@ -135,10 +155,105 @@
   }
   @media (max-width: 768px) {
     .header-cta span { display: none; }
+    .header-inner { justify-content: space-between; gap: 10px; }
     .biz-card { grid-template-columns: 1fr; }
     .biz-img { aspect-ratio: 16/9; }
     .biz-action { border-left: none; border-top: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; }
     .biz-action > * { flex: 1; min-width: 130px; }
+  }
+  @media (max-width: 480px) {
+    .header-inner > a[href="/marketing.html"] { display: none; }
+  }
+
+  /* ---- Header menu ---- (toggle behaviour lives in /nav-auth.js) */
+  .hdr-links { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .hdr-links a { color: var(--text); font-weight: 500; font-size: 14px; padding: 8px 10px; border-radius: 8px; white-space: nowrap; }
+  .hdr-links a:hover { background: var(--bg-alt); color: var(--primary); }
+  .nav-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--text); flex-shrink: 0; }
+  .nav-toggle svg { width: 20px; height: 20px; }
+  /* Desktop has the search bar in the header; the extra links live in the phone menu. */
+  .hdr-links a.hl-extra { display: none; }
+  .filter-group:nth-last-child(2) { border-bottom: none; }
+  [hidden] { display: none !important; }
+  @media (max-width: 1024px) { .hdr-links { margin-left: auto; } }
+  @media (max-width: 768px) { .header-cta { margin-left: auto; } }
+  @media (max-width: 768px) {
+    .header-inner { position: relative; height: 64px; }
+    .brand-logo { height: 40px; }
+    .nav-toggle { display: inline-flex; }
+    .hdr-links { display: none; }
+    .hdr-links.nav-open { display: flex; flex-direction: column; align-items: stretch; gap: 0; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--border); box-shadow: 0 14px 28px rgba(2,6,23,.10); padding: 6px 16px 12px; z-index: 101; }
+    .hdr-links.nav-open a, .hdr-links.nav-open a.hl-extra { display: flex; align-items: center; min-height: 48px; font-size: 15px; border-bottom: 1px solid var(--bg-alt); border-radius: 0; }
+    .hdr-links.nav-open a:last-child { border-bottom: none; }
+    .header-cta { width: 44px; height: 44px; padding: 0; justify-content: center; }
+    .header-cta svg { width: 20px; height: 20px; }
+    .container { padding: 0 16px; }
+    .city-hero { padding: 22px 0; }
+    .main { padding: 18px 0 48px; }
+    .city-hero h1 { overflow-wrap: anywhere; }
+    .sort-by select { font-size: 16px; min-height: 40px; }
+  }
+
+  /* ---- Filters: sidebar on desktop, slide-over drawer below 1024px ----
+     Stacked above the results it pushed every business a full screen down. */
+  .filter-open-btn { display: none; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 10px; background: #fff; font-weight: 700; font-size: 14px; color: var(--text); }
+  .filter-open-btn svg { width: 16px; height: 16px; }
+  .filter-open-btn .fcount { background: var(--primary); color: #fff; border-radius: 999px; font-size: 11px; min-width: 20px; height: 20px; padding: 0 6px; display: none; align-items: center; justify-content: center; }
+  .filter-open-btn .fcount.on { display: inline-flex; }
+  .filters-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .filters-close, .filters-foot { display: none; }
+  .filter-group label { min-height: 36px; }
+  .filter-clear { display: inline-flex; align-items: center; min-height: 40px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--primary); }
+  .filters-backdrop { display: none; }
+  @media (max-width: 1024px) {
+    .filter-open-btn { display: inline-flex; }
+    .filters { position: fixed; top: 0; bottom: 0; left: 0; height: auto; max-height: none; width: min(340px, 88vw); z-index: 300; border-radius: 0 16px 16px 0; border: none; overflow-y: auto; overscroll-behavior: contain; transform: translateX(-105%); transition: transform .25s ease; padding: 16px 18px 0; display: flex; flex-direction: column; visibility: hidden; }
+    .filters.open { transform: none; visibility: visible; box-shadow: 0 20px 60px rgba(2,6,23,.3); }
+    .filters h3 { margin-bottom: 4px; }
+    .filters-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; font-size: 24px; color: var(--text-muted); }
+    .filters-close:hover { background: var(--bg-alt); }
+    .filter-group label { min-height: 44px; font-size: 14px; }
+    .filter-group input[type="checkbox"], .filter-group input[type="radio"] { width: 18px; height: 18px; }
+    .filters-foot { display: block; position: sticky; bottom: 0; margin-top: auto; background: #fff; padding: 12px 0 calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); }
+    .filters-foot button { width: 100%; min-height: 48px; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 15px; }
+    .filters-backdrop.open { display: block; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 299; }
+    body.filters-lock { overflow: hidden; }
+  }
+
+  .open-btn, .wa-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .pagination button { min-width: 44px; min-height: 44px; }
+  .biz-info h3 { overflow-wrap: anywhere; }
+  .biz-phone a { display: inline-block; padding: 6px 0; }
+  .map-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; }
+  .skel-card { height: 170px; border-radius: var(--radius-lg); background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 37%, #F3F4F6 63%); background-size: 400% 100%; animation: citySkel 1.4s ease infinite; }
+  @keyframes citySkel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
+  footer { overflow-wrap: anywhere; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
+  /* Compact cards on tablets and phones (same as the pre-rendered pages in /styles.css). */
+  @media (max-width: 768px) {
+    .biz-card { grid-template-columns: 200px minmax(0, 1fr); }
+    .biz-img { aspect-ratio: auto; min-height: 150px; grid-row: 1; }
+    .biz-action { grid-column: 1 / -1; }
+  }
+  @media (max-width: 480px) { .pagination { gap: 6px; } .pagination button { padding: 8px 10px; } }
+  @media (max-width: 560px) {
+    .biz-card { grid-template-columns: 104px minmax(0, 1fr); }
+    .biz-img { aspect-ratio: auto; min-height: 104px; grid-row: 1; }
+    .biz-img .cat-chip { display: none; }
+    .biz-img .badge { top: 6px; left: 6px; padding: 2px 7px; font-size: 10px; z-index: 2; }
+    .biz-img .biz-icon { font-size: 34px; }
+    .biz-info { padding: 12px 14px; }
+    .biz-info h3 { font-size: 16px; }
+    .biz-loc { font-size: 12.5px; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .biz-loc svg { display: none; }
+    .biz-action { grid-column: 1 / -1; padding: 10px 12px 12px; }
+    .biz-action > * { min-width: 0; }
+    .biz-phone, .map-link { flex-basis: 100% !important; }
+    .float-wa { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   }
 </style>
 </head>
@@ -146,18 +261,18 @@
 
 <header class="header">
   <div class="container header-inner">
-    <a href="index.html" class="brand">
-      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
+    <a href="/" class="brand">
+      <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
     </a>
 
     <form class="header-search" onsubmit="event.preventDefault(); jumpSearch();">
       <div class="hs-field">
-        <label>City</label>
+        <label for="hsCity">City</label>
         <input list="hsCityList" id="hsCity" placeholder="Mumbai, Dallas, Bengaluru…" autocomplete="off" />
         <datalist id="hsCityList"></datalist>
       </div>
       <div class="hs-field">
-        <label>Service</label>
+        <label for="hsCat">Service</label>
         <select id="hsCat">
           <option value="">Any pet service</option>
           <option value="veterinary-clinics">Veterinary Clinics</option>
@@ -180,27 +295,40 @@
       </button>
     </form>
 
-    <a href="marketing.html" style="color:var(--text);font-weight:500;font-size:14px;padding:8px 12px;border-radius:8px;flex-shrink:0;">For Businesses</a>
-    <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=header" class="header-cta" target="_blank" rel="noopener">
+    <nav class="hdr-links" id="siteNav" aria-label="Main">
+      <a href="/#cats" class="hl-extra">Categories</a>
+      <a href="/search/" class="hl-extra">Search</a>
+      <a href="/marketing.html">For Businesses</a>
+      <a href="/membership/" class="hl-extra">Membership</a>
+      <a href="/login/">Sign In</a>
+    </nav>
+    <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=header" class="header-cta" target="_blank" rel="noopener" aria-label="List your business on WhatsApp">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
       <span>List Business</span>
     </a>
+    <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
 
 <section class="city-hero">
   <div class="container">
-    <div class="breadcrumb"><a href="index.html">Home</a> &nbsp;›&nbsp; <span id="bcCountry">India</span> &nbsp;›&nbsp; <span id="bcCity">Mumbai</span></div>
-    <h1 id="hCity">Pet services in Mumbai</h1>
-    <p id="hCount">Loading listings…</p>
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> &nbsp;›&nbsp; <span id="bcCountry">&nbsp;</span> &nbsp;›&nbsp; <span id="bcCity">&nbsp;</span></nav>
+    <h1 id="hCity">Pet services near you</h1>
+    <p id="hCount" aria-live="polite">Loading listings…</p>
   </div>
 </section>
 
 <main class="main">
   <div class="container">
     <div class="layout">
-      <aside class="filters">
-        <h3>Filter by</h3>
+      <div class="filters-backdrop" id="filtersBackdrop"></div>
+      <aside class="filters" id="filtersPanel" aria-label="Filters">
+        <div class="filters-head">
+          <h3>Filter by</h3>
+          <button type="button" class="filters-close" id="filtersClose" aria-label="Close filters">×</button>
+        </div>
 
         <div class="filter-group" id="catGroup">
           <h4>Service category</h4>
@@ -208,7 +336,7 @@
           <!-- categories injected by JS -->
         </div>
 
-        <div class="filter-group">
+        <div class="filter-group" id="ratingGroup">
           <h4>Guest rating</h4>
           <label><input type="radio" name="rating" value="0" checked> Any rating</label>
           <label><input type="radio" name="rating" value="4.7"> 4.7+ Exceptional</label>
@@ -217,7 +345,7 @@
           <label><input type="radio" name="rating" value="3.5"> 3.5+ Good</label>
         </div>
 
-        <div class="filter-group">
+        <div class="filter-group" id="reviewsGroup">
           <h4>Reviews</h4>
           <label><input type="radio" name="reviews" value="0" checked> Any review count</label>
           <label><input type="radio" name="reviews" value="50"> 50+ Google reviews</label>
@@ -226,15 +354,20 @@
         </div>
 
         <div class="filter-group">
-          <span class="filter-clear" onclick="resetFilters()">↺ Clear all filters</span>
+          <button type="button" class="filter-clear" onclick="resetFilters()">↺ Clear all filters</button>
         </div>
+        <div class="filters-foot"><button type="button" id="filtersApply">Show results</button></div>
       </aside>
 
       <section>
         <div class="results-bar">
-          <div class="results-count"><strong id="resCount">0</strong> businesses match</div>
+          <div class="results-count" aria-live="polite"><strong id="resCount">…</strong> businesses match</div>
+          <button type="button" class="filter-open-btn" id="filtersOpen" aria-controls="filtersPanel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+            Filters <span class="fcount" id="filtersCount"></span>
+          </button>
           <div class="sort-by">
-            Sort by
+            <label for="sortBy">Sort by</label>
             <select id="sortBy">
               <option value="rating">Highest rated</option>
               <option value="reviews">Most reviewed</option>
@@ -242,7 +375,7 @@
             </select>
           </div>
         </div>
-        <div class="biz-list" id="bizList"></div>
+        <div class="biz-list" id="bizList" aria-busy="true"><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div></div>
         <div class="pagination" id="pagination"></div>
       </section>
     </div>
@@ -257,20 +390,21 @@
 <footer>
   <div class="container footer-inner">
     <span>© 2026 Pets24x7 — Pet Services Marketplace.</span>
-    <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="marketing.html">For Businesses</a> · <a href="https://wa.me/919930090487">WhatsApp</a> · <a href="tel:+919930090487">+91 99300 90487</a></span>
+    <span><a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/marketing.html">For Businesses</a> · <a href="https://wa.me/919930090487">WhatsApp</a> · <a href="tel:+919930090487">+91 99300 90487</a></span>
   </div>
 </footer>
 
-<script src="config.js"></script>
+<script src="/config.js"></script>
 <script src="/analytics.js"></script>
-<script src="pets-data.js"></script>
-<script src="pets-loader.js"></script>
+<script src="/pets-data.js"></script>
+<script src="/pets-loader.js"></script>
 <script src="/pet-images.js"></script>
+<script src="/reco-track.js" defer></script>
 <script>
   function qs(name) { var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search); return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : ''; }
   function titleCase(s) { return (s||'').replace(/(^|[\s-])(\w)/g, function(_,a,b){ return a + b.toUpperCase(); }); }
-  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-  function esc(s) { return (s||'').toString().replace(/[<>&"]/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+  function esc(s) { return (s == null ? '' : String(s)).replace(/[<>&"']/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function escapeAttr(s){ return esc(s); }
 
   function seedOf(s) { return (s || '').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
   function mapEmbedSrc(b) {
@@ -281,7 +415,13 @@
 
   // Category photos live in /pet-images.js so city, listing and the page
   // builder all draw from one verified pool.
-  function cardImg(b) { return window.PetImages.cardImg(b, 560, 420); }
+  // A business's own photo (published with the listing) beats the stock one.
+  function cardImg(b) {
+    var own = (b && Array.isArray(b.photos) ? b.photos : []).filter(function (u) {
+      return /^(https?:\/\/|\/(?!\/))/i.test(String(u || ''));
+    })[0];
+    return own || window.PetImages.cardImg(b, 560, 420);
+  }
 
   // ---- State ----
   // A city with no pre-built folder is rewritten here by the host, which keeps
@@ -298,6 +438,13 @@
   var country = (qs('country') || (pathBits && pathBits.country) || 'IN').toUpperCase();
   var citySlug = (qs('city') || (pathBits && pathBits.city) || 'mumbai').toLowerCase();
   var prefilledCat = qs('cat') || (pathBits && pathBits.cat) || '';
+  // Name the city from the URL straight away; the data refines it on load.
+  (function () {
+    var guess = titleCase(citySlug.replace(/-/g, ' '));
+    document.getElementById('hCity').textContent = 'Pet services in ' + guess;
+    document.getElementById('bcCity').textContent = guess;
+    document.getElementById('bcCountry').textContent = country === 'US' ? 'USA' : 'India';
+  })();
 
   // Legacy query-string visitors: 301-equivalent JS redirect to the clean URL
   // (so any existing inbound links keep working but Google sees the canonical).
@@ -308,6 +455,30 @@
       location.replace(cleanPath);
     }
   }
+  // Canonical is always the clean URL, whichever form the visitor arrived by.
+  (function () {
+    var link = document.getElementById('pageCanonical');
+    var href = 'https://pets24x7.com/' + country.toLowerCase() + '/' + encodeURIComponent(citySlug) + '/' +
+      (prefilledCat ? encodeURIComponent(prefilledCat) + '/' : '');
+    if (!link) { link = document.createElement('link'); link.rel = 'canonical'; link.id = 'pageCanonical'; document.head.appendChild(link); }
+    link.href = href;
+    setMeta('ogUrl', href);
+  })();
+  function setMeta(id, value) {
+    var el = document.getElementById(id);
+    if (!el && id === 'ogUrl') {
+      el = document.createElement('meta');
+      el.id = id; el.setAttribute('property', 'og:url');
+      document.head.appendChild(el);
+    }
+    if (el) el.setAttribute('content', value);
+  }
+  // A Google score is shown, filtered and sorted on only with a review count
+  // behind it (same rule as build_pages.has_rating); a bare score is unknown.
+  function shownRating(b) {
+    return (Number(b.review_count) || 0) >= 1 ? (Number(b.rating) || 0) : 0;
+  }
+
   var allBiz = [];
   var cityMeta = null;
   var PAGE_SIZE = 20;
@@ -317,29 +488,82 @@
     ((location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '')
       ? '' : 'https://api.pets24x7.com');
 
-  // Move currently-featured listings to the top and tag them.
+  // Paid placements: moved to the top, labelled 'Sponsored' (the server's
+  // label), and reported as surface featured_strip against the response rid.
+  // Card order from the API is fair-rotated, so it is kept among them.
+  var featuredRid = '';
+  var featuredMeta = {};   // listingId -> { pos, label, featuredId }
   function applyFeatured(list) {
     return fetch(API_BASE + '/api/featured?city=' + encodeURIComponent(citySlug), { headers: { 'Accept': 'application/json' } })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        var ids = (d && d.listingIds) || [];
+        var cards = (d && d.cards) || [];
+        var ids = cards.length ? cards.map(function(c){ return c.id; }) : ((d && d.listingIds) || []);
         if (!ids.length) return list;
-        var set = {};
-        ids.forEach(function(id){ set[id] = true; });
-        list.forEach(function(b){ if (set[b.id]) b._featured = true; });
-        return list.slice().sort(function(a, b){ return (b._featured ? 1 : 0) - (a._featured ? 1 : 0); });
+        featuredRid = (d && d.rid) || '';
+        ids.forEach(function(id, i){
+          var c = cards[i] || {};
+          if (id && !featuredMeta[id]) featuredMeta[id] = { pos: i + 1, label: c.label || 'Sponsored', featuredId: c.featuredId || '' };
+        });
+        list.forEach(function(b){ if (featuredMeta[b.id]) b._featured = true; });
+        return list.slice().sort(function(a, b){
+          if (!!b._featured !== !!a._featured) return b._featured ? 1 : -1;
+          return a._featured ? featuredMeta[a.id].pos - featuredMeta[b.id].pos : 0;
+        });
       })
       .catch(function(){ return list; });
   }
 
+  // Sponsored-card tracking. /reco-track.js does impressions (and clicks) when
+  // it loaded; otherwise a click still goes out as one keepalive event.
+  function recoObserve(box, surface) {
+    function go() { if (window.recoTrack && window.recoTrack.observe) { try { window.recoTrack.observe(box, surface); } catch (e) {} return true; } return false; }
+    if (!go()) window.addEventListener('load', go);
+  }
+  function recoCardClick(el) {
+    var d = el.dataset || {};
+    if (!d.rid || !d.lid) return;
+    try { if (window.trackEvent) window.trackEvent('sponsored_click', { surface: 'featured_strip', reason: 'SPONSORED', listing_id: d.lid }); } catch (e) {}
+    if (window.recoTrack && window.recoTrack.click) { try { window.recoTrack.click(el); } catch (e) {} return; }
+    var ev = { rid: d.rid, type: 'click', listingId: d.lid, pos: Number(d.pos) || undefined, reason: 'SPONSORED', sponsored: true, surface: 'featured_strip' };
+    try { sessionStorage.setItem('reco:last', JSON.stringify({ rid: d.rid, listingId: d.lid, surface: 'featured_strip', pos: ev.pos, reason: 'SPONSORED', sponsored: true, ts: Date.now() })); } catch (e) {}
+    try {
+      fetch(API_BASE + '/api/reco/events', { method: 'POST', credentials: 'include', keepalive: true,
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ events: [ev] }) }).catch(function(){});
+    } catch (e) {}
+  }
+  document.getElementById('bizList').addEventListener('click', function (ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a') : null;
+    var el = a && a.closest('[data-rid]');
+    if (el) recoCardClick(el);
+  });
+
   // Cities added after the last static build have no bundled JSON file, so ask
   // the API before declaring the city empty.
   function loadCityFromApi() {
-    return fetch(API_BASE + '/api/listings/search?city=' + encodeURIComponent(citySlug) + '&limit=100&newest=1',
-      { headers: { 'Accept': 'application/json' } })
-      .then(function(r){ if (!r.ok) throw new Error('api ' + r.status); return r.json(); })
-      .then(function(d){
-        var list = (d && d.listings) || [];
+    // citySlug is an exact match server-side. The old `city=` substring query
+    // let "mumbai" fill its 100 slots with Navi Mumbai rows, and a city with
+    // more than 100 listings was silently cut short — follow nextOffset instead.
+    var MAX_PAGES = 20;
+    function page(offset, acc, n) {
+      return fetch(API_BASE + '/api/listings/search?citySlug=' + encodeURIComponent(citySlug) +
+        '&country=' + encodeURIComponent(country) + '&limit=100&newest=1&offset=' + offset,
+        { headers: { 'Accept': 'application/json' } })
+        .then(function(r){ if (!r.ok) throw new Error('api ' + r.status); return r.json(); })
+        .then(function(d){
+          acc = acc.concat((d && d.listings) || []);
+          if (d && d.hasMore && d.nextOffset != null && n + 1 < MAX_PAGES) return page(d.nextOffset, acc, n + 1);
+          return acc;
+        });
+    }
+    return page(0, [], 0)
+      .then(function(rows){
+        var want = citySlug.toLowerCase();
+        // Belt and braces: keep exactly this city and country.
+        var list = rows.filter(function (b) {
+          var slug = String(b.city_slug || b.city || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          return slug === want && String(b.country || country).toUpperCase() === country;
+        });
         if (!list.length) throw new Error('no listings');
         return applyFeatured(list);
       })
@@ -348,13 +572,14 @@
 
   function loadCityData() {
     var url = 'data/' + country.toLowerCase() + '-' + encodeURIComponent(citySlug) + '.json';
-    fetch(url, { cache: 'no-store' })
+    fetch('/' + url, { cache: 'no-store' })
       .then(function(r){ if (!r.ok) throw new Error('city not found'); return r.json(); })
       .then(function(data){ return applyFeatured(data); })
-      .then(function(data){ allBiz = data; afterLoad(); })
+      .then(function(data){ allBiz = data; afterLoad(); mergeLive(); })
       .catch(function(){ return loadCityFromApi(); })
       .catch(function(){
-        document.getElementById('bizList').innerHTML = '<div class="empty"><h3>No listings yet for this city</h3><p>We don\'t have verified pet businesses in <em>' + esc(titleCase(citySlug.replace(/-/g, ' '))) + '</em> just yet — but new businesses are added every week.</p><p style="margin-top:14px;"><a href="index.html" style="color:var(--primary);font-weight:600;">← Browse all cities</a></p></div>';
+        document.getElementById('bizList').removeAttribute('aria-busy');
+        document.getElementById('bizList').innerHTML = '<div class="empty"><h3>No listings yet for this city</h3><p>We don\'t have verified pet businesses in <em>' + esc(titleCase(citySlug.replace(/-/g, ' '))) + '</em> just yet — but new businesses are added every week.</p><p style="margin-top:14px;"><a href="/" style="color:var(--primary);font-weight:600;">← Browse all cities</a></p></div>';
         document.getElementById('resCount').textContent = '0';
         document.getElementById('hCount').textContent = 'No listings yet';
       });
@@ -362,55 +587,174 @@
 
   function afterLoad() {
     if (!allBiz.length) return;
+    // Same guards as build_pages.py: a CID mangled by a spreadsheet
+    // ("6.47E+18") is a dead Maps link, and one Google business is shown once.
+    var seenCid = {};
+    allBiz = allBiz.filter(function (b) {
+      if (b.google_cid && !/^\d+$/.test(String(b.google_cid))) { b.google_cid = ''; b.gmb_link = ''; }
+      if (!b.google_cid) return true;
+      if (seenCid[b.google_cid]) return false;
+      seenCid[b.google_cid] = 1;
+      return true;
+    });
     var sample = allBiz[0];
     var realCity = sample.city || titleCase(citySlug.replace(/-/g, ' '));
     var stateLabel = country === 'US' ? (sample.state ? ', ' + sample.state : '') : '';
     document.getElementById('hCity').textContent = 'Pet services in ' + realCity + stateLabel;
     document.getElementById('bcCity').textContent = realCity;
-    document.getElementById('bcCountry').innerHTML = '<a href="index.html">' + (country === 'IN' ? 'India' : 'USA') + '</a>';
+    document.getElementById('bcCountry').innerHTML = '<a href="/">' + (country === 'IN' ? 'India' : 'USA') + '</a>';
     document.title = 'Pet Services in ' + realCity + stateLabel + ' | Pets24x7.com';
-    document.getElementById('pageDesc').setAttribute('content',
-      'Browse ' + allBiz.length + '+ verified pet businesses in ' + realCity + stateLabel +
-      ' — vets, groomers, boarders, walkers and trainers with real Google ratings.');
-    document.getElementById('hCount').textContent = allBiz.length + ' verified businesses · Real Google ratings · WhatsApp them direct';
+    var metaDesc = 'Browse ' + allBiz.length + '+ verified pet businesses in ' + realCity + stateLabel +
+      ' — vets, groomers, boarders, walkers and trainers. WhatsApp them direct.';
+    document.getElementById('pageDesc').setAttribute('content', metaDesc);
+    setMeta('ogTitle', document.title); setMeta('twTitle', document.title);
+    setMeta('ogDesc', metaDesc); setMeta('twDesc', metaDesc);
     document.getElementById('hsCity').value = realCity;
 
-    // Category filter chips
-    var cats = {};
-    allBiz.forEach(function(b){
-      var key = b.category_slug + '||' + b.category + '||' + (b.category_icon || '📍');
-      cats[key] = (cats[key] || 0) + 1;
+    buildCatChips(prefilledCat);
+
+    // A rating is shown only with a review count behind it, and many cities
+    // have none yet: every rating/review filter then returned zero results.
+    // Offer only the filters this city's data can actually answer.
+    var anyRated = allBiz.some(function (b) { return shownRating(b) > 0; });
+    var maxReviews = allBiz.reduce(function (m, b) { return Math.max(m, Number(b.review_count) || 0); }, 0);
+    document.getElementById('ratingGroup').hidden = !anyRated;
+    document.querySelectorAll('input[name="reviews"]').forEach(function (el) {
+      var need = Number(el.value) || 0;
+      if (need && need > maxReviews) el.closest('label').hidden = true;
     });
-    var sorted = Object.keys(cats).sort(function(a,b){ return cats[b] - cats[a]; });
-    var grp = document.getElementById('catGroup');
-    sorted.forEach(function(k){
-      var parts = k.split('||');
-      var slug = parts[0], name = parts[1], icon = parts[2];
-      var lbl = document.createElement('label');
-      var checked = (slug === prefilledCat) ? ' checked' : '';
-      lbl.innerHTML = '<input type="radio" name="cat" value="' + slug + '"' + checked + '> ' + icon + ' ' + esc(name) + ' <span class="cat-count">' + cats[k] + '</span>';
-      grp.appendChild(lbl);
-    });
-    document.getElementById('catAllCount').textContent = allBiz.length;
+    document.getElementById('reviewsGroup').hidden = maxReviews < 50;
+    if (!anyRated) {
+      Array.prototype.forEach.call(document.getElementById('sortBy').options, function (o) {
+        if (o.value === 'rating') o.textContent = 'Recommended';
+        if (o.value === 'reviews') o.hidden = true;
+      });
+    }
 
     // If a cat prefilled but didn't match anything, fall back to "all"
-    if (prefilledCat && !document.querySelector('input[name="cat"][value="' + prefilledCat + '"]')) {
+    // Compare values directly: a slug with a quote in it would make a
+    // [value="..."] selector throw and stop the page rendering.
+    var catMatched = Array.prototype.some.call(document.querySelectorAll('input[name="cat"]'), function (el) { return el.value === prefilledCat; });
+    if (prefilledCat && !catMatched) {
       var all = document.querySelector('input[name="cat"][value=""]');
       if (all) all.checked = true;
     }
 
-    document.querySelectorAll('input[name="cat"], input[name="rating"], input[name="reviews"]').forEach(function(el){
-      el.addEventListener('change', function(){ currentPage = 1; render(); });
+    // Delegated, so chips rebuilt by mergeLive() need no listeners of their own.
+    ['catGroup', 'ratingGroup', 'reviewsGroup'].forEach(function (gid) {
+      document.getElementById(gid).addEventListener('change', function (ev) {
+        if (ev.target && ev.target.name) { currentPage = 1; render(); }
+      });
     });
     document.getElementById('sortBy').addEventListener('change', render);
     render();
+  }
+
+  // Category chips + the count in the hero, from allBiz. Re-run after a live
+  // merge changes the set; the checked category survives the rebuild.
+  function buildCatChips(selected) {
+    document.getElementById('hCount').textContent = allBiz.length + ' verified businesses · Google Maps profiles · WhatsApp them direct';
+    var cats = {};
+    var slugs = {};
+    allBiz.forEach(function(b){
+      var key = (b.category_slug || '') + '||' + (b.category || 'Pet Service') + '||' + (b.category_icon || '📍');
+      cats[key] = (cats[key] || 0) + 1;
+      slugs[b.category_slug || ''] = 1;
+    });
+    var sorted = Object.keys(cats).sort(function(a,b){ return cats[b] - cats[a]; });
+    var grp = document.getElementById('catGroup');
+    Array.prototype.forEach.call(grp.querySelectorAll('label[data-dyn]'), function (l) { l.parentNode.removeChild(l); });
+    sorted.forEach(function(k){
+      var parts = k.split('||');
+      var slug = parts[0], name = parts[1], icon = parts[2];
+      var lbl = document.createElement('label');
+      lbl.setAttribute('data-dyn', '1');
+      var checked = (slug === selected) ? ' checked' : '';
+      lbl.innerHTML = '<input type="radio" name="cat" value="' + esc(slug) + '"' + checked + '> ' + esc(icon) + ' ' + esc(name) + ' <span class="cat-count">' + cats[k] + '</span>';
+      grp.appendChild(lbl);
+    });
+    document.getElementById('catAllCount').textContent = allBiz.length;
+    // The selected category emptied out: fall back to "all" rather than show nothing.
+    if (selected && !slugs[selected]) {
+      var all = grp.querySelector('input[name="cat"][value=""]');
+      if (all) all.checked = true;
+    }
+  }
+
+  // The data file is a snapshot from the last publish (nightly, or the admin
+  // "Publish site" button). Listings added since then are already live in the
+  // API, and listings hidden or deleted since then are already gone from it, so
+  // once the static list is on screen ask the API for this city and reconcile.
+  // First render never waits on this, and any failure leaves the static list
+  // exactly as it was.
+  //
+  // Bounded: at most LIVE_PAGES requests of 100, newest first (new listings
+  // come back first). Removal is only trusted when the API returned the whole
+  // city, and never takes out more than half the list: an API answering from
+  // a partial index must not empty the page.
+  var LIVE_PAGES = 3;
+  function mergeLive() {
+    if (!window.fetch) return;
+    var got = [];
+    var complete = false;
+    function page(offset, n) {
+      return fetch(API_BASE + '/api/listings/search?citySlug=' + encodeURIComponent(citySlug) +
+        '&country=' + encodeURIComponent(country) + '&limit=100&newest=1&offset=' + offset,
+        { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('api ' + r.status); return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok) throw new Error('api');
+          got = got.concat(d.listings || []);
+          if (d.hasMore && d.nextOffset != null) {
+            if (n + 1 < LIVE_PAGES) return page(d.nextOffset, n + 1);
+            return;
+          }
+          complete = true;
+        });
+    }
+    function nameKey(b) { return String(b.name || '').toLowerCase().trim() + '|' + String(b.city || '').toLowerCase().trim(); }
+    page(0, 0).then(function () {
+      var live = got.filter(function (b) {
+        if (!b || !b.id || b.hidden) return false;
+        var slug = String(b.city_slug || b.city || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return slug === citySlug && String(b.country || country).toUpperCase() === country;
+      });
+      var haveId = {}, haveCid = {};
+      allBiz.forEach(function (b) { haveId[b.id] = 1; if (b.google_cid) haveCid[b.google_cid] = 1; });
+      var added = [];
+      live.forEach(function (b) {
+        if (haveId[b.id] || (b.google_cid && haveCid[b.google_cid])) return;
+        haveId[b.id] = 1;
+        if (b.google_cid) haveCid[b.google_cid] = 1;
+        b._live = true;
+        added.push(b);
+      });
+      var gone = {};
+      var goneCount = 0;
+      if (complete && live.length) {
+        // The API collapses rows with the same name in the same city, so a
+        // static duplicate of a live name is not evidence of a deletion.
+        var liveId = {}, liveName = {};
+        live.forEach(function (b) { liveId[b.id] = 1; liveName[nameKey(b)] = 1; });
+        allBiz.forEach(function (b) {
+          if (b._featured || liveId[b.id] || liveName[nameKey(b)]) return;
+          gone[b.id] = 1; goneCount++;
+        });
+        if (goneCount > Math.max(3, allBiz.length / 2)) { gone = {}; goneCount = 0; }
+      }
+      if (!added.length && !goneCount) return;
+      var selected = (document.querySelector('input[name="cat"]:checked') || {}).value || '';
+      allBiz = allBiz.filter(function (b) { return !gone[b.id]; }).concat(added);
+      buildCatChips(selected);
+      render();
+    }).catch(function () {});
   }
 
   // search datalist (populated from PETS_INDEX)
   function populateCityDatalist() {
     var idx = window.PETS_INDEX || [];
     document.getElementById('hsCityList').innerHTML = idx.slice(0, 200).map(function(c){
-      return '<option value="' + c.city + (c.country === 'US' ? ', US' : '') + '"></option>';
+      return '<option value="' + esc(c.city + (c.country === 'US' ? ', US' : '')) + '"></option>';
     }).join('');
   }
   populateCityDatalist();
@@ -427,8 +771,8 @@
     var f = getFilters();
     return list.filter(function(b){
       if (f.cat && b.category_slug !== f.cat) return false;
-      if (f.rating && b.rating < f.rating) return false;
-      if (f.reviews && b.review_count < f.reviews) return false;
+      if (f.rating && shownRating(b) < f.rating) return false;
+      if (f.reviews && (Number(b.review_count) || 0) < f.reviews) return false;
       return true;
     });
   }
@@ -436,11 +780,28 @@
     var sb = document.getElementById('sortBy').value;
     var arr = list.slice();
     arr.sort(function(a,b){
-      if (sb === 'reviews') return b.review_count - a.review_count;
-      if (sb === 'name') return a.name.localeCompare(b.name);
-      return b.rating - a.rating;
+      if (sb === 'reviews') return (Number(b.review_count) || 0) - (Number(a.review_count) || 0);
+      if (sb === 'name') return String(a.name || '').localeCompare(String(b.name || ''));
+      // Paid placements stay on top under the default sort; applyFeatured()
+      // moved them up, and a plain rating sort would silently undo that.
+      if (!!b._featured !== !!a._featured) return b._featured ? 1 : -1;
+      if (a._featured && b._featured) return featuredMeta[a.id].pos - featuredMeta[b.id].pos;
+      return shownRating(b) - shownRating(a);
     });
-    return arr;
+    return placeLive(arr, sb);
+  }
+  // Listings merged from the API after the last publish (b._live) are new and
+  // mostly unrated, so the rating sort sent them to the last page of a large
+  // city. The pre-built pages add them to page 1, after its cards; do the same
+  // here under the default sort, below any paid placements. A sort the
+  // visitor picked (reviews, name) is applied as asked.
+  function placeLive(arr, sb) {
+    if (sb !== 'rating') return arr;
+    var top = [], live = [], rest = [];
+    arr.forEach(function (b) { (b._featured ? top : b._live ? live : rest).push(b); });
+    if (!live.length || !rest.length) return arr;
+    var at = Math.max(0, Math.min(rest.length, PAGE_SIZE - top.length - live.length));
+    return top.concat(rest.slice(0, at), live, rest.slice(at));
   }
 
   function whatsappLink(b) {
@@ -467,11 +828,16 @@
   function goPage(p) {
     currentPage = p;
     render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Back to the top of the results, not the top of the page (the hero).
+    var bar = document.querySelector('.results-bar');
+    var y = bar ? bar.getBoundingClientRect().top + window.pageYOffset - 84 : 0;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   }
   window.goPage = goPage;
 
   function render() {
+    document.getElementById('bizList').removeAttribute('aria-busy');
+    updateFilterCount();
     var filtered = applySort(applyFilters(allBiz));
     document.getElementById('resCount').textContent = filtered.length;
     var start = (currentPage - 1) * PAGE_SIZE;
@@ -483,43 +849,140 @@
       return;
     }
     list.innerHTML = page.map(function(b, i){
-      var topBadge = b._featured ? '<span class="badge" style="background:var(--warning);color:#1F2937;">★ Featured</span>' :
-                     (b.rating >= 4.8 && b.review_count >= 100) ? '<span class="badge">Top Rated</span>' : '';
-      var phoneTxt = b.phone ? '📞 <a href="tel:' + escapeAttr(b.phone.replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '';
-      return '<article class="biz-card">' +
-        '<a class="biz-img" href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">' +
+      var rating = shownRating(b);
+      var reviews = Number(b.review_count) || 0;
+      var href = '/' + String(b.country || country).toLowerCase() + '/' + encodeURIComponent(b.city_slug || citySlug) + '/' + encodeURIComponent(b.id) + '/';
+      var cidQ = b.google_cid ? encodeURIComponent(b.google_cid) : '';
+      var fm = b._featured ? featuredMeta[b.id] : null;
+      var track = '';
+      if (fm) {
+        href += '?src=reco_featured_strip';
+        if (featuredRid) {
+          track = ' data-rid="' + esc(featuredRid) + '" data-lid="' + esc(b.id) + '" data-pos="' + fm.pos + '"' +
+                  ' data-reason="SPONSORED" data-sp="1" data-surface="featured_strip"';
+        }
+      }
+      var topBadge = fm ? '<span class="badge" style="background:var(--warning);color:#1F2937;" aria-label="Sponsored listing">' + esc(fm.label) + '</span>' :
+                     (rating >= 4.8 && reviews >= 100) ? '<span class="badge">Top Rated</span>' :
+                     b._live ? '<span class="badge">New</span>' : '';
+      var phoneTxt = b.phone ? '📞 <a href="tel:' + escapeAttr(String(b.phone).replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '';
+      return '<article class="biz-card"' + track + '>' +
+        '<a class="biz-img" href="' + href + '">' +
           topBadge +
-          '<span class="cat-chip">' + (b.category_icon || '📍') + ' ' + esc(b.category) + '</span>' +
-          '<span class="biz-icon" aria-hidden="true">' + (b.category_icon || '🐾') + '</span>' +
+          '<span class="cat-chip">' + esc(b.category_icon || '📍') + ' ' + esc(b.category) + '</span>' +
+          '<span class="biz-icon" aria-hidden="true">' + esc(b.category_icon || '🐾') + '</span>' +
           '<img loading="lazy" src="' + escapeAttr(cardImg(b)) + '" alt="" onerror="this.remove()">' +
         '</a>' +
         '<div class="biz-info">' +
-          '<h3><a href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">' + esc(b.name) + '</a></h3>' +
+          '<h3><a href="' + href + '">' + esc(b.name) + '</a></h3>' +
           '<div class="biz-loc">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
-            esc(b.address || (b.city + (b.state ? ', ' + b.state : ''))) +
+            esc(b.address || ((b.locality ? b.locality + ', ' : '') + b.city + (b.state ? ', ' + b.state : ''))) +
           '</div>' +
           '<div class="biz-rating">' +
-            '<span class="rating-pill">★ ' + b.rating.toFixed(1) + '</span>' +
-            (b.google_cid ?
-              '<span class="google-badge"><span class="gscore">' + b.rating.toFixed(1) + '/5</span>' +
+            (rating ? '<span class="rating-pill">★ ' + rating.toFixed(1) + '</span>' : '') +
+            (b.google_cid && rating && reviews ?
+              '<span class="google-badge"><span class="gscore">' + rating.toFixed(1) + '/5</span>' +
               '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
-              '<a href="https://www.google.com/maps?cid=' + b.google_cid + '" target="_blank" rel="noopener">' + b.review_count + ' reviews</a></span>'
+              '<a href="https://www.google.com/maps?cid=' + cidQ + '" target="_blank" rel="noopener">' + reviews + ' reviews</a></span>'
               : '<span class="rating-text">Verified listing</span>') +
           '</div>' +
         '</div>' +
         '<div class="biz-action">' +
           (phoneTxt ? '<div class="biz-phone">' + phoneTxt + '</div>' : '') +
-          '<a class="open-btn" href="/' + b.country.toLowerCase() + '/' + encodeURIComponent(b.city_slug) + '/' + encodeURIComponent(b.id) + '/">View Details</a>' +
-          '<a class="wa-btn" href="' + whatsappLink(b) + '" target="_blank" rel="noopener">' +
+          '<a class="open-btn" href="' + href + '">View Details</a>' +
+          '<a class="wa-btn" href="' + escapeAttr(whatsappLink(b)) + '" target="_blank" rel="noopener">' +
             '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>' +
             'WhatsApp →' +
           '</a>' +
-          (b.google_cid ? '<a class="map-link" href="https://www.google.com/maps?cid=' + b.google_cid + '" target="_blank" rel="noopener">View on Google Maps ↗</a>' : '') +
+          (b.google_cid ? '<a class="map-link" href="https://www.google.com/maps?cid=' + cidQ + '" target="_blank" rel="noopener">View on Google Maps ↗</a>' : '') +
         '</div>' +
       '</article>';
     }).join('');
+    if (featuredRid && list.querySelector('[data-rid]')) recoObserve(list, 'featured_strip');
     renderPagination(filtered.length);
+    injectItemListJsonLd(filtered);
+  }
+
+  // A city/category page served through this fallback (added after the last
+  // static build — see vercel.json / _redirects) never gets the ItemList
+  // JSON-LD that build_pages.py bakes into a fully-built page. Inject the
+  // same shape client-side so it isn't missing structured data until rebuild.
+  function injectItemListJsonLd(items) {
+    try {
+      var old = document.getElementById('ld-itemlist');
+      if (old) old.remove();
+      var obj = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Pet services in ' + (window.cityName || citySlug),
+        itemListOrder: 'https://schema.org/ItemListOrderDescending',
+        numberOfItems: items.length,
+        itemListElement: items.slice(0, 20).map(function(b, i){
+          var href = 'https://pets24x7.com/' + String(b.country || country).toLowerCase() + '/' + encodeURIComponent(b.city_slug || citySlug) + '/' + encodeURIComponent(b.id) + '/';
+          return { '@type': 'ListItem', position: i + 1, url: href, name: b.name };
+        })
+      };
+      var s = document.createElement('script');
+      s.type = 'application/ld+json';
+      s.id = 'ld-itemlist';
+      s.textContent = JSON.stringify(obj);
+      document.head.appendChild(s);
+    } catch (e) {}
+  }
+
+  // ---- Filter drawer (below 1024px) ----
+  var fPanel = document.getElementById('filtersPanel');
+  var fOpenBtn = document.getElementById('filtersOpen');
+  var fBackdrop = document.getElementById('filtersBackdrop');
+  function drawerMode() { return getComputedStyle(fOpenBtn).display !== 'none'; }
+  function openFilters() {
+    fPanel.classList.add('open'); fBackdrop.classList.add('open');
+    document.body.classList.add('filters-lock');
+    fOpenBtn.setAttribute('aria-expanded', 'true');
+    fPanel.setAttribute('role', 'dialog'); fPanel.setAttribute('aria-modal', 'true');
+    setTimeout(function(){ var c = document.getElementById('filtersClose'); if (c) c.focus(); }, 50);
+  }
+  function closeFilters(focusBack) {
+    if (!fPanel.classList.contains('open')) return;
+    fPanel.classList.remove('open'); fBackdrop.classList.remove('open');
+    document.body.classList.remove('filters-lock');
+    fOpenBtn.setAttribute('aria-expanded', 'false');
+    fPanel.removeAttribute('role'); fPanel.removeAttribute('aria-modal');
+    if (focusBack) fOpenBtn.focus();
+  }
+  fOpenBtn.addEventListener('click', openFilters);
+  fBackdrop.addEventListener('click', function(){ closeFilters(true); });
+  document.getElementById('filtersClose').addEventListener('click', function(){ closeFilters(true); });
+  document.getElementById('filtersApply').addEventListener('click', function(){
+    closeFilters(true);
+    var bar = document.querySelector('.results-bar');
+    if (bar) window.scrollTo({ top: Math.max(0, bar.getBoundingClientRect().top + window.pageYOffset - 84) });
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeFilters(true); });
+  // Keep Tab inside the open drawer (it is aria-modal and the page behind is locked).
+  fPanel.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab' || !fPanel.classList.contains('open')) return;
+    var items = Array.prototype.filter.call(
+      fPanel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+      function(el){ return el.offsetParent !== null || el === document.activeElement; });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  window.addEventListener('resize', function(){ if (!drawerMode()) closeFilters(false); });
+  function updateFilterCount() {
+    var f = getFilters();
+    var n = (f.cat ? 1 : 0) + (f.rating ? 1 : 0) + (f.reviews ? 1 : 0);
+    var el = document.getElementById('filtersCount');
+    el.textContent = n ? String(n) : '';
+    el.classList.toggle('on', !!n);
+    var btn = document.getElementById('filtersApply');
+    if (btn && allBiz.length) {
+      var c = applyFilters(allBiz).length;
+      btn.textContent = 'Show ' + c + ' result' + (c === 1 ? '' : 's');
+    }
   }
 
   function resetFilters() {
@@ -537,7 +1000,8 @@
     if (!raw) return;
     var name = raw.replace(/,\s*(US|USA|IN|INDIA)\s*$/i, '').trim();
     var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    var co = /,\s*US|USA/i.test(raw) ? 'US' : '';
+    // Anchored: the old /,\s*US|USA/ matched "usa" anywhere in a city name.
+    var co = /,\s*(US|USA)\s*$/i.test(raw) ? 'US' : (/,\s*(IN|INDIA)\s*$/i.test(raw) ? 'IN' : '');
     if (!co) {
       var match = (window.PETS_INDEX || []).find(function(c){ return c.city_slug === slug; });
       co = match ? match.country : country;

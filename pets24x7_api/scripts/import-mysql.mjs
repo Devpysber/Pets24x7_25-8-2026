@@ -28,7 +28,6 @@ const MODEL_ORDER = [
   'vendor',
   'membershipPlan',
   'membership',
-  'payment',
   'listingClaim',
   'emailVerificationToken',
   'passwordResetToken',
@@ -42,13 +41,25 @@ const MODEL_ORDER = [
   'review',
   'marketingCampaign',
   'featuredListing',
+  // A payment may reference a campaign or a featured slot, so it comes after
+  // both (a campaign or featured payment failed to import when it came first).
+  'payment',
   'deal',
   'event',
   'waMessage',
   'importJob',
   'auditLog',
   'setting',
+  // Opt-outs are keyed by address, not by account: dropping them would start
+  // mailing people who unsubscribed.
+  'emailOptOut',
 ];
+
+// References that form a cycle: Membership.activatingPaymentId points at a
+// Payment, and Payment.membershipId points back. The row is written without
+// the field and the field is patched in once every table is loaded.
+const DEFERRED_FIELDS = { membership: ['activatingPaymentId'] };
+const deferred = [];
 
 const log = (msg) => process.stdout.write(msg + '\n');
 
@@ -121,13 +132,23 @@ async function importTable(model, rows) {
   let failed = 0;
   for (const raw of rows) {
     const row = revive(raw);
+    const patch = {};
+    for (const f of DEFERRED_FIELDS[model] ?? []) {
+      if (row[f] != null) patch[f] = row[f];
+      delete row[f];
+    }
+    if (Object.keys(patch).length) deferred.push({ model, id: row.id, patch });
     try {
       // Upsert on the primary key so a re-run updates rather than duplicates.
       await prisma[model].upsert({ where: { id: row.id }, update: row, create: row });
       ok++;
     } catch (err) {
       failed++;
-      if (failed <= 3) log(`    ! ${model} ${row.id}: ${err.message.split('\n')[0]}`);
+      // Prisma messages open with a blank line and put the actual reason last,
+      // so the first line alone logged nothing.
+      const lines = String(err?.message ?? err).split('\n').map((l) => l.trim()).filter(Boolean);
+      const reason = `${err?.code ? err.code + ' ' : ''}${lines.at(-1) ?? 'unknown error'}`;
+      if (failed <= 3) log(`    ! ${model} ${row.id}: ${reason.slice(0, 300)}`);
     }
   }
   log(`  ${model}: ${ok} rows` + (failed ? ` · ${failed} failed` : ''));
@@ -161,6 +182,15 @@ async function main() {
   }
   for (const [model] of present) {
     log(`  ${model}: not in the import order — skipped, add it if it matters`);
+  }
+
+  for (const { model, id, patch } of deferred) {
+    try {
+      await prisma[model].update({ where: { id }, data: patch });
+    } catch (err) {
+      totalFailed++;
+      log(`    ! ${model} ${id} (deferred ${Object.keys(patch).join(', ')}): ${String(err?.message ?? err).trim().split('\n').at(-1)}`);
+    }
   }
 
   log(totalFailed ? `Done with ${totalFailed} failed rows.` : 'Done.');

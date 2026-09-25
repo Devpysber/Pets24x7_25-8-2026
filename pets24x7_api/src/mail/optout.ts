@@ -39,7 +39,7 @@ export function verifyUnsubscribeToken(email: string, token: string): boolean {
 
 export function unsubscribeUrl(email: string): string {
   const e = encodeURIComponent(normalizeEmail(email));
-  return `${env.PUBLIC_API_URL}/api/email/unsubscribe?e=${e}&t=${unsubscribeToken(email)}`;
+  return `${env.PUBLIC_API_URL.replace(/\/+$/, '')}/api/email/unsubscribe?e=${e}&t=${unsubscribeToken(email)}`;
 }
 
 export async function isOptedOut(email: string): Promise<boolean> {

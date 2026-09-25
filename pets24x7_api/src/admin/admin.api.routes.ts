@@ -6,6 +6,11 @@
 //   POST /api/admin/vendors/:id/status      { status }
 //   GET  /api/admin/parents
 //   GET  /api/admin/listings                (claimed listings, enriched from static index)
+//   POST /api/admin/listings                create one directory listing
+//   GET|PATCH|DELETE /api/admin/listings/:id
+//   POST /api/admin/listings/:id/hide|unhide
+//   POST|PUT /api/admin/listings/:id/photos, DELETE /api/admin/listings/:id/photos/:idx
+//   GET  /api/admin/directory               ?q=&city=&category=&hidden=all|only|exclude
 //   GET  /api/admin/services
 //   GET  /api/admin/enquiries
 //   GET  /api/admin/marketing               campaigns + metrics
@@ -18,30 +23,76 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 import { prisma } from '../db.js';
+import { logger } from '../logger.js';
 import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { BadRequestError, NotFoundError } from '../shared/errors.js';
-import { addAndPersistImportedListing, getListingById, indexStats, removeListingFromIndex, searchListings, suggestListings } from '../listings/index.js';
+import { BadRequestError, HttpError, NotFoundError } from '../shared/errors.js';
+import {
+  addAndPersistImportedListing,
+  findListingByPhone,
+  findListingsByNameCity,
+  getListingById,
+  indexSize,
+  indexStats,
+  listingRecordFromRow,
+  listingSlug,
+  removeListingFromIndex,
+  removeListingFromJsonMirror,
+  searchListings,
+  setListingHiddenInIndex,
+  setListingHiddenInJsonMirror,
+  suggestListings,
+  type ListingRecord,
+} from '../listings/index.js';
+import { cleanPhoto, MAX_LISTING_PHOTOS, parsePhotos } from '../listings/photos.js';
+import { clearPopularCache } from '../listings/lookup.routes.js';
+import { normalizePhone } from '../shared/phone.js';
 import { notify } from '../whatsapp/notify.js';
 import { notifyIf } from '../mail/notify.js';
 import {
   campaignApprovedEmail,
   campaignCancelledEmail,
   campaignCompletedEmail,
+  membershipExpiredEmail,
   reviewPublishedEmail,
   reviewRejectedEmail,
   vendorApprovedEmail,
   vendorRejectedEmail,
   vendorSuspendedEmail,
 } from '../mail/action-templates.js';
+import { accountDeletedEmail, reviewThanksEmail, vendorReactivatedEmail } from '../mail/lifecycle-templates.js';
+import { applyFeaturedStatus } from './admin.extra.routes.js';
 
 export const adminApiRouter = Router();
 adminApiRouter.use(requireAuth('admin'));
 
 const rupees = (minor: number) => Math.round(minor / 100);
+
+// Server-side paging for the admin tables. `?page=&perPage=` (perPage also as
+// `limit`); with neither, the first page is the same newest-N slice the
+// panel always got, so existing callers are unchanged. Every list response
+// carries `total`, `page` and `perPage` so a table can page past the slice.
+function paging(query: Record<string, unknown>, defaultPerPage: number) {
+  const n = (v: unknown) => Math.floor(Number(v));
+  const rawPer = n(query.perPage ?? query.limit);
+  const perPage = Number.isFinite(rawPer) && rawPer > 0 ? Math.min(rawPer, 500) : defaultPerPage;
+  const rawPage = n(query.page);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  return { page, perPage, skip: (page - 1) * perPage, take: perPage };
+}
+
+// Case-insensitive `contains`. `mode: 'insensitive'` is Postgres-only (the
+// MySQL client types reject it); MySQL's *_ci collation already ignores case.
+function containsCi(search: string) {
+  return {
+    contains: search,
+    ...((process.env.DATABASE_URL ?? '').startsWith('postgres') ? ({ mode: 'insensitive' } as const) : {}),
+  };
+}
 
 /**
  * The one listing total the whole admin portal quotes.
@@ -52,12 +103,19 @@ const rupees = (minor: number) => Math.round(minor / 100);
  * listing is NOT in the index (a self-registered business) adds to the total.
  */
 export async function totalListingCount(): Promise<number> {
-  const base = indexStats().listings || 0;
+  // Hidden listings included: they are still in the directory, only kept
+  // off the public site (whose counters, indexStats(), leave them out).
+  const base = indexSize();
   let extra = 0;
   try {
+    // Bounded: a genuinely unbounded scan here would get slower every time a
+    // vendor claims a listing. 50k comfortably covers the current scale (a
+    // few thousand claimed vendors) with headroom; beyond that this count
+    // should move to a DB-side query instead of an in-Node filter.
     const claimed = await prisma.vendor.findMany({
       where: { listingId: { not: null } },
       select: { listingId: true },
+      take: 50_000,
     });
     extra = claimed.filter((v) => v.listingId && !getListingById(v.listingId)).length;
   } catch {
@@ -90,7 +148,6 @@ adminApiRouter.get(
       recentEnquiries,
       recentPayments,
       activeMemberships,
-      goldMemberships,
     ] = await Promise.all([
       prisma.vendor.count({ where: { claimedAt: { not: null } } }),
       prisma.vendor.count({ where: { status: 'PENDING' } }),
@@ -113,29 +170,54 @@ adminApiRouter.get(
       prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { name: true, listingName: true, category: true, createdAt: true } }),
       prisma.payment.findMany({ where: { status: 'SUCCESS' }, orderBy: { createdAt: 'desc' }, take: 5, select: { amountMinor: true, purpose: true, createdAt: true } }),
       prisma.membership.count({ where: { status: 'ACTIVE' } }),
-      prisma.membership.count({ where: { status: 'ACTIVE', plan: { sku: { contains: 'gold' } } } }),
     ]);
 
     const [
       enquiriesByStatusRaw,
       membershipsByPlanRaw,
-      goldPlanCount,
-      silverPlanCount,
+      campaignsByGoalRaw,
+      featuredPurchased,
       featuredCount,
     ] = await Promise.all([
       prisma.enquiry.groupBy({ by: ['status'], _count: { _all: true } }),
-      prisma.membership.groupBy({ by: ['planId'], _count: { _all: true } }),
-      prisma.membership.count({ where: { plan: { tier: 'GOLD' } } }),
-      prisma.membership.count({ where: { plan: { tier: 'SILVER' } } }),
-      prisma.featuredListing.count({ where: { status: 'ACTIVE' } }),
+      // Live members only: a PENDING row is an abandoned checkout, not a subscriber.
+      prisma.membership.groupBy({ by: ['planId'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
+      // Grow Business purchases are campaigns + featured slots a vendor paid for
+      // (or was granted): the rows Grow Business buyers lists by default, per
+      // purchaseKind(). A checkout that was abandoned, or cancelled after its
+      // payment failed, is not a purchase; counting CANCELLED rows here made
+      // this chart show sales that the buyers tab (rightly) did not.
+      prisma.marketingCampaign.groupBy({
+        by: ['goal'],
+        where: {
+          OR: [
+            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] } } } },
+            { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } },
+          ],
+        },
+        _count: { _all: true },
+      }),
+      prisma.featuredListing.count({
+        where: {
+          OR: [
+            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] } } } },
+            { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } },
+          ],
+        },
+      }),
+      prisma.featuredListing.count({ where: { status: 'ACTIVE', endsAt: { gt: new Date() } } }),
     ]);
 
     const totalListings = await totalListingCount();
-    const totalCities = idxStats.cities || 570;
-    const totalCategories = idxStats.categories || 42;
+    // Real index numbers. A fallback here would print a healthy-looking figure
+    // on a server whose directory failed to load, hiding the actual fault.
+    const totalCities = idxStats.cities ?? 0;
+    const totalCategories = idxStats.categories ?? 0;
     const totalClaimedListings = claimedVendors;
     const totalSubscriptions = activeMemberships;
-    const totalGrowBusinessPlan = goldMemberships;
+    // Grow Business = the vendor-side advertising products running right now.
+    // This used to count gold pet-parent memberships, which are not a business plan.
+    const totalGrowBusinessPlan = activeCampaigns + featuredCount;
 
     // Enquiries Lead Status Breakdown
     const enquiryMap: Record<string, number> = { NEW: 0, RESPONDED: 0, COMPLETED: 0, ARCHIVED: 0 };
@@ -155,10 +237,13 @@ adminApiRouter.get(
       ],
     };
 
-    // Grow Business Plan Breakdown — actual rows, and zeros when there are none.
+    // Grow Business Plan Breakdown — what vendors actually bought, by product.
+    // Real rows, and zeros when there are none.
+    const goalCount = (g: string) =>
+      (campaignsByGoalRaw as Array<{ goal: string; _count: { _all: number } }>).find((x) => x.goal === g)?._count._all ?? 0;
     const growPlanBreakdown = {
-      labels: ['Gold Business Tier', 'Silver Business Tier', 'Featured Listing Boost', 'Marketing Campaigns'],
-      counts: [goldPlanCount, silverPlanCount, featuredCount, activeCampaigns],
+      labels: ['WhatsApp Enquiry Campaigns', 'Website Lead Campaigns', 'Profile Visit Campaigns', 'Featured Top Placements'],
+      counts: [goalCount('WHATSAPP_ENQUIRIES'), goalCount('WEBSITE_LEADS'), goalCount('PROFILE_VISITS'), featuredPurchased],
     };
 
     // Pet Parent Subscriptions Breakdown
@@ -176,29 +261,10 @@ adminApiRouter.get(
       counts: Object.values(planMap),
     };
 
-    // Category and City distribution
-    const topCats = idxStats.topCategories && idxStats.topCategories.length
-      ? idxStats.topCategories
-      : [
-          { name: 'Vets & Clinics', count: 12450 },
-          { name: 'Pet Grooming', count: 8640 },
-          { name: 'Boarding & Daycare', count: 5920 },
-          { name: 'Pet Training', count: 3810 },
-          { name: 'Food & Supplies', count: 2350 },
-          { name: 'Others', count: 1000 },
-        ];
-
-    const topCities = idxStats.topCities && idxStats.topCities.length
-      ? idxStats.topCities
-      : [
-          { name: 'Mumbai', count: 4820 },
-          { name: 'Delhi NCR', count: 4150 },
-          { name: 'Bengaluru', count: 3940 },
-          { name: 'Hyderabad', count: 3120 },
-          { name: 'Pune', count: 2850 },
-          { name: 'Chennai', count: 2410 },
-          { name: 'Kolkata', count: 1980 },
-        ];
+    // Category and City distribution — straight from the live index. The old
+    // invented fallback figures drew a full chart even when the index was empty.
+    const topCats = idxStats.topCategories ?? [];
+    const topCities = idxStats.topCities ?? [];
 
     // Real history: each month is what the platform actually held at the end of
     // it. The old version multiplied today's total by a hand-picked curve, so
@@ -219,13 +285,14 @@ adminApiRouter.get(
       Promise.all(upTo.map((end) => prisma.vendor.count({ where: { createdAt: { lt: end } } }))),
       Promise.all(upTo.map((end) => prisma.petParent.count({ where: { createdAt: { lt: end } } }))),
     ]);
+    // Imported rows carry a date; the scraped baseline does not, so it is
+    // counted as having always been there, which is true of the directory.
+    // The baseline is one number — counted once, not once per month.
+    const listingBase = await prisma.listing.count({ where: { importedAt: null } }).catch(() => 0);
     const listingHistory = await Promise.all(
       upTo.map(async (end) => {
-        // Imported rows carry a date; the scraped baseline does not, so it is
-        // counted as having always been there, which is true of the directory.
         const added = await prisma.listing.count({ where: { importedAt: { lt: end } } }).catch(() => 0);
-        const base = await prisma.listing.count({ where: { importedAt: null } }).catch(() => 0);
-        return base + added;
+        return listingBase + added;
       }),
     );
 
@@ -238,7 +305,7 @@ adminApiRouter.get(
 
     const pendingActions = [
       { id: 'pa1', text: `${pendingVendors} vendors awaiting approval`, target: 'vendors', count: pendingVendors },
-      { id: 'pa2', text: `${pendingCampaigns} campaigns pending review`, target: 'marketing', count: pendingCampaigns },
+      { id: 'pa2', text: `${pendingCampaigns} campaigns pending review`, target: 'grow-buyers', count: pendingCampaigns },
       { id: 'pa3', text: `${pendingReviews} reviews awaiting moderation`, target: 'reviews', count: pendingReviews },
       { id: 'pa4', text: `${reportedReviews} reported reviews`, target: 'reviews', count: reportedReviews },
     ].filter((a) => a.count > 0);
@@ -247,6 +314,7 @@ adminApiRouter.get(
       id: `${title}-${at.getTime()}`,
       title,
       detail: `${detail} · ${at.toLocaleString()}`,
+      at,
     });
     const recentActivity = [
       ...recentVendors.map((v) => fmtActivity('New vendor registered', `${v.businessName} · ${v.city ?? '—'}`, v.createdAt)),
@@ -254,7 +322,9 @@ adminApiRouter.get(
       ...recentEnquiries.map((e) => fmtActivity('New enquiry', `${e.name} → ${e.listingName ?? e.category ?? 'vendor'}`, e.createdAt)),
       ...recentPayments.map((p) => fmtActivity('Payment received', `₹${rupees(p.amountMinor).toLocaleString()} · ${p.purpose}`, p.createdAt)),
     ]
-      .sort((a, b) => b.detail.localeCompare(a.detail))
+      // Newest first by timestamp. Sorting on `detail` ordered the feed by the
+      // business / parent name that string starts with, not by when it happened.
+      .sort((a, b) => b.at.getTime() - a.at.getTime())
       .slice(0, 10);
 
     res.json({
@@ -305,13 +375,51 @@ adminApiRouter.get(
     const search = String(req.query.q ?? req.query.search ?? '').toLowerCase().trim();
     const category = String(req.query.category ?? '').toLowerCase().trim();
 
-    const dbVendors = await prisma.vendor.findMany({ orderBy: { createdAt: 'desc' }, take: 200 });
+    // Search runs in the database, so a vendor older than the newest 200 can
+    // still be found. The page itself stays capped.
+    // `mode: 'insensitive'` is Postgres-only (the MySQL client types reject it);
+    // MySQL's *_ci collation already compares case-insensitively.
+    const ci = {
+      contains: search,
+      ...((process.env.DATABASE_URL ?? '').startsWith('postgres') ? ({ mode: 'insensitive' } as const) : {}),
+    };
+    const dbWhere = search
+      ? { OR: [{ businessName: ci }, { ownerName: ci }, { email: ci }, { phone: { contains: search } }, { city: ci }, { locality: ci }, { category: ci }] }
+      : {};
 
-    const claimedVendorsList = dbVendors.filter((v) => v.claimedAt !== null);
-    const registeredVendorsCount = claimedVendorsList.length + dbVendors.filter((v) => v.status === 'PENDING').length;
-    const activeVendorsCount = claimedVendorsList.filter((v) => v.status === 'ACTIVE' || v.status === 'CLAIMED').length;
-    const pendingVendorsCount = dbVendors.filter((v) => v.status === 'PENDING').length;
-    const claimedListingsCount = claimedVendorsList.length;
+    // The headline counts come from count() over the whole table. Deriving them
+    // from the 200-row page made every tile stop at 200 once the platform grew.
+    // A status filter is applied in the database too. Filtering only the newest
+    // 200 rows in memory meant a claim waiting longer than that never showed
+    // under "Pending", however long it had been waiting.
+    const statusWhere: Prisma.VendorWhereInput | null =
+      status === 'ACTIVE' || status === 'CLAIMED'
+        ? { claimedAt: { not: null }, status: { in: ['ACTIVE', 'CLAIMED'] } }
+        : status === 'PENDING' || status === 'SUSPENDED' || status === 'REJECTED'
+          ? { status }
+          : status === 'UNCLAIMED'
+            ? { claimedAt: null, status: { not: 'PENDING' } }
+            : null;
+    const pageWhere: Prisma.VendorWhereInput = statusWhere ? { AND: [dbWhere, statusWhere] } : dbWhere;
+
+    const [pageVendors, actionableVendors, registeredVendorsCount, activeVendorsCount, pendingVendorsCount, claimedListingsCount] = await Promise.all([
+      prisma.vendor.findMany({ where: pageWhere, orderBy: { createdAt: 'desc' }, take: 200 }),
+      // Unfiltered, the panel filters client-side — so the rows an admin has to
+      // act on ride along even when they are older than the newest 200.
+      statusWhere
+        ? Promise.resolve([])
+        : prisma.vendor.findMany({
+            where: { AND: [dbWhere, { status: { in: ['PENDING', 'SUSPENDED'] } }] },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+          }),
+      prisma.vendor.count({ where: { OR: [{ claimedAt: { not: null } }, { status: 'PENDING' }] } }),
+      prisma.vendor.count({ where: { claimedAt: { not: null }, status: { in: ['ACTIVE', 'CLAIMED'] } } }),
+      prisma.vendor.count({ where: { status: 'PENDING' } }),
+      prisma.vendor.count({ where: { claimedAt: { not: null } } }),
+    ]);
+    const seen = new Set(pageVendors.map((v) => v.id));
+    const dbVendors = [...pageVendors, ...actionableVendors.filter((v) => !seen.has(v.id))];
 
     const formattedDbVendors = dbVendors.map((v) => {
       const isClaimed = v.claimedAt !== null;
@@ -330,6 +438,9 @@ adminApiRouter.get(
         location: [v.locality, v.city].filter(Boolean).join(', ') || v.city || '—',
         listingId: v.listingId,
         status: effectiveStatus,
+        // The account's real status. `status` above is a display label (a live
+        // claimed vendor reads CLAIMED), so action buttons must key off this.
+        rawStatus: v.status,
         claimedAt: v.claimedAt,
         approvedAt: v.approvedAt,
         createdAt: v.createdAt,
@@ -343,7 +454,7 @@ adminApiRouter.get(
       // Newest first: an import adds rows at the end of the index, and a capped
       // search that walks 34k scraped rows first would never reach them — which
       // is why a fresh import bumped the count but showed nothing in the table.
-      const rawListings = searchListings({ q: search, category, limit: 100, newestFirst: true });
+      const rawListings = searchListings({ q: search, category, limit: 100, newestFirst: true, includeHidden: true });
       directoryListingsFormatted = rawListings.map((l) => ({
         id: l.id,
         name: l.name,
@@ -359,13 +470,17 @@ adminApiRouter.get(
         approvedAt: null,
         createdAt: new Date().toISOString(),
         source: 'DIRECTORY_LISTING',
+        hidden: !!l.hidden,
       }));
     }
 
     let combinedVendors = [...formattedDbVendors, ...directoryListingsFormatted];
 
     if (status && status !== 'ALL') {
-      combinedVendors = combinedVendors.filter((v) => String(v.status).toUpperCase() === status);
+      // A live claimed business is labelled CLAIMED, so "ACTIVE" (what the
+      // panel's filter sends) has to match that label, not the raw status.
+      const wanted = status === 'ACTIVE' ? 'CLAIMED' : status;
+      combinedVendors = combinedVendors.filter((v) => String(v.status).toUpperCase() === wanted);
     }
 
     if (search) {
@@ -395,7 +510,11 @@ const VendorStatusBody = z.object({ status: z.enum(['PENDING', 'ACTIVE', 'SUSPEN
 adminApiRouter.post(
   '/vendors/:id/status',
   asyncHandler(async (req, res) => {
-    const { status, reason } = VendorStatusBody.parse(req.body);
+    const parsed = VendorStatusBody.parse(req.body);
+    const status = parsed.status;
+    // The panel always sends `reason`, empty when there is none — store and
+    // mail null rather than an empty "Reason:" line.
+    const reason = parsed.reason?.trim() || undefined;
     const id = req.params.id ?? '';
     const existing = await prisma.vendor.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError('Vendor not found');
@@ -417,13 +536,24 @@ adminApiRouter.post(
         ipAddress: req.ip ?? null,
       },
     });
-    if (status === 'ACTIVE' && existing.status !== 'ACTIVE' && v.phone) {
-      notify(v.phone, `Your Pets24x7 listing "${v.businessName}" is approved and live. Sign in at pets24x7.com to manage it.`).catch(() => {});
-    } else if (status === 'REJECTED' && v.phone) {
-      notify(v.phone, `Your Pets24x7 listing claim for "${v.businessName}" was not approved.${reason ? ' Reason: ' + reason : ''}`).catch(() => {});
+    // Lifting a suspension is not a first approval: it gets its own wording
+    // ("your listing is live again") rather than a second welcome.
+    const reinstated = status === 'ACTIVE' && existing.status === 'SUSPENDED';
+    if (status !== existing.status && v.phone) {
+      if (status === 'ACTIVE') {
+        notify(
+          v.phone,
+          reinstated
+            ? `Your Pets24x7 listing "${v.businessName}" is live again. Sign in at pets24x7.com to manage it.`
+            : `Your Pets24x7 listing "${v.businessName}" is approved and live. Sign in at pets24x7.com to manage it.`,
+        ).catch(() => {});
+      } else if (status === 'REJECTED') {
+        notify(v.phone, `Your Pets24x7 listing claim for "${v.businessName}" was not approved.${reason ? ' Reason: ' + reason : ''}`).catch(() => {});
+      }
     }
     if (status !== existing.status) {
-      if (status === 'ACTIVE') notifyIf(v.email, (to) => vendorApprovedEmail(to, v.businessName));
+      if (reinstated) notifyIf(v.email, (to) => vendorReactivatedEmail(to, v.businessName));
+      else if (status === 'ACTIVE') notifyIf(v.email, (to) => vendorApprovedEmail(to, v.businessName));
       else if (status === 'REJECTED') notifyIf(v.email, (to) => vendorRejectedEmail(to, v.businessName, reason ?? null));
       else if (status === 'SUSPENDED') notifyIf(v.email, (to) => vendorSuspendedEmail(to, v.businessName));
     }
@@ -490,8 +620,73 @@ adminApiRouter.delete(
 // ---------- One directory listing, in full ----------
 // The Vendors table mixes registered accounts with the 34k directory rows, and
 // a directory row has no vendor record behind it — so "View" had nothing to
-// show and there was no way to correct or remove a bad entry. These three
-// routes cover a listing whether or not anyone has claimed it.
+// show and there was no way to correct or remove a bad entry. These routes
+// cover a listing whether or not anyone has claimed it:
+//
+//   POST   /listings                    create one listing (409 on a likely duplicate unless force)
+//   GET    /listings/:id                everything about one listing
+//   PATCH  /listings/:id                edit any directory field (incl. hidden)
+//   DELETE /listings/:id                remove an unclaimed listing
+//   POST   /listings/:id/hide|unhide    take it off / put it back on every public API
+//   POST   /listings/:id/photos         add photos       { photos: string[] } | { photo: string }
+//   PUT    /listings/:id/photos         replace / reorder { photos: string[] } | { order: number[] }
+//   DELETE /listings/:id/photos/:idx    remove one photo
+
+/** Full admin view of a listings row (plus the index copy when the row is missing). */
+function adminListingShape(
+  id: string,
+  row: Prisma.ListingGetPayload<object> | null,
+  indexed: ReturnType<typeof getListingById>,
+  vendor: { businessName: string; address: string | null; website: string | null } | null,
+) {
+  const country = String(row?.country ?? indexed?.country ?? 'IN').toLowerCase();
+  const citySlug = row?.citySlug ?? indexed?.city_slug ?? '';
+  const photos = parsePhotos(row?.photos);
+  return {
+    id,
+    name: row?.name ?? indexed?.name ?? vendor?.businessName ?? '—',
+    category: row?.category ?? indexed?.category ?? '—',
+    categorySlug: row?.categorySlug ?? indexed?.category_slug ?? null,
+    categoryIcon: row?.categoryIcon ?? indexed?.category_icon ?? null,
+    city: row?.city ?? indexed?.city ?? '—',
+    citySlug: citySlug || null,
+    // True when the claim points at a directory row that is gone.
+    orphanedClaim: !row && !indexed && !!vendor,
+    state: row?.state ?? indexed?.state ?? null,
+    country: row?.country ?? indexed?.country ?? 'IN',
+    locality: row?.locality ?? null,
+    // What the public page shows: a verified business's own address/website
+    // first. `directory` below holds the listing's own values for the edit form.
+    address: vendor?.address ?? row?.address ?? indexed?.address ?? null,
+    phone: row?.phone ?? indexed?.phone ?? null,
+    website: vendor?.website ?? row?.website ?? indexed?.website ?? null,
+    pincode: row?.pincode ?? indexed?.pincode ?? null,
+    email: row?.email ?? null,
+    whatsapp: row?.whatsapp ?? null,
+    description: row?.description ?? null,
+    openingHours: row?.openingHours ?? null,
+    services: row?.services ?? null,
+    rating: row?.rating ?? indexed?.rating ?? 0,
+    reviewCount: row?.reviewCount ?? indexed?.review_count ?? 0,
+    googleCid: row?.googleCid ?? indexed?.google_cid ?? null,
+    gmbLink: row?.gmbLink ?? indexed?.gmb_link ?? null,
+    photos,
+    photoCount: photos.length,
+    maxPhotos: MAX_LISTING_PHOTOS,
+    hidden: row?.hidden ?? indexed?.hidden ?? false,
+    claimStatus: row?.claimStatus ?? indexed?.claimStatus ?? 'UNCLAIMED',
+    publicUrl: citySlug ? `/${country}/${citySlug}/${id}/` : null,
+    claimed: !!vendor,
+    createdAt: row?.createdAt ?? null,
+    updatedAt: row?.updatedAt ?? null,
+    importedAt: row?.importedAt ?? null,
+    directory: {
+      address: row?.address ?? indexed?.address ?? null,
+      website: row?.website ?? indexed?.website ?? null,
+    },
+  };
+}
+
 adminApiRouter.get(
   '/listings/:id',
   asyncHandler(async (req, res) => {
@@ -523,30 +718,9 @@ adminApiRouter.get(
     // admin needs to see and fix.
     if (!row && !indexed && !vendor) throw new NotFoundError('Listing not found');
 
-    const country = String(row?.country ?? indexed?.country ?? 'IN').toLowerCase();
-    const citySlug = row?.citySlug ?? indexed?.city_slug ?? '';
-
     res.json({
       ok: true,
-      listing: {
-        id,
-        name: row?.name ?? indexed?.name ?? vendor?.businessName ?? '—',
-        category: row?.category ?? indexed?.category ?? '—',
-        city: row?.city ?? indexed?.city ?? '—',
-        // True when the claim points at a directory row that is gone.
-        orphanedClaim: !row && !indexed && !!vendor,
-        state: row?.state ?? indexed?.state ?? null,
-        country: row?.country ?? indexed?.country ?? 'IN',
-        address: vendor?.address ?? row?.address ?? indexed?.address ?? null,
-        phone: row?.phone ?? indexed?.phone ?? null,
-        website: vendor?.website ?? row?.website ?? indexed?.website ?? null,
-        pincode: row?.pincode ?? indexed?.pincode ?? null,
-        rating: row?.rating ?? indexed?.rating ?? 0,
-        reviewCount: row?.reviewCount ?? indexed?.review_count ?? 0,
-        googleCid: row?.googleCid ?? indexed?.google_cid ?? null,
-        publicUrl: citySlug ? `/${country}/${citySlug}/${id}/` : null,
-        claimed: !!vendor,
-      },
+      listing: adminListingShape(id, row, indexed, vendor),
       vendor: vendor
         ? { ...vendor, galleryImages: parseGalleryText(vendor.galleryImages) }
         : null,
@@ -561,15 +735,217 @@ adminApiRouter.get(
   }),
 );
 
-const ListingPatchBody = z.object({
-  name: z.string().min(2).max(255).optional(),
-  category: z.string().max(160).optional(),
-  city: z.string().max(160).optional(),
-  address: z.string().max(1000).optional(),
-  phone: z.string().max(32).optional(),
-  website: z.string().max(2000).optional(),
-  pincode: z.string().max(20).optional(),
+// Field rules shared by create and edit. '' clears an optional field.
+const optStr = (max: number) => z.string().trim().max(max).optional();
+const googleCidField = z
+  .string()
+  .trim()
+  .max(64)
+  .regex(/^\d*$/, 'Google CID must be digits only (as in maps.google.com/?cid=…)')
+  .optional();
+const gmbLinkField = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine((v) => !v || /^https?:\/\/[^\s"'<>`]+$/.test(v), 'Google Maps link must be an http(s) URL')
+  .refine((v) => {
+    const m = /[?&]cid=([^&#]*)/.exec(v);
+    return !m || /^\d+$/.test(m[1] ?? '');
+  }, 'The cid= in the Google Maps link must be digits only')
+  .optional();
+const websiteField = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine((v) => !v || /^(https?:\/\/)?[^\s"'<>`]+\.[^\s"'<>`]+$/.test(v), 'Website must be a web address')
+  .optional();
+const emailField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(191)
+  .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Email is not valid')
+  .optional();
+
+const ListingFields = {
+  name: z.string().trim().min(2).max(255),
+  category: z.string().trim().min(2).max(160),
+  city: z.string().trim().min(2).max(160),
+  state: optStr(120),
+  country: z.enum(['IN', 'US']),
+  locality: optStr(160),
+  address: optStr(1000),
+  pincode: optStr(20),
+  phone: optStr(32),
+  whatsapp: optStr(32),
+  email: emailField,
+  website: websiteField,
+  description: optStr(5000),
+  openingHours: optStr(1000),
+  services: optStr(2000),
+  googleCid: googleCidField,
+  gmbLink: gmbLinkField,
+  hidden: z.boolean().optional(),
+};
+
+/** '' -> null, trimmed; undefined stays undefined (field not sent). */
+const blankToNull = (v: string | undefined) => (v === undefined ? undefined : v.trim() || null);
+
+/** A phone as the importer stores it, or a 400 naming the field. */
+function adminPhone(raw: string | undefined, country: 'IN' | 'US', label: string): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw.trim()) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) throw new BadRequestError(`${label} "${raw}" is not a valid number`);
+  return normalizePhone(raw, country);
+}
+
+/** Likely duplicates of a new listing: same last-10 phone, or same name in the same city. */
+async function listingDuplicates(name: string, city: string, phone: string | null) {
+  const out = new Map<string, { id: string; name: string; city: string; phone: string | null; category: string; hidden: boolean; source: 'LISTING' | 'VENDOR'; matchedOn: string[] }>();
+  const add = (m: { id: string; name: string; city: string; phone: string | null; category: string; hidden?: boolean; source: 'LISTING' | 'VENDOR' }, on: string) => {
+    const cur = out.get(`${m.source}:${m.id}`);
+    if (cur) { if (!cur.matchedOn.includes(on)) cur.matchedOn.push(on); return; }
+    out.set(`${m.source}:${m.id}`, { ...m, hidden: !!m.hidden, matchedOn: [on] });
+  };
+  const last10 = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+  if (last10.length >= 7) {
+    const rows = await prisma.listing.findMany({
+      where: { phoneLast10: last10 },
+      select: { id: true, name: true, city: true, phone: true, category: true, hidden: true },
+      take: 5,
+    });
+    for (const r of rows) add({ ...r, source: 'LISTING' }, 'phone');
+    // Rows only in the index (JSON-seeded, or written before phoneLast10).
+    for (const r of findListingByPhone(last10)) {
+      add({ id: r.id, name: r.name, city: r.city, phone: r.phone ?? null, category: r.category, hidden: r.hidden, source: 'LISTING' }, 'phone');
+    }
+    const vendors = await prisma.vendor.findMany({
+      where: { phone: { endsWith: last10 } },
+      select: { id: true, businessName: true, city: true, phone: true, category: true, listingId: true },
+      take: 5,
+    });
+    for (const v of vendors) {
+      if (v.listingId && out.has(`LISTING:${v.listingId}`)) continue;
+      add({ id: v.id, name: v.businessName, city: v.city ?? '', phone: v.phone, category: v.category ?? '', source: 'VENDOR' }, 'phone');
+    }
+  }
+  for (const r of findListingsByNameCity(name, city)) {
+    add({ id: r.id, name: r.name, city: r.city, phone: r.phone ?? null, category: r.category, hidden: r.hidden, source: 'LISTING' }, 'name_city');
+  }
+  return [...out.values()].slice(0, 10);
+}
+
+/** Directory-style id: name slug plus 8 digits, like the scraped rows. */
+async function newListingId(name: string): Promise<string> {
+  const base = listingSlug(name, 'listing').slice(0, 80).replace(/-+$/, '') || 'listing';
+  for (let i = 0; i < 5; i++) {
+    const id = `${base}-${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
+    if (!getListingById(id) && !(await prisma.listing.findUnique({ where: { id }, select: { id: true } }))) return id;
+  }
+  return `listing_adm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+const ListingCreateBody = z.object({
+  ...ListingFields,
+  country: ListingFields.country.default('IN'),
+  // Create anyway when the duplicate check finds a match.
+  force: z.boolean().optional().default(false),
 });
+
+adminApiRouter.post(
+  '/listings',
+  asyncHandler(async (req, res) => {
+    const body = ListingCreateBody.parse(req.body ?? {});
+    const country = body.country;
+    const phone = adminPhone(body.phone, country, 'Phone') ?? null;
+    const whatsapp = adminPhone(body.whatsapp, country, 'WhatsApp') ?? null;
+
+    if (!body.force) {
+      const matches = await listingDuplicates(body.name, body.city, phone);
+      if (matches.length) {
+        throw new HttpError(
+          409,
+          `This looks like a listing already on Pets24x7 ("${matches[0]!.name}", ${matches[0]!.city}). Send force: true to create it anyway.`,
+          'duplicate_listing',
+          { matches },
+        );
+      }
+    }
+
+    // Slugs exactly as the importer computes them.
+    const id = await newListingId(body.name);
+    const record: ListingRecord = {
+      id,
+      name: body.name,
+      category: body.category,
+      category_slug: listingSlug(body.category, 'pet-service'),
+      city: body.city,
+      city_slug: listingSlug(body.city, 'unknown'),
+      country,
+      ...(blankToNull(body.state) ? { state: blankToNull(body.state)! } : {}),
+      ...(blankToNull(body.address) ? { address: blankToNull(body.address)! } : {}),
+      ...(phone ? { phone } : {}),
+      ...(blankToNull(body.website) ? { website: blankToNull(body.website)! } : {}),
+      ...(blankToNull(body.pincode) ? { pincode: blankToNull(body.pincode)! } : {}),
+      ...(blankToNull(body.googleCid) ? { google_cid: blankToNull(body.googleCid)! } : {}),
+      ...(blankToNull(body.gmbLink) ? { gmb_link: blankToNull(body.gmbLink)! } : {}),
+      // No reviews yet, so no rating — same as an imported row.
+      rating: 0,
+      review_count: 0,
+      claimStatus: 'UNCLAIMED',
+      hidden: body.hidden ?? false,
+      description: blankToNull(body.description) ?? null,
+      opening_hours: blankToNull(body.openingHours) ?? null,
+      services: blankToNull(body.services) ?? null,
+      email: blankToNull(body.email) ?? null,
+      whatsapp,
+      locality: blankToNull(body.locality) ?? null,
+    };
+
+    // The importer's write path: index, MySQL, JSON mirror in one go.
+    await addAndPersistImportedListing(record);
+    const row = await prisma.listing.findUnique({ where: { id } });
+    if (!row) {
+      // addAndPersist logs and swallows a MySQL failure; do not report success.
+      removeListingFromIndex(id);
+      throw new HttpError(500, 'The listing could not be saved. Try again.', 'save_failed');
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.create',
+        meta: { listingId: id, name: row.name, city: row.city, forced: body.force }, ipAddress: req.ip ?? null,
+      },
+    });
+
+    res.status(201).json({ ok: true, listing: adminListingShape(id, row, getListingById(id), null) });
+  }),
+);
+
+const ListingPatchBody = z.object({
+  name: ListingFields.name.optional(),
+  category: ListingFields.category.optional(),
+  city: ListingFields.city.optional(),
+  state: ListingFields.state,
+  country: ListingFields.country.optional(),
+  locality: ListingFields.locality,
+  address: ListingFields.address,
+  pincode: ListingFields.pincode,
+  phone: ListingFields.phone,
+  whatsapp: ListingFields.whatsapp,
+  email: ListingFields.email,
+  website: ListingFields.website,
+  description: ListingFields.description,
+  openingHours: ListingFields.openingHours,
+  services: ListingFields.services,
+  googleCid: ListingFields.googleCid,
+  gmbLink: ListingFields.gmbLink,
+  hidden: ListingFields.hidden,
+});
+
+/** Fields a claimed business's own profile save writes back over the listing. */
+const VENDOR_SYNCED_FIELDS = ['name', 'category', 'city', 'country', 'address', 'phone', 'website', 'pincode'];
 
 adminApiRouter.patch(
   '/listings/:id',
@@ -579,48 +955,171 @@ adminApiRouter.patch(
     const existing = await prisma.listing.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError('Listing not found');
 
-    const slug = (v: string, fallback: string) =>
-      v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || fallback;
+    const country = (body.country ?? (existing.country === 'US' ? 'US' : 'IN')) as 'IN' | 'US';
+    const phone = adminPhone(body.phone, country, 'Phone');
+    const data: Prisma.ListingUpdateInput = {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.category !== undefined ? { category: body.category, categorySlug: listingSlug(body.category, 'pet-service') } : {}),
+      ...(body.city !== undefined ? { city: body.city, citySlug: listingSlug(body.city, 'unknown') } : {}),
+      ...(body.country !== undefined ? { country: body.country } : {}),
+      ...(body.state !== undefined ? { state: blankToNull(body.state) } : {}),
+      ...(body.locality !== undefined ? { locality: blankToNull(body.locality) } : {}),
+      ...(body.address !== undefined ? { address: blankToNull(body.address) } : {}),
+      ...(body.pincode !== undefined ? { pincode: blankToNull(body.pincode) } : {}),
+      ...(phone !== undefined ? { phone, phoneLast10: phone ? phone.replace(/\D/g, '').slice(-10) || null : null } : {}),
+      ...(body.whatsapp !== undefined ? { whatsapp: adminPhone(body.whatsapp, country, 'WhatsApp') } : {}),
+      ...(body.email !== undefined ? { email: blankToNull(body.email) } : {}),
+      ...(body.website !== undefined ? { website: blankToNull(body.website) } : {}),
+      ...(body.description !== undefined ? { description: blankToNull(body.description) } : {}),
+      ...(body.openingHours !== undefined ? { openingHours: blankToNull(body.openingHours) } : {}),
+      ...(body.services !== undefined ? { services: blankToNull(body.services) } : {}),
+      ...(body.googleCid !== undefined ? { googleCid: blankToNull(body.googleCid) } : {}),
+      ...(body.gmbLink !== undefined ? { gmbLink: blankToNull(body.gmbLink) } : {}),
+      ...(body.hidden !== undefined ? { hidden: body.hidden } : {}),
+      // Marks it as touched, which also floats it to the front of the
+      // in-memory index on the next boot.
+      importedAt: new Date(),
+    };
 
-    const updated = await prisma.listing.update({
-      where: { id },
-      data: {
-        ...body,
-        ...(body.category ? { categorySlug: slug(body.category, 'pet-service') } : {}),
-        ...(body.city ? { citySlug: slug(body.city, 'unknown') } : {}),
-        // Marks it as touched, which also floats it to the front of the
-        // in-memory index on the next boot.
-        importedAt: new Date(),
-      },
-    });
+    const updated = await prisma.listing.update({ where: { id }, data });
+    const changed = Object.keys(body).filter((k) => (body as Record<string, unknown>)[k] !== undefined);
 
     await prisma.auditLog.create({
       data: {
         actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.update',
-        meta: { listingId: id, changed: Object.keys(body) }, ipAddress: req.ip ?? null,
+        meta: { listingId: id, changed }, ipAddress: req.ip ?? null,
       },
     });
 
     // Keep the running index in step, or the site shows the old values until
-    // the next restart.
-    await addAndPersistImportedListing({
-      id: updated.id,
-      name: updated.name,
-      category: updated.category,
-      category_slug: updated.categorySlug,
-      city: updated.city,
-      city_slug: updated.citySlug,
-      country: updated.country,
-      address: updated.address ?? undefined,
-      phone: updated.phone ?? undefined,
-      website: updated.website ?? undefined,
-      pincode: updated.pincode ?? undefined,
-      rating: updated.rating,
-      review_count: updated.reviewCount,
-      claimStatus: updated.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
-    }).catch(() => {});
+    // the next restart. Built from the whole saved row: rebuilding it from the
+    // edited fields alone wrote NULL over the state, Google CID/Maps link and
+    // category icon of every listing an admin touched.
+    await addAndPersistImportedListing(listingRecordFromRow(updated)).catch(() => {});
+    if (body.hidden !== undefined && body.hidden !== existing.hidden) clearPopularCache();
 
-    res.json({ ok: true, listing: updated });
+    // A claimed listing still belongs to its business: the edit stands, but
+    // their next profile save writes these fields back from their account.
+    const vendor = await prisma.vendor
+      .findUnique({ where: { listingId: id }, select: { businessName: true, address: true, website: true } })
+      .catch(() => null);
+    const overwritten = vendor ? changed.filter((k) => VENDOR_SYNCED_FIELDS.includes(k)) : [];
+
+    res.json({
+      ok: true,
+      listing: adminListingShape(id, updated, getListingById(id), vendor),
+      ...(overwritten.length
+        ? {
+            warning: `"${vendor!.businessName}" has claimed this listing. When they next save their profile, any of ${overwritten.join(', ')} set on their account replaces this edit.`,
+          }
+        : {}),
+    });
+  }),
+);
+
+/** POST /listings/:id/hide and /unhide. */
+function hideRoute(hidden: boolean) {
+  return asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const existing = await prisma.listing.findUnique({ where: { id }, select: { id: true, name: true, city: true, hidden: true } });
+    if (!existing) throw new NotFoundError('Listing not found');
+    if (existing.hidden !== hidden) {
+      await prisma.listing.update({ where: { id }, data: { hidden } });
+      await prisma.auditLog.create({
+        data: {
+          actorType: 'ADMIN', actorId: req.auth!.sub, action: hidden ? 'listing.hide' : 'listing.unhide',
+          meta: { listingId: id, name: existing.name, city: existing.city }, ipAddress: req.ip ?? null,
+        },
+      });
+    }
+    setListingHiddenInIndex(id, hidden);
+    await setListingHiddenInJsonMirror(id, hidden);
+    clearPopularCache();
+    res.json({ ok: true, id, hidden, changed: existing.hidden !== hidden });
+  });
+}
+adminApiRouter.post('/listings/:id/hide', hideRoute(true));
+adminApiRouter.post('/listings/:id/unhide', hideRoute(false));
+
+// ----- Photos for a directory listing -----
+const PhotosAddBody = z
+  .object({ photo: z.string().optional(), photos: z.array(z.string()).max(MAX_LISTING_PHOTOS).optional() })
+  .refine((b) => !!b.photo || !!b.photos?.length, 'Send photo or photos');
+const PhotosPutBody = z
+  .object({ photos: z.array(z.string()).max(MAX_LISTING_PHOTOS).optional(), order: z.array(z.number().int().min(0)).optional() })
+  .refine((b) => !!b.photos || !!b.order, 'Send photos (the new list) or order (current indexes in the new order)');
+
+async function listingPhotosOrThrow(id: string) {
+  const row = await prisma.listing.findUnique({ where: { id }, select: { id: true, photos: true } });
+  if (!row) throw new NotFoundError('Listing not found');
+  return parsePhotos(row.photos);
+}
+
+async function savePhotos(req: Parameters<Parameters<typeof asyncHandler>[0]>[0], id: string, photos: string[], action: string, meta: Record<string, unknown>) {
+  await prisma.listing.update({ where: { id }, data: { photos: photos.length ? photos : Prisma.DbNull } });
+  await prisma.auditLog.create({
+    data: {
+      actorType: 'ADMIN', actorId: req.auth!.sub, action,
+      meta: { listingId: id, count: photos.length, ...meta } as Prisma.InputJsonValue, ipAddress: req.ip ?? null,
+    },
+  });
+  const claimed = await prisma.vendor.count({ where: { listingId: id, claimedAt: { not: null } } }).catch(() => 0);
+  return {
+    ok: true,
+    id,
+    photos,
+    count: photos.length,
+    maxPhotos: MAX_LISTING_PHOTOS,
+    // The public page shows the business's own photos instead, when it has any.
+    ...(claimed ? { note: 'This listing is claimed: its business’s own photos, when it has any, are shown instead of these.' } : {}),
+  };
+}
+
+adminApiRouter.post(
+  '/listings/:id/photos',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const body = PhotosAddBody.parse(req.body ?? {});
+    const current = await listingPhotosOrThrow(id);
+    const incoming = [...(body.photo ? [body.photo] : []), ...(body.photos ?? [])].map(cleanPhoto);
+    if (current.length + incoming.length > MAX_LISTING_PHOTOS) {
+      throw new BadRequestError(`A listing holds at most ${MAX_LISTING_PHOTOS} photos (it has ${current.length}).`);
+    }
+    res.status(201).json(await savePhotos(req, id, [...current, ...incoming], 'listing.photos.add', { added: incoming.length }));
+  }),
+);
+
+adminApiRouter.put(
+  '/listings/:id/photos',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const body = PhotosPutBody.parse(req.body ?? {});
+    const current = await listingPhotosOrThrow(id);
+    let next: string[];
+    if (body.order) {
+      const valid =
+        body.order.length === current.length &&
+        new Set(body.order).size === current.length &&
+        body.order.every((i) => i < current.length);
+      if (!valid) throw new BadRequestError(`order must list each of the ${current.length} current photo indexes (0-${current.length - 1}) once`);
+      next = body.order.map((i) => current[i]!);
+    } else {
+      // Photos already stored come back exactly as served; anything new is checked.
+      next = body.photos!.map((p) => (current.includes(p) ? p : cleanPhoto(p)));
+    }
+    res.json(await savePhotos(req, id, next, 'listing.photos.update', { order: body.order ?? null }));
+  }),
+);
+
+adminApiRouter.delete(
+  '/listings/:id/photos/:idx',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    const idx = Number(req.params.idx);
+    const current = await listingPhotosOrThrow(id);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= current.length) throw new NotFoundError('No photo at that position');
+    const next = current.filter((_, i) => i !== idx);
+    res.json(await savePhotos(req, id, next, 'listing.photos.delete', { removedIndex: idx }));
   }),
 );
 
@@ -641,13 +1140,38 @@ adminApiRouter.delete(
       );
     }
 
-    await prisma.listing.delete({ where: { id } });
+    // Rows that point at the listing by id (listingId has no foreign key) go
+    // with it, in one transaction. Reviews left on the directory page are
+    // taken out of circulation rather than deleted, so the pet parent's own
+    // history keeps them: a pending one would otherwise sit in the moderation
+    // queue for a page that no longer exists, and a published one would keep
+    // counting. (Reviews with a vendorId belong to a vendor account; there is
+    // none here, the claimed case is refused above.) Its click and view log
+    // is only about this listing and is dropped.
+    const moderated = { moderatedBy: req.auth!.sub, moderatedAt: new Date(), moderationReason: 'The listing was deleted.' };
+    const [pendingClosed, publishedHidden, activityRemoved] = await prisma.$transaction([
+      prisma.review.updateMany({
+        where: { listingId: id, vendorId: null, status: 'PENDING' },
+        data: { status: 'REJECTED', ...moderated },
+      }),
+      prisma.review.updateMany({
+        where: { listingId: id, vendorId: null, status: 'PUBLISHED' },
+        data: { status: 'HIDDEN', ...moderated },
+      }),
+      prisma.listingActivity.deleteMany({ where: { listingId: id } }),
+      prisma.listing.delete({ where: { id } }),
+    ]);
     removeListingFromIndex(id);
+    await removeListingFromJsonMirror(id);
 
     await prisma.auditLog.create({
       data: {
         actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.delete',
-        meta: { listingId: id, name: existing.name, city: existing.city }, ipAddress: req.ip ?? null,
+        meta: {
+          listingId: id, name: existing.name, city: existing.city,
+          reviewsRejected: pendingClosed.count, reviewsHidden: publishedHidden.count, activityRemoved: activityRemoved.count,
+        },
+        ipAddress: req.ip ?? null,
       },
     });
 
@@ -669,14 +1193,28 @@ function parseGalleryText(raw: string | null | undefined): string[] {
 // ---------- Pet parents ----------
 adminApiRouter.get(
   '/parents',
-  asyncHandler(async (_req, res) => {
-    const parents = await prisma.petParent.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-      include: { pets: { select: { name: true, species: true } }, _count: { select: { enquiries: true, memberships: true } } },
-    });
+  asyncHandler(async (req, res) => {
+    const pg = paging(req.query, 200);
+    const search = String(req.query.q ?? req.query.search ?? '').trim();
+    const ci = containsCi(search);
+    const where = search
+      ? { OR: [{ name: ci }, { email: ci }, { phone: { contains: search } }, { city: ci }] }
+      : {};
+    const [parents, total] = await Promise.all([
+      prisma.petParent.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: pg.skip,
+        take: pg.take,
+        include: { pets: { select: { name: true, species: true } }, _count: { select: { enquiries: true, memberships: true } } },
+      }),
+      prisma.petParent.count({ where }),
+    ]);
     res.json({
       ok: true,
+      total,
+      page: pg.page,
+      perPage: pg.perPage,
       parents: parents.map((p) => ({
         id: p.id,
         name: p.name,
@@ -730,6 +1268,7 @@ adminApiRouter.delete(
         ipAddress: req.ip ?? null,
       },
     });
+    notifyIf(parent.email, (to) => accountDeletedEmail(to, parent.name ?? 'there'));
 
     res.json({ ok: true, id, name: parent.name });
   }),
@@ -749,11 +1288,14 @@ adminApiRouter.get(
     const category = String(req.query.category ?? '').trim();
     const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1);
     const perPage = Math.min(60, Math.max(12, parseInt(String(req.query.perPage ?? '24'), 10) || 24));
+    // Hidden listings are off the public site but always reachable here.
+    const hiddenQ = String(req.query.hidden ?? 'all').toLowerCase();
+    const includeHidden = hiddenQ === 'only' ? ('only' as const) : hiddenQ !== 'exclude';
 
     // searchListings caps a single call at 200, so paging is done over a
     // deliberately wider slice rather than by asking for an unbounded list.
     const WINDOW = 200;
-    const found = searchListings({ q, city, category, limit: WINDOW });
+    const found = searchListings({ q, city, category, limit: WINDOW, includeHidden });
     const start = (page - 1) * perPage;
     const slice = found.slice(start, start + perPage);
 
@@ -769,11 +1311,24 @@ adminApiRouter.get(
           .catch(() => [])
       : [];
     const claimBy = new Map(claims.filter((c) => c.listingId).map((c) => [c.listingId as string, c]));
+    // Admin-attached photo counts, without pulling the (inline) images.
+    const listingPhotoCounts = new Map<string, number>();
+    if (slice.length) {
+      try {
+        const rows = await prisma.$queryRaw<Array<{ id: string; n: bigint | number | null }>>(
+          Prisma.sql`SELECT id, JSON_LENGTH(photos) AS n FROM listings WHERE id IN (${Prisma.join(slice.map((l) => l.id))}) AND photos IS NOT NULL`,
+        );
+        for (const r of rows) listingPhotoCounts.set(r.id, Number(r.n ?? 0));
+      } catch {
+        // Not MySQL (local Postgres) or table unreadable: counts read as 0.
+      }
+    }
 
     res.json({
       ok: true,
       page,
       perPage,
+      hidden: includeHidden === 'only' ? 'only' : includeHidden ? 'all' : 'exclude',
       // The index is walked lazily, so this is "at least this many" once the
       // window is full — said plainly rather than printed as a total.
       matched: found.length,
@@ -801,6 +1356,11 @@ adminApiRouter.get(
           // admin sees is what a visitor sees.
           imageUrl: v?.imageUrl ?? null,
           photoCount: (v?.imageUrl ? 1 : 0) + parseGalleryText(v?.galleryImages).length,
+          // Photos an admin attached to the listing itself (shown while the
+          // business has none of its own).
+          listingPhotoCount: listingPhotoCounts.get(l.id) ?? 0,
+          // Off the public site: search, city pages, detail, recommendations.
+          hidden: !!l.hidden,
         };
       }),
     });
@@ -852,14 +1412,25 @@ adminApiRouter.get(
 // ---------- Services ----------
 adminApiRouter.get(
   '/services',
-  asyncHandler(async (_req, res) => {
-    const services = await prisma.service.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 300,
-      include: { vendor: { select: { businessName: true, city: true } } },
-    });
+  asyncHandler(async (req, res) => {
+    const pg = paging(req.query, 300);
+    const status = String(req.query.status ?? '').toUpperCase();
+    const where = ['ACTIVE', 'HIDDEN'].includes(status) ? { status: status as any } : {};
+    const [services, total] = await Promise.all([
+      prisma.service.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: pg.skip,
+        take: pg.take,
+        include: { vendor: { select: { businessName: true, city: true } } },
+      }),
+      prisma.service.count({ where }),
+    ]);
     res.json({
       ok: true,
+      total,
+      page: pg.page,
+      perPage: pg.perPage,
       services: services.map((s) => ({
         id: s.id,
         name: s.name,
@@ -877,10 +1448,26 @@ adminApiRouter.get(
 // ---------- Enquiries ----------
 adminApiRouter.get(
   '/enquiries',
-  asyncHandler(async (_req, res) => {
-    const enquiries = await prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 300 });
+  asyncHandler(async (req, res) => {
+    const pg = paging(req.query, 300);
+    const search = String(req.query.q ?? req.query.search ?? '').trim();
+    const status = String(req.query.status ?? '').toUpperCase();
+    const ci = containsCi(search);
+    const where = {
+      ...(['NEW', 'RESPONDED', 'COMPLETED', 'ARCHIVED'].includes(status) ? { status: status as any } : {}),
+      ...(search
+        ? { OR: [{ name: ci }, { phone: { contains: search } }, { listingName: ci }, { category: ci }, { city: ci }] }
+        : {}),
+    };
+    const [enquiries, total] = await Promise.all([
+      prisma.enquiry.findMany({ where, orderBy: { createdAt: 'desc' }, skip: pg.skip, take: pg.take }),
+      prisma.enquiry.count({ where }),
+    ]);
     res.json({
       ok: true,
+      total,
+      page: pg.page,
+      perPage: pg.perPage,
       enquiries: enquiries.map((e) => ({
         id: e.id,
         parent: e.name,
@@ -921,6 +1508,10 @@ adminApiRouter.get(
         goal: c.goal,
         duration: `${c.durationDays} Days`,
         amount: rupees(c.priceMinor),
+        // Only a SUCCESS payment is money received; `amount` is the plan price.
+        paid: c.payment?.status === 'SUCCESS',
+        amountPaid: c.payment?.status === 'SUCCESS' ? rupees(c.priceMinor) : 0,
+        purchaseLabel: PURCHASE_LABEL[purchaseKind(c.status, c.payment?.status)],
         status: c.status,
         paymentStatus: c.payment?.status ?? null,
         startsAt: c.startsAt,
@@ -933,41 +1524,60 @@ adminApiRouter.get(
 
 const CampaignStatusBody = z.object({ status: z.enum(['PENDING_REVIEW', 'ACTIVE', 'COMPLETED', 'CANCELLED']) });
 
+type CampaignStatusValue = z.infer<typeof CampaignStatusBody>['status'];
+
+/**
+ * One campaign status change, shared by the Marketing tab and the Grow Business
+ * buyers tab so both set the run window, write the audit row and mail the vendor
+ * the same way. Returns null when no campaign has that id.
+ */
+async function applyCampaignStatus(
+  actor: { sub: string; ip: string | null },
+  id: string,
+  status: CampaignStatusValue,
+) {
+  const existing = await prisma.marketingCampaign.findUnique({ where: { id } });
+  if (!existing) return null;
+
+  const data: Record<string, unknown> = { status };
+  if (status === 'ACTIVE' && (!existing.startsAt || (existing.endsAt && existing.endsAt <= new Date()))) {
+    // First approval, or reactivating a run whose window already closed: the
+    // run starts today for its full length. Reusing an old window made
+    // "Reactivate" produce a campaign that was ACTIVE but already over.
+    const now = new Date();
+    data.startsAt = now;
+    data.endsAt = new Date(now.getTime() + existing.durationDays * 24 * 3600 * 1000);
+  }
+  const c = await prisma.marketingCampaign.update({ where: { id }, data });
+  await prisma.auditLog.create({
+    data: { actorType: 'ADMIN', actorId: actor.sub, action: `campaign.${status.toLowerCase()}`, meta: { campaignId: id }, ipAddress: actor.ip },
+  });
+  if (status !== existing.status) {
+    const vendor = await prisma.vendor
+      .findUnique({ where: { id: c.vendorId }, select: { email: true, businessName: true } })
+      .catch(() => null);
+    const goal = String(c.goal);
+    if (vendor?.email) {
+      if (status === 'ACTIVE') {
+        notifyIf(vendor.email, (to) =>
+          campaignApprovedEmail(to, vendor.businessName, { goal, durationDays: c.durationDays }, c.endsAt),
+        );
+      } else if (status === 'CANCELLED') {
+        notifyIf(vendor.email, (to) => campaignCancelledEmail(to, vendor.businessName, goal));
+      } else if (status === 'COMPLETED') {
+        notifyIf(vendor.email, (to) => campaignCompletedEmail(to, vendor.businessName, goal));
+      }
+    }
+  }
+  return c;
+}
+
 adminApiRouter.post(
   '/marketing/:id/status',
   asyncHandler(async (req, res) => {
     const { status } = CampaignStatusBody.parse(req.body);
-    const id = req.params.id ?? '';
-    const existing = await prisma.marketingCampaign.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Campaign not found');
-
-    const data: Record<string, unknown> = { status };
-    if (status === 'ACTIVE' && !existing.startsAt) {
-      const now = new Date();
-      data.startsAt = now;
-      data.endsAt = new Date(now.getTime() + existing.durationDays * 24 * 3600 * 1000);
-    }
-    const c = await prisma.marketingCampaign.update({ where: { id }, data });
-    await prisma.auditLog.create({
-      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: `campaign.${status.toLowerCase()}`, meta: { campaignId: id }, ipAddress: req.ip ?? null },
-    });
-    if (status !== existing.status) {
-      const vendor = await prisma.vendor
-        .findUnique({ where: { id: c.vendorId }, select: { email: true, businessName: true } })
-        .catch(() => null);
-      const goal = String(c.goal);
-      if (vendor?.email) {
-        if (status === 'ACTIVE') {
-          notifyIf(vendor.email, (to) =>
-            campaignApprovedEmail(to, vendor.businessName, { goal, durationDays: c.durationDays }, c.endsAt),
-          );
-        } else if (status === 'CANCELLED') {
-          notifyIf(vendor.email, (to) => campaignCancelledEmail(to, vendor.businessName, goal));
-        } else if (status === 'COMPLETED') {
-          notifyIf(vendor.email, (to) => campaignCompletedEmail(to, vendor.businessName, goal));
-        }
-      }
-    }
+    const c = await applyCampaignStatus({ sub: req.auth!.sub, ip: req.ip ?? null }, req.params.id ?? '', status);
+    if (!c) throw new NotFoundError('Campaign not found');
     res.json({ ok: true, id: c.id, status: c.status });
   }),
 );
@@ -980,11 +1590,13 @@ adminApiRouter.get(
     const where = ['INITIATED', 'PENDING', 'SUCCESS', 'FAILED', 'REFUNDED', 'CANCELLED'].includes(status)
       ? { status: status as any }
       : {};
-    const [payments, byStatus, monthAgg] = await Promise.all([
+    const pg = paging(req.query, 200);
+    const [payments, byStatus, monthAgg, total] = await Promise.all([
       prisma.payment.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: 200,
+        skip: pg.skip,
+        take: pg.take,
         include: {
           parent: { select: { name: true } },
           membership: { include: { plan: { select: { name: true } } } },
@@ -997,12 +1609,16 @@ adminApiRouter.get(
         _sum: { amountMinor: true },
         where: { status: 'SUCCESS', createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
       }),
+      prisma.payment.count({ where }),
     ]);
 
     const sumFor = (s: string) => rupees(byStatus.find((b) => b.status === s)?._sum.amountMinor ?? 0);
 
     res.json({
       ok: true,
+      total,
+      page: pg.page,
+      perPage: pg.perPage,
       metrics: {
         total: byStatus.reduce((acc, b) => acc + (b.status === 'SUCCESS' ? rupees(b._sum.amountMinor ?? 0) : 0), 0),
         thisMonth: rupees(monthAgg._sum.amountMinor ?? 0),
@@ -1080,19 +1696,25 @@ adminApiRouter.get(
   asyncHandler(async (req, res) => {
     const status = String(req.query.status ?? '');
     const where = ['PENDING', 'PUBLISHED', 'REJECTED', 'HIDDEN'].includes(status) ? { status: status as any } : {};
-    const [reviews, pending, published, rejected] = await Promise.all([
+    const pg = paging(req.query, 200);
+    const [reviews, pending, published, rejected, total] = await Promise.all([
       prisma.review.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: 200,
+        skip: pg.skip,
+        take: pg.take,
         include: { vendor: { select: { businessName: true } } },
       }),
       prisma.review.count({ where: { status: 'PENDING' } }),
       prisma.review.count({ where: { status: 'PUBLISHED' } }),
       prisma.review.count({ where: { status: 'REJECTED' } }),
+      prisma.review.count({ where }),
     ]);
     res.json({
       ok: true,
+      total,
+      page: pg.page,
+      perPage: pg.perPage,
       metrics: { pending, published, rejected },
       reviews: reviews.map((r) => ({
         id: r.id,
@@ -1108,6 +1730,16 @@ adminApiRouter.get(
   }),
 );
 
+// The business behind a review. A review left before the listing was claimed
+// has no vendorId, but the vendor who has since claimed that listing is still
+// the one to tell.
+async function reviewVendor(r: { vendorId: string | null; listingId: string | null }) {
+  const select = { email: true, businessName: true } as const;
+  if (r.vendorId) return prisma.vendor.findUnique({ where: { id: r.vendorId }, select }).catch(() => null);
+  if (r.listingId) return prisma.vendor.findUnique({ where: { listingId: r.listingId }, select }).catch(() => null);
+  return null;
+}
+
 adminApiRouter.post(
   '/reviews/:id/publish',
   asyncHandler(async (req, res) => {
@@ -1121,15 +1753,24 @@ adminApiRouter.post(
     await prisma.auditLog.create({
       data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'review.publish', meta: { reviewId: id }, ipAddress: req.ip ?? null },
     });
-    // Only a claimed listing has a business to notify.
-    const publishVendor = r.vendorId
-      ? await prisma.vendor
-          .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
-          .catch(() => null)
-      : null;
-    notifyIf(publishVendor?.email, (to) =>
-      reviewPublishedEmail(to, publishVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }),
-    );
+    // Publishing an already-published review (a double click, a re-moderation)
+    // must not mail the business and the reviewer a second time.
+    if (existing.status !== 'PUBLISHED') {
+      // Only a claimed listing has a business to notify.
+      const publishVendor = await reviewVendor(r);
+      notifyIf(publishVendor?.email, (to) =>
+        reviewPublishedEmail(to, publishVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }),
+      );
+      // The reviewer is told their review is live.
+      if (r.parentId) {
+        const author = await prisma.petParent
+          .findUnique({ where: { id: r.parentId }, select: { email: true, name: true } })
+          .catch(() => null);
+        notifyIf(author?.email, (to) =>
+          reviewThanksEmail(to, author?.name ?? r.reviewerName, r.listingName ?? publishVendor?.businessName ?? 'the business'),
+        );
+      }
+    }
     res.json({ ok: true, id: r.id, status: r.status });
   }),
 );
@@ -1150,14 +1791,12 @@ adminApiRouter.post(
     await prisma.auditLog.create({
       data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'review.reject', meta: { reviewId: id, reason: reason ?? null }, ipAddress: req.ip ?? null },
     });
-    const rejectVendor = r.vendorId
-      ? await prisma.vendor
-          .findUnique({ where: { id: r.vendorId }, select: { email: true, businessName: true } })
-          .catch(() => null)
-      : null;
-    notifyIf(rejectVendor?.email, (to) =>
-      reviewRejectedEmail(to, rejectVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }, reason ?? null),
-    );
+    if (existing.status !== 'REJECTED') {
+      const rejectVendor = await reviewVendor(r);
+      notifyIf(rejectVendor?.email, (to) =>
+        reviewRejectedEmail(to, rejectVendor!.businessName, { reviewerName: r.reviewerName, rating: r.rating }, reason ?? null),
+      );
+    }
     res.json({ ok: true, id: r.id, status: r.status });
   }),
 );
@@ -1197,7 +1836,17 @@ adminApiRouter.get(
       prisma.petParent.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
       prisma.vendor.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
       prisma.payment.findMany({ where: { status: 'SUCCESS', createdAt: win }, select: { createdAt: true, amountMinor: true } }),
-      prisma.listingActivity.findMany({ where: { createdAt: win }, select: { createdAt: true, kind: true, city: true } }).catch(() => []),
+      // Listing views are one row per page view, so 30 days of raw activity
+      // grows with traffic and was all loaded into memory here. The totals per
+      // kind come back as a grouped count; only the contact taps (a small
+      // fraction) are fetched row by row, for the daily series.
+      Promise.all([
+        prisma.listingActivity.groupBy({ by: ['kind'], where: { createdAt: win }, _count: { _all: true } }),
+        prisma.listingActivity.findMany({
+          where: { createdAt: win, kind: { in: ['phone_click', 'whatsapp_click'] } },
+          select: { createdAt: true },
+        }),
+      ]).catch(() => [[], []] as const),
       prisma.enquiry.groupBy({ by: ['city'], where: { createdAt: win }, _count: { _all: true } }).catch(() => []),
     ]);
 
@@ -1215,12 +1864,13 @@ adminApiRouter.get(
     for (const r of paymentRows) { const k = dayKey(r.createdAt); if (k in revenueByDay) revenueByDay[k] = (revenueByDay[k] ?? 0) + Math.round(r.amountMinor / 100); }
     const contactByDay = emptySeries();
     const kinds: Record<string, number> = { phone_click: 0, whatsapp_click: 0, website_click: 0, listing_view: 0 };
-    for (const r of activityRows as Array<{ createdAt: Date; kind: string }>) {
-      kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
-      if (r.kind === 'phone_click' || r.kind === 'whatsapp_click') {
-        const k = dayKey(r.createdAt);
-        if (k in contactByDay) contactByDay[k] = (contactByDay[k] ?? 0) + 1;
-      }
+    const [kindCounts, contactRows] = activityRows;
+    for (const r of kindCounts as ReadonlyArray<{ kind: string; _count: { _all: number } }>) {
+      kinds[r.kind] = (kinds[r.kind] ?? 0) + r._count._all;
+    }
+    for (const r of contactRows as ReadonlyArray<{ createdAt: Date }>) {
+      const k = dayKey(r.createdAt);
+      if (k in contactByDay) contactByDay[k] = (contactByDay[k] ?? 0) + 1;
     }
 
     const pct = (nowN: number, prevN: number) =>
@@ -1475,10 +2125,156 @@ export const defaultGrowPlans = [
   },
 ];
 
-export let memoryGrowPlans = [...defaultGrowPlans];
+export let memoryGrowPlans: Array<Record<string, any>> = [...defaultGrowPlans];
+
+// ---------- Plan catalogues: persisted, not only in memory ----------
+// Admin edits to the Grow Business plans, the vendor subscription tiers and the
+// parent-plan fallback used to live only in process memory. A restart or a
+// redeploy silently put every price back to the defaults, while checkout
+// (payments/pricing.ts, vendor subscriptions) charged whatever the array held.
+// They are now saved in the settings table and read back on boot. The arrays
+// are mutated in place, so every module that imported them sees saved values.
+const PLAN_STORE_KEYS = {
+  grow: 'plans:grow',
+  vendor: 'plans:vendor_subscriptions',
+  parent: 'plans:parent_subscriptions',
+  parentRecommended: 'plans:parent_recommended',
+} as const;
+
+/** Setting keys owned by the server. The generic settings editor must not write them. */
+export const RESERVED_SETTING_PREFIXES = ['plans:', 'admin_email_set:', 'vendor_pay:'];
+
+/** Plan ids flagged "recommended" for DB membership plans (the table has no column for it). */
+let parentRecommendedIds: string[] = [];
+
+function replaceContents<T>(target: T[], next: T[]): void {
+  target.splice(0, target.length, ...next);
+}
+
+let planStoresLoad: Promise<void> | null = null;
+let planStoresFailedAt = 0;
+let planStoresLoadedAt = 0;
+/** Bumped by every save, so a load that raced a save cannot put the old catalogue back. */
+let planStoresGeneration = 0;
+
+// The catalogues live in process memory, and with several API instances an
+// admin's price change lands on only one of them. Every instance therefore
+// re-reads the saved rows this often (one indexed Setting query), so the rest
+// of the cluster charges the new price within a minute. One server is
+// unaffected apart from that query.
+const PLAN_STORES_REFRESH_MS = 60_000;
+
+/**
+ * Loads saved plan catalogues into the in-memory arrays. Safe to call often:
+ * it queries at most once a PLAN_STORES_REFRESH_MS, and retries at most every
+ * 30s after a failure (a DB blip at boot must not leave checkout on default
+ * prices for the life of the process).
+ */
+export function loadPersistedPlanStores(): Promise<void> {
+  const stale = planStoresLoadedAt > 0 && Date.now() - planStoresLoadedAt > PLAN_STORES_REFRESH_MS;
+  if ((!planStoresLoad || stale) && Date.now() - planStoresFailedAt > 30_000) {
+    const generation = planStoresGeneration;
+    // Marked fresh up front, so concurrent callers share this one query.
+    planStoresLoadedAt = Date.now();
+    planStoresLoad = (async () => {
+      const rows = await prisma.setting.findMany({ where: { key: { in: Object.values(PLAN_STORE_KEYS) } } });
+      // A save on this instance while the query was out already holds newer data.
+      if (generation !== planStoresGeneration) return;
+      for (const r of rows) {
+        const arr = Array.isArray(r.value) ? (r.value as any[]) : null;
+        if (!arr) continue;
+        if (r.key === PLAN_STORE_KEYS.parentRecommended) {
+          parentRecommendedIds = arr.filter((x): x is string => typeof x === 'string');
+          continue;
+        }
+        if (!arr.length) continue;
+        if (r.key === PLAN_STORE_KEYS.grow) replaceContents(memoryGrowPlans, arr);
+        else if (r.key === PLAN_STORE_KEYS.vendor) replaceContents(memoryVendorSubPlans as any[], arr);
+        else if (r.key === PLAN_STORE_KEYS.parent) replaceContents(memoryParentSubPlans as any[], arr);
+      }
+    })().catch((err) => {
+      logger.warn({ err }, 'admin: could not load saved plan catalogues; using defaults for now');
+      planStoresLoad = null;
+      planStoresLoadedAt = 0;
+      planStoresFailedAt = Date.now();
+    });
+  }
+  return planStoresLoad ?? Promise.resolve();
+}
+
+async function persistPlanStore(key: string, value: unknown[], actorId: string): Promise<void> {
+  // Before and after: a load whose query overlaps the write in either
+  // direction is discarded (the caller updates memory itself right after).
+  planStoresGeneration++;
+  await prisma.setting.upsert({
+    where: { key },
+    update: { value: value as any, updatedBy: actorId },
+    create: { key, value: value as any, updatedBy: actorId },
+  });
+  planStoresGeneration++;
+}
+
+// Every admin request waits for the saved catalogues, so an edit is always
+// applied on top of what is stored — never on top of the defaults.
+adminApiRouter.use((_req, _res, next) => {
+  loadPersistedPlanStores().then(() => next(), () => next());
+});
 
 export function getActiveGrowPlans() {
+  // First caller on a fresh process kicks off the load; the in-memory array is
+  // updated in place as soon as it lands.
+  void loadPersistedPlanStores();
   return memoryGrowPlans.filter((p) => p.active);
+}
+
+/** "a\nb" or ["a","b"] → clean string[]; undefined when the field was not sent. */
+function normalizePerks(raw: unknown): string[] | undefined {
+  if (raw === undefined) return undefined;
+  const list = Array.isArray(raw) ? raw : String(raw ?? '').split('\n');
+  return list.map((s) => String(s).trim()).filter(Boolean).slice(0, 20);
+}
+
+const PerksField = z.union([z.array(z.string().max(200)).max(40), z.string().max(8000)]).optional();
+
+const GrowPlanBody = z.object({
+  id: z.string().max(80).regex(/^[A-Za-z0-9_-]+$/, 'Plan id may only use letters, digits, _ and -').optional(),
+  name: z.string().trim().min(2).max(120),
+  type: z.enum(['CAMPAIGN', 'FEATURED']).optional(),
+  goal: z.enum(['WHATSAPP_ENQUIRIES', 'WEBSITE_LEADS', 'PROFILE_VISITS', 'FEATURED_TOP_SLOT', 'CUSTOM_CAMPAIGN']),
+  tier: z.string().max(40).nullable().optional(),
+  durationDays: z.coerce.number().int().min(1).max(365),
+  // Checkout multiplies this by 100 and charges it, so it must be a real,
+  // non-negative number — NaN from a blank field used to go straight through.
+  priceRupees: z.coerce.number().min(0).max(10_000_000),
+  originalPriceRupees: z.coerce.number().min(0).max(10_000_000).nullable().optional(),
+  tagline: z.string().max(240).optional(),
+  perks: PerksField,
+  recommended: z.boolean().optional(),
+  active: z.boolean().optional(),
+});
+type GrowPlanInput = Partial<z.infer<typeof GrowPlanBody>>;
+
+/** Normalises a validated body into the stored plan shape. */
+function toGrowPlan(b: GrowPlanInput, base: Record<string, any>): Record<string, any> {
+  const goal = b.goal ?? base.goal;
+  return {
+    ...base,
+    ...(b.name !== undefined ? { name: b.name } : {}),
+    goal,
+    // Type follows the goal: a featured slot is sold through the featured
+    // checkout, everything else through the campaign one.
+    type: goal === 'FEATURED_TOP_SLOT' ? 'FEATURED' : 'CAMPAIGN',
+    ...(b.tier !== undefined ? { tier: b.tier } : {}),
+    ...(b.durationDays !== undefined ? { durationDays: b.durationDays } : {}),
+    ...(b.priceRupees !== undefined ? { priceRupees: Math.round(b.priceRupees) } : {}),
+    ...(b.originalPriceRupees !== undefined
+      ? { originalPriceRupees: b.originalPriceRupees == null ? null : Math.round(b.originalPriceRupees) }
+      : {}),
+    ...(b.tagline !== undefined ? { tagline: b.tagline } : {}),
+    ...(b.perks !== undefined ? { perks: normalizePerks(b.perks) } : {}),
+    ...(b.recommended !== undefined ? { recommended: b.recommended } : {}),
+    ...(b.active !== undefined ? { active: b.active } : {}),
+  };
 }
 
 // GET /api/admin/grow-plans
@@ -1492,40 +2288,38 @@ adminApiRouter.get(
   }),
 );
 
-// POST /api/admin/grow-plans
+// POST /api/admin/grow-plans — create (or replace, when an existing id is sent)
 adminApiRouter.post(
   '/grow-plans',
   asyncHandler(async (req, res) => {
-    const body = req.body || {};
+    const body = GrowPlanBody.parse(req.body ?? {});
     const id = body.id || `grow_plan_${Date.now()}`;
     const idx = memoryGrowPlans.findIndex((p) => p.id === id);
 
-    const planData = {
+    const planData = toGrowPlan(body, {
       id,
-      name: body.name || 'Custom Grow Plan',
-      type: body.type || 'CAMPAIGN',
-      goal: body.goal || 'WHATSAPP_ENQUIRIES',
-      tier: body.tier || null,
-      durationDays: parseInt(body.durationDays || '30', 10),
-      priceRupees: parseInt(body.priceRupees || '2999', 10),
-      originalPriceRupees: parseInt(body.originalPriceRupees || '4999', 10),
-      tagline: body.tagline || '',
-      perks: Array.isArray(body.perks) ? body.perks : (String(body.perks || '').split('\n').filter(Boolean)),
-      recommended: Boolean(body.recommended),
-      active: body.active !== undefined ? Boolean(body.active) : true,
-    };
+      tier: null,
+      originalPriceRupees: null,
+      tagline: '',
+      perks: [],
+      recommended: false,
+      active: true,
+    });
 
-    if (idx >= 0) {
-      memoryGrowPlans[idx] = planData;
-    } else {
-      memoryGrowPlans.push(planData);
-    }
+    const next = [...memoryGrowPlans];
+    if (idx >= 0) next[idx] = planData;
+    else next.push(planData);
+    await persistPlanStore(PLAN_STORE_KEYS.grow, next, req.auth!.sub);
+    replaceContents(memoryGrowPlans, next);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: idx >= 0 ? 'grow_plan.replace' : 'grow_plan.create', meta: { planId: id, priceRupees: planData.priceRupees }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
 
     res.json({ ok: true, plan: planData });
   }),
 );
 
-// PUT /api/admin/grow-plans/:id
+// PUT /api/admin/grow-plans/:id — partial update (the quick toggles send one field)
 adminApiRouter.put(
   '/grow-plans/:id',
   asyncHandler(async (req, res) => {
@@ -1533,59 +2327,142 @@ adminApiRouter.put(
     const idx = memoryGrowPlans.findIndex((p) => p.id === id);
     const existing = memoryGrowPlans[idx];
     if (idx < 0 || !existing) throw new NotFoundError('Plan not found');
-    const body = req.body || {};
+    // The id is the key checkout and history refer to; it is not editable.
+    const { id: _ignored, ...body } = GrowPlanBody.partial().parse(req.body ?? {});
 
-    const updatedPlan = {
-      ...existing,
-      ...body,
-      durationDays: body.durationDays ? parseInt(body.durationDays, 10) : existing.durationDays,
-      priceRupees: body.priceRupees !== undefined ? parseInt(body.priceRupees, 10) : existing.priceRupees,
-      originalPriceRupees: body.originalPriceRupees !== undefined ? parseInt(body.originalPriceRupees, 10) : existing.originalPriceRupees,
-      perks: Array.isArray(body.perks) ? body.perks : (body.perks ? String(body.perks).split('\n').filter(Boolean) : existing.perks),
-    };
-    memoryGrowPlans[idx] = updatedPlan;
+    const updatedPlan = toGrowPlan(body, existing);
+    const next = [...memoryGrowPlans];
+    next[idx] = updatedPlan;
+    await persistPlanStore(PLAN_STORE_KEYS.grow, next, req.auth!.sub);
+    replaceContents(memoryGrowPlans, next);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'grow_plan.update', meta: { planId: id, changed: Object.keys(body) }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
 
     res.json({ ok: true, plan: updatedPlan });
   }),
 );
 
-// GET /api/admin/grow-buyers
+const CAMPAIGN_GOAL_NAMES: Record<string, string> = {
+  WHATSAPP_ENQUIRIES: 'WhatsApp Direct Leads',
+  WEBSITE_LEADS: 'Website Lead Ads',
+  PROFILE_VISITS: 'Profile Visits Boost',
+};
+
+/**
+ * What a Grow Business purchase row really is, from its payment and run status.
+ *
+ * The buyers table used to list every checkout attempt — including ones whose
+ * payment FAILED and were then CANCELLED — under "Amount Paid", while the KPIs
+ * (correctly) counted only cleared money. So a vendor with two failed checkouts
+ * ("Omkar vet") showed two ₹ purchases above "₹0 revenue · 0 buyers".
+ *
+ *   PAID           payment SUCCESS                        -> revenue
+ *   REFUNDED       payment REFUNDED                        -> listed, no revenue
+ *   COMPLIMENTARY  no successful payment, but an admin moved it past checkout
+ *                  (PENDING_REVIEW / ACTIVE / COMPLETED / EXPIRED)  -> listed, no revenue
+ *   UNPAID         checkout never completed (PENDING_PAYMENT, or CANCELLED
+ *                  without a successful payment)          -> hidden unless ?include=all
+ */
+type PurchaseKind = 'PAID' | 'REFUNDED' | 'COMPLIMENTARY' | 'UNPAID';
+function purchaseKind(status: string, paymentStatus: string | null | undefined): PurchaseKind {
+  if (paymentStatus === 'SUCCESS') return 'PAID';
+  if (paymentStatus === 'REFUNDED') return 'REFUNDED';
+  if (status === 'PENDING_PAYMENT' || status === 'CANCELLED') return 'UNPAID';
+  return 'COMPLIMENTARY';
+}
+const PURCHASE_LABEL: Record<PurchaseKind, string> = {
+  PAID: 'Paid',
+  REFUNDED: 'Refunded',
+  COMPLIMENTARY: 'Complimentary (no payment)',
+  UNPAID: 'Checkout not completed',
+};
+const RUN_STATUS_LABEL: Record<string, string> = {
+  PENDING_PAYMENT: 'Awaiting payment',
+  PENDING_REVIEW: 'Paid · awaiting review',
+  ACTIVE: 'Live',
+  COMPLETED: 'Completed',
+  EXPIRED: 'Ended',
+  CANCELLED: 'Cancelled',
+};
+
+// GET /api/admin/grow-buyers            paid, refunded and complimentary purchases
+// GET /api/admin/grow-buyers?include=all  ... plus checkouts that were never paid
 adminApiRouter.get(
   '/grow-buyers',
-  asyncHandler(async (_req, res) => {
-    const [campaigns, featured, vendors] = await Promise.all([
-      prisma.marketingCampaign.findMany({ orderBy: { createdAt: 'desc' }, include: { vendor: true, payment: true }, take: 100 }),
-      prisma.featuredListing.findMany({ orderBy: { createdAt: 'desc' }, include: { vendor: true, payment: true }, take: 100 }),
-      prisma.vendor.findMany({ where: { status: 'ACTIVE' }, orderBy: { createdAt: 'desc' }, take: 100 }),
+  asyncHandler(async (req, res) => {
+    const includeUnpaid = String(req.query.include ?? '').toLowerCase() === 'all';
+    const vendorSelect = {
+      businessName: true, ownerName: true, phone: true, email: true,
+      city: true, category: true, whatsapp: true, website: true,
+    } as const;
+    const [campaigns, featured] = await Promise.all([
+      prisma.marketingCampaign.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, vendorId: true, goal: true, priceMinor: true, durationDays: true,
+          notes: true, status: true, createdAt: true, startsAt: true, endsAt: true,
+          vendor: { select: vendorSelect },
+          payment: { select: { status: true } },
+        },
+        take: 200,
+      }),
+      prisma.featuredListing.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, vendorId: true, city: true, category: true, priceMinor: true, durationDays: true,
+          status: true, createdAt: true, startsAt: true, endsAt: true,
+          vendor: { select: vendorSelect },
+          payment: { select: { status: true } },
+        },
+        take: 200,
+      }),
     ]);
 
     const buyers: any[] = [];
+    // amountPaidRupees is money that cleared (0 otherwise); priceRupees is the
+    // plan's price whatever happened to the payment.
+    const moneyFields = (status: string, paymentStatus: string | null | undefined, priceMinor: number) => {
+      const kind = purchaseKind(status, paymentStatus);
+      return {
+        purchaseKind: kind,
+        purchaseLabel: PURCHASE_LABEL[kind],
+        paid: kind === 'PAID',
+        priceRupees: Math.round(priceMinor / 100),
+        amountPaidRupees: kind === 'PAID' ? Math.round(priceMinor / 100) : 0,
+        paymentStatus: paymentStatus ?? null,
+        statusLabel: RUN_STATUS_LABEL[status] ?? status,
+      };
+    };
 
+    // Only what the record actually holds. The old version filled gaps with
+    // "Mumbai", "Veterinary Clinic", pets24x7.com and invented campaign notes,
+    // so an admin briefing an ad agency could be handed made-up targets.
     for (const c of campaigns) {
       buyers.push({
         id: c.id,
         purchaseId: c.id,
         vendorId: c.vendorId,
-        businessName: c.vendor?.businessName || 'Pet Business',
-        ownerName: c.vendor?.ownerName || c.vendor?.phone || 'Vendor Owner',
+        businessName: c.vendor?.businessName || '—',
+        ownerName: c.vendor?.ownerName || c.vendor?.phone || '—',
         phone: c.vendor?.phone || '—',
         email: c.vendor?.email || '—',
-        city: c.vendor?.city || 'Mumbai',
-        category: c.vendor?.category || 'Veterinary Clinic',
-        planName: c.goal === 'WHATSAPP_ENQUIRIES' ? `WhatsApp Direct Leads · ${c.durationDays} Days` : (c.goal === 'WEBSITE_LEADS' ? `Website Lead Ads · ${c.durationDays} Days` : `Profile Visits Boost · ${c.durationDays} Days`),
+        city: c.vendor?.city || '—',
+        category: c.vendor?.category || '—',
+        planName: `${CAMPAIGN_GOAL_NAMES[c.goal] ?? String(c.goal)} · ${c.durationDays} Days`,
         goal: c.goal,
         type: 'CAMPAIGN',
-        amountPaidRupees: Math.round(c.priceMinor / 100),
+        ...moneyFields(c.status, c.payment?.status, c.priceMinor),
         durationDays: c.durationDays,
         filledTargetDetails: {
-          whatsappNumber: c.vendor?.whatsapp || c.vendor?.phone || '—',
-          websiteUrl: c.vendor?.website || 'https://pets24x7.com',
-          notes: c.notes || 'Vendor requested targeted local pet parent campaign in city area.',
+          whatsappNumber: c.vendor?.whatsapp || c.vendor?.phone || null,
+          websiteUrl: c.vendor?.website || null,
+          notes: c.notes || null,
         },
         status: c.status,
         purchasedAt: c.createdAt,
-        startsAt: c.startsAt || c.createdAt,
-        endsAt: c.endsAt || new Date(c.createdAt.getTime() + c.durationDays * 24 * 3600 * 1000),
+        startsAt: c.startsAt,
+        endsAt: c.endsAt,
       });
     }
 
@@ -1594,67 +2471,99 @@ adminApiRouter.get(
         id: f.id,
         purchaseId: f.id,
         vendorId: f.vendorId,
-        businessName: f.vendor?.businessName || 'Pet Service',
-        ownerName: f.vendor?.ownerName || f.vendor?.phone || 'Vendor Owner',
+        businessName: f.vendor?.businessName || '—',
+        ownerName: f.vendor?.ownerName || f.vendor?.phone || '—',
         phone: f.vendor?.phone || '—',
         email: f.vendor?.email || '—',
-        city: f.city || f.vendor?.city || 'Mumbai',
-        category: f.category || f.vendor?.category || 'Pet Service',
+        city: f.city || f.vendor?.city || '—',
+        category: f.category || f.vendor?.category || '—',
         planName: `Featured Top Placement · ${f.durationDays} Days`,
         goal: 'FEATURED_TOP_SLOT',
         type: 'FEATURED',
-        amountPaidRupees: Math.round(f.priceMinor / 100),
+        ...moneyFields(f.status, f.payment?.status, f.priceMinor),
         durationDays: f.durationDays,
         filledTargetDetails: {
-          whatsappNumber: f.vendor?.whatsapp || f.vendor?.phone || '—',
-          websiteUrl: f.vendor?.website || '—',
-          notes: `Top slot pinned in ${f.city || 'Mumbai'} (${f.category || 'All Categories'})`,
+          whatsappNumber: f.vendor?.whatsapp || f.vendor?.phone || null,
+          websiteUrl: f.vendor?.website || null,
+          notes: f.city ? `Top slot pinned in ${f.city} (${f.category || 'all categories'})` : null,
         },
         status: f.status,
         purchasedAt: f.createdAt,
-        startsAt: f.startsAt || f.createdAt,
-        endsAt: f.endsAt || new Date(f.createdAt.getTime() + f.durationDays * 24 * 3600 * 1000),
+        startsAt: f.startsAt,
+        endsAt: f.endsAt,
       });
     }
 
+    buyers.sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime());
 
-
-    const totalRevenue = buyers.reduce((sum, b) => {
-      if (b.status === 'ACTIVE' || b.status === 'COMPLETED') {
-        return sum + (b.amountPaidRupees || 0);
-      }
-      return sum;
-    }, 0);
-    const activeCount = buyers.filter((b) => b.status === 'ACTIVE').length;
-    const pendingCount = buyers.filter((b) => b.status === 'PENDING_REVIEW' || b.status === 'PENDING_PAYMENT' || b.status === 'PENDING').length;
-    const completedCount = buyers.filter((b) => b.status === 'COMPLETED').length;
+    // Every figure below is computed from the same rows the table shows (never
+    // the unpaid attempts), so the KPIs and the list always agree.
+    const purchases = buyers.filter((b) => b.purchaseKind !== 'UNPAID');
+    const unpaid = buyers.filter((b) => b.purchaseKind === 'UNPAID');
+    // Revenue is money that actually cleared: a comped or refunded purchase
+    // is not revenue, whatever its run status says.
+    const totalRevenue = purchases.reduce((sum, b) => sum + (b.amountPaidRupees || 0), 0);
+    const distinctVendors = (rows: any[]) => new Set(rows.map((b) => b.vendorId)).size;
+    const active = purchases.filter((b) => b.status === 'ACTIVE');
 
     res.json({
       ok: true,
-      buyers,
+      buyers: includeUnpaid ? buyers : purchases,
+      includesUnpaid: includeUnpaid,
       stats: {
         totalRevenue,
-        activeBuyers: activeCount,
-        pendingReview: pendingCount,
-        completedBuyers: completedCount,
-        totalPurchases: buyers.length,
+        // Distinct businesses, not rows: one vendor with two live plans is one buyer.
+        activeBuyers: distinctVendors(active),
+        activePurchases: active.length,
+        pendingReview: purchases.filter((b) => b.status === 'PENDING_REVIEW').length,
+        completedBuyers: purchases.filter((b) => b.status === 'COMPLETED' || b.status === 'EXPIRED').length,
+        totalPurchases: purchases.length,
+        paidPurchases: purchases.filter((b) => b.purchaseKind === 'PAID').length,
+        payingBuyers: distinctVendors(purchases.filter((b) => b.purchaseKind === 'PAID')),
+        complimentaryPurchases: purchases.filter((b) => b.purchaseKind === 'COMPLIMENTARY').length,
+        refundedPurchases: purchases.filter((b) => b.purchaseKind === 'REFUNDED').length,
+        // Checkouts started but never paid; listed only with ?include=all.
+        unpaidAttempts: unpaid.length,
       },
     });
   }),
 );
 
 // POST /api/admin/grow-buyers/:id/status
+// The id is either a campaign or a featured slot. Each goes through the same
+// code path as its own tab, so run windows, audit rows and vendor emails are
+// identical. The old version blindly wrote the raw status to both tables,
+// swallowed every error (an invalid enum, an unknown id) and answered ok.
+const GrowBuyerStatusBody = z.object({ status: z.enum(['PENDING_REVIEW', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'EXPIRED']) });
+
 adminApiRouter.post(
   '/grow-buyers/:id/status',
   asyncHandler(async (req, res) => {
-    const id = req.params.id;
-    const { status } = req.body || {};
-    if (!status) throw new BadRequestError('Status is required');
+    const id = req.params.id ?? '';
+    const { status } = GrowBuyerStatusBody.parse(req.body ?? {});
 
-    await prisma.marketingCampaign.update({ where: { id }, data: { status: status as any } }).catch(() => null);
-    await prisma.featuredListing.update({ where: { id }, data: { status: status as any } }).catch(() => null);
+    const campaign = await prisma.marketingCampaign.findUnique({ where: { id }, select: { id: true } });
+    if (campaign) {
+      const c = await applyCampaignStatus(
+        { sub: req.auth!.sub, ip: req.ip ?? null },
+        id,
+        status === 'EXPIRED' ? 'COMPLETED' : status,
+      );
+      if (!c) throw new NotFoundError('Purchase not found');
+      res.json({ ok: true, id, type: 'CAMPAIGN', status: c.status });
+      return;
+    }
 
-    res.json({ ok: true, id, status });
+    const featured = await prisma.featuredListing.findUnique({ where: { id }, select: { id: true } });
+    if (featured) {
+      if (status === 'PENDING_REVIEW') throw new BadRequestError('A featured placement has no review step.');
+      const f = await applyFeaturedStatus(req, id, status === 'COMPLETED' ? 'EXPIRED' : status);
+      if (!f) throw new NotFoundError('Purchase not found');
+      res.json({ ok: true, id, type: 'FEATURED', status: f.status });
+      return;
+    }
+
+    throw new NotFoundError('Purchase not found');
   }),
 );
 
@@ -1743,7 +2652,7 @@ export const defaultParentSubPlans = [
   },
 ];
 
-export let memoryParentSubPlans = [...defaultParentSubPlans];
+export let memoryParentSubPlans: Array<Record<string, any>> = [...defaultParentSubPlans];
 
 export const defaultVendorSubPlans = [
   {
@@ -1806,64 +2715,128 @@ export const defaultVendorSubPlans = [
   },
 ];
 
-export let memoryVendorSubPlans = [...defaultVendorSubPlans];
+export let memoryVendorSubPlans: Array<Record<string, any>> = [...defaultVendorSubPlans];
+
+// ---------- Pet parent plans ----------
+// Membership checkout reads the membership_plans table and nothing else, so an
+// edit made here must land in that table. The previous version only changed an
+// in-memory copy: GET showed the DB rows, PUT looked for the id in memory,
+// found nothing, and answered ok — every toggle and price change was a no-op.
+const ParentPlanBody = z.object({
+  id: z.string().max(80).optional(),
+  // A blank SKU field means "generate one".
+  sku: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(2).max(60).regex(/^[a-z0-9_-]+$/i, 'SKU may only use letters, digits, _ and -').optional(),
+  ),
+  tier: z.enum(['BRONZE', 'SILVER', 'GOLD']).optional(),
+  billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).optional(),
+  name: z.string().trim().min(2).max(80).optional(),
+  tagline: z.string().max(160).optional(),
+  perks: PerksField,
+  discountPercent: z.coerce.number().int().min(0).max(90).optional(),
+  priceRupees: z.coerce.number().min(0).max(10_000_000).optional(),
+  currency: z.string().length(3).optional(),
+  durationDays: z.coerce.number().int().min(1).max(3660).optional(),
+  recommended: z.boolean().optional(),
+  active: z.boolean().optional(),
+});
+type ParentPlanInput = z.infer<typeof ParentPlanBody>;
+
+function parentPlanDbData(b: ParentPlanInput) {
+  const data: Record<string, unknown> = {};
+  if (b.sku !== undefined) data.sku = b.sku;
+  if (b.tier !== undefined) data.tier = b.tier;
+  if (b.billingPeriod !== undefined) data.billingPeriod = b.billingPeriod;
+  if (b.name !== undefined) data.name = b.name;
+  if (b.tagline !== undefined) data.tagline = b.tagline || null;
+  if (b.perks !== undefined) data.perks = normalizePerks(b.perks) ?? [];
+  if (b.discountPercent !== undefined) data.discountPercent = b.discountPercent;
+  if (b.priceRupees !== undefined) data.priceMinor = Math.round(b.priceRupees * 100);
+  if (b.currency !== undefined) data.currency = b.currency.toUpperCase();
+  if (b.durationDays !== undefined) data.durationDays = b.durationDays;
+  if (b.active !== undefined) data.active = b.active;
+  return data;
+}
+
+function parentPlanOut(p: {
+  id: string; sku: string; tier: string; billingPeriod: string; name: string; tagline: string | null;
+  perks: unknown; discountPercent: number; priceMinor: number; currency: string; durationDays: number; active: boolean;
+}) {
+  return {
+    id: p.id,
+    sku: p.sku,
+    tier: p.tier,
+    billingPeriod: p.billingPeriod,
+    name: p.name,
+    tagline: p.tagline || '',
+    perks: Array.isArray(p.perks) ? p.perks : [],
+    discountPercent: p.discountPercent || 0,
+    priceRupees: rupees(p.priceMinor),
+    currency: p.currency,
+    durationDays: p.durationDays,
+    recommended: parentRecommendedIds.includes(p.id),
+    active: p.active,
+  };
+}
+
+async function setParentRecommended(id: string, on: boolean, actorId: string) {
+  const next = on
+    ? Array.from(new Set([...parentRecommendedIds, id]))
+    : parentRecommendedIds.filter((x) => x !== id);
+  await persistPlanStore(PLAN_STORE_KEYS.parentRecommended, next, actorId);
+  parentRecommendedIds = next;
+}
 
 // GET /api/admin/subscriptions/parent-plans
 adminApiRouter.get(
   '/subscriptions/parent-plans',
   asyncHandler(async (_req, res) => {
-    const dbPlans = await prisma.membershipPlan.findMany().catch(() => []);
+    const dbPlans = await prisma.membershipPlan
+      .findMany({ orderBy: [{ sortOrder: 'asc' }, { priceMinor: 'asc' }] })
+      .catch(() => []);
     if (dbPlans.length > 0) {
-      const merged = dbPlans.map((p) => ({
-        id: p.id,
-        sku: p.sku,
-        tier: p.tier,
-        billingPeriod: p.billingPeriod,
-        name: p.name,
-        tagline: p.tagline || '',
-        perks: Array.isArray(p.perks) ? p.perks : [],
-        discountPercent: p.discountPercent || 0,
-        priceRupees: rupees(p.priceMinor),
-        durationDays: p.durationDays,
-        active: p.active,
-      }));
-      res.json({ ok: true, plans: merged });
+      res.json({ ok: true, plans: dbPlans.map(parentPlanOut), source: 'db' });
       return;
     }
-    res.json({ ok: true, plans: memoryParentSubPlans });
+    // Nothing seeded yet: show the starter catalogue. Editing one of these
+    // creates it for real (see PUT), since only DB plans can be bought.
+    res.json({ ok: true, plans: memoryParentSubPlans, source: 'defaults' });
   }),
 );
 
-// POST /api/admin/subscriptions/parent-plans
+// POST /api/admin/subscriptions/parent-plans — creates a purchasable plan
 adminApiRouter.post(
   '/subscriptions/parent-plans',
   asyncHandler(async (req, res) => {
-    const body = req.body || {};
-    const id = body.id || `sub_parent_${Date.now()}`;
-    const idx = memoryParentSubPlans.findIndex((p) => p.id === id);
+    const b = ParentPlanBody.parse(req.body ?? {});
+    if (!b.name) throw new BadRequestError('Plan name is required');
+    if (b.priceRupees === undefined) throw new BadRequestError('Price is required');
+    const billingPeriod = b.billingPeriod ?? 'MONTHLY';
+    const sku = b.sku || `${(b.tier ?? 'silver').toLowerCase()}_${billingPeriod.toLowerCase()}_${Date.now().toString(36)}`;
+    const taken = await prisma.membershipPlan.findUnique({ where: { sku } });
+    if (taken) throw new BadRequestError(`A plan with SKU "${sku}" already exists`);
 
-    const planData = {
-      id,
-      sku: body.sku || `parent_${Date.now()}`,
-      tier: body.tier || 'SILVER',
-      billingPeriod: body.billingPeriod || 'MONTHLY',
-      name: body.name || 'PetCare Pass Tier',
-      tagline: body.tagline || '',
-      perks: Array.isArray(body.perks) ? body.perks : (String(body.perks || '').split('\n').filter(Boolean)),
-      discountPercent: parseInt(body.discountPercent || '0', 10),
-      priceRupees: parseFloat(body.priceRupees || '0'),
-      durationDays: parseInt(body.durationDays || '30', 10),
-      recommended: Boolean(body.recommended),
-      active: body.active !== undefined ? Boolean(body.active) : true,
-    };
-
-    if (idx >= 0) {
-      memoryParentSubPlans[idx] = planData;
-    } else {
-      memoryParentSubPlans.push(planData);
-    }
-
-    res.json({ ok: true, plan: planData });
+    const plan = await prisma.membershipPlan.create({
+      data: {
+        sku,
+        tier: b.tier ?? 'SILVER',
+        billingPeriod,
+        name: b.name,
+        tagline: b.tagline || null,
+        perks: normalizePerks(b.perks) ?? [],
+        discountPercent: b.discountPercent ?? 0,
+        priceMinor: Math.round(b.priceRupees * 100),
+        currency: (b.currency ?? 'INR').toUpperCase(),
+        durationDays: b.durationDays ?? (billingPeriod === 'ANNUAL' ? 365 : 30),
+        active: b.active ?? true,
+      },
+    });
+    if (b.recommended) await setParentRecommended(plan.id, true, req.auth!.sub);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'plan.create', meta: { planId: plan.id, sku: plan.sku }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
+    res.json({ ok: true, plan: parentPlanOut(plan) });
   }),
 );
 
@@ -1871,23 +2844,47 @@ adminApiRouter.post(
 adminApiRouter.put(
   '/subscriptions/parent-plans/:id',
   asyncHandler(async (req, res) => {
-    const id = req.params.id;
-    const idx = memoryParentSubPlans.findIndex((p) => p.id === id);
-    const existing = memoryParentSubPlans[idx];
-    const body = req.body || {};
+    const id = req.params.id ?? '';
+    const { id: _ignored, ...b } = ParentPlanBody.parse(req.body ?? {});
 
-    if (idx >= 0 && existing) {
-      const updated = {
-        ...existing,
-        ...body,
-        perks: Array.isArray(body.perks) ? body.perks : (body.perks ? String(body.perks).split('\n').filter(Boolean) : existing.perks),
-      };
-      memoryParentSubPlans[idx] = updated;
-      res.json({ ok: true, plan: updated });
-      return;
+    let existing = await prisma.membershipPlan.findUnique({ where: { id } });
+    if (!existing) {
+      // One of the starter plans shown before anything was seeded: create it
+      // (matched on SKU) so the edit takes effect at checkout.
+      const starter = memoryParentSubPlans.find((p) => p.id === id);
+      if (!starter) throw new NotFoundError('Plan not found');
+      const bySku = await prisma.membershipPlan.findUnique({ where: { sku: starter.sku } });
+      existing = bySku ?? await prisma.membershipPlan.create({
+        data: {
+          sku: starter.sku,
+          tier: starter.tier as any,
+          billingPeriod: starter.billingPeriod as any,
+          name: starter.name,
+          tagline: starter.tagline || null,
+          perks: starter.perks ?? [],
+          discountPercent: starter.discountPercent ?? 0,
+          priceMinor: Math.round(Number(starter.priceRupees || 0) * 100),
+          durationDays: starter.durationDays,
+          active: starter.active !== false,
+        },
+      });
+      if ((starter as any).recommended && b.recommended === undefined) {
+        await setParentRecommended(existing.id, true, req.auth!.sub);
+      }
     }
 
-    res.json({ ok: true, plan: body });
+    const data = parentPlanDbData(b);
+    // The SKU is written into every payment record for this plan, so it is
+    // fixed once created (the edit form resends it unchanged).
+    delete data.sku;
+    const plan = Object.keys(data).length
+      ? await prisma.membershipPlan.update({ where: { id: existing.id }, data })
+      : existing;
+    if (b.recommended !== undefined) await setParentRecommended(plan.id, b.recommended, req.auth!.sub);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'plan.update', meta: { planId: plan.id, changed: Object.keys(b) }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
+    res.json({ ok: true, plan: parentPlanOut(plan) });
   }),
 );
 
@@ -1895,11 +2892,20 @@ adminApiRouter.put(
 adminApiRouter.get(
   '/subscriptions/parent-subscribers',
   asyncHandler(async (_req, res) => {
-    const dbMemberships = await prisma.membership.findMany({
-      take: 100,
-      orderBy: { createdAt: 'desc' },
-      include: { parent: true, plan: true },
-    }).catch(() => []);
+    // Paid statuses: PENDING is an abandoned checkout and REFUNDED gave the
+    // money back, so neither is a subscriber or revenue.
+    const PAID: Array<'ACTIVE' | 'EXPIRED' | 'CANCELLED'> = ['ACTIVE', 'EXPIRED', 'CANCELLED'];
+    const [dbMemberships, totalSubscribers, activeSubscribers, revenueAgg, popularRaw] = await Promise.all([
+      prisma.membership.findMany({
+        take: 200,
+        orderBy: { createdAt: 'desc' },
+        include: { parent: true, plan: true },
+      }),
+      prisma.membership.count({ where: { status: { in: PAID } } }),
+      prisma.membership.count({ where: { status: 'ACTIVE' } }),
+      prisma.membership.aggregate({ _sum: { pricePaidMinor: true }, where: { status: { in: PAID } } }),
+      prisma.membership.groupBy({ by: ['planId'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
+    ]);
 
     const subscribers: any[] = dbMemberships.map((m) => ({
       id: m.id,
@@ -1907,50 +2913,118 @@ adminApiRouter.get(
       name: m.parent?.name || 'Pet Parent',
       phone: m.parent?.phone || '—',
       email: m.parent?.email || '—',
-      city: m.parent?.city || 'Mumbai',
-      planName: m.plan?.name || 'PetCare Pass',
-      tier: m.plan?.tier || 'SILVER',
-      billingPeriod: m.plan?.billingPeriod || 'MONTHLY',
+      city: m.parent?.city || '—',
+      planName: m.plan?.name || '—',
+      tier: m.plan?.tier || '—',
+      billingPeriod: m.plan?.billingPeriod || '—',
       pricePaidRupees: rupees(m.pricePaidMinor || 0),
       autoRenew: m.autoRenew,
       status: m.status,
-      startsAt: m.startsAt || m.createdAt,
-      endsAt: m.endsAt || new Date(m.createdAt.getTime() + (m.plan?.durationDays || 30) * 86400 * 1000),
+      startsAt: m.startsAt,
+      endsAt: m.endsAt,
       createdAt: m.createdAt,
     }));
 
-
-
-    const totalRev = subscribers.reduce((sum, s) => sum + (s.pricePaidRupees || 0), 0);
-    const activeCount = subscribers.filter((s) => s.status === 'ACTIVE').length;
+    // Most popular = the plan with the most live members, not a fixed label.
+    const top = [...(popularRaw as Array<{ planId: string; _count: { _all: number } }>)]
+      .sort((a, b) => b._count._all - a._count._all)[0];
+    const popularPlan = top
+      ? (await prisma.membershipPlan.findUnique({ where: { id: top.planId }, select: { name: true } }).catch(() => null))?.name ?? '—'
+      : '—';
 
     res.json({
       ok: true,
       subscribers,
       stats: {
-        totalSubscribers: subscribers.length,
-        activeSubscribers: activeCount,
-        totalRevenue: totalRev,
-        popularPlan: 'Silver Annual',
+        totalSubscribers,
+        activeSubscribers,
+        totalRevenue: rupees(revenueAgg._sum.pricePaidMinor ?? 0),
+        popularPlan,
       },
     });
   }),
 );
 
 // POST /api/admin/subscriptions/parent-subscribers/:id/status
+// Status and dates must agree, or benefit checks that look at endsAt keep a
+// "cancelled" member live (and a "reactivated" one expired). The old version
+// wrote the raw status, swallowed errors and always answered ok.
+const ParentSubStatusBody = z
+  .object({
+    status: z.enum(['ACTIVE', 'CANCELLED', 'EXPIRED']).optional(),
+    autoRenew: z.boolean().optional(),
+  })
+  .refine((b) => b.status !== undefined || b.autoRenew !== undefined, { message: 'Nothing to change' });
+
 adminApiRouter.post(
   '/subscriptions/parent-subscribers/:id/status',
   asyncHandler(async (req, res) => {
-    const id = req.params.id;
-    const { status, autoRenew } = req.body || {};
-    const data: any = {};
-    if (status) data.status = status;
-    if (autoRenew !== undefined) data.autoRenew = Boolean(autoRenew);
+    const id = req.params.id ?? '';
+    const { status, autoRenew } = ParentSubStatusBody.parse(req.body ?? {});
+    const existing = await prisma.membership.findUnique({ where: { id }, include: { plan: true, parent: true } });
+    if (!existing) throw new NotFoundError('Subscription not found');
 
-    await prisma.membership.update({ where: { id }, data }).catch(() => null);
-    res.json({ ok: true, id, status, autoRenew });
+    const now = new Date();
+    const data: Record<string, unknown> = {};
+    if (autoRenew !== undefined) data.autoRenew = autoRenew;
+    if (status === 'ACTIVE') {
+      data.status = 'ACTIVE';
+      data.cancelledAt = null;
+      if (!existing.endsAt || existing.endsAt <= now) {
+        data.startsAt = now;
+        data.endsAt = new Date(now.getTime() + existing.plan.durationDays * 24 * 3600 * 1000);
+      }
+    } else if (status === 'CANCELLED' || status === 'EXPIRED') {
+      data.status = status;
+      data.autoRenew = false;
+      if (status === 'CANCELLED') data.cancelledAt = now;
+      if (!existing.endsAt || existing.endsAt > now) data.endsAt = now;
+    }
+
+    const m = await prisma.membership.update({ where: { id }, data });
+    await prisma.auditLog.create({
+      data: {
+        actorType: 'ADMIN', actorId: req.auth!.sub, action: `membership.${(status ?? 'autorenew').toLowerCase()}`,
+        meta: { membershipId: id, autoRenew: autoRenew ?? null }, ipAddress: req.ip ?? null,
+      },
+    }).catch(() => {});
+    // The member loses their benefits today, so tell them.
+    if (status && status !== 'ACTIVE' && existing.status === 'ACTIVE') {
+      notifyIf(existing.parent?.email, (to) =>
+        membershipExpiredEmail(to, existing.parent?.name ?? 'there', existing.plan.name),
+      );
+    }
+    res.json({ ok: true, id, status: m.status, autoRenew: m.autoRenew, endsAt: m.endsAt });
   }),
 );
+
+// ---------- Vendor subscription tiers ----------
+const VendorPlanBody = z.object({
+  id: z.string().max(80).regex(/^[A-Za-z0-9_-]+$/, 'Plan id may only use letters, digits, _ and -').optional(),
+  sku: z.string().max(60).optional(),
+  tier: z.string().trim().min(2).max(40).optional(),
+  billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).optional(),
+  name: z.string().trim().min(2).max(120).optional(),
+  tagline: z.string().max(240).optional(),
+  perks: PerksField,
+  leadLimit: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  badge: z.string().max(40).optional(),
+  priceRupees: z.coerce.number().min(0).max(10_000_000).optional(),
+  durationDays: z.coerce.number().int().min(1).max(3660).optional(),
+  recommended: z.boolean().optional(),
+  active: z.boolean().optional(),
+});
+type VendorPlanInput = z.infer<typeof VendorPlanBody>;
+
+function toVendorPlan(b: VendorPlanInput, base: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = { ...base };
+  for (const k of ['sku', 'tier', 'billingPeriod', 'name', 'tagline', 'leadLimit', 'badge', 'durationDays', 'recommended', 'active'] as const) {
+    if (b[k] !== undefined) out[k] = b[k];
+  }
+  if (b.priceRupees !== undefined) out.priceRupees = Math.round(b.priceRupees);
+  if (b.perks !== undefined) out.perks = normalizePerks(b.perks);
+  return out;
+}
 
 // GET /api/admin/subscriptions/vendor-plans
 adminApiRouter.get(
@@ -1964,31 +3038,34 @@ adminApiRouter.get(
 adminApiRouter.post(
   '/subscriptions/vendor-plans',
   asyncHandler(async (req, res) => {
-    const body = req.body || {};
-    const id = body.id || `sub_vendor_${Date.now()}`;
+    const b = VendorPlanBody.parse(req.body ?? {});
+    if (!b.name) throw new BadRequestError('Plan name is required');
+    const id = b.id || `sub_vendor_${Date.now()}`;
     const idx = memoryVendorSubPlans.findIndex((p) => p.id === id);
 
-    const planData = {
+    const planData = toVendorPlan(b, {
       id,
-      sku: body.sku || `vendor_${Date.now()}`,
-      tier: body.tier || 'GOLD',
-      billingPeriod: body.billingPeriod || 'MONTHLY',
-      name: body.name || 'Vendor Tier Plan',
-      tagline: body.tagline || '',
-      perks: Array.isArray(body.perks) ? body.perks : (String(body.perks || '').split('\n').filter(Boolean)),
-      leadLimit: parseInt(body.leadLimit || '9999', 10),
-      badge: body.badge || 'VERIFIED_PRO',
-      priceRupees: parseFloat(body.priceRupees || '0'),
-      durationDays: parseInt(body.durationDays || '30', 10),
-      recommended: Boolean(body.recommended),
-      active: body.active !== undefined ? Boolean(body.active) : true,
-    };
+      sku: `vendor_${Date.now()}`,
+      tier: 'GOLD',
+      billingPeriod: 'MONTHLY',
+      tagline: '',
+      perks: [],
+      leadLimit: 9999,
+      badge: 'VERIFIED_PRO',
+      priceRupees: 0,
+      durationDays: 30,
+      recommended: false,
+      active: true,
+    });
 
-    if (idx >= 0) {
-      memoryVendorSubPlans[idx] = planData;
-    } else {
-      memoryVendorSubPlans.push(planData);
-    }
+    const next = [...memoryVendorSubPlans];
+    if (idx >= 0) next[idx] = planData;
+    else next.push(planData);
+    await persistPlanStore(PLAN_STORE_KEYS.vendor, next, req.auth!.sub);
+    replaceContents(memoryVendorSubPlans, next);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'vendor_plan.save', meta: { planId: id, priceRupees: planData.priceRupees }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
 
     res.json({ ok: true, plan: planData });
   }),
@@ -2001,25 +3078,20 @@ adminApiRouter.put(
     const id = req.params.id;
     const idx = memoryVendorSubPlans.findIndex((p) => p.id === id);
     const existing = memoryVendorSubPlans[idx];
-    const body = req.body || {};
+    // Answering ok for an unknown id told the admin a change was saved when
+    // nothing had happened.
+    if (idx < 0 || !existing) throw new NotFoundError('Plan not found');
+    const { id: _ignored, ...b } = VendorPlanBody.parse(req.body ?? {});
 
-    if (idx >= 0 && existing) {
-      const updated = {
-        ...existing,
-        ...body,
-        priceRupees: body.priceRupees != null ? parseFloat(body.priceRupees) : existing.priceRupees,
-        durationDays: body.durationDays != null ? parseInt(body.durationDays, 10) : existing.durationDays,
-        leadLimit: body.leadLimit != null ? parseInt(body.leadLimit, 10) : (existing.leadLimit || 9999),
-        perks: Array.isArray(body.perks) ? body.perks : (body.perks ? String(body.perks).split('\n').filter(Boolean) : existing.perks),
-        recommended: body.recommended !== undefined ? Boolean(body.recommended) : existing.recommended,
-        active: body.active !== undefined ? Boolean(body.active) : existing.active,
-      };
-      memoryVendorSubPlans[idx] = updated;
-      res.json({ ok: true, plan: updated });
-      return;
-    }
-
-    res.json({ ok: true, plan: body });
+    const updated = toVendorPlan(b, existing);
+    const next = [...memoryVendorSubPlans];
+    next[idx] = updated;
+    await persistPlanStore(PLAN_STORE_KEYS.vendor, next, req.auth!.sub);
+    replaceContents(memoryVendorSubPlans, next);
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'vendor_plan.update', meta: { planId: id, changed: Object.keys(b) }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
+    res.json({ ok: true, plan: updated });
   }),
 );
 
@@ -2027,45 +3099,51 @@ adminApiRouter.put(
 adminApiRouter.get(
   '/subscriptions/vendor-subscribers',
   asyncHandler(async (_req, res) => {
-    const dbVendors = await prisma.vendor.findMany({
-      take: 100,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        businessName: true,
-        ownerName: true,
-        phone: true,
-        email: true,
-        city: true,
-        category: true,
-        status: true,
-        createdAt: true,
-      },
-    }).catch(() => []);
+    // Walk the subscriptions themselves rather than the newest 100 vendors, so
+    // a paying vendor who signed up long ago is not silently left out.
+    const paid = Array.from(vendorSubscriptionStore.entries()).filter(
+      ([, s]) => s && s.tier && s.tier !== 'BASIC' && (s.pricePaidRupees || 0) > 0,
+    );
+    const vendors = paid.length
+      ? await prisma.vendor
+          .findMany({
+            where: { id: { in: paid.map(([vendorId]) => vendorId) } },
+            select: { id: true, businessName: true, ownerName: true, phone: true, email: true, city: true, category: true, createdAt: true },
+          })
+          .catch(() => [])
+      : [];
+    const byId = new Map(vendors.map((v) => [v.id, v]));
 
     const subscribers: any[] = [];
-    for (const v of dbVendors) {
-      const activeSub = vendorSubscriptionStore.get(v.id);
-      if (activeSub && activeSub.tier && activeSub.tier !== 'BASIC' && (activeSub.pricePaidRupees || 0) > 0) {
-        subscribers.push({
-          id: activeSub.id || `v_sub_${v.id}`,
-          vendorId: v.id,
-          businessName: v.businessName || 'Pet Business',
-          ownerName: v.ownerName || v.phone || 'Owner',
-          phone: v.phone || '—',
-          email: v.email || '—',
-          city: v.city || 'Mumbai',
-          category: v.category || 'Pet Service',
-          tierName: activeSub.tierName || 'Vendor Subscription',
-          tier: activeSub.tier,
-          pricePaidRupees: activeSub.pricePaidRupees || 0,
-          leadLimit: 9999,
-          status: activeSub.status || 'ACTIVE',
-          startsAt: activeSub.startsAt || v.createdAt,
-          endsAt: activeSub.endsAt || new Date(v.createdAt.getTime() + 30 * 86400 * 1000),
-        });
-      }
+    const nowMs = Date.now();
+    for (const [vendorId, activeSub] of paid) {
+      const v = byId.get(vendorId);
+      if (!v) continue; // vendor deleted since
+      // A paid plan past its end date has lapsed even if nobody has touched
+      // the store since (currentVendorSubscription only rewrites it on the
+      // vendor's next visit). It stays listed so it can be reactivated, but it
+      // is not counted as an active subscriber.
+      const lapsed = !!activeSub.endsAt && new Date(activeSub.endsAt).getTime() < nowMs;
+      const effectiveStatus = lapsed && (activeSub.status || 'ACTIVE') === 'ACTIVE' ? 'EXPIRED' : activeSub.status || 'ACTIVE';
+      subscribers.push({
+        id: activeSub.id || `v_sub_${v.id}`,
+        vendorId: v.id,
+        businessName: v.businessName || '—',
+        ownerName: v.ownerName || v.phone || '—',
+        phone: v.phone || '—',
+        email: v.email || '—',
+        city: v.city || '—',
+        category: v.category || '—',
+        tierName: activeSub.tierName || 'Vendor Subscription',
+        tier: activeSub.tier,
+        pricePaidRupees: activeSub.pricePaidRupees || 0,
+        leadLimit: activeSub.leadLimit ?? 9999,
+        status: effectiveStatus,
+        startsAt: activeSub.startsAt ?? null,
+        endsAt: activeSub.endsAt ?? null,
+      });
     }
+    subscribers.sort((a, b) => new Date(b.startsAt ?? 0).getTime() - new Date(a.startsAt ?? 0).getTime());
 
     const totalRevenue = subscribers.reduce((sum, s) => sum + (s.pricePaidRupees || 0), 0);
     const activeCount = subscribers.filter((s) => s.status === 'ACTIVE').length;
@@ -2085,13 +3163,44 @@ adminApiRouter.get(
 );
 
 // POST /api/admin/subscriptions/vendor-subscribers/:id/status
+// Used to answer ok without changing anything, so "Expire Sub" / "Activate"
+// were dead buttons. The id is the subscription id or the vendor id.
+const VendorSubStatusBody = z.object({ status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELLED']) });
+
 adminApiRouter.post(
   '/subscriptions/vendor-subscribers/:id/status',
   asyncHandler(async (req, res) => {
-    const id = req.params.id;
-    const { status } = req.body || {};
-    res.json({ ok: true, id, status });
+    const id = req.params.id ?? '';
+    const { status } = VendorSubStatusBody.parse(req.body ?? {});
+
+    let vendorId: string | null = vendorSubscriptionStore.has(id) ? id : null;
+    if (!vendorId) {
+      for (const [vid, s] of vendorSubscriptionStore.entries()) {
+        if (s && (s.id === id || `v_sub_${vid}` === id)) { vendorId = vid; break; }
+      }
+    }
+    const current = vendorId ? vendorSubscriptionStore.get(vendorId) : null;
+    if (!vendorId || !current) throw new NotFoundError('Subscription not found');
+
+    const now = new Date();
+    const next: Record<string, any> = { ...current, status };
+    if (status === 'ACTIVE') {
+      const ends = current.endsAt ? new Date(current.endsAt) : null;
+      if (!ends || ends <= now) {
+        const plan = memoryVendorSubPlans.find((p) => p.tier === current.tier);
+        next.startsAt = now;
+        next.endsAt = new Date(now.getTime() + (Number(plan?.durationDays) || 30) * 24 * 3600 * 1000);
+      }
+    } else {
+      next.autoRenew = false;
+      const ends = current.endsAt ? new Date(current.endsAt) : null;
+      if (!ends || ends > now) next.endsAt = now;
+    }
+    vendorSubscriptionStore.set(vendorId, next);
+
+    await prisma.auditLog.create({
+      data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: `vendor_subscription.${status.toLowerCase()}`, meta: { vendorId, subscriptionId: current.id ?? null }, ipAddress: req.ip ?? null },
+    }).catch(() => {});
+    res.json({ ok: true, id, vendorId, status: next.status, endsAt: next.endsAt });
   }),
 );
-
-

@@ -51,7 +51,9 @@
     var a = document.createElement('a');
     a.textContent = text;
     a.href = href;
-    if (cls) a.className = cls;
+    // A link that borrows a page class (nav-link, …) takes that class's look,
+    // so it matches its neighbours in the header and in the opened phone menu.
+    if (cls) { a.className = cls; return a; }
     a.style.fontWeight = '600';
     a.style.fontSize = '14px';
     a.style.padding = '6px 10px';
@@ -59,7 +61,19 @@
     return a;
   }
 
+  // Injected links get a 44px tap height. Zero specificity (:where) so any
+  // page rule, e.g. one hiding header links on phones until the menu opens,
+  // still wins; inline styles would override those.
+  function addTapStyle() {
+    if (document.getElementById('navAuthTapStyle')) return;
+    var st = document.createElement('style');
+    st.id = 'navAuthTapStyle';
+    st.textContent = ':where([data-nav-dash],[data-nav-signout]){display:inline-flex;align-items:center;min-height:44px}';
+    document.head.insertBefore(st, document.head.firstChild);
+  }
+
   function applySignedIn(role) {
+    addTapStyle();
     var dash = DASH[role] || '/';
     var existing = loginLinks();
 
@@ -69,7 +83,9 @@
         a.setAttribute('href', dash);
         a.removeAttribute('target');
         if (a.parentNode && !a.parentNode.querySelector('[data-nav-signout]')) {
-          var out = mkLink('Sign out', '#', a.className);
+          // Not a "keep visible on phones" link: on a narrow header only the
+          // dashboard link stays out; Sign out lives in the opened menu.
+          var out = mkLink('Sign out', '#', (a.className || '').replace(/\b(nav-keep|essential)\b/g, '').trim());
           out.setAttribute('data-nav-signout', '1');
           out.addEventListener('click', signOut);
           a.parentNode.insertBefore(out, a.nextSibling);
@@ -97,6 +113,69 @@
     if (ref) { container.insertBefore(d, ref); container.insertBefore(o, ref); }
     else { container.appendChild(d); container.appendChild(o); }
   }
+
+  // ---- Mobile menu ----
+  // Every public header's hamburger (.nav-toggle) opens the nav it names in
+  // aria-controls (or the header's own nav). One implementation, so each page
+  // gets the same keyboard behaviour: Escape closes and returns focus, a tap
+  // outside or on a link closes, and widening past the breakpoint resets it.
+  function wireNavToggles() {
+    var toggles = document.querySelectorAll('.nav-toggle');
+    Array.prototype.forEach.call(toggles, function (btn) {
+      if (btn.getAttribute('data-nav-wired')) return;
+      btn.setAttribute('data-nav-wired', '1');
+      var id = btn.getAttribute('aria-controls');
+      var header = btn.closest('header') || document;
+      var nav = (id && document.getElementById(id)) ||
+        header.querySelector('.hdr-nav, .header-nav, .nav-links, nav');
+      if (!nav) return;
+      if (!nav.id) nav.id = 'siteNav' + Math.random().toString(36).slice(2, 7);
+      btn.setAttribute('aria-controls', nav.id);
+
+      function setOpen(open, focusBack) {
+        nav.classList.toggle('nav-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        if (!open && focusBack) btn.focus();
+      }
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = !nav.classList.contains('nav-open');
+        setOpen(open);
+        if (open) {
+          var first = nav.querySelector('a[href], button');
+          if (first && e.detail === 0) first.focus(); // keyboard activation
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && nav.classList.contains('nav-open')) setOpen(false, true);
+      });
+      document.addEventListener('click', function (e) {
+        if (!nav.classList.contains('nav-open')) return;
+        // Any activated link or button inside closes the menu (so e.g. a
+        // "Talk to Expert" button opening a modal does not leave it open),
+        // except toggles that expand a sub-menu.
+        var hit = e.target.closest && e.target.closest('a[href],button:not(.dropdown-toggle):not([aria-haspopup])');
+        if (nav.contains(e.target) && !hit) return;
+        setOpen(false);
+      });
+      // Tabbing out of the open menu closes it, so it does not stay over the page.
+      // The toggle sits after the menu in some headers, so watch both.
+      function onFocusOut(e) {
+        if (!nav.classList.contains('nav-open')) return;
+        var to = e.relatedTarget;
+        if (!to || nav.contains(to) || to === btn) return;
+        setOpen(false);
+      }
+      nav.addEventListener('focusout', onFocusOut);
+      btn.addEventListener('focusout', onFocusOut);
+      window.addEventListener('resize', function () {
+        if (nav.classList.contains('nav-open') && getComputedStyle(btn).display === 'none') setOpen(false);
+      });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireNavToggles);
+  else wireNavToggles();
 
   fetch(BASE + '/api/me', { credentials: 'include', headers: { 'Accept': 'application/json' } })
     .then(function (r) { return r.json(); })

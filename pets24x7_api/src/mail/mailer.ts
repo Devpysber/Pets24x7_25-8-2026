@@ -11,6 +11,7 @@ import { env } from '../env.js';
 import { logger } from '../logger.js';
 import type { MailKind } from './optout.js';
 import { isOptedOut, unsubscribeUrl } from './optout.js';
+import { UNSUBSCRIBE_SLOT, withTracking } from './components.js';
 
 let cached: Transporter | null = null;
 
@@ -75,31 +76,53 @@ export interface MailInput {
    * `npm run mail:check` test message sets this.
    */
   force?: boolean;
+  /**
+   * Short snake_case id of the template (e.g. 'membership_activated'). Becomes
+   * utm_medium on every link to our own site, so clicks are attributable.
+   */
+  tag?: string;
+  /** utm_campaign for those links. Defaults to the mail kind. */
+  campaign?: string;
 }
 
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-
 /**
- * Appends the unsubscribe line to a rendered template. Injected here rather
- * than inside each template so a template can never ship marketing mail
- * without one.
+ * Adds the unsubscribe line to a rendered marketing template, or clears the
+ * slot on anything else. Done here rather than inside each template so a
+ * template can never ship marketing mail without one.
+ *
+ * The line lands in the Footer's UNSUBSCRIBE_SLOT, inside the card next to the
+ * legal links; HTML that did not come from page() gets it before </body>.
+ * Exported so scripts/mail-preview.ts renders exactly what is sent.
  */
-function withUnsubscribeFooter(html: string, url: string): string {
+export function withUnsubscribeFooter(html: string, url: string | null): string {
+  if (!url) return html.split(UNSUBSCRIBE_SLOT).join('');
+  // The URL carries a raw '&' between query params — must be entity-escaped
+  // before it can sit inside an href="..." attribute value.
+  const safeUrl = url.replace(/&/g, '&amp;');
+  const line =
+    `<br>You are receiving occasional Pets24x7 suggestions. ` +
+    `<a href="${safeUrl}" style="color:#4b5563;text-decoration:underline">Unsubscribe</a>.`;
+  if (html.includes(UNSUBSCRIBE_SLOT)) return html.split(UNSUBSCRIBE_SLOT).join(line);
   const block =
-    `<div style="max-width:600px;margin:0 auto;padding:0 20px 28px;text-align:center;font-family:${FONT}">` +
-    `<p style="margin:0;font-size:12px;line-height:18px;color:#9ca3af">` +
-    `You are receiving occasional Pets24x7 suggestions. ` +
-    `<a href="${url}" style="color:#9ca3af;text-decoration:underline">Unsubscribe</a>.` +
-    `</p></div>`;
+    `<div style="max-width:600px;margin:0 auto;padding:0 20px 28px;text-align:center;` +
+    `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;` +
+    `font-size:12px;line-height:18px;color:#6b7280">${line.slice(4)}</div>`;
   return html.includes('</body>') ? html.replace('</body>', `${block}</body>`) : html + block;
+}
+
+/** Plain-text twin of withUnsubscribeFooter. */
+export function withUnsubscribeText(text: string, url: string | null): string {
+  return url ? `${text}\n\nDon't want these emails? Unsubscribe: ${url}\n` : text;
 }
 
 /**
  * Best-effort send. Never throws: a mail outage must not fail a signup, so the
  * caller gets `false` and the error is logged.
  */
-export async function sendMail(input: MailInput): Promise<boolean> {
-  const kind: MailKind = input.kind ?? 'transactional';
+export async function sendMail(rawInput: MailInput): Promise<boolean> {
+  const kind: MailKind = rawInput.kind ?? 'transactional';
+  // Tag own-site links with UTM parameters before anything logs or sends it.
+  const input = withTracking(rawInput);
   if (kind === 'marketing') {
     let suppressed = false;
     try {
@@ -142,15 +165,10 @@ export async function sendMail(input: MailInput): Promise<boolean> {
     return false;
   }
   try {
-    const { kind: _kind, sensitive: _sensitive, force: _force, ...message } = input;
-    if (kind === 'marketing') {
-      const url = unsubscribeUrl(input.to);
-      message.html = withUnsubscribeFooter(message.html, url);
-      message.text = `${message.text}
-
-Don't want these emails? Unsubscribe: ${url}
-`;
-    }
+    const { kind: _kind, sensitive: _sensitive, force: _force, tag: _tag, campaign: _campaign, ...message } = input;
+    const unsub = kind === 'marketing' ? unsubscribeUrl(input.to) : null;
+    message.html = withUnsubscribeFooter(message.html, unsub);
+    message.text = withUnsubscribeText(message.text, unsub);
     const headers =
       kind === 'marketing'
         ? {

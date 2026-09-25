@@ -15,9 +15,16 @@ declare global {
 }
 
 function pickToken(req: Request, role: ActorRole): string | undefined {
-  // Prefer Authorization: Bearer <jwt> (for cross-origin XHR), fall back to cookie.
+  // Prefer Authorization: Bearer <jwt> (for cross-origin XHR), but only when it
+  // actually carries this role — otherwise a header for a different role (e.g.
+  // an admin token on a request also checking pet_parent/vendor) would shadow
+  // a perfectly valid same-role cookie. Fall back to the cookie in every other case.
   const header = req.headers.authorization;
-  if (header && header.startsWith('Bearer ')) return header.slice(7);
+  if (header && header.startsWith('Bearer ')) {
+    const headerToken = header.slice(7);
+    const payload = verifyToken(headerToken);
+    if (payload && payload.role === role) return headerToken;
+  }
   return readAuthCookie(req.cookies ?? {}, role);
 }
 
@@ -38,6 +45,13 @@ function rejection(res: Response, role: ActorRole, reason: 'unknown' | 'revoked'
 
 export function requireAuth(role: ActorRole) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Several routers share a mount point (/api/admin has five, /api/vendor
+    // six) and each guards itself, so one request used to resolve the same
+    // actor against the database once per router it passed through. req.actor
+    // is only ever set after a full check, so a second guard for the same role
+    // has nothing left to prove.
+    if (req.auth?.role === role && req.actor?.role === role) return next();
+
     const token = pickToken(req, role);
     if (!token) return next(new UnauthorizedError());
     const payload = verifyToken(token);

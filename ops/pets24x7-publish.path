@@ -1,0 +1,13 @@
+[Unit]
+Description=Start a site publish when the admin panel asks for one
+
+[Path]
+# POST /api/admin/publish writes this file (PUBLISH_TRIGGER_FILE in the API
+# env); pets24x7-publish.sh deletes it when a run starts. PathExists (not
+# PathModified) is level-triggered: a request made while a run is building
+# leaves the file behind, and systemd starts one more run when this one ends.
+PathExists=/opt/pets24x7/run/publish.request
+Unit=pets24x7-publish.service
+
+[Install]
+WantedBy=multi-user.target

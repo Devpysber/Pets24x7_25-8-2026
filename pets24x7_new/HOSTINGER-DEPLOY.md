@@ -95,7 +95,7 @@ If your plan shows an inode warning, run this to slim down by ~1,600 unused JSON
 ```
 cd public_html
 # from the SSH terminal — list orphan JSONs (visible cities only have 569)
-python3 -c "import json, re, os; idx=json.loads(re.search(r'PETS_INDEX\s*=\s*(\[.+?\]);', open('pets-data.js').read()).group(1)); keep=set((c['country'].lower(), c['city_slug']) for c in idx); [os.remove(f'data/{f}') for f in os.listdir('data') if not any(f==f'{c}-{s}.json' for c,s in keep)]"
+python3 -c "import json, re, os; t=open('pets-data.js', encoding='utf-8').read(); idx=json.JSONDecoder().raw_decode(t, re.search(r'PETS_INDEX\s*=\s*', t).end())[0]; keep=set((c['country'].lower(), c['city_slug']) for c in idx); [os.remove(f'data/{f}') for f in os.listdir('data') if not any(f==f'{c}-{s}.json' for c,s in keep)]"
 ```
 
 ## Updating content later
@@ -110,6 +110,21 @@ python build_data.py
 python build_pages.py
 # then re-zip + re-upload via File Manager
 ```
+
+**Listings edited in the admin panel (MySQL)?** The site now lives on the VPS,
+where `pets24x7-publish.sh` re-exports and re-renders nightly and on the admin
+"Publish site" button (see `../DEPLOY.md`, "Managing listings"). A shared host
+has no such job, so for a Hostinger copy export the database into a copy of
+this folder and render there before zipping (never render in place):
+
+```
+cd ../pets24x7_api
+node scripts/export-listings-static.mjs --out <copy>/data     # DATABASE_URL must point at the DB
+cd <copy> && python build_pages.py --out <copy>
+```
+
+The `.htaccess` fallback rules still serve listings added after that zip from
+the API.
 
 **Full re-deploy?** Zip + upload + extract again, replace the old files.
 
@@ -126,5 +141,5 @@ python build_pages.py
 ## Quick reference
 
 - **Upload destination:** `public_html/` (or your domain's directory)
-- **Required files at root:** `index.html`, `.htaccess`, `config.js`, `styles.css`, `pets-data.js`, `pets-loader.js`, `pets24x7_logo.png`, `sitemap.xml`, `robots.txt`, `in/`, `us/`, `data/`
+- **Required files at root:** `index.html`, `.htaccess`, `config.js`, `styles.css`, `pets-data.js`, `pets-loader.js`, `pets24x7_logo.png`, `sitemap.xml` (the index) plus every `sitemap-*.xml` it lists, `robots.txt`, `in/`, `us/`, `data/`
 - **Don't upload:** `*.py`, `*.md`, `*.bat`, `*.toml`, `*.zip`, `LEADS-APPS-SCRIPT.gs` (the `.htaccess` denies access to them anyway, but cleaner to omit).

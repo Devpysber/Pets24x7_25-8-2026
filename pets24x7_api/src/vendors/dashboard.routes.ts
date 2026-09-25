@@ -2,16 +2,17 @@
 // All routes require a vendor JWT.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { requireAuth } from '../auth/middleware.js';
 import { setAuthCookie } from '../auth/jwt.js';
+import { revocationCutoff } from '../auth/actor.js';
 import { asyncHandler } from '../shared/async-handler.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
-import { addAndPersistImportedListing, getListingById, type ListingRecord } from '../listings/index.js';
+import { addAndPersistImportedListing, findListingByPhone, getListingById, publicListing, type ListingRecord } from '../listings/index.js';
 import bcrypt from 'bcrypt';
 import { notifyIf } from '../mail/notify.js';
 import {
@@ -19,57 +20,57 @@ import {
   sendVendorVerificationEmail,
 } from '../auth/vendor-email-verification.js';
 import { enquiryStatusEmail, vendorProfileUpdatedEmail } from '../mail/action-templates.js';
+import { vendorPhotosUpdatedEmail } from '../mail/lifecycle-templates.js';
+import { isVendorApproved } from '../shared/vendor-status.js';
+import { invalidateVendorInsights } from '../feed/reco/vendor-insights.js';
+import { normalizePhone } from '../shared/phone.js';
+import { vendorReviewScope } from '../reviews/vendor.routes.js';
+import { profileCompletion } from './profile-completion.js';
+import type { Prisma, Vendor } from '@prisma/client';
 
 export const vendorDashboardRouter = Router();
 
 vendorDashboardRouter.use(requireAuth('vendor'));
 
-function completionChecklist(vendor: {
-  email: string | null;
-  emailVerified?: boolean;
-  listingId: string | null;
-  status: string;
-  hasReviews?: boolean;
-  hasServices?: boolean;
-}) {
-  return [
-    { key: 'claim_listing', label: 'Claim your listing',                done: !!vendor.listingId, weight: 25 },
-    { key: 'verify_phone',  label: 'Verify your WhatsApp number',       done: true, weight: 15 }, // implicit on signup
-    // An unverified address does not count: it is where receipts and enquiry
-    // alerts go, so it has to be one we know reaches them.
-    { key: 'add_email',     label: 'Add and verify a business email',   done: !!vendor.email && !!vendor.emailVerified, weight: 15 },
-    { key: 'admin_approve', label: 'Approval from Pets24x7 admin',      done: vendor.status === 'ACTIVE', weight: 20 },
-    { key: 'add_services',    label: 'List at least one service',         done: !!vendor.hasServices, weight: 10 },
-    { key: 'collect_reviews', label: 'Collect your first review',         done: !!vendor.hasReviews, weight: 15 },
-  ];
+/**
+ * Which enquiries a vendor may see and act on. Always its claimed listing id.
+ * The business-name fallback (for enquiries sent from the parent dashboard
+ * without an id) is narrowed to rows with no listingId at all, and never a
+ * marketing-page lead — whose listingName is the sender's own business. Before,
+ * any vendor whose name matched another listing's (dozens of "Government
+ * Veterinary Hospital"s), or who renamed itself to match, read and updated
+ * that listing's leads, customer phone numbers included.
+ */
+function enquiryScope(v: { listingId: string | null; businessName: string | null } | null): Prisma.EnquiryWhereInput | null {
+  if (!v?.listingId) return null;
+  const or: Prisma.EnquiryWhereInput[] = [{ listingId: v.listingId }];
+  if (v.businessName) {
+    or.push({
+      listingId: null,
+      listingName: v.businessName,
+      OR: [{ source: null }, { NOT: { source: { startsWith: 'marketing' } } }],
+    });
+  }
+  return { OR: or };
 }
+
+/**
+ * Images reach public pages and other dashboards as <img src>, and some of
+ * those still build markup by string. Accept only a hosted http(s) URL with no
+ * markup characters, or a complete base64 image data URL — a prefix check alone
+ * let anything follow the comma.
+ */
+const IMAGE_SRC =
+  /^(?:https?:\/\/[^\s"'<>`]+|data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+)$/;
+const imageSrc = z.string().max(600_000).regex(IMAGE_SRC, 'must be an image URL or image data URL');
 
 vendorDashboardRouter.get(
   '/dashboard',
   asyncHandler(async (req, res) => {
-    let v: any = null;
-    try {
-      v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
-    } catch {
-      // DB connection offline
-    }
-
-    if (!v) {
-      v = {
-        id: req.auth!.sub,
-        businessName: 'Pawsome Pet Care & Clinic',
-        phone: '+919930090487',
-        email: 'contact@pawsome.example.com',
-        status: 'ACTIVE',
-        city: 'Mumbai',
-        country: 'IN',
-        category: 'Veterinary Clinic',
-        listingId: 'in-mumbai-pawsome-clinic',
-        claimedAt: new Date(),
-        approvedAt: new Date(),
-        profileCompletion: 85,
-      };
-    }
+    // No invented fallback: a DB failure is an error (500 with a request id),
+    // and a missing row is a 404 — never another business's name and phone.
+    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
+    if (!v) throw new NotFoundError('Vendor account not found');
 
     const listing = v.listingId ? getListingById(v.listingId) : null;
 
@@ -83,19 +84,23 @@ vendorDashboardRouter.get(
     try {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
+      // Includes reviews left on the listing before it was claimed.
+      const reviewWhere = await vendorReviewScope(v.id);
       const [total, pending, published, recent, sent, opened, completed, sentToday, camps, svc, avgAgg] =
         await Promise.all([
-          prisma.review.count({ where: { vendorId: v.id } }),
-          prisma.review.count({ where: { vendorId: v.id, status: 'PENDING' } }),
-          prisma.review.count({ where: { vendorId: v.id, status: 'PUBLISHED' } }),
-          prisma.review.findMany({ where: { vendorId: v.id }, orderBy: { createdAt: 'desc' }, take: 5 }),
+          prisma.review.count({ where: reviewWhere }),
+          prisma.review.count({ where: { AND: [reviewWhere, { status: 'PENDING' }] } }),
+          prisma.review.count({ where: { AND: [reviewWhere, { status: 'PUBLISHED' }] } }),
+          // The dashboard's Reviews tab renders this list and nothing else, so
+          // five meant a vendor could never see or reply to their sixth review.
+          prisma.review.findMany({ where: reviewWhere, orderBy: { createdAt: 'desc' }, take: 100 }),
           prisma.reviewRequest.count({ where: { vendorId: v.id } }),
           prisma.reviewRequest.count({ where: { vendorId: v.id, openedAt: { not: null } } }),
           prisma.reviewRequest.count({ where: { vendorId: v.id, reviewSubmittedAt: { not: null } } }),
           prisma.reviewRequest.count({ where: { vendorId: v.id, sentAt: { gte: startOfDay } } }),
           prisma.marketingCampaign.findMany({ where: { vendorId: v.id }, orderBy: { createdAt: 'desc' }, take: 20 }),
           prisma.service.count({ where: { vendorId: v.id } }),
-          prisma.review.aggregate({ where: { vendorId: v.id, status: 'PUBLISHED' }, _avg: { rating: true } }),
+          prisma.review.aggregate({ where: { AND: [reviewWhere, { status: 'PUBLISHED' }] }, _avg: { rating: true } }),
         ]);
       const avg = avgAgg._avg.rating;
       reviewAgg = { total, pending, published, average: avg != null ? Math.round(avg * 10) / 10 : null, recent };
@@ -110,8 +115,8 @@ vendorDashboardRouter.get(
     // Enquiry rollup for this vendor's claimed listing.
     let enquiryAgg = { total: 0, new: 0, responded: 0, completed: 0, archived: 0 };
     try {
-      if (v.listingId || v.businessName) {
-        const where = { OR: [{ listingId: v.listingId ?? '__none__' }, { listingName: v.businessName ?? '__none__' }] };
+      const where = enquiryScope(v);
+      if (where) {
         const [t, n, r, c, a] = await Promise.all([
           prisma.enquiry.count({ where }),
           prisma.enquiry.count({ where: { AND: [where, { status: 'NEW' }] } }),
@@ -125,15 +130,19 @@ vendorDashboardRouter.get(
       // DB offline
     }
 
-    const checklist = completionChecklist({
-      email: v.email,
-      emailVerified: v.emailVerified,
-      listingId: v.listingId,
-      status: v.status,
+    // Same function /api/reco/vendor uses, so both screens quote one number.
+    const completion = profileCompletion({
+      ...v,
+      listingWebsite: listing?.website ?? null,
+      serviceCount,
       hasReviews: hasCollectedReviews,
-      hasServices: serviceCount > 0,
     });
-    const completionPct = checklist.reduce((s, item) => s + (item.done ? item.weight : 0), 0);
+    // The stored column (served by /api/me) is only a cache of this figure.
+    if (v.profileCompletion !== completion.percent) {
+      void prisma.vendor
+        .update({ where: { id: v.id }, data: { profileCompletion: completion.percent } })
+        .catch(() => {});
+    }
 
     res.json({
       ok: true,
@@ -152,8 +161,8 @@ vendorDashboardRouter.get(
         claimedAt: v.claimedAt,
         approvedAt: v.approvedAt,
       },
-      listing: listing ?? { id: v.listingId ?? 'unclaimed', name: v.businessName, city: v.city, category: v.category, rating: null, review_count: 0 },
-      completion: { percent: completionPct, checklist },
+      listing: listing ? publicListing(listing) : { id: v.listingId ?? 'unclaimed', name: v.businessName, city: v.city, category: v.category, rating: null, review_count: 0 },
+      completion: { percent: completion.percent, checklist: completion.checklist },
       reviews: reviewAgg,
       enquiries: enquiryAgg,
       customerInvites: invites,
@@ -163,17 +172,16 @@ vendorDashboardRouter.get(
   }),
 );
 
+// `email` may only be *added* here, by an account that has none yet. Changing
+// or removing an existing address is support-only (same policy as
+// /my-business): it identifies the account and receives the sign-in codes, so
+// a stolen session must not be able to move the account to another inbox.
 const ProfileBody = z.object({
   businessName: z.string().min(2).max(120).optional(),
-  email: z.string().email().max(160).optional().or(z.literal('')),
+  email: z.string().trim().toLowerCase().email().max(160).optional().or(z.literal('')),
   category: z.string().min(2).max(80).optional(),
   // Small resized data: URL (client downsizes first). '' clears it.
-  imageUrl: z
-    .string()
-    .max(600_000)
-    .regex(/^data:image\/(png|jpe?g|webp);base64,/, 'must be an image data URL')
-    .optional()
-    .or(z.literal('')),
+  imageUrl: imageSrc.optional().or(z.literal('')),
 });
 
 vendorDashboardRouter.patch(
@@ -182,7 +190,7 @@ vendorDashboardRouter.patch(
     const body = ProfileBody.parse(req.body);
     const current = await prisma.vendor.findUnique({
       where: { id: req.auth!.sub },
-      select: { email: true },
+      select: { email: true, businessName: true, category: true, imageUrl: true },
     });
 
     const data: Record<string, unknown> = {};
@@ -194,6 +202,9 @@ vendorDashboardRouter.patch(
     // so the old address's proof never carries over to a different one.
     const nextEmail = body.email === undefined ? undefined : body.email || null;
     const emailChanged = nextEmail !== undefined && nextEmail !== (current?.email ?? null);
+    if (emailChanged && current?.email) {
+      throw new ForbiddenError('To change your business email, contact support@pets24x7.com from the current address.');
+    }
     if (nextEmail !== undefined) {
       data.email = nextEmail;
       if (emailChanged) {
@@ -203,15 +214,28 @@ vendorDashboardRouter.patch(
     }
 
     const v = await prisma.vendor.update({ where: { id: req.auth!.sub }, data });
+    invalidateVendorInsights(v.id);
 
     if (emailChanged && v.email) {
       void sendVendorVerificationEmail({ id: v.id, businessName: v.businessName, email: v.email }).catch((err) => {
         req.log.warn({ err }, 'vendor email verification send failed');
       });
     }
-    const changed = Object.keys(data).filter((k) => k !== 'emailVerified' && k !== 'emailVerifiedAt');
+    // Only fields whose value really moved — re-saving the same form used to
+    // mail "your profile was updated" listing every field on it.
+    const before = (current ?? {}) as Record<string, unknown>;
+    const changed = Object.keys(data).filter(
+      (k) => k !== 'emailVerified' && k !== 'emailVerifiedAt' && (before[k] ?? null) !== (data[k] ?? null),
+    );
     if (changed.length > 0) {
       notifyIf(v.email, (to) => vendorProfileUpdatedEmail(to, v.businessName, changed));
+    }
+    // Name and category are shown on the public listing, which reads the
+    // listing index — /my-business already pushed there, this route did not.
+    if (changed.includes('businessName') || changed.includes('category')) {
+      await syncVendorToListingIndex(v).catch((err) =>
+        req.log.warn({ err }, 'listing index sync failed after vendor profile edit'),
+      );
     }
     res.json({
       ok: true,
@@ -234,14 +258,24 @@ vendorDashboardRouter.get(
   asyncHandler(async (req, res) => {
     const v = await prisma.vendor.findUnique({
       where: { id: req.auth!.sub },
-      select: { listingId: true, businessName: true },
+      select: { listingId: true, businessName: true, status: true },
     });
-    if (!v?.listingId) return res.json({ ok: true, enquiries: [] });
+    const where = enquiryScope(v);
+    if (!where) return res.json({ ok: true, enquiries: [] });
     const enquiries = await prisma.enquiry.findMany({
-      where: { OR: [{ listingId: v.listingId }, { listingName: v.businessName }] },
+      where,
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+    // Same gate as the new-enquiry notification: a pending or suspended account
+    // sees that leads exist, not the customer's phone and email.
+    if (!isVendorApproved(v?.status)) {
+      return res.json({
+        ok: true,
+        contactHidden: true,
+        enquiries: enquiries.map((e) => ({ ...e, phone: '', email: null })),
+      });
+    }
     res.json({ ok: true, enquiries });
   }),
 );
@@ -255,18 +289,35 @@ vendorDashboardRouter.patch(
     const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub }, select: { listingId: true, businessName: true } });
     const enq = await prisma.enquiry.findUnique({ where: { id: req.params.id ?? '' } });
     if (!enq) throw new NotFoundError('Enquiry not found');
-    const ownsIt = (v?.listingId && enq.listingId === v.listingId) || (v?.businessName && enq.listingName === v.businessName);
+    // Same rule as the list above (see enquiryScope).
+    const ownsIt =
+      !!v?.listingId &&
+      (enq.listingId === v.listingId ||
+        (enq.listingId === null &&
+          !!v.businessName &&
+          enq.listingName === v.businessName &&
+          !(enq.source ?? '').startsWith('marketing')));
     if (!ownsIt) throw new ForbiddenError();
     const updated = await prisma.enquiry.update({
       where: { id: enq.id },
-      data: { status, handledBy: req.auth!.sub, respondedAt: status === 'RESPONDED' && !enq.respondedAt ? new Date() : enq.respondedAt },
+      data: {
+        status,
+        handledBy: req.auth!.sub,
+        respondedAt: status === 'RESPONDED' && !enq.respondedAt ? new Date() : enq.respondedAt,
+        ...(status === 'COMPLETED' && !enq.closedAt ? { closedAt: new Date() } : {}),
+      },
     });
-    // Keep the parent in the loop when the vendor moves their enquiry along.
-    if (status !== enq.status) {
+    // Keep the parent in the loop when the vendor moves their enquiry along —
+    // forward moves only, once each. Toggling NEW <-> RESPONDED mailed the
+    // parent the same "your enquiry was answered" on every click.
+    const firstResponse = status === 'RESPONDED' && !enq.respondedAt;
+    const completedNow = status === 'COMPLETED' && !enq.closedAt && enq.status !== 'COMPLETED' && enq.status !== 'ARCHIVED';
+    if (firstResponse || completedNow) {
       notifyIf(updated.email, (to) =>
         enquiryStatusEmail(to, updated.name, updated.listingName ?? v?.businessName ?? null, status),
       );
     }
+    if (status !== enq.status) invalidateVendorInsights(req.auth!.sub);
     res.json({ ok: true, enquiry: { id: updated.id, status: updated.status } });
   }),
 );
@@ -286,7 +337,7 @@ vendorDashboardRouter.get(
 // ----- Resend the verification link -----
 // Rate-limited on its own: it is the one vendor endpoint that causes outbound
 // mail to an address the caller chose.
-const resendLimiter = rateLimit({
+const resendLimiter = makeLimiter('vendor-dashboard-email-resend', {
   windowMs: 60 * 60_000,
   max: env.NODE_ENV === 'development' ? 10_000 : 5,
   standardHeaders: true,
@@ -318,33 +369,7 @@ vendorDashboardRouter.get(
   asyncHandler(async (req, res) => {
     const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub } });
     if (!v) throw new NotFoundError('Vendor account not found');
-    const staticListing = v.listingId ? getListingById(v.listingId) : null;
-    res.json({
-      ok: true,
-      business: {
-        id: v.id,
-        listingId: v.listingId || v.id,
-        businessName: v.businessName,
-        category: v.category || staticListing?.category || 'Pet Service',
-        city: v.city || staticListing?.city || 'Mumbai',
-        country: v.country || staticListing?.country || 'IN',
-        locality: v.locality || '',
-        address: v.address || staticListing?.address || '',
-        pincode: v.pincode || staticListing?.pincode || '',
-        phone: v.phone || staticListing?.phone || '',
-        email: v.email || '',
-        website: v.website || staticListing?.website || '',
-        whatsapp: v.whatsapp || '',
-        about: v.about || '',
-        openingHours: v.openingHours || '',
-        servicesList: v.servicesList || '',
-        imageUrl: v.imageUrl || '',
-        galleryImages: parseGallery(v.galleryImages),
-        hasPassword: !!v.passwordHash,
-        status: v.status,
-        claimedAt: v.claimedAt,
-      },
-    });
+    res.json({ ok: true, business: toBusinessDto(v) });
   }),
 );
 
@@ -370,14 +395,48 @@ const UpdateBusinessBody = z.object({
   about: z.string().max(5000).optional(),
   openingHours: z.string().max(1000).optional(),
   servicesList: z.string().max(2000).optional(),
-  imageUrl: z.string().max(600_000).optional(),
+  // Free text from the Edit Business form before; now the same image rule as
+  // /profile. '' clears it.
+  imageUrl: imageSrc.optional().or(z.literal('')),
   // Up to five extra photos for the public listing gallery. Each is either a
   // hosted URL or a small resized data URL produced by the dashboard.
   galleryImages: z
-    .array(z.string().max(600_000))
+    .array(imageSrc)
     .max(5, 'You can keep at most 5 photos')
     .optional(),
 });
+
+/**
+ * The one shape the Edit Business form reads, for GET and PATCH alike. An
+ * explicit allow-list: spreading the row leaked internal columns (password
+ * hash, session revocation, must-change-password) to the browser.
+ */
+function toBusinessDto(v: Vendor) {
+  const staticListing = v.listingId ? getListingById(v.listingId) : null;
+  return {
+    id: v.id,
+    listingId: v.listingId || v.id,
+    businessName: v.businessName,
+    category: v.category || staticListing?.category || 'Pet Service',
+    city: v.city || staticListing?.city || 'Mumbai',
+    country: v.country || staticListing?.country || 'IN',
+    locality: v.locality || '',
+    address: v.address || staticListing?.address || '',
+    pincode: v.pincode || staticListing?.pincode || '',
+    phone: v.phone || staticListing?.phone || '',
+    email: v.email || '',
+    website: v.website || staticListing?.website || '',
+    whatsapp: v.whatsapp || '',
+    about: v.about || '',
+    openingHours: v.openingHours || '',
+    servicesList: v.servicesList || '',
+    imageUrl: v.imageUrl || '',
+    galleryImages: parseGallery(v.galleryImages),
+    hasPassword: !!v.passwordHash,
+    status: v.status,
+    claimedAt: v.claimedAt,
+  };
+}
 
 /** Gallery column is stored as JSON text; never let a bad row break the page. */
 function parseGallery(raw: string | null | undefined): string[] {
@@ -402,9 +461,36 @@ vendorDashboardRouter.patch(
 
     const { galleryImages, ...rest } = body;
     const data: Record<string, unknown> = { ...rest };
+    if (rest.imageUrl !== undefined) data.imageUrl = rest.imageUrl || null;
     if (galleryImages !== undefined) data.galleryImages = JSON.stringify(galleryImages);
+    // Every other phone write path normalizes before persisting (register,
+    // claim, login match) — without it here, a self-edited number can drift
+    // from the exact-string form /login's lookup expects and silently stop
+    // matching.
+    const country = (rest.country || v.country || 'IN') as 'IN' | 'US';
+    // The phone is the account's unique sign-in key, so a blank field means
+    // "leave it", never "store ''": the empty string wiped the login and the
+    // second vendor to do it hit the unique constraint.
+    if (rest.phone !== undefined) {
+      if (rest.phone.trim()) data.phone = normalizePhone(rest.phone, country);
+      else delete data.phone;
+    }
+    // The phone is also what a WhatsApp claim matches on. Moving an account
+    // onto the number of another business's listing would block (or capture)
+    // that owner's claim, and nothing here proves the number is theirs, so
+    // such a change goes through support instead.
+    if (typeof data.phone === 'string' && data.phone !== v.phone) {
+      const others = findListingByPhone(data.phone).filter((l) => l.id !== v.listingId);
+      if (others.length) {
+        throw new BadRequestError(
+          'That number belongs to another business listed on Pets24x7. Contact support@pets24x7.com to change it.',
+        );
+      }
+    }
+    if (rest.whatsapp !== undefined) data.whatsapp = rest.whatsapp.trim() ? normalizePhone(rest.whatsapp, country) : null;
 
     const updated = await prisma.vendor.update({ where: { id: v.id }, data });
+    invalidateVendorInsights(v.id);
 
     // The public site reads the in-memory listing index, not the vendor table,
     // so an edit that never reached the index showed nowhere outside this
@@ -413,9 +499,27 @@ vendorDashboardRouter.patch(
       req.log.warn({ err }, 'listing index sync failed after vendor edit'),
     );
 
+    // Action mails. Photos get their own template (it was never sent by
+    // anything); other fields get the profile-updated one, listing only the
+    // fields whose value actually moved.
+    const before = v as unknown as Record<string, unknown>;
+    if (galleryImages !== undefined) {
+      const prevCount = parseGallery(v.galleryImages).length;
+      if (galleryImages.length > prevCount) {
+        notifyIf(updated.email, (to) => vendorPhotosUpdatedEmail(to, updated.businessName, galleryImages.length));
+      }
+    }
+    const changed = Object.keys(data).filter(
+      (k) => k !== 'galleryImages' && (before[k] ?? null) !== (data[k] ?? null),
+    );
+    if (changed.length > 0) {
+      notifyIf(updated.email, (to) => vendorProfileUpdatedEmail(to, updated.businessName, changed));
+    }
+
     res.json({
       ok: true,
-      business: { ...updated, galleryImages: parseGallery(updated.galleryImages) },
+      // Spreading the whole row returned the bcrypt password hash to the browser.
+      business: toBusinessDto(updated),
     });
   }),
 );
@@ -483,8 +587,9 @@ vendorDashboardRouter.post(
     await prisma.vendor.update({
       where: { id: v.id },
       // Changing the password ends other sessions: whoever knew the old one
-      // should not keep a live cookie.
-      data: { passwordHash, mustChangePassword: false, sessionsRevokedAt: new Date() },
+      // should not keep a live cookie. Backdated so the cookie issued below
+      // (same second) survives — see revocationCutoff.
+      data: { passwordHash, mustChangePassword: false, sessionsRevokedAt: revocationCutoff() },
     });
     // Revoking sessions would log this vendor out of the tab they are using, so
     // hand them a fresh cookie issued after the cut-off.

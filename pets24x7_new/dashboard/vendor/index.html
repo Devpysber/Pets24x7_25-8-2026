@@ -26,6 +26,8 @@
     --text-main: #0F172A;
     --text-muted: #64748B;
     --text-subtle: #94A3B8;
+    --text-heading: #0F172A;
+    --text: #0F172A;
     --border: #E2E8F0;
     --border-light: #F1F5F9;
     --success: #15803D;
@@ -207,7 +209,7 @@
   }
   .biz-overview-main h2 { font-size: 18px; font-weight: 700; color: var(--text-main); letter-spacing: -0.3px; margin-bottom: 4px; }
   .biz-overview-sub { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .status-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 99px; font-weight: 600; font-size: 11.5px; }
+  .status-tag { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; padding: 2px 8px; border-radius: 99px; font-weight: 600; font-size: 11.5px; }
   .status-tag.active { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 
   /* Quick Actions Bar */
@@ -248,6 +250,62 @@
   /* Services Grid */
   .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
   .service-card { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+
+  /* Reviews list */
+  .review-item { padding: 14px 0; border-top: 1px solid var(--border-light); }
+  .review-item:first-child { border-top: none; }
+  .review-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 10px; }
+  .review-rating { font-size: 12.5px; font-weight: 700; color: var(--warning); }
+
+  /* Recommended next steps */
+  .next-step { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border-light); font-size: 13.5px; }
+  .next-step:first-child { border-top: none; }
+  .next-step.done { color: var(--text-muted); }
+  .next-step .btn { white-space: nowrap; flex-shrink: 0; }
+  .progress-track { height: 8px; background: var(--border-light); border-radius: 99px; overflow: hidden; margin: 6px 0 14px; }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 99px; width: 0; transition: width 0.4s ease; }
+
+  /* Recommendations (GET /api/reco/vendor) */
+  .reco-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-light); }
+  .reco-row:first-child { border-top: none; }
+  .reco-dot { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: #2563EB; }
+  .reco-dot.urgent { background: #DC2626; }
+  .reco-dot.recommended { background: #D97706; }
+  .reco-dot.opportunity { background: #2563EB; }
+  .reco-main { flex: 1; min-width: 0; }
+  .reco-title { font-size: 13.5px; font-weight: 700; color: var(--text-main); }
+  .reco-body { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
+  .reco-metric { font-size: 12px; color: var(--text-main); margin-top: 4px; }
+  .reco-side { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .reco-x { background: none; border: none; color: var(--text-subtle); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; }
+  .reco-x:hover { color: var(--text-main); }
+  .reco-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .reco-chip { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--border); background: var(--primary-light); color: var(--primary); cursor: pointer; }
+  .reco-chip:hover { border-color: var(--primary); }
+  .skel { background: linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%); background-size: 200% 100%; animation: skel 1.2s ease-in-out infinite; border-radius: var(--radius-sm); }
+  @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+  .bench-row { margin: 12px 0; }
+  .bench-head { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; margin-bottom: 5px; }
+  .bench-head span:last-child { color: var(--text-muted); }
+  .bench-track { position: relative; height: 10px; background: var(--border-light); border-radius: 99px; }
+  .bench-median { position: absolute; left: 0; top: 0; bottom: 0; background: #CBD5E1; border-radius: 99px; }
+  .bench-you { position: absolute; top: -3px; width: 4px; height: 16px; margin-left: -2px; background: var(--primary); border-radius: 2px; }
+  .perf-chart svg { display: block; width: 100%; height: 150px; }
+  .perf-chart .bar-views { fill: #BFDBFE; }
+  .perf-chart .bar-taps { fill: var(--primary); }
+  .perf-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .perf-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .comp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border-light); font-size: 13px; }
+  .comp-row a { font-weight: 600; color: var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .why-boost { background: linear-gradient(135deg, #EFF6FF, #FFFBEB); border: 1px solid #BFDBFE; border-radius: var(--radius-lg); padding: 18px 20px; margin-top: 28px; }
+  @media (max-width: 560px) {
+    .reco-row { flex-wrap: wrap; }
+    .reco-main { flex-basis: calc(100% - 22px); }
+    .reco-side { margin-left: 22px; }
+    .bench-head { flex-direction: column; gap: 2px; }
+  }
+  .why-boost ul { margin: 8px 0 12px 18px; font-size: 13.5px; line-height: 1.7; color: var(--text-main); }
 
   /* Grow Your Business Hero */
   .grow-hero {
@@ -318,19 +376,120 @@
   /* Modals */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
   .modal-backdrop.show { display: flex; }
-  .modal-panel { background: #FFFFFF; width: 100%; max-width: 620px; border-radius: var(--radius-lg); padding: 28px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .modal-panel { background: #FFFFFF; width: 100%; max-width: 620px; border-radius: var(--radius-lg); padding: 28px; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; box-shadow: var(--shadow); border: 1px solid var(--border); }
+
+  /* ---------- Shared hardening (a11y, wrapping, responsive helpers) ---------- */
+  /* Component display rules (.btn, .metric-card …) beat the UA [hidden] rule,
+     so hidden Remove buttons / sponsored cards were still showing. */
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden; }
+  img, svg, video, iframe { max-width: 100%; }
+  [id] { scroll-margin-top: 72px; }
+  .content-container, .modal-panel { overflow-wrap: anywhere; }
+  table.data-table { overflow-wrap: normal; }
+  a { color: var(--primary); }
+  a:not([href]) { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+  .btn:focus-visible, .nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .link-btn { background: none; border: none; padding: 0; font: inherit; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; }
+  .link-btn:hover { text-decoration: underline; }
+  .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--text-main); flex-shrink: 0; margin: -8px -8px -8px 0; }
+  .modal-close:hover { background: var(--sidebar-hover); }
+  .modal-panel:focus { outline: none; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .steps-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .billing-toggle { display: flex; align-items: center; gap: 4px; background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px; border-radius: 30px; flex-wrap: nowrap; }
+  .billing-toggle .btn { border-radius: 20px; font-size: 12px; padding: 6px 14px; white-space: nowrap; }
+  .nav-backdrop { display: none; }
+  .menu-btn { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); margin-right: -8px; }
+  .menu-btn:hover { background: var(--sidebar-hover); }
+  .metric-card { justify-content: flex-start; }
+  .metric-val { margin-top: 2px; }
+  .receipt-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; font-size: 12px; }
+  .receipt-head > div:last-child { text-align: right; }
 
   @media (max-width: 840px) {
-    .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
-    .sidebar.open { transform: translateX(0); }
-    .mobile-bar { display: flex; }
-    .main-workspace { margin-left: 0; padding-top: 56px; }
-    .top-header { display: none; }
-    .content-container { padding: 20px 16px; }
-    .biz-overview-card { flex-direction: column; align-items: flex-start; }
-    .metrics-grid { grid-template-columns: 1fr 1fr; }
-    .plans-grid { grid-template-columns: 1fr; }
+    .sidebar { transform: translateX(-100%); transition: transform 0.25s ease, visibility 0.25s; visibility: hidden; width: min(280px, 85vw); box-shadow: 0 10px 40px rgba(15,23,42,0.25); }
+    .sidebar.open { transform: translateX(0); visibility: visible; }
+    .nav-backdrop { display: block; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 95; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .nav-backdrop.show { opacity: 1; pointer-events: auto; }
+    body.nav-open { overflow: hidden; }
+    .nav-item { min-height: 44px; }
+    .mobile-bar { display: flex; padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); }
+    .main-workspace { margin-left: 0; padding-top: calc(56px + env(safe-area-inset-top)); }
+    /* Keep the page title on phones — several panes have no heading of their own. */
+    .top-header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+    .top-header h1 { font-size: 18px; }
+    .top-header p { font-size: 12.5px; }
+    .header-actions .user-avatar { display: none; }
+    .content-container { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+    .card { padding: 16px; }
+    .biz-overview-card { flex-direction: column; align-items: flex-start; padding: 16px; }
+    .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
     .goals-grid { grid-template-columns: 1fr; }
+    .card-header { flex-wrap: wrap; gap: 10px; }
+    .btn { min-height: 44px; }
+    .btn-sm { min-height: 40px; }
+    .form-control, select.form-control, textarea.form-control { font-size: 16px; min-height: 44px; }
+    .modal-close { width: 44px; height: 44px; }
+    .grow-hero { padding: 22px 18px; }
+    .grow-hero h2 { font-size: 22px; }
+    .grow-hero p.sub { font-size: 14px !important; }
+    .reco-x { min-width: 40px; min-height: 40px; }
+    .link-btn { min-height: 44px; }
+    .mobile-bar .brand { min-height: 44px; }
+    .comp-row a { padding: 10px 0; }
+    #csServices label { min-height: 40px; }
+    #csServices input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--primary); }
+  }
+  @media (max-width: 560px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 0; }
+    .plans-grid { grid-template-columns: 1fr !important; }
+    .grid-3.keep-2 { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-backdrop { padding: 10px; align-items: flex-end; }
+    .modal-panel { padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 20px); border-radius: 16px; }
+    .steps-bar { font-size: 11.5px !important; padding: 8px 6px !important; flex-wrap: nowrap; gap: 4px; }
+    .steps-bar > span:nth-child(even) { display: none; }
+    .steps-bar > span { flex: 1; text-align: center; line-height: 1.3; }
+    .steps-bar > span + span:nth-child(odd) { border-left: 1px solid var(--border); }
+    .billing-toggle { width: 100%; }
+    .billing-toggle .btn { flex: 1; padding: 6px 8px; }
+    .receipt-head > div:last-child { text-align: left; }
+    /* Tables become stacked cards: each cell shows its column name. */
+    table.data-table.stack thead { display: none; }
+    table.data-table.stack, table.data-table.stack tbody, table.data-table.stack tr, table.data-table.stack td { display: block; width: 100%; }
+    table.data-table.stack tr { border-bottom: 1px solid var(--border); padding: 10px 0; }
+    table.data-table.stack tr:last-child { border-bottom: none; }
+    table.data-table.stack tr:hover td { background: transparent; }
+    table.data-table.stack td { border: none; padding: 4px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right !important; overflow-wrap: anywhere; }
+    table.data-table.stack td::before { content: attr(data-label); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); text-align: left; flex-shrink: 0; }
+    table.data-table.stack td[data-label=""]::before, table.data-table.stack td[colspan]::before { content: none; }
+    table.data-table.stack td[colspan] { justify-content: center; text-align: center !important; }
+    table.data-table.stack td.cell-action { justify-content: flex-end; padding-top: 8px; }
+    table.data-table.stack td.cell-action .btn { width: 100%; }
+    table.data-table.stack td.cell-primary { font-size: 14px; }
+    .card:not(.card-flush) > .table-container { margin-left: -16px; margin-right: -16px; }
+  }
+  /* Toasts sit at the bottom on phones, right over a bottom-sheet modal's Save
+     button (a tap on Save hit the toast instead). Show them under the top bar here. */
+  @media (max-width: 560px) {
+    body { --p24-toast-top: 64px; }
+    body .p24-toast-wrap { top: calc(64px + env(safe-area-inset-top)); bottom: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    .goal-card:hover, .plan-card:hover { transform: none; }
+  }
+  /* Print only the receipt when "Print / Save PDF" is used from it. */
+  @media print {
+    body.printing-receipt .app-layout, body.printing-receipt .modal-backdrop:not(#vendorReceiptModal), body.printing-receipt .mobile-bar { display: none !important; }
+    body.printing-receipt #vendorReceiptModal { position: static; display: block !important; background: none; padding: 0; backdrop-filter: none; }
+    body.printing-receipt #vendorReceiptModal .modal-panel { max-height: none; overflow: visible; box-shadow: none; border: none; max-width: none !important; }
+    body.printing-receipt #vendorReceiptModal .no-print { display: none !important; }
   }
 </style>
 </head>
@@ -344,13 +503,13 @@
       <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:30px;width:auto;max-width:150px;object-fit:contain;display:block;" />
       <span>Pets24x7 Vendor</span>
     </a>
-    <button class="menu-btn" id="menuToggle">
+    <button class="menu-btn" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </header>
 
   <!-- Left Sidebar Navigation -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Vendor portal navigation">
     <a class="sidebar-brand" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
       <img src="/pets24x7_logo.png" alt="Pets24x7" />
       <div class="sidebar-brand-text">
@@ -371,6 +530,14 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Enquiries
         <span class="badge" id="enqNavBadge" hidden>0</span>
+      </a>
+      <a class="nav-item" data-view="services">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Services
+      </a>
+      <a class="nav-item" data-view="reviews">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Reviews
       </a>
       <a class="nav-item" data-view="performance">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -397,6 +564,7 @@
       </a>
     </div>
   </aside>
+  <div class="nav-backdrop" id="navBackdrop" aria-hidden="true"></div>
 
   <!-- Main Workspace -->
   <main class="main-workspace">
@@ -437,6 +605,17 @@
           <button class="btn btn-sm" onclick="navigate('grow')">🚀 Grow Your Business</button>
         </div>
 
+        <!-- Recommended actions — ranked server-side by GET /api/reco/vendor -->
+        <div class="card" id="recoActionsCard">
+          <div class="card-header" style="margin-bottom:4px;">
+            <div>
+              <div class="card-title">Recommended for your business</div>
+              <div class="card-subtitle">The few things most likely to win you more customers right now.</div>
+            </div>
+          </div>
+          <div id="recoActions" aria-live="polite"><div class="reco-row" aria-hidden="true"><span class="reco-dot skel"></span><div class="reco-main"><div class="skel" style="height:13px; width:45%;"></div><div class="skel" style="height:11px; width:80%; margin-top:8px;"></div></div></div></div>
+        </div>
+
         <!-- Business Metrics Cards -->
         <div class="metrics-grid">
           <div class="metric-card">
@@ -448,7 +627,14 @@
             <div class="metric-trend" style="color:var(--text-muted);" id="mEnqNew">—</div>
           </div>
 
-
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-lbl">Published Reviews</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div class="metric-val" id="mReviews">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mReviewAvg">—</div>
+          </div>
 
           <div class="metric-card">
             <div class="metric-top">
@@ -460,6 +646,19 @@
           </div>
         </div>
 
+        <!-- Recommended next steps — driven by the server's completion checklist -->
+        <div class="card" id="dashChecklistCard" hidden>
+          <div class="card-header" style="margin-bottom:4px;">
+            <div>
+              <div class="card-title">Recommended next steps</div>
+              <div class="card-subtitle">Complete profiles rank higher and win more enquiries.</div>
+            </div>
+            <span style="font-size:20px; font-weight:800; color:var(--primary);" id="dashCompletionPct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="dashCompletionBar"></div></div>
+          <div id="dashChecklist"></div>
+        </div>
+
         <!-- Recent Enquiries Section -->
         <div class="card">
           <div class="card-header">
@@ -467,11 +666,11 @@
               <div class="card-title">Recent Enquiries</div>
               <div class="card-subtitle">Latest customer requests received via Pets24x7.</div>
             </div>
-            <a onclick="navigate('enquiries')" style="color:var(--primary); font-size:13px; font-weight:600; cursor:pointer;">View all →</a>
+            <button type="button" class="link-btn" onclick="navigate('enquiries')">View all →</button>
           </div>
 
           <div class="table-container">
-            <table class="data-table">
+            <table class="data-table stack">
               <thead>
                 <tr>
                   <th>Customer</th>
@@ -482,7 +681,7 @@
                   <th style="text-align:right;">Action</th>
                 </tr>
               </thead>
-              <tbody id="dashTableBody"></tbody>
+              <tbody id="dashTableBody"><tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Loading enquiries…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -555,7 +754,8 @@
         <div class="card">
           <div class="card-title" style="margin-bottom:6px;">Email address</div>
           <div class="card-subtitle" style="margin-bottom:14px;">Receipts, enquiry alerts and sign-in codes go here.</div>
-          <div class="form-group"><label>Business email</label><input type="email" class="form-control" id="accEmailInput" disabled /></div>
+          <div class="form-group"><label for="accEmailInput">Business email</label><input type="email" class="form-control" id="accEmailInput" disabled /></div>
+          <div id="accEmailVerify" style="font-size:12.5px; margin-bottom:10px;"></div>
           <div style="font-size:12.5px; color:var(--text-muted);">
             This address identifies your account, so we change it for you rather than letting it be edited here.
             <a href="mailto:hello@pets24x7.com?subject=Change%20the%20email%20on%20my%20business%20account" style="font-weight:700;">Email support</a>
@@ -566,10 +766,10 @@
         <div class="card">
           <div class="card-title" style="margin-bottom:6px;">Change password</div>
           <div class="card-subtitle" style="margin-bottom:14px;">Used for password sign-in. Signing in with an emailed code keeps working either way.</div>
-          <div class="form-group" id="accCurrentPassWrap"><label>Current password</label><input type="password" class="form-control" id="accCurrentPass" autocomplete="current-password" /></div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div class="form-group"><label>New password</label><input type="password" class="form-control" id="accNewPass" autocomplete="new-password" /></div>
-            <div class="form-group"><label>Confirm new password</label><input type="password" class="form-control" id="accNewPass2" autocomplete="new-password" /></div>
+          <div class="form-group" id="accCurrentPassWrap"><label for="accCurrentPass">Current password</label><input type="password" class="form-control" id="accCurrentPass" autocomplete="current-password" /></div>
+          <div class="grid-2">
+            <div class="form-group"><label for="accNewPass">New password</label><input type="password" class="form-control" id="accNewPass" autocomplete="new-password" /></div>
+            <div class="form-group"><label for="accNewPass2">Confirm new password</label><input type="password" class="form-control" id="accNewPass2" autocomplete="new-password" /></div>
           </div>
           <button class="btn btn-primary btn-sm" id="accPassSave">Update password</button>
           <div id="accPassMsg" style="font-size:12.5px; margin-top:8px;"></div>
@@ -593,9 +793,9 @@
           <button class="btn btn-sm filter-enq" data-filter="archived">Archived (0)</button>
         </div>
 
-        <div class="card" style="padding:0; overflow:hidden;">
+        <div class="card card-flush" style="padding:0; overflow:hidden;">
           <div class="table-container">
-            <table class="data-table">
+            <table class="data-table stack">
               <thead>
                 <tr>
                   <th>Customer</th>
@@ -606,9 +806,58 @@
                   <th style="text-align:right;">Action</th>
                 </tr>
               </thead>
-              <tbody id="fullEnquiriesTableBody"></tbody>
+              <tbody id="fullEnquiriesTableBody"><tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Loading enquiries…</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <!-- 5. SERVICES VIEW -->
+      <section id="view-services" class="view-pane">
+        <div class="card-header" style="margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:18px; font-weight:700;">Services &amp; Prices</h2>
+            <div class="card-subtitle">Priced services shown on your public listing. Hidden services stay saved but are not shown.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddServiceModal()">+ Add Service</button>
+        </div>
+        <div class="services-grid" id="servicesGrid">
+          <p style="color:var(--text-muted); padding:20px 0;">Loading services…</p>
+        </div>
+      </section>
+
+      <!-- 5B. REVIEWS VIEW -->
+      <section id="view-reviews" class="view-pane">
+        <div class="card" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+          <div style="font-size:36px; font-weight:800; letter-spacing:-1px;" id="revAvg">—</div>
+          <div>
+            <div style="color:#F59E0B; font-size:18px; letter-spacing:2px;" id="revStars"></div>
+            <div style="font-size:13px; color:var(--text-muted);" id="revCount">No reviews yet</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Request Reviews on WhatsApp</div>
+              <div class="card-subtitle">One customer per line: phone number, optionally followed by " - name". Up to 50 a day.</div>
+            </div>
+          </div>
+          <label for="rrInput" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;">Customer phone numbers, one per line</label><textarea class="form-control" id="rrInput" rows="4" autocomplete="off" placeholder="+91 98765 43210 - Priya&#10;+91 91234 56789"></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+            <button class="btn btn-wa btn-sm" id="rrSend">Send Review Requests</button>
+          </div>
+          <div id="rrResults" style="display:none; margin-top:14px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Customer Reviews</div>
+              <div class="card-subtitle">Reviews left for your business on Pets24x7. New reviews go live after moderation.</div>
+            </div>
+          </div>
+          <div id="reviewsList"><p style="color:var(--text-muted); padding:16px 0;">Loading reviews…</p></div>
         </div>
       </section>
 
@@ -624,8 +873,40 @@
           <div class="metric-card"><span class="metric-lbl">Total Enquiries</span><div class="metric-val" id="pEnqTotal">—</div></div>
           <div class="metric-card"><span class="metric-lbl">New / Unhandled</span><div class="metric-val" id="pEnqNew">—</div></div>
           <div class="metric-card"><span class="metric-lbl">Completed</span><div class="metric-val" id="pEnqDone">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Published Reviews</span><div class="metric-val" id="pReviews">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Average Rating</span><div class="metric-val" id="pRating">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Services Listed</span><div class="metric-val" id="pServices">—</div></div>
         </div>
-        <p style="font-size:12.5px; color:var(--text-muted); margin-top:12px;">Profile-view and impression tracking is not enabled for this account yet.</p>
+
+        <!-- Visibility on Pets24x7 (last 30 days) — GET /api/reco/vendor performance -->
+        <h3 style="font-size:15px; font-weight:700; margin:4px 0 12px;">Visibility · last 30 days</h3>
+        <div class="metrics-grid">
+          <div class="metric-card"><span class="metric-lbl">Profile Views</span><div class="metric-val" id="pViews">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Contact Taps</span><div class="metric-val" id="pTaps">—</div><div class="metric-trend" style="color:var(--text-muted);" id="pTapsSplit">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Shown in Recommendations</span><div class="metric-val" id="pRecoImp">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Recommendation Clicks</span><div class="metric-val" id="pRecoClk">—</div><div class="metric-trend" style="color:var(--text-muted);" id="pRecoCtr"></div></div>
+          <div class="metric-card" id="pSponsoredCard" hidden><span class="metric-lbl">Sponsored Placement</span><div class="metric-val" id="pSpImp">—</div><div class="metric-trend" style="color:var(--text-muted);" id="pSpClk">—</div></div>
+        </div>
+
+        <div class="card" id="perfTrendCard">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Views vs contact taps</div>
+              <div class="card-subtitle">Daily activity on your listing over the last 30 days.</div>
+            </div>
+          </div>
+          <div class="perf-chart" id="perfChart"><div class="skel" style="height:150px;"></div></div>
+        </div>
+
+        <div class="card" id="perfBenchCard">
+          <div class="card-header">
+            <div>
+              <div class="card-title" id="perfBenchTitle">How you compare</div>
+              <div class="card-subtitle" id="perfBenchSub">Compared with other businesses in your city and category. Public data only.</div>
+            </div>
+          </div>
+          <div id="perfBench"><div class="skel" style="height:14px; margin:14px 0;"></div><div class="skel" style="height:14px; margin:14px 0;"></div><div class="skel" style="height:14px; margin:14px 0;"></div></div>
+        </div>
       </section>
 
       <!-- 7. GROW YOUR BUSINESS VIEW (FRONT PAGE: HERO, WHAT WE HANDLE, ACTIVE CAMPAIGN, MARKETING GOALS) -->
@@ -720,11 +1001,14 @@
         </div>
 
         <!-- Featured Placement — paid top-of-page slot on this listing's city + category pages -->
+        <!-- Why boost now — shown only when /api/reco/vendor says a boost or renewal is worth it -->
+        <div class="why-boost" id="growWhyBoost" hidden></div>
+
         <div class="card" id="featuredCard" style="margin-top:28px;">
           <div class="card-header">
             <div>
               <div class="card-title">⭐ Featured Placement</div>
-              <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Pin your listing to the top of your city and category pages on pets24x7.com, with a "Featured" badge.</p>
+              <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Pin your listing to the top of your city and category pages on pets24x7.com, clearly labelled "Sponsored".</p>
             </div>
           </div>
           <div id="featuredActive" style="display:none; margin-bottom:16px;"></div>
@@ -739,14 +1023,12 @@
       <section id="view-grow-plans" class="view-pane">
         <!-- Back Navigation Link -->
         <div style="margin-bottom:16px;">
-          <a onclick="navigate('grow')" style="font-size:13px; font-weight:600; color:var(--primary); cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
-            ← Back to Marketing Goals
-          </a>
+          <button type="button" class="link-btn" onclick="navigate('grow')">← Back to Marketing Goals</button>
         </div>
 
         <!-- 3-Step Progress Indicator at top of Plan Selection -->
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; padding:12px 18px; background:#FFFFFF; border-radius:var(--radius); border:1px solid var(--border); font-size:13px; font-weight:700; box-shadow:var(--shadow-sm);">
-          <span style="color:var(--primary); font-weight:800;">1 Choose Plan (Active)</span>
+        <div class="steps-bar" style="margin-bottom:24px; padding:12px 18px; background:#FFFFFF; border-radius:var(--radius); border:1px solid var(--border); font-size:13px; font-weight:700; box-shadow:var(--shadow-sm);">
+          <span style="color:var(--primary); font-weight:800;" aria-current="step">1 Choose Plan</span>
           <span style="color:var(--text-subtle);">➔</span>
           <span style="color:var(--text-muted);">2 Campaign Settings</span>
           <span style="color:var(--text-subtle);">➔</span>
@@ -784,8 +1066,9 @@
       <section id="view-settings" class="view-pane">
         <div class="card">
           <div class="card-title" style="margin-bottom:14px;">Settings</div>
-          <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="fName" /></div>
-          <div class="form-group"><label>Contact Email</label><input type="email" class="form-control" id="fEmail" /></div>
+          <div class="form-group"><label for="fName">Business Name</label><input type="text" class="form-control" id="fName" autocomplete="organization" /></div>
+          <div class="form-group"><label for="fEmail">Contact Email</label><input type="email" class="form-control" id="fEmail" disabled /></div>
+          <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 14px;">Your email identifies your account — contact support to change it.</div>
           <button class="btn btn-primary btn-sm" id="saveBtn">Save Settings</button>
         </div>
       </section>
@@ -797,11 +1080,11 @@
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
             <div>
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-                <span class="status-tag" style="background:rgba(255,255,255,0.2); color:#FFFFFF; border:1px solid rgba(255,255,255,0.3); font-weight:700; font-size:12px;" id="vSubBadge">⭐ GOLD PLATINUM</span>
-                <span style="font-size:12px; font-weight:600; opacity:0.9;" id="vSubStatusTag">● ACTIVE</span>
+                <span class="status-tag" style="background:rgba(255,255,255,0.2); color:#FFFFFF; border:1px solid rgba(255,255,255,0.3); font-weight:700; font-size:12px;" id="vSubBadge">⭐ —</span>
+                <span style="font-size:12px; font-weight:600; opacity:0.9;" id="vSubStatusTag"></span>
               </div>
-              <h2 style="font-size:24px; font-weight:800; margin:0 0 6px 0;" id="vSubTierTitle">Vendor Gold Platinum Plan</h2>
-              <p style="font-size:13.5px; opacity:0.9; margin:0;" id="vSubValidityText">Valid until October 5, 2026 • Auto-renew active</p>
+              <h2 style="font-size:24px; font-weight:800; margin:0 0 6px 0;" id="vSubTierTitle">Loading your plan…</h2>
+              <p style="font-size:13.5px; opacity:0.9; margin:0;" id="vSubValidityText">&nbsp;</p>
             </div>
             <div>
               <button class="btn btn-sm" style="background:#FFFFFF; color:#1E3A8A; font-weight:700; border:none; padding:10px 20px; font-size:13.5px;" onclick="scrollToVendorPlans()">Upgrade / Change Plan</button>
@@ -812,15 +1095,15 @@
           <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.2); display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
             <div>
               <div style="font-size:12px; opacity:0.8; font-weight:600;">Monthly Customer Leads</div>
-              <div style="font-size:20px; font-weight:800; margin-top:2px;" id="vSubLeadCount">∞ Unlimited Leads</div>
+              <div style="font-size:20px; font-weight:800; margin-top:2px;" id="vSubLeadCount">—</div>
             </div>
             <div>
               <div style="font-size:12px; opacity:0.8; font-weight:600;">Verification &amp; Badge Status</div>
-              <div style="font-size:15px; font-weight:700; margin-top:4px;" id="vSubBadgeStatus">Verified Gold Business</div>
+              <div style="font-size:15px; font-weight:700; margin-top:4px;" id="vSubBadgeStatus">—</div>
             </div>
             <div>
               <div style="font-size:12px; opacity:0.8; font-weight:600;">Search Ranking Boost</div>
-              <div style="font-size:15px; font-weight:700; margin-top:4px; color:#FDE047;">Top #1 Search Ranking 🚀</div>
+              <div style="font-size:15px; font-weight:700; margin-top:4px; color:#FDE047;" id="vSubRankBoost">—</div>
             </div>
           </div>
         </div>
@@ -832,14 +1115,14 @@
             <p style="font-size:13.5px; color:var(--text-muted); margin-top:2px;">Select the best subscription tier to get verified, receive customer leads, and rank #1 in your city.</p>
           </div>
           <!-- Billing Cycle Switch -->
-          <div style="display:flex; align-items:center; gap:8px; background:#F1F5F9; border:1px solid #E2E8F0; padding:4px; border-radius:30px;">
-            <button id="vSubToggleMonthly" class="btn btn-sm btn-primary" style="border-radius:20px; font-size:12px; padding:6px 16px;" onclick="setVendorSubBilling('MONTHLY')">Monthly Billing</button>
-            <button id="vSubToggleAnnual" class="btn btn-sm btn-outline" style="border-radius:20px; font-size:12px; padding:6px 16px;" onclick="setVendorSubBilling('ANNUAL')">Annual Billing <span style="background:#DC2626; color:#FFF; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:800; margin-left:4px;">SAVE 20%</span></button>
+          <div class="billing-toggle" role="group" aria-label="Billing period">
+            <button id="vSubToggleMonthly" class="btn btn-sm btn-primary" aria-pressed="true" onclick="setVendorSubBilling('MONTHLY')">Monthly billing</button>
+            <button id="vSubToggleAnnual" class="btn btn-sm btn-outline" aria-pressed="false" onclick="setVendorSubBilling('ANNUAL')">Annual <span style="background:#DC2626; color:#FFF; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:800; margin-left:4px;">2 MONTHS FREE</span></button>
           </div>
         </div>
 
         <!-- Vendor Plans Grid -->
-        <div class="plans-grid" id="vendorSubPlansGrid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px; margin-bottom:32px;">
+        <div class="plans-grid" id="vendorSubPlansGrid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:20px; margin-bottom:32px;">
           <p style="color:var(--text-muted);">Loading subscription plans...</p>
         </div>
 
@@ -851,7 +1134,8 @@
               <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Download receipts and track past subscription transactions.</p>
             </div>
           </div>
-          <table class="data-table" style="width:100%;">
+          <div class="table-container">
+          <table class="data-table stack" style="width:100%;">
             <thead>
               <tr>
                 <th>Date</th>
@@ -867,6 +1151,7 @@
               <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Loading invoices...</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -879,11 +1164,11 @@
   <div class="modal-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:17px; font-weight:800;" id="csModalTitle">Campaign Setup</h3>
-      <button onclick="closeModal('campaignSetupModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal(\'campaignSetupModal\')" aria-label="Close">✕</button>
     </div>
 
     <!-- 3-Step Progress Indicator -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding:10px 14px; background:#F8FAFC; border-radius:8px; border:1px solid var(--border); font-size:12.5px; font-weight:700;">
+    <div class="steps-bar" style="margin-bottom:20px; padding:10px 14px; background:#F8FAFC; border-radius:8px; border:1px solid var(--border); font-size:12.5px; font-weight:700;">
       <span id="progStep1" style="color:var(--text-muted);">1 Choose Plan</span>
       <span style="color:var(--text-subtle);">➔</span>
       <span id="progStep2" style="color:var(--primary);">2 Campaign Settings</span>
@@ -894,33 +1179,33 @@
     <!-- Step 2: Campaign Settings -->
     <div id="csStep2">
       <div class="form-group">
-        <label>Selected Package</label>
+        <label for="csPlanName">Selected Package</label>
         <input type="text" class="form-control" id="csPlanName" readonly style="background:#F8FAFC; font-weight:700; color:var(--primary);" />
       </div>
 
       <div class="form-group">
-        <label>Campaign Objective</label>
+        <label for="csGoalDisplay">Campaign Objective</label>
         <input type="text" class="form-control" id="csGoalDisplay" readonly style="background:#F8FAFC; font-weight:600;" />
       </div>
 
       <div class="form-group">
-        <label>Business Name</label>
+        <label for="csBizName">Business Name</label>
         <input type="text" class="form-control" id="csBizName" readonly style="background:#F8FAFC; font-weight:600;" />
       </div>
 
       <div class="form-group">
-        <label>WhatsApp Number for Enquiries</label>
-        <input type="text" class="form-control" id="csPhone" required />
+        <label for="csPhone">WhatsApp Number for Enquiries</label>
+        <input type="tel" autocomplete="tel" class="form-control" id="csPhone" required />
         <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Confirm or update the WhatsApp number where customer enquiries will be received.</div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+      <div class="grid-2">
         <div class="form-group">
-          <label>Target Location</label>
+          <label for="csLocation">Target Location</label>
           <input type="text" class="form-control" id="csLocation" required />
         </div>
         <div class="form-group">
-          <label>Target Radius</label>
+          <label for="csRadius">Target Radius</label>
           <select class="form-control" id="csRadius">
             <option>5 km radius</option>
             <option>10 km radius</option>
@@ -931,28 +1216,17 @@
 
       <div class="form-group">
         <label>Services to Promote</label>
-        <div style="display:flex; flex-direction:column; gap:6px; font-size:13px; margin-top:4px;">
-          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
-            <input type="checkbox" checked /> Veterinary Consultation
-          </label>
-          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
-            <input type="checkbox" checked /> Vaccination Package
-          </label>
-          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">
-            <input type="checkbox" /> Pet Grooming &amp; Bathing
-          </label>
-        </div>
+        <div id="csServices" style="display:flex; flex-direction:column; gap:6px; font-size:13px; margin-top:4px;"></div>
       </div>
 
       <div class="form-group">
-        <label>Campaign Information (Special offers, highlights, instructions)</label>
+        <label for="csInfo">Campaign Information (Special offers, highlights, instructions)</label>
         <textarea class="form-control" id="csInfo" placeholder="e.g. 10% discount on first consultation, open 7 days a week" style="height:70px;"></textarea>
       </div>
 
       <div class="form-group">
-        <label>Creative Assets (Upload photos/offers - Optional)</label>
-        <input type="file" class="form-control" multiple accept="image/*,video/*" />
-        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Optional. Our marketing team can design all creatives for you if no files are provided.</div>
+        <label>Creative Assets (Optional)</label>
+        <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Our marketing team designs all creatives for you. Have photos or offers you'd like used? Send them to us on <a href="https://wa.me/919930090487?text=Hi%20Pets24x7%2C%20sharing%20creatives%20for%20my%20campaign." target="_blank" rel="noopener" style="font-weight:700;">WhatsApp</a> after payment.</div>
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
@@ -1016,39 +1290,39 @@
   <div class="modal-panel" style="max-width:680px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h3 style="font-size:16px; font-weight:700;">Edit Business Information</h3>
-      <button onclick="closeModal('editBizModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal(\'editBizModal\')" aria-label="Close">✕</button>
     </div>
     <form id="editBizForm">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="form-group"><label>Business Name</label><input type="text" class="form-control" id="ebName" required /></div>
-        <div class="form-group"><label>Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
+      <div class="grid-2">
+        <div class="form-group"><label for="ebName">Business Name</label><input type="text" class="form-control" id="ebName" autocomplete="organization" required /></div>
+        <div class="form-group"><label for="ebCategory">Category</label><input type="text" class="form-control" id="ebCategory" required /></div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-        <div class="form-group"><label>City</label><input type="text" class="form-control" id="ebCity" required /></div>
-        <div class="form-group"><label>Locality / Area</label><input type="text" class="form-control" id="ebLocality" /></div>
-        <div class="form-group"><label>Country</label>
+      <div class="grid-3">
+        <div class="form-group"><label for="ebCity">City</label><input type="text" class="form-control" id="ebCity" autocomplete="address-level2" required /></div>
+        <div class="form-group"><label for="ebLocality">Locality / Area</label><input type="text" class="form-control" id="ebLocality" /></div>
+        <div class="form-group"><label for="ebCountry">Country</label>
           <select class="form-control" id="ebCountry">
             <option value="IN">India</option>
             <option value="US">United States</option>
           </select>
         </div>
       </div>
-      <div class="form-group"><label>PIN / ZIP code</label><input type="text" class="form-control" id="ebPincode" /></div>
-      <div class="form-group"><label>Full Address</label><input type="text" class="form-control" id="ebAddress" required /></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="form-group"><label>Phone Number</label><input type="text" class="form-control" id="ebPhone" required /></div>
-        <div class="form-group"><label>Email Address</label><input type="email" class="form-control" id="ebEmail" disabled /></div>
+      <div class="form-group"><label for="ebPincode">PIN / ZIP code</label><input type="text" class="form-control" id="ebPincode" autocomplete="postal-code" inputmode="numeric" /></div>
+      <div class="form-group"><label for="ebAddress">Full Address</label><input type="text" class="form-control" id="ebAddress" autocomplete="street-address" required /></div>
+      <div class="grid-2">
+        <div class="form-group"><label for="ebPhone">Phone Number</label><input type="tel" class="form-control" id="ebPhone" autocomplete="tel" inputmode="tel" required /></div>
+        <div class="form-group"><label for="ebEmail">Email Address</label><input type="email" class="form-control" id="ebEmail" disabled /></div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="form-group"><label>Website</label><input type="url" class="form-control" id="ebWebsite" placeholder="https://..." /></div>
-        <div class="form-group"><label>WhatsApp Number</label><input type="text" class="form-control" id="ebWhatsapp" /></div>
+      <div class="grid-2">
+        <div class="form-group"><label for="ebWebsite">Website</label><input type="url" class="form-control" id="ebWebsite" inputmode="url" autocomplete="url" placeholder="https://..." /></div>
+        <div class="form-group"><label for="ebWhatsapp">WhatsApp Number</label><input type="tel" class="form-control" id="ebWhatsapp" autocomplete="tel" inputmode="tel" /></div>
       </div>
-      <div class="form-group"><label>About Business</label><textarea class="form-control" id="ebAbout" rows="2" placeholder="Description of your clinic or services…"></textarea></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="form-group"><label>Opening Hours</label><input type="text" class="form-control" id="ebHours" placeholder="e.g. 9:00 AM - 8:00 PM" /></div>
-        <div class="form-group"><label>Services Offered</label><input type="text" class="form-control" id="ebServices" placeholder="e.g. Vaccination, Grooming" /></div>
+      <div class="form-group"><label for="ebAbout">About Business</label><textarea class="form-control" id="ebAbout" rows="2" placeholder="Description of your clinic or services…"></textarea></div>
+      <div class="grid-2">
+        <div class="form-group"><label for="ebHours">Opening Hours</label><input type="text" class="form-control" id="ebHours" placeholder="e.g. 9:00 AM - 8:00 PM" /></div>
+        <div class="form-group"><label for="ebServices">Services Offered</label><input type="text" class="form-control" id="ebServices" placeholder="e.g. Vaccination, Grooming" /></div>
       </div>
-      <div class="form-group"><label>Storefront Cover Image URL</label><input type="url" class="form-control" id="ebImageUrl" placeholder="https://..." /></div>
+      <div class="form-group"><label for="ebImageUrl">Storefront Cover Image URL</label><input type="url" class="form-control" id="ebImageUrl" placeholder="https://..." /></div>
       <div id="ebErr" style="color:red; font-size:12px; font-weight:600; display:none; margin-top:8px;"></div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
         <button type="button" class="btn btn-sm" onclick="closeModal('editBizModal')">Cancel</button>
@@ -1058,11 +1332,32 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="addServiceModal">
+  <div class="modal-panel" style="max-width:520px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px; font-weight:700;">Add a Service</h3>
+      <button type="button" class="modal-close" onclick="closeModal(\'addServiceModal\')" aria-label="Close">✕</button>
+    </div>
+    <form id="addServiceForm">
+      <div class="form-group"><label for="sName">Service Name</label><input type="text" class="form-control" id="sName" maxlength="120" required placeholder="e.g. Full Grooming" /></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label for="sPrice" id="sPriceLabel">Price (₹)</label><input type="number" class="form-control" id="sPrice" min="0" step="1" required placeholder="799" /></div>
+        <div class="form-group"><label for="sDuration">Duration</label><input type="text" class="form-control" id="sDuration" maxlength="40" placeholder="45 mins" /></div>
+      </div>
+      <div class="form-group"><label for="sDesc">Description (optional)</label><textarea class="form-control" id="sDesc" rows="3" maxlength="500" placeholder="What's included…"></textarea></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button type="button" class="btn btn-sm" onclick="closeModal('addServiceModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="enquiryModal">
   <div class="modal-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:16px; font-weight:700;">Enquiry Details</h3>
-      <button onclick="closeModal('enquiryModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal(\'enquiryModal\')" aria-label="Close">✕</button>
     </div>
     <div id="enquiryModalBody"></div>
   </div>
@@ -1072,7 +1367,7 @@
   <div class="modal-panel" style="max-width:840px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:16px; font-weight:700;">Listing Preview</h3>
-      <button onclick="closeModal('previewModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal(\'previewModal\')" aria-label="Close">✕</button>
     </div>
     <iframe id="previewIframe" src="about:blank" style="width:100%; height:580px; border:1px solid var(--border); border-radius:var(--radius-sm);"></iframe>
     <p id="previewNote" style="font-size:12.5px; color:var(--text-muted); margin-top:8px;"></p>
@@ -1090,7 +1385,7 @@
           <p style="font-size:11.5px; opacity:0.8; margin:2px 0 0 0;" id="vPayModalSubtitle">Secured by Razorpay • 256-bit SSL Encryption</p>
         </div>
       </div>
-      <button onclick="closeModal('vendorPaymentGatewayModal')" style="background:rgba(255,255,255,0.15); border:none; color:#FFFFFF; font-size:16px; width:30px; height:30px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+      <button type="button" onclick="closeModal('vendorPaymentGatewayModal')" aria-label="Close" style="background:rgba(255,255,255,0.15); border:none; color:#FFFFFF; font-size:16px; width:44px; height:44px; flex-shrink:0; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
     </div>
 
     <!-- Modal Body -->
@@ -1103,7 +1398,7 @@
             <div style="font-size:16px; font-weight:800; color:var(--text-heading);" id="vPayItemName">Vendor Gold Platinum Plan</div>
             <div style="font-size:12px; color:var(--text-muted);" id="vPayItemDesc">30 Days Membership • Unlimited Leads</div>
           </div>
-          <div style="font-size:18px; font-weight:800; color:var(--primary);" id="vPayBasePrice">₹2,999</div>
+          <div style="font-size:18px; font-weight:800; color:var(--primary); white-space:nowrap; flex-shrink:0; margin-left:12px;" id="vPayBasePrice">₹2,999</div>
         </div>
         <div style="border-top:1px dashed #CBD5E1; margin:12px 0; padding-top:12px; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
           <div style="display:flex; justify-content:space-between; color:var(--text-muted);">
@@ -1121,81 +1416,10 @@
         </div>
       </div>
 
-      <!-- Payment Method Selection -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:10px; text-transform:uppercase;">Select Payment Method</div>
-        
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <!-- Option 1: Card -->
-          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #2563EB; background:#EFF6FF; border-radius:10px; cursor:pointer;">
-            <input type="radio" name="vPayMethod" value="CARD" checked style="accent-color:#2563EB;" onclick="switchPayMethodTab('CARD')" />
-            <div style="font-size:20px;">💳</div>
-            <div style="flex:1;">
-              <div style="font-weight:700; font-size:13.5px;">Credit / Debit Card</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">Visa, Mastercard, RuPay, Amex</div>
-            </div>
-          </label>
-
-          <!-- Option 2: UPI / QR Code -->
-          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #E2E8F0; background:#FFFFFF; border-radius:10px; cursor:pointer;">
-            <input type="radio" name="vPayMethod" value="UPI" style="accent-color:#2563EB;" onclick="switchPayMethodTab('UPI')" />
-            <div style="font-size:20px;">📱</div>
-            <div style="flex:1;">
-              <div style="font-weight:700; font-size:13.5px;">UPI / QR Code</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">GPay, PhonePe, Paytm, BHIM</div>
-            </div>
-          </label>
-
-          <!-- Option 3: Net Banking -->
-          <label class="pay-method-opt" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #E2E8F0; background:#FFFFFF; border-radius:10px; cursor:pointer;">
-            <input type="radio" name="vPayMethod" value="NETBANKING" style="accent-color:#2563EB;" onclick="switchPayMethodTab('NETBANKING')" />
-            <div style="font-size:20px;">🏦</div>
-            <div style="flex:1;">
-              <div style="font-weight:700; font-size:13.5px;">Net Banking</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">HDFC, ICICI, SBI, Axis, Kotak</div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Payment Details Input Form Pane -->
-      <div id="payDetailsPane" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; margin-bottom:20px;">
-        <div id="payPaneCard">
-          <div class="form-group" style="margin-bottom:10px;">
-            <label style="font-size:11px; font-weight:700;">Card Number</label>
-            <input type="text" class="form-control" placeholder="4532 •••• •••• 8921" id="vPayCardNum" value="4532 8901 2345 8921" />
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:11px; font-weight:700;">Expiry Date</label>
-              <input type="text" class="form-control" placeholder="MM/YY" id="vPayCardExp" value="08/28" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:11px; font-weight:700;">CVV</label>
-              <input type="password" class="form-control" placeholder="•••" id="vPayCardCvv" value="888" maxlength="4" />
-            </div>
-          </div>
-        </div>
-
-        <div id="payPaneUpi" style="display:none; text-align:center;">
-          <div style="font-size:12px; font-weight:700; margin-bottom:8px;">Scan QR Code or enter UPI ID</div>
-          <div style="background:#FFFFFF; border:1px solid #CBD5E1; padding:12px; display:inline-block; border-radius:8px; margin-bottom:8px;">
-            <div style="width:120px; height:120px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; font-size:40px; margin:0 auto;">📱</div>
-            <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">UPI ID: pets24x7.pay@icici</div>
-          </div>
-          <input type="text" class="form-control" placeholder="vendor@okaxis" id="vPayUpiId" value="petsvendor@gpay" style="text-align:center; font-weight:600;" />
-        </div>
-
-        <div id="payPaneNetbanking" style="display:none;">
-          <label style="font-size:11px; font-weight:700;">Select Bank</label>
-          <select class="form-control" id="vPayBankSelect">
-            <option>HDFC Bank</option>
-            <option>ICICI Bank</option>
-            <option>State Bank of India (SBI)</option>
-            <option>Axis Bank</option>
-            <option>Kotak Mahindra Bank</option>
-          </select>
-        </div>
+      <!-- Payment method is chosen inside the secure Razorpay window; nothing
+           card-related is typed into (or held by) this page. -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; margin-bottom:20px; font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+        You'll choose <strong style="color:var(--text-main);">Card, UPI or Net Banking</strong> in the secure Razorpay window that opens next. Your plan activates as soon as the payment is confirmed.
       </div>
 
       <!-- Action Button -->
@@ -1218,14 +1442,14 @@
         <h3 style="font-size:18px; font-weight:800; margin:0;">Tax Invoice &amp; Payment Receipt</h3>
         <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Pets24x7 Business Solutions Pvt Ltd</p>
       </div>
-      <button onclick="closeModal('vendorReceiptModal')" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal(\'vendorReceiptModal\')" aria-label="Close">✕</button>
     </div>
 
     <div id="vReceiptModalBody"></div>
 
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #E2E8F0; padding-top:14px;">
+    <div class="no-print" style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #E2E8F0; padding-top:14px; flex-wrap:wrap;">
       <button class="btn btn-sm" onclick="closeModal('vendorReceiptModal')">Close</button>
-      <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button>
+      <button class="btn btn-primary btn-sm" onclick="printReceipt()">🖨️ Print / Save PDF</button>
     </div>
   </div>
 </div>
@@ -1255,6 +1479,61 @@
   function esc(s) { return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
+  // Modal a11y: every panel is a labelled dialog; opening moves focus into it,
+  // closing returns focus to whatever opened it, and the page behind stops scrolling.
+  (function wireModalA11y() {
+    var lastFocus = null;
+    document.querySelectorAll('.modal-backdrop').forEach(function(m) {
+      var panel = m.querySelector('.modal-panel');
+      if (!panel) return;
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-modal', 'true');
+      var h = panel.querySelector('h3');
+      if (h) { if (!h.id) h.id = m.id + 'Title'; panel.setAttribute('aria-labelledby', h.id); }
+      panel.setAttribute('tabindex', '-1');
+      new MutationObserver(function() {
+        var open = m.classList.contains('show');
+        if (open === !!m._open) return;
+        m._open = open;
+        var anyOpen = !!document.querySelector('.modal-backdrop.show');
+        document.body.style.overflow = anyOpen ? 'hidden' : '';
+        if (open) {
+          lastFocus = document.activeElement;
+          panel.scrollTop = 0;
+          setTimeout(function() {
+            if (panel.contains(document.activeElement)) return;
+            var f = panel.querySelector('input:not([readonly]):not([disabled]):not([type=hidden]):not([type=checkbox]), textarea, select');
+            (f || panel).focus({ preventScroll: true });
+          }, 60);
+        } else if (lastFocus && document.contains(lastFocus) && typeof lastFocus.focus === 'function') {
+          try { lastFocus.focus({ preventScroll: true }); } catch (e) {}
+          lastFocus = null;
+        }
+      }).observe(m, { attributes: true, attributeFilter: ['class'] });
+    });
+    // Keep Tab inside the open dialog.
+    document.addEventListener('keydown', function(ev) {
+      if (ev.key !== 'Tab') return;
+      var m = document.querySelector('.modal-backdrop.show');
+      if (!m) return;
+      var items = Array.prototype.filter.call(
+        m.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'),
+        function(el) { return el.offsetParent !== null; });
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (ev.shiftKey && (document.activeElement === first || !m.contains(document.activeElement))) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && (document.activeElement === last || !m.contains(document.activeElement))) { ev.preventDefault(); first.focus(); }
+    });
+  })();
+
+  function printReceipt() {
+    document.body.classList.add('printing-receipt');
+    var done = function() { document.body.classList.remove('printing-receipt'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 1000);
+  }
+
   // Modal UX: click backdrop or press Escape to close.
   document.addEventListener('click', function(ev) {
     if (ev.target.classList && ev.target.classList.contains('modal-backdrop')) ev.target.classList.remove('show');
@@ -1263,7 +1542,13 @@
     if (ev.key === 'Escape') document.querySelectorAll('.modal-backdrop.show').forEach(function(m){ m.classList.remove('show'); });
   });
 
+  // Deep links (mail buttons, payment returns, the email-verify redirect) use
+  // these names; map them onto the real panes.
+  var VIEW_ALIASES = { marketing: 'grow', campaigns: 'grow', featured: 'grow', account: 'listing', profile: 'listing', analytics: 'performance', subscription: 'subscriptions', billing: 'subscriptions' };
+
   function navigate(viewId) {
+    viewId = VIEW_ALIASES[viewId] || viewId;
+    if (!document.getElementById('view-' + viewId)) viewId = 'dash';
     state.currentView = viewId;
     document.querySelectorAll('.view-pane').forEach(function(el){ el.classList.remove('active'); });
     var target = document.getElementById('view-' + viewId);
@@ -1279,6 +1564,8 @@
       dash: ['Dashboard', 'Overview of your business activity on Pets24x7.'],
       listing: ['My Listing', 'Manage how your business appears on Pets24x7.'],
       enquiries: ['Customer Enquiries', 'Manage enquiries received from Pet Parents.'],
+      services: ['Services & Prices', 'The services and prices customers see on your listing.'],
+      reviews: ['Reviews', 'Collect, read and reply to customer reviews.'],
       performance: ['Business Performance', 'Track profile visibility and customer engagement.'],
       grow: ['Grow Your Business', 'Managed marketing campaigns by the Pets24x7 team.'],
       'grow-plans': ['Select Marketing Plan', 'Choose campaign duration and estimated customer reach.'],
@@ -1294,17 +1581,68 @@
       loadVendorSubscriptions();
     }
 
-    document.getElementById('sidebar').classList.remove('open');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.title = info[0] + ' — Pets24x7 Vendor Portal';
+    if (isNavOpen()) setNav(false, true);
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
 
-  document.querySelectorAll('.nav-item[data-view]').forEach(function(el){
-    el.addEventListener('click', function(){ navigate(this.getAttribute('data-view')); });
-  });
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
 
-  document.getElementById('menuToggle').addEventListener('click', function(){
-    document.getElementById('sidebar').classList.toggle('open');
+  // Nav items are real links (keyboard focusable, open-in-new-tab works via
+  // ?view=) but a plain click switches panes in place.
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(el){
+    el.setAttribute('href', '?view=' + el.getAttribute('data-view'));
+    el.addEventListener('click', function(ev){
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button === 1) return;
+      ev.preventDefault();
+      navigate(this.getAttribute('data-view'));
+    });
   });
+  (function(){
+    var lo = document.getElementById('logoutBtn');
+    if (lo) { lo.setAttribute('href', '/'); lo.setAttribute('role', 'button'); }
+  })();
+
+  // ---- Mobile drawer: backdrop, Escape, focus handling, aria-expanded ----
+  function isNavOpen() { return document.getElementById('sidebar').classList.contains('open'); }
+  function setNav(open, silent) {
+    var sb = document.getElementById('sidebar');
+    var btn = document.getElementById('menuToggle');
+    var bd = document.getElementById('navBackdrop');
+    sb.classList.toggle('open', open);
+    if (bd) bd.classList.toggle('show', open);
+    document.body.classList.toggle('nav-open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    if (open) {
+      var first = sb.querySelector('.nav-item.active') || sb.querySelector('.nav-item');
+      if (first) setTimeout(function(){ first.focus(); }, 50);
+    } else if (!silent) {
+      btn.focus();
+    }
+  }
+  document.getElementById('menuToggle').addEventListener('click', function(){ setNav(!isNavOpen()); });
+  document.getElementById('navBackdrop').addEventListener('click', function(){ setNav(false); });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Escape' && isNavOpen() && !document.querySelector('.modal-backdrop.show')) setNav(false);
+  });
+  // Keep Tab inside the open drawer: cycle through the menu button and the
+  // sidebar links instead of escaping into the page hidden behind the backdrop.
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Tab' || !isNavOpen() || document.querySelector('.modal-backdrop.show, .p24-dlg-back')) return;
+    var sb = document.getElementById('sidebar');
+    var items = [document.getElementById('menuToggle')].concat(Array.prototype.filter.call(
+      sb.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+      function(el){ return el.offsetParent !== null; }));
+    var first = items[0], last = items[items.length - 1];
+    var inside = items.indexOf(document.activeElement) !== -1;
+    if (!inside) { ev.preventDefault(); (ev.shiftKey ? last : first).focus(); }
+    else if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  });
+  window.addEventListener('resize', function(){ if (window.innerWidth > 840 && isNavOpen()) setNav(false, true); });
 
   /* ================= VENDOR SUBSCRIPTIONS & PAYMENT GATEWAY ================= */
   var vendorSubState = {
@@ -1326,6 +1664,8 @@
       if (btnM) btnM.className = 'btn btn-sm btn-primary';
       if (btnA) btnA.className = 'btn btn-sm btn-outline';
     }
+    if (btnM) btnM.setAttribute('aria-pressed', period === 'ANNUAL' ? 'false' : 'true');
+    if (btnA) btnA.setAttribute('aria-pressed', period === 'ANNUAL' ? 'true' : 'false');
     renderVendorSubPlans();
   }
 
@@ -1339,8 +1679,11 @@
     // resolved first marked the wrong card "Current Active Plan" (and disabled
     // its Subscribe button) while the banner showed the real plan.
     var plans = api.vendorSubPlans()
-      .then(function(r) { vendorSubState.plans = r.plans || []; })
-      .catch(function() { vendorSubState.plans = []; });
+      .then(function(r) {
+        vendorSubState.plans = (r.plans || []).filter(function(p) { return p.active !== false; });
+        vendorSubState.plansError = null;
+      })
+      .catch(function(e) { vendorSubState.plans = []; vendorSubState.plansError = fmtErr(e); });
 
     var mine = api.vendorSubMe()
       .then(function(r) {
@@ -1387,33 +1730,62 @@
       }
     }
     if (leadsEl) leadsEl.textContent = '∞ Unlimited Customer Leads';
-    if (badgeStatEl) badgeStatEl.textContent = (sub.tier === 'GOLD' || sub.tier === 'DIAMOND') ? 'Verified Gold Business' : 'Verified Business Listing';
+    if (badgeStatEl) badgeStatEl.textContent = sub.tier === 'DIAMOND' ? 'Diamond Verified Business'
+      : sub.tier === 'GOLD' ? 'Verified Gold Business'
+      : sub.tier === 'SILVER' ? 'Verified Pro Business' : 'Verified Business Listing';
+    // Only claim the boost the tier actually carries.
+    var rankEl = document.getElementById('vSubRankBoost');
+    if (rankEl) rankEl.textContent = sub.tier === 'DIAMOND' ? 'Top ranking across all cities 🚀'
+      : sub.tier === 'GOLD' ? 'Top of city & category 🚀'
+      : sub.tier === 'SILVER' ? 'Priority search ranking'
+      : 'Standard — upgrade to rank higher';
+  }
+
+  // A plan priced per year (e.g. Diamond, durationDays 365) is already annual:
+  // it must not be multiplied again or labelled "/ month".
+  function planIsAnnual(p) {
+    return !!p && (p.billingPeriod === 'ANNUAL' || (p.durationDays || 0) >= 365);
+  }
+
+  function planPriceFor(p) {
+    var price = Number(p.priceRupees) || 0;
+    if (planIsAnnual(p)) return { price: price, period: '/ year', billing: 'MONTHLY' };
+    if (vendorSubState.billingPeriod === 'ANNUAL' && price > 0) {
+      // The server charges 10x the monthly price for a year (two months free).
+      return { price: Math.round(price * 10), period: '/ year (2 months free)', billing: 'ANNUAL' };
+    }
+    return { price: price, period: '/ month', billing: 'MONTHLY' };
   }
 
   function renderVendorSubPlans() {
     var grid = document.getElementById('vendorSubPlansGrid');
     if (!grid) return;
 
-    var plans = vendorSubState.plans && vendorSubState.plans.length > 0 ? vendorSubState.plans : [
-      { id: 'v_plan_free', name: 'Basic Free', priceRupees: 0, leadLimit: 9999, tier: 'BASIC', badge: 'VERIFIED', perks: ['Verified Business Listing', '∞ Unlimited Customer Leads', 'Basic Analytics', 'Standard Support'] },
-      { id: 'v_plan_silver', name: 'Silver Pro', priceRupees: 1499, leadLimit: 9999, tier: 'SILVER', badge: 'VERIFIED_PRO', perks: ['Verified Pro Badge', '∞ Unlimited Customer Leads', 'WhatsApp Direct Enquiries', 'Priority Search Ranking', 'Email Support'] },
-      { id: 'v_plan_gold', name: 'Gold Platinum', priceRupees: 2999, leadLimit: 9999, tier: 'GOLD', badge: 'GOLD_PLATINUM', recommended: true, perks: ['⭐ Gold Verified Badge', '∞ Unlimited Customer Leads', 'Top #1 City & Category Ranking', 'Direct WhatsApp & Phone Leads', 'Dedicated Account Manager'] },
-      { id: 'v_plan_diamond', name: 'Diamond Enterprise', priceRupees: 24999, leadLimit: 9999, tier: 'DIAMOND', badge: 'DIAMOND_VIP', perks: ['💎 Diamond Badge', '∞ Unlimited Customer Leads', 'Top Ranking Across All Cities', 'Includes 30 Days Free Featured Spot', 'VIP 24/7 Priority Support'] }
-    ];
+    // No invented catalogue: a hard-coded fallback offered plan ids the server
+    // may not sell, so a failed load shows a retry instead.
+    var plans = vendorSubState.plans || [];
+    if (!plans.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1; color:var(--text-muted);">' +
+        (vendorSubState.plansError
+          ? 'Could not load subscription plans (' + esc(vendorSubState.plansError) + '). '
+          : 'No subscription plans are available right now. ') +
+        '<button class="btn btn-sm" onclick="loadVendorSubscriptions()">Retry</button></div>';
+      return;
+    }
 
     // Until /subscriptions/me has answered, nothing is the current plan — so no
     // card is disabled and every Subscribe button stays clickable.
     var currentTier = vendorSubState.subscription ? vendorSubState.subscription.tier : null;
-    var isAnnual = vendorSubState.billingPeriod === 'ANNUAL';
+    // One "Most popular" card: the server's pick if it flags one, else Gold.
+    // (Flagging both the server pick and Gold put two badges on the page.)
+    var recPlan = plans.filter(function(x) { return x.recommended; })[0] ||
+                  plans.filter(function(x) { return x.tier === 'GOLD'; })[0] || null;
 
     grid.innerHTML = plans.map(function(p) {
       var isCurrent = currentTier != null && p.tier === currentTier;
-      var price = p.priceRupees;
-      var periodText = '/ month';
-      if (isAnnual && price > 0) {
-        price = Math.round(price * 10);
-        periodText = '/ year (20% OFF)';
-      }
+      var pp = planPriceFor(p);
+      var price = pp.price;
+      var periodText = pp.period;
 
       var perksHtml = (p.perks || []).map(function(perk) {
         return '<li style="margin-bottom:8px; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text);">' +
@@ -1421,10 +1793,10 @@
         '</li>';
       }).join('');
 
-      var isRec = p.recommended || p.tier === 'GOLD';
+      var isRec = p === recPlan;
       var ctaBtn = isCurrent
         ? '<button class="btn btn-sm btn-outline" style="width:100%; border-color:#CBD5E1; color:#64748B;" disabled>Current Active Plan</button>'
-        : '<button class="btn btn-sm btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:700;" onclick="openVendorPaymentModal(\'SUBSCRIPTION\', \'' + p.id + '\')">' + (price === 0 ? 'Activate Free' : 'Subscribe / Upgrade →') + '</button>';
+        : '<button class="btn btn-sm btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:700;" onclick="openVendorPaymentModal(\'SUBSCRIPTION\', \'' + esc(p.id) + '\')">' + (price === 0 ? 'Activate Free' : 'Subscribe / Upgrade →') + '</button>';
 
       return '<div class="plan-card' + (isRec ? ' recommended' : '') + '" style="background:#FFFFFF; border:1px solid ' + (isRec ? '#3B82F6' : '#E2E8F0') + '; border-radius:14px; padding:24px; display:flex; flex-direction:column; justify-content:space-between; position:relative; box-shadow:' + (isRec ? '0 8px 24px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)') + ';">' +
         (isRec ? '<span class="plan-rec-badge" style="background:#2563EB; color:#FFF; font-weight:800; font-size:10.5px; padding:4px 12px; border-radius:12px; position:absolute; top:-12px; right:20px;">MOST POPULAR</span>' : '') +
@@ -1455,51 +1827,45 @@
     tbody.innerHTML = invoices.map(function(inv) {
       var dStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today';
       return '<tr>' +
-        '<td>' + dStr + '</td>' +
-        '<td><span style="font-family:monospace; font-weight:700; font-size:12px;">' + esc(inv.merchantTxnId) + '</span></td>' +
-        '<td><span class="status-tag" style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; font-weight:700;">' + esc(inv.planName) + '</span></td>' +
-        '<td style="font-weight:800;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td>' +
-        '<td><span style="font-size:12px; color:var(--text-muted);">' + esc(inv.paymentMethod || 'Online') + '</span></td>' +
-        '<td><span class="status-tag tag-active">Paid</span></td>' +
-        '<td style="text-align:right;"><button class="btn btn-sm btn-outline" style="font-size:11.5px; padding:4px 10px;" onclick="openVendorReceiptModal(\'' + inv.id + '\')">🧾 View Receipt</button></td>' +
+        '<td data-label="Date" style="white-space:nowrap;">' + dStr + '</td>' +
+        '<td data-label="Transaction ID"><span style="font-family:monospace; font-weight:700; font-size:12px; overflow-wrap:anywhere;">' + esc(inv.merchantTxnId) + '</span></td>' +
+        '<td data-label="Plan"><span class="status-tag" style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; font-weight:700;">' + esc(inv.planName) + '</span></td>' +
+        '<td data-label="Amount" style="font-weight:800; white-space:nowrap;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td>' +
+        '<td data-label="Method"><span style="font-size:12px; color:var(--text-muted);">' + esc(inv.paymentMethod || 'Online') + '</span></td>' +
+        '<td data-label="Status">' + invStatusTag(inv.status) + '</td>' +
+        '<td class="cell-action" data-label="" style="text-align:right; white-space:nowrap;"><button class="btn btn-sm btn-outline" style="font-size:11.5px; padding:4px 10px;" onclick="openVendorReceiptModal(\'' + esc(inv.id) + '\')">🧾 View Receipt</button></td>' +
       '</tr>';
     }).join('');
   }
 
-  function switchPayMethodTab(type) {
-    var pCard = document.getElementById('payPaneCard');
-    var pUpi = document.getElementById('payPaneUpi');
-    var pNb = document.getElementById('payPaneNetbanking');
-    if (pCard) pCard.style.display = type === 'CARD' ? 'block' : 'none';
-    if (pUpi) pUpi.style.display = type === 'UPI' ? 'block' : 'none';
-    if (pNb) pNb.style.display = type === 'NETBANKING' ? 'block' : 'none';
+  function invStatusTag(status) {
+    var s = String(status || 'PAID').toUpperCase();
+    if (s === 'PAID' || s === 'SUCCESS' || s === 'COMPLETED') return '<span class="status-tag active">Paid</span>';
+    if (s === 'REFUNDED') return '<span class="status-pill pill-responded">Refunded</span>';
+    if (s === 'FAILED') return '<span class="status-pill" style="background:var(--danger-bg); color:var(--danger);">Failed</span>';
+    return '<span class="status-pill pill-pending">' + esc(s.charAt(0) + s.slice(1).toLowerCase()) + '</span>';
   }
 
   function openVendorPaymentModal(itemType, itemPayload) {
-    vendorSubState.checkoutTarget = { type: itemType, payload: itemPayload };
-
     var title = 'Checkout Payment';
     var desc = 'Secured by Razorpay';
-    var name = 'Vendor Gold Platinum Plan';
-    var price = 2999;
+    var name = '';
+    var price = 0;
 
     if (itemType === 'SUBSCRIPTION') {
       var plans = vendorSubState.plans || [];
-      var p = plans.find(function(x){ return x.id === itemPayload || x.tier === itemPayload; }) || plans[2];
-      if (p) {
-        name = p.name + ' (' + (vendorSubState.billingPeriod === 'ANNUAL' ? 'Annual' : 'Monthly') + ')';
-        price = p.priceRupees;
-        if (vendorSubState.billingPeriod === 'ANNUAL' && price > 0) price = Math.round(price * 10);
-        desc = '∞ Unlimited Customer Leads & Full Listing Access';
-      }
-    } else if (itemType === 'CAMPAIGN') {
-      name = (itemPayload.goal || 'Marketing Campaign') + ' — ' + (itemPayload.days || 30) + ' Days';
-      price = itemPayload.price || 8999;
-      desc = 'Managed Facebook & Instagram Ads by Pets24x7 Marketing Team';
-    } else if (itemType === 'FEATURED') {
-      name = 'Featured Placement — ' + (itemPayload.days || 30) + ' Days';
-      price = itemPayload.price || 2499;
-      desc = 'Top Placement on City & Category search pages with Featured Badge';
+      // Never fall back to some other plan: charging for a plan the vendor did
+      // not pick is worse than refusing.
+      var p = plans.find(function(x){ return x.id === itemPayload || x.tier === itemPayload; });
+      if (!p) { toast('That plan is no longer available. Refresh and try again.', 'error'); return; }
+      var pp = planPriceFor(p);
+      name = p.name + ' (' + (pp.period.indexOf('year') !== -1 ? 'Annual' : 'Monthly') + ')';
+      price = pp.price;
+      desc = '∞ Unlimited Customer Leads & Full Listing Access';
+      vendorSubState.checkoutTarget = { type: itemType, payload: p.id, billingPeriod: pp.billing };
+    } else {
+      // Campaigns and Featured placements have their own checkout flows.
+      return;
     }
 
     var basePriceStr = '₹' + Number(price).toLocaleString('en-IN');
@@ -1524,14 +1890,22 @@
       btn.innerHTML = '⌛ Processing Payment...';
     }
 
-    var target = vendorSubState.checkoutTarget || { type: 'SUBSCRIPTION', payload: 'v_plan_gold' };
-    var planId = typeof target.payload === 'string' ? target.payload : (target.payload.id || 'v_plan_gold');
+    var target = vendorSubState.checkoutTarget;
     var label = '🔒 Pay & Activate Now';
 
     function stop(msg) {
       if (btn) { btn.disabled = false; btn.textContent = label; }
-      if (msg) toast(msg, 'ok');
+      if (msg) toast(msg, 'error');
     }
+
+    // No silent default plan — only what the vendor picked on a card.
+    if (!target || target.type !== 'SUBSCRIPTION' || !target.payload) {
+      stop('Choose a plan first.');
+      closeModal('vendorPaymentGatewayModal');
+      return;
+    }
+    var planId = target.payload;
+    var billingPeriod = target.billingPeriod || vendorSubState.billingPeriod;
 
     function done(vRes) {
       closeModal('vendorPaymentGatewayModal');
@@ -1543,7 +1917,7 @@
 
     api.vendorSubCheckout({
       planId: planId,
-      billingPeriod: vendorSubState.billingPeriod,
+      billingPeriod: billingPeriod,
       paymentGateway: 'RAZORPAY'
     }).then(function(res) {
       // A free plan is activated by the checkout call itself — there is nothing
@@ -1555,8 +1929,10 @@
 
       // The server verifies the Razorpay signature, so the real gateway has to
       // run. Skipping it (as this used to) meant every "payment" was rejected
-      // and the failure was then reported to the vendor as a success.
-      if (c.mode !== 'razorpay' && c.mode !== 'simulated') {
+      // and the failure was then reported to the vendor as a success. A
+      // 'simulated' checkout carries a made-up key and order id that Razorpay
+      // rejects, so it is treated as "gateway unavailable" too.
+      if (c.mode !== 'razorpay' || !c.keyId || !c.orderId) {
         stop('Could not start payment: the payment gateway is not available right now.');
         return;
       }
@@ -1575,7 +1951,7 @@
             api.vendorSubVerify({
               merchantTxnId: txnId,
               planId: planId,
-              billingPeriod: vendorSubState.billingPeriod,
+              billingPeriod: billingPeriod,
               paymentMethod: 'Razorpay',
               razorpay_order_id: resp.razorpay_order_id,
               razorpay_payment_id: resp.razorpay_payment_id,
@@ -1599,31 +1975,28 @@
 
   function openVendorReceiptModal(invId) {
     var invoices = vendorSubState.invoices || [];
-    var inv = invoices.find(function(x){ return x.id === invId; }) || invoices[0] || {
-      merchantTxnId: 'TXN_20260905_9931',
-      planName: 'Vendor Gold Platinum Plan',
-      amountRupees: 2999,
-      paymentMethod: 'UPI / Razorpay',
-      createdAt: new Date()
-    };
+    // Only a real invoice: showing a made-up receipt (or someone else's first
+    // row) for a missing id is worse than saying it is gone.
+    var inv = invoices.find(function(x){ return x.id === invId; });
+    if (!inv) { toast('That receipt could not be found. Refresh and try again.', 'error'); return; }
 
-    var dStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Today';
-    var bizName = (state.vendor && state.vendor.businessName) || 'Pawsome Care Clinic';
+    var dStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    var bizName = (state.vendor && state.vendor.businessName) || '—';
 
     var html = '<div style="font-size:13px; line-height:1.6;">' +
-      '<div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:12px;">' +
-        '<div><strong>Billed To:</strong><br/>' + esc(bizName) + '<br/>Phone: ' + esc(state.vendor.phone || '+91 99300 90487') + '</div>' +
-        '<div style="text-align:right;"><strong>Invoice No:</strong> ' + esc(inv.merchantTxnId) + '<br/><strong>Date:</strong> ' + dStr + '<br/><span style="color:#16A34A; font-weight:800;">● PAID</span></div>' +
+      '<div class="receipt-head">' +
+        '<div><strong>Billed To:</strong><br/>' + esc(bizName) + (state.vendor.phone ? '<br/>Phone: ' + esc(state.vendor.phone) : '') + '</div>' +
+        '<div><strong>Invoice No:</strong> ' + esc(inv.merchantTxnId) + '<br/><strong>Date:</strong> ' + dStr + '<br/>' + invStatusTag(inv.status) + '</div>' +
       '</div>' +
       '<table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12.5px;">' +
         '<thead style="background:#F8FAFC; border-bottom:2px solid #E2E8F0;">' +
           '<tr><th style="text-align:left; padding:8px;">Item Description</th><th style="text-align:right; padding:8px;">Amount</th></tr>' +
         '</thead>' +
         '<tbody>' +
-          '<tr><td style="padding:10px 8px; border-bottom:1px solid #E2E8F0;">' + esc(inv.planName) + '</td><td style="text-align:right; padding:10px 8px; border-bottom:1px solid #E2E8F0; font-weight:700;">₹' + Number(inv.amountRupees).toLocaleString('en-IN') + '</td></tr>' +
+          '<tr><td style="padding:10px 8px; border-bottom:1px solid #E2E8F0;">' + esc(inv.planName) + '</td><td style="text-align:right; padding:10px 8px; border-bottom:1px solid #E2E8F0; font-weight:700;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td></tr>' +
         '</tbody>' +
       '</table>' +
-      '<div style="text-align:right; font-size:14px; font-weight:800; color:#1E3A8A;">Total Paid: ₹' + Number(inv.amountRupees).toLocaleString('en-IN') + '</div>' +
+      '<div style="text-align:right; font-size:14px; font-weight:800; color:#1E3A8A;">Total Paid: ₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</div>' +
     '</div>';
 
     if (document.getElementById('vReceiptModalBody')) document.getElementById('vReceiptModalBody').innerHTML = html;
@@ -1634,7 +2007,25 @@
     state.selectedGoal = goalName;
     document.getElementById('selectedGoalTitle').textContent = goalName + ' — Marketing Plans';
     document.getElementById('csGoalDisplay').value = goalName;
+    // Plans are goal-specific, so the grid has to follow the goal picked —
+    // otherwise every goal showed whichever plans were rendered first.
+    renderPlans();
     navigate('grow-plans');
+  }
+
+  // The price for a campaign duration under the goal being bought: the
+  // goal's own plan when the admin has set one, else the generic package.
+  function campaignPlanFor(durationDays) {
+    var goalCode = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
+    var cat = state.campaignCatalogue || {};
+    var gp = (cat.plans || []).filter(function(p) {
+      return p.goal === goalCode && p.active !== false && p.durationDays === durationDays;
+    })[0];
+    var o = (cat.options || []).filter(function(x) { return x.durationDays === durationDays; })[0];
+    if (!gp && !o) return null;
+    var rupees = gp ? Number(gp.priceRupees != null ? gp.priceRupees : gp.price) || 0 : Math.round(o.priceMinor / 100);
+    var label = durationDays === 90 ? '3 Months' : ((o && o.label) || (durationDays + ' Days'));
+    return { durationDays: durationDays, label: label, price: rupees, priceMinor: Math.round(rupees * 100) };
   }
 
   function renderPlans() {
@@ -1710,6 +2101,17 @@
     return state.featured.filter(function(f) { return f.status === 'PENDING_PAYMENT'; })[0] || null;
   }
 
+  function cancelFeaturedAwaiting(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+    api.vendorFeaturedCancel(id).then(function() {
+      toast('Cancelled', 'ok');
+      loadFeatured();
+    }).catch(function(err) {
+      toast('Could not cancel: ' + fmtErr(err), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Cancel it'; }
+    });
+  }
+
   function renderFeatured() {
     var grid = document.getElementById('featuredPlans');
     var live = document.getElementById('featuredActive');
@@ -1737,6 +2139,15 @@
     } else {
       live.style.display = 'none';
       live.innerHTML = '';
+    }
+    // An unpaid checkout blocks new ones server-side; say so and give a way out
+    // instead of leaving every button stuck on "Payment pending".
+    if (awaiting) {
+      live.style.display = 'block';
+      live.innerHTML += '<div style="background:var(--warning-bg); border:1px solid var(--warning-border); border-radius:var(--radius); padding:12px 16px; margin-top:' + (current ? '10px' : '0') + '; font-size:13px; color:var(--warning);">' +
+        'A ' + esc(String(awaiting.durationDays || '')) + '-day placement is reserved but not paid yet. ' +
+        '<button type="button" class="btn btn-sm" style="margin-left:6px;" onclick="cancelFeaturedAwaiting(\'' + awaiting.id + '\', this)">Cancel it</button>' +
+      '</div>';
     }
 
     var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
@@ -1781,7 +2192,7 @@
   function buyFeatured(durationDays, btn) {
     var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
     var o = opts.filter(function(x){ return x.durationDays === durationDays; })[0];
-    if (!o) { toast('That placement is no longer available.', 'ok'); return; }
+    if (!o) { toast('That placement is no longer available.', 'error'); return; }
     var rupees = Math.round(o.priceMinor / 100);
     var live = liveFeatured();
     var msg = live
@@ -1796,26 +2207,30 @@
   }
 
   function startFeaturedCheckout(o, durationDays, btn) {
+    var btnLabel = btn ? btn.textContent : 'Pay →';
     if (btn) { btn.disabled = true; btn.textContent = 'Starting payment…'; }
     api.vendorFeaturedCreate({ durationDays: durationDays }).then(function(r) {
       var c = r.checkout || {};
-      if (c.mode === 'razorpay') return openRazorpay(c, r.merchantTxnId, 'Featured placement — ' + o.label, btn);
+      if (c.mode === 'razorpay') return openRazorpay(c, r.merchantTxnId, 'Featured placement — ' + o.label, btn, 'featured=1', btnLabel);
       var url = r.redirectUrl || c.redirectUrl;
       if (!url) throw new Error('No payment URL returned');
       location.href = url;
     }).catch(function(e) {
-      toast(fmtErr(e), 'ok');
-      if (btn) { btn.disabled = false; btn.textContent = 'Feature for ' + o.label + ' →'; }
+      toast(fmtErr(e), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+      // A 409 means a checkout is already open server-side; show it as pending.
+      if (e && e.status === 409) loadFeatured();
     });
   }
 
   // Campaign Setup Modal Logic
   function startCampaignSetup(durationDays) {
-    var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
-    var o = opts.find(function(x){ return x.durationDays === durationDays; });
-    if (!o) { toast('That plan is no longer available.', 'ok'); return; }
-    state.selectedPlan = { name: o.label, price: Math.round(o.priceMinor / 100), durationDays: o.durationDays, priceMinor: o.priceMinor };
-    document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ₹' + Math.round(o.priceMinor / 100).toLocaleString('en-IN') + ')';
+    var o = campaignPlanFor(durationDays);
+    if (!o) { toast('That plan is no longer available.', 'error'); return; }
+    state.selectedPlan = { name: o.label, price: o.price, durationDays: o.durationDays, priceMinor: o.priceMinor };
+    document.getElementById('csGoalDisplay').value = state.selectedGoal;
+    document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ₹' + o.price.toLocaleString('en-IN') + ')';
+    renderCampaignServices();
     document.getElementById('csStep2').style.display = 'block';
     document.getElementById('csStep3').style.display = 'none';
     document.getElementById('csStep4').style.display = 'none';
@@ -1837,17 +2252,43 @@
     document.getElementById('progStep3').style.color = 'var(--text-muted)';
   }
 
+  // "Services to Promote" comes from what this business actually offers
+  // (priced services, else the free-text services list), not a fixed vet list.
+  function renderCampaignServices() {
+    var box = document.getElementById('csServices');
+    if (!box) return;
+    var names = state.services.filter(function(s) { return s.rawStatus !== 'HIDDEN'; }).map(function(s) { return s.name; });
+    if (!names.length && state.vendor.servicesList) {
+      names = state.vendor.servicesList.split(/[,\n]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+    }
+    names = names.filter(function(n, i) { return names.indexOf(n) === i; }).slice(0, 12);
+    if (!names.length) {
+      box.innerHTML = '<div style="font-size:12.5px; color:var(--text-muted);">No services listed yet — our team will promote your business as a whole. Add services under <a onclick="closeModal(\'campaignSetupModal\'); navigate(\'services\');" style="cursor:pointer; font-weight:700;">Services</a> to target them.</div>';
+      return;
+    }
+    box.innerHTML = names.map(function(n, i) {
+      return '<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:500; font-size:13px;">' +
+        '<input type="checkbox" class="cs-svc" value="' + esc(n) + '"' + (i < 3 ? ' checked' : '') + ' /> ' + esc(n) + '</label>';
+    }).join('');
+  }
+
+  function selectedCampaignServices() {
+    return Array.prototype.slice.call(document.querySelectorAll('#csServices .cs-svc:checked')).map(function(c) { return c.value; });
+  }
+
   function goToStep3() {
     var phone = document.getElementById('csPhone').value.trim() || state.vendor.phone || '';
     var location = document.getElementById('csLocation').value.trim() || state.vendor.city || '';
     var radius = document.getElementById('csRadius').value || '5 km radius';
+    if (phone.replace(/[^0-9]/g, '').length < 10) { toast('Enter the WhatsApp number where enquiries should arrive.', 'error'); return; }
+    if (!location) { toast('Enter the area you want to target.', 'error'); return; }
 
     document.getElementById('revGoal').textContent = state.selectedGoal;
     document.getElementById('revDuration').textContent = state.selectedPlan.name;
     document.getElementById('revLoc').textContent = location + ' · ' + radius;
     document.getElementById('revPhone').textContent = phone;
-    document.getElementById('csReviewPrice').textContent = '₹' + state.selectedPlan.price.toLocaleString();
-    document.getElementById('payBtn').textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString() + ' →';
+    document.getElementById('csReviewPrice').textContent = '₹' + state.selectedPlan.price.toLocaleString('en-IN');
+    document.getElementById('payBtn').textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →';
 
     document.getElementById('csStep2').style.display = 'none';
     document.getElementById('csStep3').style.display = 'block';
@@ -1866,7 +2307,11 @@
       document.head.appendChild(s);
     });
   }
-  function openRazorpay(c, merchantTxnId, desc, btn) {
+  // returnQuery tells load() which status endpoint to poll on the way back: a
+  // featured payment polled against the campaign endpoint 404s and the vendor
+  // never heard their placement went live.
+  function openRazorpay(c, merchantTxnId, desc, btn, returnQuery, btnLabel) {
+    btnLabel = btnLabel || 'Pay →';
     return loadRazorpay().then(function() {
       var rzp = new Razorpay({
         key: c.keyId, order_id: c.orderId, amount: c.amountMinor, currency: c.currency || 'INR',
@@ -1878,15 +2323,15 @@
             razorpay_payment_id: resp.razorpay_payment_id,
             razorpay_signature: resp.razorpay_signature
           }).then(function() {
-            location.href = '/dashboard/vendor/?view=marketing&txn=' + encodeURIComponent(merchantTxnId);
+            location.href = '/dashboard/vendor/?view=marketing&' + (returnQuery ? returnQuery + '&' : '') + 'txn=' + encodeURIComponent(merchantTxnId);
           }).catch(function(e) {
-            toast('Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + merchantTxnId, 'ok');
-            if (btn) { btn.disabled = false; }
+            toast('Payment taken but not confirmed: ' + fmtErr(e) + '. Contact support with txn ' + merchantTxnId, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
           });
         },
-        modal: { ondismiss: function(){ if (btn) { btn.disabled = false; btn.textContent = 'Pay →'; } } }
+        modal: { ondismiss: function(){ if (btn) { btn.disabled = false; btn.textContent = btnLabel; } } }
       });
-      rzp.on('payment.failed', function(e){ toast((e.error && e.error.description) || 'Payment failed', 'error'); if (btn) btn.disabled = false; });
+      rzp.on('payment.failed', function(e){ toast((e.error && e.error.description) || 'Payment failed', 'error'); if (btn) { btn.disabled = false; btn.textContent = btnLabel; } });
       rzp.open();
     });
   }
@@ -1895,6 +2340,13 @@
     var goalEnum = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
     var durationDays = state.selectedPlan.durationDays;
     if (!durationDays) { toast('Please choose a plan first.', 'error'); return; }
+    var csPhoneEl = document.getElementById('csPhone');
+    var csLocationEl = document.getElementById('csLocation');
+    if ((csPhoneEl && !csPhoneEl.value.trim()) || (csLocationEl && !csLocationEl.value.trim())) {
+      toast('Please fill in the WhatsApp number and target area before paying.', 'error');
+      if (csPhoneEl && !csPhoneEl.value.trim()) csPhoneEl.focus(); else if (csLocationEl) csLocationEl.focus();
+      return;
+    }
     var payBtn = document.getElementById('payBtn');
     if (payBtn) { payBtn.disabled = true; payBtn.textContent = 'Starting payment…'; }
 
@@ -1902,19 +2354,30 @@
     var loc = (document.getElementById('csLocation').value || '').trim();
     var rad = document.getElementById('csRadius').value || '';
     var wa  = (document.getElementById('csPhone').value || '').trim();
+    var svcs = selectedCampaignServices();
+    var info = (document.getElementById('csInfo').value || '').trim();
+    // Short targeting fields first so the 500-char cap only ever trims the
+    // free-text brief, never the WhatsApp number or area.
     var notes = 'Goal: ' + state.selectedGoal +
       (loc ? ' | Target area: ' + loc : '') +
       (rad ? ' | Radius: ' + rad : '') +
-      (wa ? ' | WhatsApp: ' + wa : '');
+      (wa ? ' | WhatsApp: ' + wa : '') +
+      (svcs.length ? ' | Services: ' + svcs.join(', ') : '') +
+      (info ? ' | Brief: ' + info : '');
 
     api.vendorCampaignCreate({ goal: goalEnum, durationDays: durationDays, notes: notes.slice(0, 500) }).then(function(r) {
       var c = r.checkout;
-      if (c && c.mode === 'razorpay') { return openRazorpay(c, r.merchantTxnId, 'Marketing campaign', payBtn); }
+      if (c && c.mode === 'razorpay') { return openRazorpay(c, r.merchantTxnId, 'Marketing campaign', payBtn, '', 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →'); }
       if (r.redirectUrl) { location.href = r.redirectUrl; return; }
       throw new Error('No checkout method returned');
     }).catch(function(err) {
-      if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString() + ' →'; }
+      if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →'; }
       toast('Could not start payment: ' + fmtErr(err), 'error');
+      // 409: a campaign is already awaiting payment or running — show it.
+      if (err && err.status === 409) {
+        closeModal('campaignSetupModal');
+        api.vendorCampaigns().then(function(r) { state.campaigns = r.campaigns || []; renderCampaign(); navigate('grow'); }).catch(function(){});
+      }
     });
   }
 
@@ -1942,17 +2405,27 @@
     body.innerHTML = list.map(function(e) {
       return `
         <tr>
-          <td style="font-weight:600;">${esc(e.name)}</td>
-          <td>${esc(e.petName)}</td>
-          <td>${esc(e.service)}</td>
-          <td style="color:var(--text-muted); font-size:12px;">${esc(e.date)}</td>
-          <td>${enqPill(e.status)}</td>
-          <td style="text-align:right;">
-            <button class="btn btn-sm" onclick="openEnquiryDetails('${e.id}')">View</button>
+          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}</td>
+          <td data-label="Pet">${esc(e.petName)}</td>
+          <td data-label="Service">${esc(e.service)}</td>
+          <td data-label="Date" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${esc(e.date)}</td>
+          <td data-label="Status">${enqPill(e.status)}</td>
+          <td class="cell-action" data-label="" style="text-align:right;">
+            <button class="btn btn-sm" onclick="openEnquiryDetails('${e.id}')" aria-label="View enquiry from ${esc(e.name)}">View</button>
           </td>
         </tr>
       `;
     }).join('');
+  }
+
+  // Services are priced in the vendor's own currency (USD for US businesses,
+  // stored by the server from the vendor's country).
+  function currencySymbol(code) { return String(code || '').toUpperCase() === 'USD' ? '$' : '₹'; }
+  function vendorCurrencySymbol() { return String(state.vendor.country || '').toUpperCase() === 'US' ? '$' : '₹'; }
+  function fmtServicePrice(s) {
+    var n = Number(s.price) || 0;
+    var usd = String(s.currency || '').toUpperCase() === 'USD';
+    return currencySymbol(s.currency) + n.toLocaleString(usd ? 'en-US' : 'en-IN', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
   }
 
   function renderServices() {
@@ -1970,12 +2443,12 @@
             <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:4px;">${esc(s.name)}</div>
             <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">${esc(s.duration || 'Duration not set')}</div>
             ${s.description ? '<div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">' + esc(s.description) + '</div>' : ''}
-            <div style="font-size:16px; font-weight:700; color:var(--text-main);">₹${s.price}</div>
+            <div style="font-size:16px; font-weight:700; color:var(--text-main);">${esc(fmtServicePrice(s))}</div>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:10px; border-top:1px solid var(--border-light);">
             <span class="status-tag ${hidden ? '' : 'active'}" style="font-size:11px;">${hidden ? 'Hidden' : 'Visible'}</span>
             <div style="display:flex; gap:6px;">
-              <button class="btn btn-sm" onclick="toggleServiceVisibility('${s.id}')">${hidden ? 'Show' : 'Hide'}</button>
+              <button class="btn btn-sm" data-svc-id="${s.id}" onclick="toggleServiceVisibility('${s.id}', this)">${hidden ? 'Show' : 'Hide'}</button>
               <button class="btn btn-sm" onclick="editService('${s.id}')">Edit</button>
               <button class="btn btn-sm" style="color:var(--danger);" onclick="removeService('${s.id}')">Remove</button>
             </div>
@@ -1985,16 +2458,24 @@
     }).join('');
   }
 
-  function toggleServiceVisibility(id) {
+  function toggleServiceVisibility(id, btn) {
     var s = state.services.find(function(x){ return x.id === id; });
     if (!s) return;
     var next = s.rawStatus === 'HIDDEN' ? 'ACTIVE' : 'HIDDEN';
+    var label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     api.vendorServiceUpdate(id, { status: next }).then(loadServices)
-      .catch(function(err){ toast('Could not update: ' + fmtErr(err), 'error'); });
+      .catch(function(err){
+        toast('Could not update: ' + fmtErr(err), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = label; }
+      });
   }
 
   function renderFullEnquiries(filter) {
-    filter = filter || 'all';
+    // Remember the active filter: a status change re-renders the table, and
+    // snapping back to "all" while the "New" button stayed highlighted hid it.
+    filter = filter || state.enqFilter || 'all';
+    state.enqFilter = filter;
     var list = state.enquiries.filter(function(e){ return filter === 'all' || e.status === filter; });
     var body = document.getElementById('fullEnquiriesTableBody');
     if (!body) return;
@@ -2006,13 +2487,13 @@
     body.innerHTML = list.map(function(e) {
       return `
         <tr>
-          <td style="font-weight:600;">${esc(e.name)}</td>
-          <td>${esc(e.petName)}${e.species ? ' <span style="font-size:11px; color:var(--text-muted);">(' + esc(e.species) + ')</span>' : ''}</td>
-          <td>${esc(e.service)}</td>
-          <td style="color:var(--text-muted); font-size:12px;">${esc(e.date)}</td>
-          <td>${enqPill(e.status)}</td>
-          <td style="text-align:right;">
-            <button class="btn btn-sm btn-primary" onclick="openEnquiryDetails('${e.id}')">View Details</button>
+          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}</td>
+          <td data-label="Pet">${esc(e.petName)}${e.species ? ' <span style="font-size:11px; color:var(--text-muted);">(' + esc(e.species) + ')</span>' : ''}</td>
+          <td data-label="Service">${esc(e.service)}</td>
+          <td data-label="Date" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${esc(e.date)}</td>
+          <td data-label="Status">${enqPill(e.status)}</td>
+          <td class="cell-action" data-label="" style="text-align:right; white-space:nowrap;">
+            <button class="btn btn-sm btn-primary" onclick="openEnquiryDetails('${e.id}')" aria-label="View details of enquiry from ${esc(e.name)}">View Details</button>
           </td>
         </tr>
       `;
@@ -2060,12 +2541,90 @@
           <p style="font-size:13px; color:var(--text-main); line-height:1.4;">"${esc(r.comment)}"</p>
           ${replyBlock}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:11.5px; color:var(--text-muted);">
-            <span>Verified Customer Review &bull; ${esc(r.date)}</span>
+            <span>${reviewStatusLabel(r.status)} &bull; ${esc(r.date)}</span>
             ${replyBtn}
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  // Only a published review is live; a pending one is still in moderation and
+  // a rejected one is not shown publicly, so neither is a "verified" review.
+  function reviewStatusLabel(status) {
+    var s = String(status || 'PUBLISHED').toUpperCase();
+    if (s === 'PENDING') return '<span class="status-pill pill-pending">Awaiting moderation</span>';
+    if (s === 'REJECTED') return '<span class="status-pill" style="background:var(--danger-bg); color:var(--danger);">Not published</span>';
+    return 'Published on your listing';
+  }
+
+  function mapReview(r) {
+    return { id: r.id, name: r.reviewerName || 'Customer', rating: r.rating || 0, comment: r.text || '',
+      vendorReply: r.vendorReply || '', status: r.status || '',
+      date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' };
+  }
+
+  // Full list for the Reviews view — the dashboard summary carries only 5.
+  function loadReviews() {
+    if (!api.vendorReviewsCollected) return Promise.resolve();
+    return api.vendorReviewsCollected().then(function(r) {
+      state.reviews = (r.reviews || []).map(mapReview);
+      state.reviewsLoaded = true;
+      renderReviews();
+    }).catch(function() {
+      if (!state.reviewsLoaded) renderReviews();
+    });
+  }
+
+  // The dashboard returns a weighted completion checklist; each open item gets
+  // a one-click action so the vendor always knows the next thing to do.
+  var CHECKLIST_ACTIONS = {
+    claim_listing:   ['Find my listing', function(){ location.href = '/find-my-listing/'; }],
+    add_email:       ['Verify email', function(){ navigate('listing'); var b = document.getElementById('accEmailVerify'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }],
+    admin_approve:   ['Contact support', function(){ window.open('https://wa.me/919930090487?text=' + encodeURIComponent('Hi Pets24x7, please review my business listing for approval.'), '_blank', 'noopener'); }],
+    add_services:    ['Add a service', function(){ navigate('services'); openAddServiceModal(); }],
+    collect_reviews: ['Request reviews', function(){ openBulkReviewModal(); }],
+    add_photo:       ['Upload photo', function(){ checklistScrollTo('vImgPreview'); }],
+    add_gallery:     ['Add photos', function(){ checklistScrollTo('vGalleryGrid'); }],
+    add_about:       ['Edit profile', function(){ checklistEditField('ebAbout'); }],
+    add_hours:       ['Edit profile', function(){ checklistEditField('ebHours'); }],
+    add_website:     ['Edit profile', function(){ checklistEditField('ebWebsite'); }],
+    add_whatsapp:    ['Edit profile', function(){ checklistEditField('ebWhatsapp'); }]
+  };
+
+  // Checklist helpers: open the listing view, then bring the missing piece into view.
+  function checklistScrollTo(id) {
+    navigate('listing');
+    var el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function checklistEditField(id) {
+    navigate('listing');
+    openEditBizModal();
+    var f = document.getElementById(id);
+    if (f) setTimeout(function(){ try { f.focus(); } catch (e) {} }, 60);
+  }
+
+  function renderChecklist(completion) {
+    var card = document.getElementById('dashChecklistCard');
+    var list = document.getElementById('dashChecklist');
+    if (!card || !list || !completion || !Array.isArray(completion.checklist)) return;
+    var pct = Math.max(0, Math.min(100, Number(completion.percent) || 0));
+    document.getElementById('dashCompletionPct').textContent = pct + '%';
+    document.getElementById('dashCompletionBar').style.width = pct + '%';
+    // Open items first, so the next action is always at the top.
+    var items = completion.checklist.slice().sort(function(a, b) { return (a.done ? 1 : 0) - (b.done ? 1 : 0); });
+    list.innerHTML = items.map(function(it) {
+      var act = !it.done && CHECKLIST_ACTIONS[it.key];
+      return '<div class="next-step' + (it.done ? ' done' : '') + '">' +
+        '<span>' + (it.done ? '✅ ' : '⬜ ') + esc(it.label) + '</span>' +
+        (act ? '<button class="btn btn-sm btn-primary" data-step="' + esc(it.key) + '">' + esc(act[0]) + ' →</button>' : '') +
+      '</div>';
+    }).join('');
+    list.querySelectorAll('button[data-step]').forEach(function(b) {
+      b.addEventListener('click', function() { var a = CHECKLIST_ACTIONS[b.getAttribute('data-step')]; if (a) a[1](); });
+    });
+    card.hidden = pct >= 100;
   }
 
   function replyToReview(id) {
@@ -2087,9 +2646,18 @@
     });
   }
 
-  // Services were removed from the vendor dashboard; kept as a no-op so an
-  // older cached page cannot throw on the missing modal.
-  function openAddServiceModal() {}
+  function openAddServiceModal() {
+    var f = document.getElementById('addServiceForm');
+    if (f) f.reset();
+    var sym = vendorCurrencySymbol();
+    var lbl = document.getElementById('sPriceLabel');
+    if (lbl) lbl.textContent = 'Price (' + sym + ')';
+    var sp = document.getElementById('sPrice');
+    if (sp) { sp.step = sym === '$' ? '0.01' : '1'; sp.placeholder = sym === '$' ? '40' : '799'; }
+    document.getElementById('addServiceModal').classList.add('show');
+    var n = document.getElementById('sName');
+    if (n) setTimeout(function(){ n.focus(); }, 50);
+  }
   function openEditBizModal() { document.getElementById('editBizModal').classList.add('show'); }
   function openPreviewModal() {
     var f = document.getElementById('previewIframe');
@@ -2163,8 +2731,11 @@
     if (history.replaceState) history.replaceState(null, '', location.pathname);
   }
 
-  // Reviews were removed from the vendor dashboard; kept as a no-op.
-  function openBulkReviewModal() {}
+  function openBulkReviewModal() {
+    navigate('reviews');
+    var el = document.getElementById('rrInput');
+    if (el) setTimeout(function(){ el.focus(); }, 300);
+  }
 
   // Every request always produces a working review link. When WhatsApp is not
   // connected (or a single send fails) the link is shown with a one-tap wa.me
@@ -2246,7 +2817,9 @@
       var customers = [];
       raw.forEach(function(line) {
         line = line.trim(); if (!line) return;
-        var parts = line.split(/\s*[—–-]{1,2}\s*/);
+        // Split on a spaced dash, an en/em dash or a comma only — a bare
+        // hyphen is part of numbers like +91-98765-43210.
+        var parts = line.split(/\s+-{1,2}\s+|\s*[—–,]\s*/);
         var phone = (parts[0] || '').trim();
         var name = (parts[1] || '').trim();
         if (phone.replace(/[^0-9]/g, '').length >= 10) customers.push(name ? { phone: phone, name: name } : { phone: phone });
@@ -2274,9 +2847,12 @@
     body.innerHTML = `
       <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:6px; padding:14px; margin-bottom:14px; font-size:13px;">
         <div style="font-size:15px; font-weight:700; margin-bottom:2px;">${esc(e.name)}</div>
-        <div style="color:var(--text-muted);">Phone: <a href="tel:${esc(cleanPhone)}">${esc(e.phone || '—')}</a></div>
+        <div style="color:var(--text-muted);">Phone: ${e.phone ? '<a href="tel:' + esc(cleanPhone) + '">' + esc(e.phone) + '</a>' : 'shown once your account is approved'}</div>
         ${e.petName && e.petName !== 'Pet' ? '<div style="color:var(--text-muted); margin-top:2px;">Pet: ' + esc(e.petName) + '</div>' : ''}
+        ${e.email ? '<div style="color:var(--text-muted); margin-top:2px;">Email: <a href="mailto:' + esc(e.email) + '">' + esc(e.email) + '</a></div>' : ''}
         <div style="color:var(--text-muted); margin-top:2px;">Service: ${esc(e.service)}</div>
+        ${e.preferred ? '<div style="color:var(--text-muted); margin-top:2px;">Preferred date: ' + esc(e.preferred) + '</div>' : ''}
+        ${e.city ? '<div style="color:var(--text-muted); margin-top:2px;">City: ' + esc(e.city) + '</div>' : ''}
         <div style="color:var(--text-muted); margin-top:2px;">Received: ${esc(e.date)}</div>
         <div style="margin-top:6px;">${enqPill(e.status)}</div>
       </div>
@@ -2288,21 +2864,31 @@
         ${digits.length >= 10 ? '<a href="https://wa.me/' + digits + '?text=' + encodeURIComponent(waMsg) + '" target="_blank" class="btn btn-wa btn-sm" style="width:100%;">Respond on WhatsApp</a>' : ''}
         ${cleanPhone ? '<a href="tel:' + esc(cleanPhone) + '" class="btn btn-sm" style="width:100%; justify-content:center;">Call customer</a>' : ''}
         <div style="display:flex; gap:8px; margin-top:4px; flex-wrap:wrap;">
-          <button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus('${e.id}', 'RESPONDED')">Mark responded</button>
-          <button class="btn btn-sm btn-primary" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus('${e.id}', 'COMPLETED')">Mark completed</button>
-          <button class="btn btn-sm" style="flex:1; min-width:120px; color:var(--text-muted);" onclick="updateEnquiryStatus('${e.id}', 'ARCHIVED')">Archive</button>
+          ${e.status !== 'responded' ? '<button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'RESPONDED\', this)">Mark responded</button>' : ''}
+          ${e.status !== 'completed' ? '<button class="btn btn-sm btn-primary" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'COMPLETED\', this)">Mark completed</button>' : ''}
+          ${e.status !== 'archived' ? '<button class="btn btn-sm" style="flex:1; min-width:120px; color:var(--text-muted);" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'ARCHIVED\', this)">Archive</button>' : '<button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'NEW\', this)">Restore to New</button>'}
         </div>
       </div>
     `;
     document.getElementById('enquiryModal').classList.add('show');
   }
 
-  function updateEnquiryStatus(id, newStatus) {
+  function updateEnquiryStatus(id, newStatus, btn) {
     var apiStatus = newStatus.toUpperCase();
+    // Disable while saving: a double click sent the customer two status emails.
+    var btns = document.querySelectorAll('#enquiryModalBody button');
+    btns.forEach(function(b) { b.disabled = true; });
+    if (btn) btn.textContent = 'Saving…';
     api.vendorEnquiryStatus(id, apiStatus).then(function() {
       closeModal('enquiryModal');
+      toast('Enquiry marked ' + apiStatus.toLowerCase(), 'ok');
       return refreshEnquiries();
-    }).catch(function(err) { toast('Could not update: ' + fmtErr(err), 'error'); });
+    }).catch(function(err) {
+      toast('Could not update: ' + fmtErr(err), 'error');
+      btns.forEach(function(b) { b.disabled = false; });
+      var e = state.enquiries.find(function(x){ return x.id === id; });
+      if (e) openEnquiryDetails(id);
+    });
   }
 
   function refreshEnquiries() {
@@ -2337,13 +2923,15 @@
       confirmLabel: 'Save service',
       fields: [
         { name: 'name', label: 'Service name', value: s.name, required: true },
-        { name: 'price', label: 'Price (₹)', type: 'number', value: s.price, required: true },
+        // uiForm has no step option and a number input defaults to step=1,
+        // which would block saving a $12.50 price — so cents currencies use text.
+        { name: 'price', label: 'Price (' + currencySymbol(s.currency) + ')', type: currencySymbol(s.currency) === '$' ? 'text' : 'number', value: s.price, required: true },
         { name: 'duration', label: 'Duration', value: s.duration || '30 mins', placeholder: '45 mins' },
         { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: s.description || '' }
       ]
     }).then(function (f) {
       if (!f) return;
-      var pn = parseFloat(f.price);
+      var pn = /^\d+(\.\d{1,2})?$/.test(String(f.price).trim()) ? parseFloat(f.price) : NaN;
       if (isNaN(pn) || pn < 0) { toast('Enter a valid price.', 'error'); return; }
       api.vendorServiceUpdate(id, {
         name: f.name,
@@ -2355,7 +2943,10 @@
     });
   }
 
-  document.getElementById('addServiceForm').addEventListener('submit', function(ev){
+  // Guarded: a missing form used to throw here and halt the whole script —
+  // no data loaded, and Sign Out / Save did nothing.
+  var addServiceFormEl = document.getElementById('addServiceForm');
+  if (addServiceFormEl) addServiceFormEl.addEventListener('submit', function(ev){
     ev.preventDefault();
     var name = document.getElementById('sName').value.trim();
     var price = parseFloat(document.getElementById('sPrice').value);
@@ -2371,6 +2962,7 @@
     }).then(function() {
       closeModal('addServiceModal');
       form.reset();
+      toast('Service added to your listing', 'ok');
     }).catch(function(err) {
       toast('Could not add service: ' + fmtErr(err), 'error');
     }).finally(function() {
@@ -2382,27 +2974,39 @@
     ev.preventDefault();
     var name = document.getElementById('ebName').value.trim();
     if (name.length < 2) { toast('Business name is required.', 'error'); return; }
+    var val = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    // Optional fields are sent even when empty: `|| undefined` dropped them,
+    // so clearing a website or the About text silently never saved.
     var payload = {
       businessName: name,
-      category: document.getElementById('ebCategory').value.trim() || undefined,
-      city: document.getElementById('ebCity').value.trim() || undefined,
-      country: (document.getElementById('ebCountry') || {}).value || undefined,
-      pincode: ((document.getElementById('ebPincode') || {}).value || '').trim() || undefined,
-      locality: document.getElementById('ebLocality').value.trim() || undefined,
-      address: document.getElementById('ebAddress').value.trim() || undefined,
-      phone: document.getElementById('ebPhone').value.trim() || undefined,
-      website: document.getElementById('ebWebsite').value.trim() || undefined,
-      whatsapp: document.getElementById('ebWhatsapp').value.trim() || undefined,
-      about: document.getElementById('ebAbout').value.trim() || undefined,
-      openingHours: document.getElementById('ebHours').value.trim() || undefined,
-      servicesList: document.getElementById('ebServices').value.trim() || undefined,
-      imageUrl: document.getElementById('ebImageUrl').value.trim() || undefined
+      category: val('ebCategory') || undefined,
+      city: val('ebCity') || undefined,
+      country: val('ebCountry') || undefined,
+      pincode: val('ebPincode'),
+      locality: val('ebLocality'),
+      address: val('ebAddress') || undefined,
+      phone: val('ebPhone') || undefined,
+      website: val('ebWebsite'),
+      whatsapp: val('ebWhatsapp'),
+      about: val('ebAbout'),
+      openingHours: val('ebHours'),
+      servicesList: val('ebServices')
     };
+    // The cover image is usually an uploaded data URL (hundreds of KB) — only
+    // send it when the vendor actually changed the field.
+    var img = val('ebImageUrl');
+    if (img && img !== (state.vendor.imageUrl || '')) {
+      if (!/^(https?:\/\/|data:image\/(png|jpe?g|webp);base64,)/i.test(img)) {
+        toast('Cover image must be an http(s) link.', 'error'); return;
+      }
+      payload.imageUrl = img;
+    }
     var sb = document.getElementById('ebSubmitBtn');
     if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
     api.vendorUpdateMyBusiness(payload).then(function(r) {
       applyVendor(r.business || payload);
       closeModal('editBizModal');
+      toast('Business details saved — your public listing is updated.', 'ok');
     }).catch(function(err) {
       toast('Could not save business details: ' + fmtErr(err), 'error');
     }).finally(function() {
@@ -2419,10 +3023,11 @@
   });
 
   document.getElementById('saveBtn').addEventListener('click', function(){
-    var payload = {
-      businessName: document.getElementById('fName').value.trim(),
-      email: document.getElementById('fEmail').value.trim()
-    };
+    // Email is not self-service (it identifies the account and receives the
+    // sign-in codes) — see the Email address card — so only the name is sent.
+    var name = document.getElementById('fName').value.trim();
+    if (name.length < 2) { toast('Business name is required.', 'error'); return; }
+    var payload = { businessName: name };
     var btn = this;
     btn.disabled = true;
     api.vendorPatch(payload).then(function(r) {
@@ -2433,7 +3038,8 @@
     }).finally(function(){ btn.disabled = false; });
   });
 
-  document.getElementById('logoutBtn').addEventListener('click', function(){
+  document.getElementById('logoutBtn').addEventListener('click', function(ev){
+    ev.preventDefault();
     api.logout().finally(function(){ location.href = '/'; });
   });
 
@@ -2453,7 +3059,13 @@
       time: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—',
       date: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       status: (e.status || 'NEW').toLowerCase(),
-      message: e.notes || ''
+      message: e.notes || '',
+      email: e.email || '',
+      city: e.city || '',
+      preferred: (function() {
+        var p = e.preferredDate ? new Date(e.preferredDate) : null;
+        return p && !isNaN(p.getTime()) ? p.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      })()
     };
   }
 
@@ -2466,22 +3078,33 @@
 
   function applyVendor(v) {
     if (!v) return;
-    state.vendor.businessName = v.businessName || state.vendor.businessName;
-    state.vendor.email = v.email || '';
-    state.vendor.emailVerified = !!v.emailVerified;
-    state.vendor.phone = v.phone || state.vendor.phone;
-    state.vendor.category = v.category || state.vendor.category;
-    state.vendor.city = v.city || state.vendor.city || '';
-    state.vendor.locality = v.locality || state.vendor.locality || '';
-    state.vendor.address = v.address || state.vendor.address || '';
-    state.vendor.pincode = v.pincode || state.vendor.pincode || '';
-    state.vendor.website = v.website || state.vendor.website || '';
-    state.vendor.whatsapp = v.whatsapp || state.vendor.whatsapp || '';
-    state.vendor.about = v.about || state.vendor.about || '';
-    state.vendor.openingHours = v.openingHours || state.vendor.openingHours || '';
-    state.vendor.servicesList = v.servicesList || state.vendor.servicesList || '';
-    state.vendor.status = v.status || state.vendor.status || '';
-    state.vendor.country = v.country || state.vendor.country || 'IN';
+    // Several responses feed this (dashboard summary, /my-business, saves),
+    // each with a different subset of fields. A field that is absent or null
+    // keeps what we already have; an empty string is a deliberate clear.
+    // (`v.x || state.x` meant a cleared field never cleared, and a response
+    // without emailVerified flipped a verified address back to unverified.)
+    var take = function(key, fallback) {
+      if (v[key] != null) state.vendor[key] = v[key];
+      else if (state.vendor[key] == null) state.vendor[key] = fallback;
+    };
+    if (v.businessName) state.vendor.businessName = v.businessName;
+    if (v.phone) state.vendor.phone = v.phone;
+    if (v.category) state.vendor.category = v.category;
+    if (v.city) state.vendor.city = v.city;
+    else if (state.vendor.city == null) state.vendor.city = '';
+    take('email', '');
+    if (v.emailVerified !== undefined) state.vendor.emailVerified = !!v.emailVerified;
+    take('locality', '');
+    take('address', '');
+    take('pincode', '');
+    take('website', '');
+    take('whatsapp', '');
+    take('about', '');
+    take('openingHours', '');
+    take('servicesList', '');
+    if (v.status) state.vendor.status = v.status;
+    if (v.country) state.vendor.country = v.country;
+    else if (!state.vendor.country) state.vendor.country = 'IN';
     if (v.imageUrl !== undefined) state.vendor.imageUrl = v.imageUrl || '';
     if (v.galleryImages !== undefined) {
       state.vendor.galleryImages = Array.isArray(v.galleryImages) ? v.galleryImages : [];
@@ -2543,7 +3166,7 @@
     var rm = document.getElementById('vImgRemove');
     if (!box) return;
     if (state.vendor.imageUrl) {
-      box.innerHTML = '<img src="' + state.vendor.imageUrl + '" alt="Storefront" style="width:100%;height:100%;object-fit:cover;">';
+      box.innerHTML = '<img src="' + esc(state.vendor.imageUrl) + '" alt="Storefront" style="width:100%;height:100%;object-fit:cover;">';
       box.style.border = '1px solid var(--border)';
       if (rm) rm.hidden = false;
     } else {
@@ -2747,6 +3370,7 @@
     }
     if (c.status === 'PENDING_REVIEW') return '\u{1F7E1} With Pets24x7 team for review';
     if (c.status === 'PENDING_PAYMENT') return '\u{1F7E0} Awaiting payment';
+    if (c.status === 'EXPIRED' || c.status === 'COMPLETED') return 'Finished';
     return c.status;
   }
 
@@ -2762,14 +3386,17 @@
       '<div class="card-header"><div>' +
         '<div class="card-title">Your Campaign</div>' +
         '<div class="card-subtitle">' + esc(sub) + '</div>' +
-      '</div><span class="status-tag active" style="font-size:12px;">' + esc(campaignStatusLine(c)) + '</span></div>' +
-      '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin: 14px 0;">' +
+      '</div><span class="status-tag active" style="font-size:12px; white-space:normal;">' + esc(campaignStatusLine(c)) + '</span></div>' +
+      '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:16px; margin: 14px 0;">' +
         cell('Goal', goal) +
         cell('Duration', c.durationDays ? c.durationDays + ' days' : '\u2014') +
         cell('Started', c.startsAt ? fmtDate(c.startsAt) : 'Not started') +
         cell('Ends', c.endsAt ? fmtDate(c.endsAt) : '\u2014', true) +
       '</div>' +
-      '<p style="font-size:12px; color:var(--text-muted);">Ad-delivery metrics (reach, impressions) are reported by the Pets24x7 marketing team and will appear here once the campaign starts delivering.</p>' +
+      (c.status === 'PENDING_PAYMENT'
+        ? '<p style="font-size:12.5px; color:var(--warning);">This campaign is reserved but the payment was not completed. ' +
+          '<a href="https://wa.me/919930090487?text=' + encodeURIComponent('Hi Pets24x7, I need help completing or cancelling my unpaid campaign' + (c.payment && c.payment.merchantTxnId ? ' (ref ' + c.payment.merchantTxnId + ')' : '') + '.') + '" target="_blank" rel="noopener" style="font-weight:700;">Message us on WhatsApp</a> to complete or cancel it.</p>'
+        : '<p style="font-size:12px; color:var(--text-muted);">Ad-delivery metrics (reach, impressions) are reported by the Pets24x7 marketing team and will appear here once the campaign starts delivering.</p>') +
     '</div>';
   }
 
@@ -2786,6 +3413,321 @@
       return c.status === 'ACTIVE' && (!c.endsAt || new Date(c.endsAt).getTime() > now);
     });
     list.innerHTML = live.map(campaignCardHtml).join('');
+  }
+
+  /* ================= RECOMMENDATIONS (GET /api/reco/vendor) =================
+     One call feeds three places: the "Recommended for your business" card on
+     the dashboard, the real visibility metrics + benchmark on Performance, and
+     the "Why boost now" box on Grow. Every string from the server is esc()'d. */
+  var reco = { data: null, loading: false, error: null };
+  var RECO_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+
+  function recoFetch() {
+    // api-client exposes recoVendor(); fall back to the raw path so this panel
+    // works against an older api-client.js too.
+    return (typeof api.recoVendor === 'function') ? api.recoVendor() : api.get('/api/reco/vendor');
+  }
+
+  function loadRecoVendor() {
+    if (reco.loading) return;
+    reco.loading = true;
+    reco.error = null;
+    renderRecoActions();
+    renderRecoPerformance();
+    recoFetch().then(function(d) {
+      reco.data = d || null;
+    }).catch(function(err) {
+      reco.error = err || new Error('failed');
+    }).then(function() {
+      reco.loading = false;
+      renderRecoActions();
+      renderRecoPerformance();
+      renderWhyBoost();
+    });
+  }
+
+  function recoDismissed(id) {
+    try {
+      var ts = Number(localStorage.getItem('reco-dismiss:' + id));
+      return !!ts && (Date.now() - ts) < RECO_DISMISS_MS;
+    } catch (e) { return false; }
+  }
+  function dismissRecoAction(id) {
+    try { localStorage.setItem('reco-dismiss:' + id, String(Date.now())); } catch (e) {}
+    renderRecoActions();
+  }
+
+  function recoNum(n) {
+    if (n == null || n === '') return '—';
+    return typeof n === 'number' ? n.toLocaleString(state.vendor.country === 'US' ? 'en-US' : 'en-IN') : String(n);
+  }
+
+  // Only same-site paths or http(s) URLs become links — never javascript:.
+  function safeUrl(u) {
+    u = String(u || '');
+    return (/^\/(?!\/)/.test(u) || /^https?:\/\//i.test(u)) ? u : '';
+  }
+
+  function recoActionList() {
+    var d = reco.data;
+    var list = (d && Array.isArray(d.actions)) ? d.actions.slice() : [];
+    return list
+      .filter(function(a) { return a && a.id && !recoDismissed(a.id); })
+      .sort(function(a, b) { return (Number(b.priority) || 0) - (Number(a.priority) || 0); });
+  }
+
+  function recoMetricLine(m) {
+    if (!m || m.value == null) return '';
+    var b = reco.data && reco.data.benchmark;
+    var where = b && (b.city || b.category)
+      ? ' in ' + [b.city, b.category].filter(Boolean).join(' ')
+      : '';
+    return '<div class="reco-metric">' + esc(m.label || 'You') + ': <strong>' + esc(recoNum(m.value)) + '</strong>' +
+      (m.benchmark != null ? ' · Median' + esc(where) + ': <strong>' + esc(recoNum(m.benchmark)) + '</strong>' : '') +
+    '</div>';
+  }
+
+  function renderRecoActions() {
+    var card = document.getElementById('recoActionsCard');
+    var box = document.getElementById('recoActions');
+    if (!card || !box) return;
+    if (reco.loading && !reco.data) {
+      card.hidden = false;
+      box.innerHTML = [0, 1, 2].map(function() {
+        return '<div class="reco-row" aria-hidden="true"><span class="reco-dot skel"></span>' +
+          '<div class="reco-main"><div class="skel" style="height:13px; width:45%;"></div>' +
+          '<div class="skel" style="height:11px; width:80%; margin-top:8px;"></div></div></div>';
+      }).join('');
+      return;
+    }
+    if (reco.error && !reco.data) {
+      card.hidden = false;
+      box.innerHTML = '<p style="font-size:13px; color:var(--text-muted); padding:8px 0;">Could not load suggestions. ' +
+        '<button class="btn btn-sm" onclick="loadRecoVendor()">Retry</button></p>';
+      return;
+    }
+    var actions = recoActionList().slice(0, 4);
+    if (!actions.length) { card.hidden = true; box.innerHTML = ''; return; }
+    card.hidden = false;
+    box.innerHTML = actions.map(function(a) {
+      var sev = ['urgent', 'recommended', 'opportunity'].indexOf(a.severity) >= 0 ? a.severity : 'opportunity';
+      var cta = a.cta || {};
+      var chips = (a.id === 'add_services' && Array.isArray(a.suggestions) && a.suggestions.length)
+        ? '<div class="reco-chips">' + a.suggestions.slice(0, 8).map(function(s) {
+            return '<button type="button" class="reco-chip" data-reco-svc="' + esc(s) + '" title="Add this service">+ ' + esc(s) + '</button>';
+          }).join('') + '</div>'
+        : '';
+      return '<div class="reco-row" data-reco-id="' + esc(a.id) + '">' +
+        '<span class="reco-dot ' + sev + '" title="' + esc(sev) + '" aria-label="' + esc(sev) + '"></span>' +
+        '<div class="reco-main">' +
+          '<div class="reco-title">' + esc(a.title) + '</div>' +
+          (a.body ? '<div class="reco-body">' + esc(a.body) + '</div>' : '') +
+          recoMetricLine(a.metric) + chips +
+        '</div>' +
+        '<div class="reco-side">' +
+          ((cta.view || cta.href) && cta.label
+            ? '<button type="button" class="btn btn-sm' + (sev === 'urgent' ? ' btn-primary' : '') + '" data-reco-cta="' + esc(a.id) + '">' + esc(cta.label) + ' →</button>'
+            : '') +
+          '<button type="button" class="reco-x" data-reco-dismiss="' + esc(a.id) + '" title="Dismiss for 7 days" aria-label="Dismiss for 7 days">×</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    box.querySelectorAll('[data-reco-cta]').forEach(function(b) {
+      b.addEventListener('click', function() { runRecoCta(b.getAttribute('data-reco-cta')); });
+    });
+    box.querySelectorAll('[data-reco-dismiss]').forEach(function(b) {
+      b.addEventListener('click', function() { dismissRecoAction(b.getAttribute('data-reco-dismiss')); });
+    });
+    box.querySelectorAll('[data-reco-svc]').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var name = b.getAttribute('data-reco-svc');
+        navigate('services');
+        openAddServiceModal();
+        var n = document.getElementById('sName');
+        if (n) n.value = name;
+        try { window.trackEvent('vendor_reco_action', { action: 'add_services_suggestion' }); } catch (e) {}
+      });
+    });
+  }
+
+  function runRecoCta(id) {
+    var a = recoActionList().filter(function(x) { return x.id === id; })[0];
+    if (!a || !a.cta) return;
+    try { window.trackEvent('vendor_reco_action', { action: id }); } catch (e) {}
+    if (a.cta.view) {
+      navigate(a.cta.view);
+      // Boost/renew land on Grow; take the vendor straight to the plans.
+      if ((id === 'boost_featured' || id === 'renew_featured') && (a.cta.view === 'grow')) {
+        setTimeout(function() { var c = document.getElementById('growWhyBoost'); if (!c || c.hidden) c = document.getElementById('featuredCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+      }
+      return;
+    }
+    var href = safeUrl(a.cta.href);
+    if (href) window.open(href, '_blank', 'noopener');
+  }
+
+  function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+
+  function perfChartSvg(daily) {
+    var n = daily.length;
+    var max = 1;
+    daily.forEach(function(r) { max = Math.max(max, Number(r.views) || 0, Number(r.taps) || 0); });
+    var W = 600, H = 140, slot = W / n, bw = Math.max(2, slot * 0.7), tw = Math.max(1.5, slot * 0.35);
+    var bars = daily.map(function(r, i) {
+      var v = Number(r.views) || 0, t = Number(r.taps) || 0;
+      var vh = (v / max) * (H - 4), th = (t / max) * (H - 4);
+      var x = i * slot + (slot - bw) / 2;
+      return '<g><title>' + esc(r.day) + ': ' + v + ' view' + (v === 1 ? '' : 's') + ', ' + t + ' tap' + (t === 1 ? '' : 's') + '</title>' +
+        '<rect x="0" y="0" width="' + slot.toFixed(2) + '" height="' + H + '" transform="translate(' + (i * slot).toFixed(2) + ',0)" fill="transparent"/>' +
+        '<rect class="bar-views" x="' + x.toFixed(2) + '" y="' + (H - vh).toFixed(2) + '" width="' + bw.toFixed(2) + '" height="' + vh.toFixed(2) + '" rx="1.5"/>' +
+        '<rect class="bar-taps" x="' + (i * slot + (slot - tw) / 2).toFixed(2) + '" y="' + (H - th).toFixed(2) + '" width="' + tw.toFixed(2) + '" height="' + th.toFixed(2) + '" rx="1"/>' +
+      '</g>';
+    }).join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Daily profile views and contact taps, last 30 days">' + bars + '</svg>' +
+      '<div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-subtle); margin-top:4px;"><span>' + esc(daily[0].day) + '</span><span>peak ' + max + '/day</span><span>' + esc(daily[n - 1].day) + '</span></div>' +
+      '<div class="perf-legend"><span><i style="background:#BFDBFE;"></i>Profile views</span><span><i style="background:var(--primary);"></i>Contact taps</span></div>';
+  }
+
+  function benchRow(label, you, median, fmt) {
+    var y = Number(you), m = Number(median);
+    var hasY = you != null && !isNaN(y), hasM = median != null && !isNaN(m);
+    var max = Math.max(hasY ? y : 0, hasM ? m : 0) * 1.25 || 1;
+    var f = fmt || recoNum;
+    return '<div class="bench-row">' +
+      '<div class="bench-head"><span><strong>' + esc(label) + '</strong></span>' +
+        '<span>You <strong style="color:var(--primary);">' + esc(hasY ? f(y) : '—') + '</strong> · Median ' + esc(hasM ? f(m) : '—') + '</span></div>' +
+      '<div class="bench-track">' +
+        (hasM ? '<div class="bench-median" style="width:' + Math.min(100, (m / max) * 100).toFixed(1) + '%;"></div>' : '') +
+        (hasY ? '<div class="bench-you" style="left:' + Math.min(100, (y / max) * 100).toFixed(1) + '%;" title="You"></div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderRecoPerformance() {
+    var chart = document.getElementById('perfChart');
+    var bench = document.getElementById('perfBench');
+    if (!chart || !bench) return;
+    var d = reco.data;
+    if (reco.loading && !d) {
+      chart.innerHTML = '<div class="skel" style="height:150px;"></div>';
+      bench.innerHTML = '<div class="skel" style="height:14px; margin:14px 0;"></div><div class="skel" style="height:14px; margin:14px 0;"></div><div class="skel" style="height:14px; margin:14px 0;"></div>';
+      return;
+    }
+    if (reco.error && !d) {
+      var retry = '<p style="font-size:13px; color:var(--text-muted);">Could not load performance data. <button class="btn btn-sm" onclick="loadRecoVendor()">Retry</button></p>';
+      chart.innerHTML = retry;
+      bench.innerHTML = '';
+      return;
+    }
+    var p = d && d.performance;
+    var b = d && d.benchmark;
+    var f = d && d.featured;
+
+    if (p) {
+      var taps = p.taps || {};
+      setText('pViews', recoNum(p.views || 0));
+      setText('pTaps', recoNum(taps.total || 0));
+      setText('pTapsSplit', 'Phone ' + recoNum(taps.phone || 0) + ' · WhatsApp ' + recoNum(taps.whatsapp || 0) + ' · Website ' + recoNum(taps.website || 0));
+      setText('pRecoImp', recoNum(p.recoImpressions || 0));
+      setText('pRecoClk', recoNum(p.recoClicks || 0));
+      setText('pRecoCtr', p.recoImpressions ? ((100 * (p.recoClicks || 0) / p.recoImpressions).toFixed(1) + '% click-through') : '');
+      var spCard = document.getElementById('pSponsoredCard');
+      if (spCard) {
+        var showSp = !!(f && f.active) || (p.sponsoredImpressions || 0) > 0;
+        spCard.hidden = !showSp;
+        setText('pSpImp', recoNum(p.sponsoredImpressions || 0) + ' seen');
+        setText('pSpClk', recoNum(p.sponsoredClicks || 0) + ' click' + (p.sponsoredClicks === 1 ? '' : 's'));
+      }
+      var daily = Array.isArray(p.daily) ? p.daily : [];
+      var any = daily.some(function(r) { return (Number(r.views) || 0) + (Number(r.taps) || 0) > 0; });
+      chart.innerHTML = (daily.length && any)
+        ? perfChartSvg(daily)
+        : '<p style="font-size:13px; color:var(--text-muted); padding:12px 0;">No profile views or contact taps recorded in the last 30 days yet. Share your listing link and ask happy customers for reviews to get discovered.</p>';
+    } else {
+      ['pViews', 'pTaps', 'pRecoImp', 'pRecoClk'].forEach(function(id) { setText(id, '—'); });
+      setText('pTapsSplit', '');
+      setText('pRecoCtr', '');
+      chart.innerHTML = '<p style="font-size:13px; color:var(--text-muted); padding:12px 0;">Visibility data appears once your listing is claimed and approved. <a href="/find-my-listing/" style="font-weight:600;">Find my listing →</a></p>';
+    }
+
+    if (!b) {
+      setText('perfBenchTitle', 'How you compare');
+      bench.innerHTML = '<p style="font-size:13px; color:var(--text-muted); padding:8px 0;">Claim your listing to see how you compare. <a href="/find-my-listing/" style="font-weight:600;">Find my listing →</a></p>';
+      return;
+    }
+    setText('perfBenchTitle', 'How you compare' + (b.city || b.category ? ' in ' + [b.city, b.category].filter(Boolean).join(' · ') : ''));
+    var rating = b.rating || {}, reviews = b.reviews || {}, views = b.views30d || {}, tp = b.taps30d || {}, conv = b.conversion || {};
+    var pct = function(x) { return (x * 100).toFixed(1) + '%'; };
+    var oneDp = function(x) { return x.toFixed(1) + '★'; };
+    var html = '';
+    if (b.yourRank) {
+      html += '<div style="font-size:14px; font-weight:700; margin-bottom:6px;">Rank #' + esc(recoNum(b.yourRank)) + ' of ' + esc(recoNum(b.listings)) + '</div>';
+    } else if (b.listings) {
+      html += '<div style="font-size:13px; color:var(--text-muted); margin-bottom:6px;">' + esc(recoNum(b.listings)) + ' businesses in this city and category</div>';
+    }
+    html += benchRow('Google rating', rating.you, rating.median, oneDp) +
+      benchRow('Reviews', reviews.you, reviews.median) +
+      benchRow('Profile views (30d)', views.you, views.median) +
+      benchRow('Contact taps (30d)', tp.you, tp.median);
+    if (conv.you != null || conv.median != null) {
+      html += '<div style="font-size:12.5px; color:var(--text-muted); margin-top:6px;">Views that became a contact tap: you ' +
+        esc(conv.you != null ? pct(Number(conv.you)) : '—') + ' · median ' + esc(conv.median != null ? pct(Number(conv.median)) : '—') + '</div>';
+    }
+    html += '<div style="font-size:11.5px; color:var(--text-subtle); margin-top:8px;">Bar = category median · Blue marker = you</div>';
+    var comps = Array.isArray(b.topCompetitors) ? b.topCompetitors.slice(0, 3) : [];
+    if (comps.length) {
+      html += '<div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin:18px 0 4px;">Top listings nearby</div>' +
+        comps.map(function(c) {
+          var u = safeUrl(c.url);
+          var name = esc(c.name || 'Listing');
+          return '<div class="comp-row">' +
+            (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + name + '</a>' : '<span style="font-weight:600;">' + name + '</span>') +
+            '<span style="display:flex; gap:8px; align-items:center; flex-shrink:0; color:var(--text-muted); font-size:12.5px;">' +
+              (c.featured ? '<span class="status-tag" style="background:var(--warning-bg); color:var(--warning); border:1px solid var(--warning-border);">Featured</span>' : '') +
+              (c.rating ? '⭐ ' + esc(Number(c.rating).toFixed(1)) + ' · ' : '') +
+              esc(recoNum(c.review_count || 0)) + ' review' + (Number(c.review_count) === 1 ? '' : 's') +
+            '</span>' +
+          '</div>';
+        }).join('');
+    }
+    bench.innerHTML = html;
+  }
+
+  function renderWhyBoost() {
+    var box = document.getElementById('growWhyBoost');
+    if (!box) return;
+    var d = reco.data;
+    if (!d) { box.hidden = true; box.innerHTML = ''; return; }
+    var actions = Array.isArray(d.actions) ? d.actions : [];
+    var act = actions.filter(function(a) { return a && (a.id === 'renew_featured' || a.id === 'boost_featured'); })
+      .sort(function(a, b) { return (Number(b.priority) || 0) - (Number(a.priority) || 0); })[0];
+    var b = d.benchmark || {}, f = d.featured || {}, p = d.performance || {};
+    var lines = [];
+    if (act) {
+      if (b.listings) lines.push(recoNum(b.listings) + ' ' + (b.category || '') + ' businesses in ' + (b.city || 'your city'));
+      if (f.slotsLive != null) lines.push('Featured slots live: ' + recoNum(f.slotsLive) + (f.slotsCap ? ' of ' + recoNum(f.slotsCap) : ''));
+      var v = b.views30d || {};
+      if (v.you != null) lines.push('Your views: ' + recoNum(v.you) + ' vs median ' + recoNum(v.median != null ? v.median : 0));
+    }
+    var placement = f.active
+      ? 'Your placement: ' + recoNum(p.sponsoredImpressions || 0) + ' impressions · ' + recoNum(p.sponsoredClicks || 0) + ' clicks this month'
+      : '';
+    if (!act && !placement) { box.hidden = true; box.innerHTML = ''; return; }
+    box.innerHTML =
+      (act ? '<div style="font-size:16px; font-weight:800;">' + esc(act.id === 'renew_featured' ? 'Keep your spot — renew now' : 'Why boost now') + '</div>' +
+             (act.body ? '<div style="font-size:13px; color:var(--text-muted); margin-top:2px;">' + esc(act.body) + '</div>' : '') +
+             (lines.length ? '<ul>' + lines.map(function(l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' : '<div style="height:10px;"></div>')
+           : '') +
+      (placement ? '<div style="font-size:13px; font-weight:600; color:#047857; margin-bottom:' + (act ? '12px' : '0') + ';">📈 ' + esc(placement) + '</div>' : '') +
+      (act ? '<button type="button" class="btn btn-primary btn-sm" onclick="scrollToFeaturedPlans()">' + esc((act.cta && act.cta.label) || (act.id === 'renew_featured' ? 'Renew placement' : 'See featured plans')) + ' →</button>' : '');
+    box.hidden = false;
+  }
+
+  function scrollToFeaturedPlans() {
+    var el = document.getElementById('featuredPlans');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try { window.trackEvent('vendor_reco_action', { action: 'why_boost_cta' }); } catch (e) {}
   }
 
   function renderMetrics() {
@@ -2815,10 +3757,15 @@
     set('dashRatingLine', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' (' + (ra.published || 0) + ' review' + ((ra.published || 0) === 1 ? '' : 's') + ')') : 'No reviews yet');
   }
 
+  function retryServices() {
+    loadServices().catch(function(e) { toast('Could not load services: ' + fmtErr(e), 'error'); });
+  }
+
   function loadServices() {
     return api.vendorServices().then(function(r) {
       state.services = (r.services || []).map(function(s) {
-        return { id: s.id, name: s.name, price: Math.round(s.priceMinor / 100), duration: s.durationLabel, description: s.description || '', rawStatus: s.status };
+        // Keep cents: a $12.50 service is not $13.
+        return { id: s.id, name: s.name, price: Math.round(s.priceMinor) / 100, currency: s.currency || 'INR', duration: s.durationLabel, description: s.description || '', rawStatus: s.status };
       });
       state.serviceCount = state.services.length;
       renderServices();
@@ -2847,27 +3794,32 @@
       state.invites = d.customerInvites || state.invites;
       renderEnquiryFilters();
       if (d.serviceCount != null) state.serviceCount = d.serviceCount;
-      if (d.reviews && d.reviews.recent) {
-        state.reviews = d.reviews.recent.map(function(r) {
-          return { id: r.id, name: r.reviewerName || 'Customer', rating: r.rating || 0, comment: r.text || '',
-            vendorReply: r.vendorReply || '',
-            date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' };
-        });
+      // The summary only carries the 5 newest; never let it overwrite the
+      // full list if /vendor/reviews already answered.
+      if (d.reviews && d.reviews.recent && !state.reviewsLoaded) {
+        state.reviews = d.reviews.recent.map(mapReview);
       }
-      state.campaigns = d.campaigns || [];
+      renderChecklist(d.completion);
+      // /vendor/campaigns is the full record; the summary must not overwrite
+      // it when it answers second.
+      if (!state.campaignsLoaded) state.campaigns = d.campaigns || [];
       renderReviews();
       renderCampaign();
       renderMetrics();
+      loadRecoVendor();
     }).catch(function(err){
       if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
       if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
       renderReviews();
+      loadRecoVendor();
     });
 
     loadServices().catch(function(err){
       if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
       if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
-      renderServices();
+      var grid = document.getElementById('servicesGrid');
+      if (grid) grid.innerHTML = '<p style="color:var(--danger); padding:20px 0;">Could not load your services (' + esc(fmtErr(err)) + '). ' +
+        '<button class="btn btn-sm" onclick="retryServices()">Retry</button></p>';
     });
 
     api.vendorEnquiries().then(function(r) {
@@ -2879,19 +3831,30 @@
       renderFullEnquiries();
       renderEnquiryFilters();
       renderMetrics();
-    }).catch(function(){ renderDashTable(); renderFullEnquiries(); });
+    }).catch(function(err){
+      var msg = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--danger);">Could not load enquiries (' + esc(fmtErr(err)) + '). Refresh to try again.</td></tr>';
+      var a = document.getElementById('dashTableBody'), b = document.getElementById('fullEnquiriesTableBody');
+      if (a) a.innerHTML = msg;
+      if (b) b.innerHTML = msg;
+    });
 
     api.vendorCampaigns().then(function(r) {
       state.campaigns = r.campaigns || [];
+      state.campaignsLoaded = true;
       state.campaignCatalogue = r.catalogue || null;
       renderCampaign();
       renderPlans();
     }).catch(function(){});
 
     loadFeatured();
+    loadReviews();
+
+    // Deep link from a mail button or a return URL (?view=services etc.).
+    var params = new URLSearchParams(location.search);
+    var viewParam = params.get('view');
+    if (viewParam) navigate(viewParam);
 
     // Return from a campaign checkout — payment done, now awaiting admin review.
-    var params = new URLSearchParams(location.search);
     handleEmailVerifyReturn(params);
 
     // A featured-placement return must be polled against the featured endpoint,

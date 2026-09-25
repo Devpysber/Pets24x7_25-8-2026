@@ -3,7 +3,7 @@
  * Used by /login/, /parent-login/, /vendor-login/, /dashboard/*.
  *
  * API base resolved at runtime:
- *   - localhost / 127.0.0.1  -> http://localhost:4000   (local dev)
+ *   - localhost / 127.0.0.1  -> same origin ('')        (serve.py proxies /api to :4000)
  *   - anything else          -> https://api.pets24x7.com
  *
  * Override in config.js if needed:
@@ -31,10 +31,25 @@
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
-    return fetch(BASE + path, opts).then(function (r) {
+    return fetch(BASE + path, opts).catch(function (netErr) {
+      // A dropped connection rejects with a bare TypeError ("Failed to fetch"),
+      // which is meaningless to a customer. No status is set, so callers that
+      // test isTransientApiError() still treat it as transient.
+      var e = new Error('Could not reach Pets24x7. Check your connection and try again.');
+      e.cause = netErr;
+      throw e;
+    }).then(function (r) {
       return r.json().catch(function () { return { ok: false, error: 'bad_json' }; }).then(function (data) {
         if (!r.ok) {
-          var err = new Error(data.message || data.error || ('HTTP ' + r.status));
+          // Schema failures come back as { error: 'validation_failed', issues }
+          // with no message; the first issue is the useful sentence. A non-JSON
+          // error page (proxy 502 etc.) says nothing beyond its status.
+          var issue = data && data.issues && data.issues[0];
+          var issueMsg = issue && issue.message
+            ? ((issue.path && issue.path.length ? issue.path.join('.') + ': ' : '') + issue.message)
+            : '';
+          var code = data && data.error && data.error !== 'bad_json' ? data.error : '';
+          var err = new Error((data && data.message) || issueMsg || code || ('HTTP ' + r.status));
           err.status = r.status;
           err.data = data;
           throw err;
@@ -49,6 +64,7 @@
     get:    function (p)        { return req('GET',    p); },
     post:   function (p, body)  { return req('POST',   p, body || {}); },
     patch:  function (p, body)  { return req('PATCH',  p, body || {}); },
+    put:    function (p, body)  { return req('PUT',    p, body || {}); },
     del:    function (p)        { return req('DELETE', p); },
 
     // Auth helpers
@@ -56,7 +72,7 @@
     logout:           function ()                        { return req('POST', '/api/me/logout', {}); },
 
     parentRequestOtp: function (p)                       { return req('POST', '/api/parent/request-otp', p); },
-    parentVerify:     function (phone, code)             { return req('POST', '/api/parent/verify',      { phone: phone, code: code }); },
+    parentVerify:     function (phone, code, extra)      { return req('POST', '/api/parent/verify',      Object.assign({ phone: phone, code: code }, extra || {})); },
 
     // Email + password auth (manual signup needs a verification click; Google
     // sign-in is trusted straight away because Google already proved the address).
@@ -77,7 +93,7 @@
     adminEmailOtpRequest:  function (email)              { return req('POST', '/api/admin/email/otp/request',  { email: email }); },
     adminEmailOtpVerify:   function (email, code)        { return req('POST', '/api/admin/email/otp/verify',   { email: email, code: code }); },
 
-    vendorRequestOtp: function (phone)                   { return req('POST', '/api/vendor/request-otp', { phone: phone }); },
+    vendorRequestOtp: function (phone, country)          { return req('POST', '/api/vendor/request-otp', { phone: phone, country: country }); },
     vendorVerify:     function (p)                       { return req('POST', '/api/vendor/verify',      p); },
 
     adminLogin:       function (email, password)         { return req('POST', '/api/admin/login', { email: email, password: password }); },
@@ -112,6 +128,7 @@
     parentPetUpdate:  function (id, p)                   { return req('PATCH', '/api/parent/pets/' + encodeURIComponent(id), p); },
     parentPetDelete:  function (id)                      { return req('DELETE', '/api/parent/pets/' + encodeURIComponent(id)); },
     parentProfileUpdate: function (p)                    { return req('PATCH', '/api/parent/profile', p); },
+    parentProfilePhoneOtp: function (p)                   { return req('POST', '/api/parent/profile/phone-otp', p); },
     parentEnquiries:  function ()                        { return req('GET',  '/api/enquiries/mine'); },
 
     parentSaved:      function ()                        { return req('GET',    '/api/parent/saved'); },
@@ -147,11 +164,13 @@
     vendorCampaigns:        function ()      { return req('GET',  '/api/vendor/campaigns'); },
     vendorCampaignCreate:   function (p)     { return req('POST', '/api/vendor/campaigns', p); },
     vendorCampaignStatus:   function (txn)   { return req('GET',  '/api/vendor/campaigns/payment/' + encodeURIComponent(txn)); },
+    vendorCampaignCancel:   function (id)    { return req('POST', '/api/vendor/campaigns/' + encodeURIComponent(id) + '/cancel', {}); },
 
     // Vendor featured listing
     vendorFeatured:         function ()      { return req('GET',  '/api/vendor/featured'); },
     vendorFeaturedCreate:   function (p)     { return req('POST', '/api/vendor/featured', p); },
     vendorFeaturedStatus:   function (txn)   { return req('GET',  '/api/vendor/featured/payment/' + encodeURIComponent(txn)); },
+    vendorFeaturedCancel:   function (id)    { return req('POST', '/api/vendor/featured/' + encodeURIComponent(id) + '/cancel', {}); },
 
     // Vendor subscriptions & checkout
     vendorSubPlans:    function ()           { return req('GET',  '/api/vendor/subscriptions/plans'); },
@@ -212,7 +231,7 @@
 
     // Admin JSON API
     adminOverview:      function ()          { return req('GET',  '/api/admin/overview'); },
-    adminVendors:       function (status)    { return req('GET',  '/api/admin/vendors' + (status ? '?status=' + encodeURIComponent(status) : '')); },
+    adminVendors:       function (status, q) { var qs = []; if (status) qs.push('status=' + encodeURIComponent(status)); if (q) qs.push('q=' + encodeURIComponent(q)); return req('GET', '/api/admin/vendors' + (qs.length ? '?' + qs.join('&') : '')); },
     adminVendorStatus:  function (id, body)  { return req('POST', '/api/admin/vendors/' + encodeURIComponent(id) + '/status', body); },
     adminParents:       function ()          { return req('GET',  '/api/admin/parents'); },
     adminListings:      function ()          { return req('GET',  '/api/admin/listings'); },
@@ -229,7 +248,8 @@
     adminGrowPlans:       function ()          { return req('GET',  '/api/admin/grow-plans'); },
     adminGrowPlanSave:    function (body)      { return req('POST', '/api/admin/grow-plans', body); },
     adminGrowPlanUpdate:  function (id, body)  { return req('PUT',  '/api/admin/grow-plans/' + encodeURIComponent(id), body); },
-    adminGrowBuyers:      function ()          { return req('GET',  '/api/admin/grow-buyers'); },
+    // include: 'all' also returns checkouts that were started but never paid.
+    adminGrowBuyers:      function (include)   { return req('GET',  '/api/admin/grow-buyers' + (include ? '?include=' + encodeURIComponent(include) : '')); },
     adminGrowBuyerStatus: function (id, status){ return req('POST', '/api/admin/grow-buyers/' + encodeURIComponent(id) + '/status', { status: status }); },
 
     // Subscriptions API
@@ -281,12 +301,21 @@
       if (o.city)     qs.push('city=' + encodeURIComponent(o.city));
       if (o.category) qs.push('category=' + encodeURIComponent(o.category));
       if (o.page)     qs.push('page=' + encodeURIComponent(o.page));
+      if (o.hidden)   qs.push('hidden=' + encodeURIComponent(o.hidden));   // all | only | exclude
       return req('GET', '/api/admin/directory' + (qs.length ? '?' + qs.join('&') : ''));
     },
     adminDirectorySuggest: function (qs)  { return req('GET', '/api/admin/directory/suggest' + (qs || '')); },
     adminListing:       function (id)       { return req('GET',    '/api/admin/listings/' + encodeURIComponent(id)); },
     adminListingUpdate: function (id, body) { return req('PATCH',  '/api/admin/listings/' + encodeURIComponent(id), body); },
     adminListingDelete: function (id)       { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id)); },
+    // body.force = true adds the listing even when a likely duplicate exists (409 otherwise).
+    adminListingCreate: function (body)     { return req('POST',   '/api/admin/listings', body); },
+    adminListingHide:   function (id, hide) { return req('POST',   '/api/admin/listings/' + encodeURIComponent(id) + (hide === false ? '/unhide' : '/hide'), {}); },
+    adminListingPhotosAdd:   function (id, photos) { return req('POST',   '/api/admin/listings/' + encodeURIComponent(id) + '/photos', { photos: photos }); },
+    adminListingPhotosOrder: function (id, order)  { return req('PUT',    '/api/admin/listings/' + encodeURIComponent(id) + '/photos', { order: order }); },
+    adminListingPhotoDelete: function (id, idx)    { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id) + '/photos/' + encodeURIComponent(idx)); },
+    adminPublish:       function ()         { return req('POST', '/api/admin/publish', {}); },
+    adminPublishStatus: function ()         { return req('GET',  '/api/admin/publish/status'); },
     adminSettings:    function ()          { return req('GET',  '/api/admin/settings'); },
     adminMyProfile:   function ()          { return req('GET',   '/api/admin/me/profile'); },
     adminMyProfileSave: function (body)    { return req('PATCH', '/api/admin/me/profile', body); },
@@ -300,9 +329,66 @@
       var cat = encodeURIComponent(params.category || '');
       var city = encodeURIComponent(params.city || '');
       var limit = params.limit || 60;
-      return req('GET', '/api/listings/search?q=' + q + '&category=' + cat + '&city=' + city + '&limit=' + limit);
+      return req('GET', '/api/listings/search?q=' + q + '&category=' + cat + '&city=' + city + '&limit=' + limit +
+        (params.newest ? '&newest=1' : ''));
+    },
+    listingById:      function (id)                      { return req('GET',  '/api/listings/' + encodeURIComponent(id)); },
+    listingsPopular:  function (city, category) {
+      var qs = [];
+      if (city) qs.push('city=' + encodeURIComponent(city));
+      if (category) qs.push('category=' + encodeURIComponent(category));
+      return req('GET', '/api/listings/popular' + (qs.length ? '?' + qs.join('&') : ''));
+    },
+
+    // ---- Recommendations (src/reco) ----
+    // Every reco response carries a `rid`; each item carries pos, reason and
+    // sponsored. /reco-track.js reports impressions and clicks against it.
+    recoParent:       function (p)                       { return req('GET', '/api/reco/parent' + recoQs(p)); },
+    // recoParentFeed(city) or recoParentFeed({ city, country, limit })
+    recoParentFeed:   function (city, country) {
+      var p = (city && typeof city === 'object') ? city : { city: city, country: country };
+      return req('GET', '/api/reco/parent/feed' + recoQs(p));
+    },
+    recoListing:      function (id, limit)               { return req('GET', '/api/reco/listing/' + encodeURIComponent(id) + recoQs({ limit: limit })); },
+    // p = { city, country, category, sort, limit, cursor, sponsored:'0'|'1', surface:'home' }
+    recoCity:         function (p)                       { return req('GET', '/api/reco/city' + recoQs(p)); },
+    // Best-effort batch of { rid, type, listingId, pos?, reason?, sponsored?, surface? }.
+    // keepalive so a click that navigates away still gets delivered; never rejects.
+    recoEvents:       function (events) {
+      if (!events || !events.length) return Promise.resolve({ ok: false, accepted: 0, rejected: 0 });
+      try {
+        return fetch(BASE + '/api/reco/events', {
+          method: 'POST', credentials: 'include', keepalive: true,
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ events: events.slice(0, 50) })
+        }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
+      } catch (e) { return Promise.resolve({ ok: false }); }
+    },
+    recoVendor:       function ()                        { return req('GET', '/api/reco/vendor'); },
+
+    adminRecoInsights:   function (section, opts) {
+      var p = Object.assign({ section: section || 'all' }, opts || {});
+      return req('GET', '/api/admin/reco/insights' + recoQs(p));
+    },
+    adminRecoNudge:      function (p)                    { return req('POST', '/api/admin/reco/nudge', p); },
+    adminRecoConfig:     function ()                     { return req('GET',  '/api/admin/reco/config'); },
+    adminRecoConfigSave: function (partial)              { return req('PUT',  '/api/admin/reco/config', partial || {}); },
+    adminRecoRebuild:    function ()                     { return req('POST', '/api/admin/reco/rebuild', {}); },
+    adminRecoPerformance:function (days, surface, variant) {
+      return req('GET', '/api/admin/reco/performance' + recoQs({ days: days, surface: surface, variant: variant }));
     }
   };
+
+  // Query string from an object, skipping empty values (0 is kept).
+  function recoQs(p) {
+    var parts = [];
+    Object.keys(p || {}).forEach(function (k) {
+      var v = p[k];
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+    });
+    return parts.length ? '?' + parts.join('&') : '';
+  }
 
   // Tiny global helpers shared across login/dashboard pages.
   window.fmtErr = function (e) { return (e && (e.message || e.error)) || 'Something went wrong'; };

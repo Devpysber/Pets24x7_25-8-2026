@@ -2,21 +2,24 @@
 //   POST /api/vendor/request-otp { phone }
 //      → 200 { matches: [...] }   (phone matched ≥ 1 listing, OTP sent)
 //      → 200 { matches: [], hint: "no_match" }   (no matches, do NOT send OTP)
-//   POST /api/vendor/verify     { phone, code, listingId, businessName, email? }
-//      → JWT cookie + Vendor row created (status PENDING, awaiting admin approve)
+//   POST /api/vendor/verify     { phone, code, listingId, businessName?, email?, country? }
+//      → JWT cookie + Vendor row created/updated (status ACTIVE). The listing
+//        must be one whose phone matched in step 1 (or the one this phone
+//        already manages) — proving your own phone never lets you claim a
+//        business that is listed under a different number.
 //   GET  /api/vendor/email/verify?token=...
 //      → burns an email-verification token, redirects back to the dashboard
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 
 import { prisma } from '../db.js';
 import { issueOtp, verifyOtp } from '../whatsapp/otp.js';
 import { setAuthCookie } from './jwt.js';
-import { findListingByPhone, getListingById } from '../listings/index.js';
+import { findListingByPhone, findPublicListingsByPhone, getListingById, shownRating } from '../listings/index.js';
 import { normalizePhone } from '../shared/phone.js';
+import { makeLimiter } from '../shared/rate-limit.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../shared/errors.js';
 import { env } from '../env.js';
@@ -24,6 +27,7 @@ import { notifyIf } from '../mail/notify.js';
 import { vendorWelcomeEmail } from '../mail/action-templates.js';
 import { vendorEmailVerifiedEmail } from '../mail/lifecycle-templates.js';
 import {
+  type VendorConsumeResult,
   consumeVendorVerificationToken,
   sendVendorVerificationEmail,
 } from './vendor-email-verification.js';
@@ -31,11 +35,34 @@ import { EMAIL_OTP_TTL_MIN, issueEmailOtp, normEmail, verifyEmailOtp } from './e
 
 export const vendorAuthRouter = Router();
 
-const otpLimiter = rateLimit({
+const otpLimiter = makeLimiter('vendor-otp-request', {
   windowMs: 60_000,
   max: process.env.NODE_ENV === 'development' ? 10_000 : 4,
   standardHeaders: true,
 });
+
+// Code checks have their own budget (see the parent twin in parent.routes.ts):
+// the per-code attempt cap bounds one phone, not one caller cycling phones.
+const verifyLimiter = makeLimiter('vendor-otp-verify', {
+  windowMs: 60_000,
+  max: process.env.NODE_ENV === 'development' ? 10_000 : 10,
+  standardHeaders: true,
+});
+
+/**
+ * Vendor.email is not unique, so a sign-in by address has to pick one row. A
+ * row whose owner proved the address wins over one that only typed it —
+ * otherwise anyone could register a business under someone else's address and
+ * have that person's email sign-in land in the newcomer's account. Among
+ * equals the newest claim wins; unclaimed rows (claimedAt null) sort last,
+ * where Postgres would otherwise put NULLs first on a descending sort.
+ */
+function vendorByEmail(email: string) {
+  return prisma.vendor.findFirst({
+    where: { email },
+    orderBy: [{ emailVerified: 'desc' }, { claimedAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Email OTP sign-in for an ALREADY-CLAIMED vendor.
@@ -48,7 +75,7 @@ const otpLimiter = rateLimit({
 // mail — matching how /request-otp already reports an unmatched phone.
 // ---------------------------------------------------------------------------
 
-const emailOtpLimiter = rateLimit({
+const emailOtpLimiter = makeLimiter('vendor-email-otp', {
   windowMs: 60_000,
   max: env.NODE_ENV === 'development' ? 10_000 : 5,
   standardHeaders: true,
@@ -62,11 +89,8 @@ vendorAuthRouter.post(
     const email = normEmail(rawEmail);
 
     // Vendor.email is not unique (two staff may share an address on different
-    // listings), so match the newest claimed row.
-    const vendor = await prisma.vendor.findFirst({
-      where: { email },
-      orderBy: { claimedAt: 'desc' },
-    });
+    // listings) — see vendorByEmail for which row wins.
+    const vendor = await vendorByEmail(email);
     if (!vendor) {
       return res.json({ ok: true, email, hint: 'no_account' });
     }
@@ -98,7 +122,7 @@ vendorAuthRouter.post(
     const ok = await verifyEmailOtp(email, body.code, 'EMAIL_LOGIN_VENDOR');
     if (!ok) throw new UnauthorizedError('Incorrect code');
 
-    const vendor = await prisma.vendor.findFirst({ where: { email }, orderBy: { claimedAt: 'desc' } });
+    const vendor = await vendorByEmail(email);
     if (!vendor) throw new UnauthorizedError('No vendor account for this email');
     // A suspended or rejected vendor must not get a session back.
     if (vendor.status === 'SUSPENDED' || vendor.status === 'REJECTED') {
@@ -117,6 +141,13 @@ vendorAuthRouter.post(
     await prisma.vendorEmailToken
       .updateMany({ where: { vendorId: vendor.id, usedAt: null }, data: { usedAt: new Date() } })
       .catch(() => {});
+
+    // A temp/admin-issued password still needs to be rotated before a full
+    // session is handed out — the same gate the password-login route enforces.
+    if (updated.mustChangePassword) {
+      res.json({ ok: true, mustChangePassword: true, email: updated.email });
+      return;
+    }
 
     setAuthCookie(res, { sub: updated.id, role: 'vendor' });
     res.json({
@@ -168,7 +199,7 @@ vendorAuthRouter.post(
     }
 
     const email = normEmail(payload.email);
-    const vendor = await prisma.vendor.findFirst({ where: { email }, orderBy: { claimedAt: 'desc' } });
+    const vendor = await vendorByEmail(email);
     if (!vendor) {
       throw new UnauthorizedError(
         'No business account uses that Google address yet. Claim your listing or register your business first.',
@@ -187,6 +218,13 @@ vendorAuthRouter.post(
     await prisma.vendorEmailToken
       .updateMany({ where: { vendorId: vendor.id, usedAt: null }, data: { usedAt: new Date() } })
       .catch(() => {});
+
+    // Same gate as email-OTP: a temp/admin-issued password must be rotated
+    // before Google Sign-In can hand out a full session.
+    if (updated.mustChangePassword) {
+      res.json({ ok: true, mustChangePassword: true, email: updated.email });
+      return;
+    }
 
     setAuthCookie(res, { sub: updated.id, role: 'vendor' });
     res.json({
@@ -215,7 +253,12 @@ vendorAuthRouter.post(
     const body = RequestOtpBody.parse(req.body);
     const phone = normalizePhone(body.phone, body.country ?? 'IN');
     const isDev = process.env.NODE_ENV === 'development';
-    let matches = findListingByPhone(phone);
+    // Nothing is verified yet — anyone can type any number — so the preview
+    // (name, category, city, address, rating) only ever shows listings the
+    // public may see; a hidden one is not revealed to whoever knows its phone.
+    // Same rule as GET /api/listings/by-phone. /verify still accepts any
+    // listing under the number, hidden included, once the code is proven.
+    let matches = findPublicListingsByPhone(phone);
 
     if (matches.length === 0 && isDev) {
       // Dev convenience: fall back to a REAL scraped listing so the claim
@@ -249,7 +292,7 @@ vendorAuthRouter.post(
         state: m.state ?? '',
         country: m.country,
         address: m.address ?? '',
-        rating: m.rating,
+        rating: shownRating(m),
         review_count: m.review_count,
         url: `/${(m.country || 'in').toLowerCase()}/${m.city_slug || 'mumbai'}/${m.id}/`,
       })),
@@ -260,17 +303,22 @@ vendorAuthRouter.post(
 // ----- Step 2: verify + claim a specific listing -----
 const VerifyBody = z.object({
   phone: z.string().min(6),
-  code: z.string().length(6),
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'),
   listingId: z.string().min(3),
   businessName: z.string().min(2).max(120).optional(),
   email: z.string().email().optional(),
+  // Must match what request-otp was given, or a 10-digit US number normalises
+  // to +91 here and never finds its code.
+  country: z.enum(['IN', 'US']).optional(),
 });
 
 vendorAuthRouter.post(
   '/verify',
+  verifyLimiter,
   asyncHandler(async (req, res) => {
     const body = VerifyBody.parse(req.body);
-    const phone = normalizePhone(body.phone);
+    const phone = normalizePhone(body.phone, body.country ?? 'IN');
+    const email = body.email ? normEmail(body.email) : undefined;
 
     const listing: { id: string; name: string; city: string; category: string; country: string; rating: number | string; review_count: number } =
       getListingById(body.listingId) ?? {
@@ -297,35 +345,63 @@ vendorAuthRouter.post(
     // public listing) — never proceed on an unverified OTP outside dev.
     if (!verified && !isDev) throw new UnauthorizedError('Invalid or expired code');
 
+    // The code proves the caller holds THIS phone. It says nothing about any
+    // other business, so the listing must be one listed under this number, or
+    // the one this phone already manages (a re-login).
+    const priorClaim = await prisma.vendor
+      .findUnique({ where: { phone }, select: { id: true, claimedAt: true, email: true, status: true, listingId: true } })
+      .catch(() => null);
+    if (!isDev) {
+      const ownsListing =
+        priorClaim?.listingId === body.listingId ||
+        findListingByPhone(phone).some((m) => m.id === body.listingId);
+      if (!ownsListing) {
+        throw new UnauthorizedError('That listing is not registered to this phone number.');
+      }
+      if (!getListingById(body.listingId) && priorClaim?.listingId !== body.listingId) {
+        throw new BadRequestError('Listing not found.');
+      }
+    }
+    // A suspended or rejected business cannot re-activate itself by signing in
+    // again — the upsert below would otherwise flip it straight back to ACTIVE.
+    if (priorClaim && (priorClaim.status === 'SUSPENDED' || priorClaim.status === 'REJECTED')) {
+      throw new UnauthorizedError('This business account is not active. Contact support@pets24x7.com.');
+    }
+    // One listing, one owner: someone else already manages it.
+    const holder = await prisma.vendor
+      .findUnique({ where: { listingId: listing.id }, select: { id: true } })
+      .catch(() => null);
+    if (holder && holder.id !== priorClaim?.id) {
+      throw new ConflictError('This listing has already been claimed. Contact support@pets24x7.com if it is yours.');
+    }
+
     try {
       const now = new Date();
-      // Welcome mail goes out on the first claim only, never on a re-login.
-      const priorClaim = await prisma.vendor
-        .findUnique({ where: { phone }, select: { claimedAt: true, email: true } })
-        .catch(() => null);
       // An address typed into the claim form is self-declared. If it differs
       // from the one already on file, the proof that came with the old address
       // no longer applies — clear it, or a vendor could swap in someone else's
-      // address and inherit a verified badge.
-      const emailChanged = (body.email ?? null) !== (priorClaim?.email ?? null);
+      // address and inherit a verified badge. A re-login that sends no address
+      // keeps the one on file rather than wiping it.
+      const emailChanged = email !== undefined && email !== (priorClaim?.email ?? null);
       const vendor = await prisma.vendor.upsert({
         where: { phone },
         update: {
           listingId: listing.id,
           businessName: body.businessName ?? listing.name,
-          email: body.email ?? null,
+          ...(email !== undefined && { email }),
           city: listing.city,
           country: listing.country,
           category: listing.category,
-          status: 'ACTIVE',
-          claimedAt: now,
+          // An account that has claimed before keeps its status and claim date;
+          // only a first claim sets them (a re-login must not reset either).
+          ...(priorClaim?.claimedAt ? {} : { status: 'ACTIVE' as const, claimedAt: now }),
           ...(emailChanged ? { emailVerified: false, emailVerifiedAt: null } : {}),
         },
         create: {
           phone,
           listingId: listing.id,
           businessName: body.businessName ?? listing.name,
-          email: body.email ?? null,
+          email: email ?? null,
           city: listing.city,
           country: listing.country,
           category: listing.category,
@@ -342,12 +418,13 @@ vendorAuthRouter.post(
       if (process.env.NODE_ENV !== 'development') throw err;
     }
 
-    // An address typed during the claim is self-declared: send the proof link.
-    if (body.email) {
+    // A newly typed address is self-declared: send the proof link. An address
+    // already on file (verified or not) is not re-mailed on every sign-in.
+    if (email && email !== (priorClaim?.email ?? null) && vendorId !== 'dev-vendor-id') {
       void sendVendorVerificationEmail({
         id: vendorId,
         businessName: body.businessName ?? listing.name,
-        email: body.email,
+        email,
       }).catch((err) => req.log.warn({ err }, 'vendor claim verification send failed'));
     }
 
@@ -363,7 +440,7 @@ vendorAuthRouter.post(
           name: listing.name,
           city: listing.city,
           category: listing.category,
-          rating: listing.rating,
+          rating: shownRating(listing),
           review_count: listing.review_count,
         },
       },
@@ -379,13 +456,17 @@ const SITE = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
 
 vendorAuthRouter.get(
   '/email/verify',
-  rateLimit({ windowMs: 60_000, max: env.NODE_ENV === 'development' ? 10_000 : 20, standardHeaders: true }),
+  makeLimiter('vendor-email-verify', { windowMs: 60_000, max: env.NODE_ENV === 'development' ? 10_000 : 20, standardHeaders: true }),
   asyncHandler(async (req, res) => {
     const back = (state: string) => `${SITE}/dashboard/vendor/?view=account&emailVerified=${state}`;
     const token = typeof req.query.token === 'string' ? req.query.token : '';
     if (!token) return res.redirect(back('invalid'));
 
-    const result = await consumeVendorVerificationToken(token);
+    // Opened from a mail client: a failure must land on a page, never on JSON.
+    const result = await consumeVendorVerificationToken(token).catch((err): VendorConsumeResult => {
+      req.log.warn({ err }, 'vendor email verification consume failed');
+      return { ok: false, reason: 'invalid' };
+    });
     if (!result.ok) return res.redirect(back(result.reason));
 
     req.log.info({ vendorId: result.vendorId }, 'vendor email verified');

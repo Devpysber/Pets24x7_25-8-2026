@@ -6,7 +6,17 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Page not found · Pets24x7.com</title>
 <meta name="robots" content="noindex" />
-<link rel="icon" type="image/png" href="pets24x7_logo.png" />
+<meta name="description" content="This page could not be found. Search vets, groomers, boarding and more pet services on Pets24x7." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Page not found — Pets24x7.com" />
+<meta property="og:description" content="Find vets, groomers, boarding and more pet services on Pets24x7." />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Page not found — Pets24x7.com" />
+<meta name="twitter:description" content="Find vets, groomers, boarding and more pet services on Pets24x7." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
+<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -35,19 +45,41 @@
   .links { margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; }
   .links a { color: var(--text-muted); margin: 0 8px; text-decoration: none; }
   .links a:hover { color: var(--primary); text-decoration: underline; }
+  .links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 2px; color: var(--text-muted); }
+  .links a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 6px; margin: 0; }
+  .btn { min-height: 48px; justify-content: center; }
+  a:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
+  @media (max-width: 480px) {
+    body { padding: 24px 16px; align-items: flex-start; }
+    .brand { margin-bottom: 20px; }
+    .actions { flex-direction: column; align-items: stretch; }
+    .btn { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } .btn:hover { transform: none; } }
 </style>
+<script>
+  // Old query-string links carry country=IN, and the Netlify/Vercel legacy
+  // redirects copy it into the path as-is (/IN/mumbai/). Pages live under the
+  // lowercase prefix, so send those on instead of showing a 404.
+  (function () {
+    var m = /^\/(IN|US|In|Us|iN|uS)(\/.*)?$/.exec(location.pathname);
+    if (m) location.replace('/' + m[1].toLowerCase() + (m[2] || '/') + location.search + location.hash);
+  })();
+</script>
+<script src="/config.js"></script>
 <script src="/analytics.js"></script>
 </head>
 <body>
   <div class="card">
     <a href="/" class="brand">
-      <img class="brand-logo" src="pets24x7_logo.png" alt="Pets24x7" />
+      <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
     </a>
     <div class="big-404">404</div>
     <h1>Looks like this pup wandered off the trail.</h1>
     <p>The link you followed is broken or no longer exists. Let's get you back on the leash — browse pet services in your city or chat with us on WhatsApp.</p>
     <div class="actions">
       <a href="/" class="btn btn-primary">← Back to home</a>
+      <a href="/search/" class="btn btn-primary" style="background:#fff;color:var(--primary);border:2px solid var(--primary);box-shadow:none;">Search pet services</a>
       <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20landed%20on%20a%20broken%20page..." class="btn btn-wa" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
         Chat on WhatsApp
@@ -58,9 +90,9 @@
       <a href="/in/bengaluru/">Bengaluru</a>·
       <a href="/us/dallas/">Dallas</a>·
       <a href="/us/miami/">Miami</a>·
-      <a href="marketing.html">For Businesses</a>·
-      <a href="privacy.html">Privacy</a>·
-      <a href="terms.html">Terms</a>
+      <a href="/marketing.html">For Businesses</a>·
+      <a href="/privacy.html">Privacy</a>·
+      <a href="/terms.html">Terms</a>
     </div>
   </div>
 </body>

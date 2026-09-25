@@ -1,0 +1,14 @@
+[Unit]
+Description=Nightly publish of the pets24x7 listings to the static site
+
+[Timer]
+# 03:30 in India whatever the server's own timezone is, plus up to 20 minutes
+# of jitter so it does not land on the same second as other nightly jobs.
+OnCalendar=*-*-* 03:30:00 Asia/Kolkata
+RandomizedDelaySec=20min
+AccuracySec=1min
+# A box that was off at 03:30 publishes once when it comes back.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

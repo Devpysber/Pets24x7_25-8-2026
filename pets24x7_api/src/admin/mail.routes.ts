@@ -20,6 +20,7 @@ import { BadRequestError } from '../shared/errors.js';
 import { logger } from '../logger.js';
 import { MAIL_CATALOG, catalogEntry } from '../mail/catalog.js';
 import { mailEnabled, sendMail, verifyMailTransport } from '../mail/mailer.js';
+import { withTracking } from '../mail/components.js';
 
 export const adminMailRouter = Router();
 adminMailRouter.use(requireAuth('admin'));
@@ -48,7 +49,7 @@ async function audienceEmails(audience: Audience): Promise<string[]> {
     return rows.map((r) => r.parent?.email).filter((e): e is string => !!e);
   }
   const rows = await prisma.vendor.findMany({
-    where: { email: { not: null }, ...(audience === 'active_vendors' ? { status: 'ACTIVE' } : {}) },
+    where: { email: { not: null }, ...(audience === 'active_vendors' ? { status: { in: ['ACTIVE', 'CLAIMED'] } } : {}) },
     select: { email: true },
     take: MAX_RECIPIENTS,
   });
@@ -124,7 +125,9 @@ adminMailRouter.post(
       // A bad data shape is the admin's typo, not a server fault — say which.
       throw new BadRequestError(`Could not render "${entry.label}": ${String(err?.message ?? err)}`);
     }
-    res.json({ ok: true, id: entry.id, subject: mail.subject, html: mail.html, text: mail.text });
+    // Show the links exactly as sent — sendMail adds the same UTM tags.
+    mail = withTracking({ ...mail, kind: entry.kind ?? 'marketing' });
+    res.json({ ok: true, id: entry.id, kind: entry.kind ?? 'marketing', subject: mail.subject, html: mail.html, text: mail.text });
   }),
 );
 

@@ -15,15 +15,15 @@
 // have an account with us.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { requireAuth } from '../auth/middleware.js';
-import { getListingById } from './index.js';
+import { makeLimiter } from '../shared/rate-limit.js';
+import { requireAuth, optionalAuth } from '../auth/middleware.js';
+import { getPublicListingById } from './index.js';
 
 export const activityRouter = Router();
 export const adminActivityRouter = Router();
@@ -43,15 +43,18 @@ function hashIp(ip: string | undefined): string | null {
 }
 
 // Generous: a page can legitimately report a view and then a tap.
-const writeLimiter = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true });
+const writeLimiter = makeLimiter('listing-activity-write', { windowMs: 60_000, max: 60, standardHeaders: true });
 
 activityRouter.post(
   '/',
   writeLimiter,
+  // Nothing populated req.auth here before, so every tap by a signed-in parent
+  // was stored as anonymous and the admin feed could never say who it was.
+  optionalAuth('pet_parent'),
   asyncHandler(async (req, res) => {
     const body = Body.parse(req.body);
-    const listing = getListingById(body.listingId);
-    // Unknown listing ids are dropped rather than stored: this endpoint is open,
+    const listing = getPublicListingById(body.listingId);
+    // Unknown (or hidden) listing ids are dropped rather than stored: this endpoint is open,
     // and a table of arbitrary strings is not worth having.
     if (!listing) return res.status(202).json({ ok: true, recorded: false });
 
@@ -100,16 +103,22 @@ adminActivityRouter.use(requireAuth('admin'));
 adminActivityRouter.get(
   '/activity',
   asyncHandler(async (req, res) => {
-    const take = Math.min(300, Number(req.query.limit ?? 150) || 150);
-    const kind = typeof req.query.kind === 'string' ? req.query.kind : '';
+    // Clamped both ways: a negative `take` makes Prisma read from the far end.
+    const take = Math.max(1, Math.min(300, Math.trunc(Number(req.query.limit ?? 150)) || 150));
+    // '' and 'all' mean everything; 'enquiry' means enquiries only (it used to
+    // return every tap as well); any other value filters taps by kind.
+    const rawKind = typeof req.query.kind === 'string' ? req.query.kind : '';
+    const kind = rawKind === 'all' ? '' : rawKind;
 
-    const [taps, enquiries, totals] = await Promise.all([
-      prisma.listingActivity.findMany({
-        where: kind && kind !== 'enquiry' ? { kind } : {},
-        orderBy: { createdAt: 'desc' },
-        take,
-      }),
-      kind && kind !== 'enquiry' && kind !== 'all'
+    const [taps, enquiries, totals, enquiryTotal] = await Promise.all([
+      kind === 'enquiry'
+        ? Promise.resolve([])
+        : prisma.listingActivity.findMany({
+            where: kind ? { kind } : {},
+            orderBy: { createdAt: 'desc' },
+            take,
+          }),
+      kind && kind !== 'enquiry'
         ? Promise.resolve([])
         : prisma.enquiry.findMany({
             orderBy: { createdAt: 'desc' },
@@ -121,6 +130,7 @@ adminActivityRouter.get(
             },
           }),
       prisma.listingActivity.groupBy({ by: ['kind'], _count: { _all: true } }).catch(() => []),
+      prisma.enquiry.count().catch(() => 0),
     ]);
 
     // Parent names, in one query rather than one per row.
@@ -175,7 +185,8 @@ adminActivityRouter.get(
       .sort((a, b) => b.at.getTime() - a.at.getTime())
       .slice(0, take);
 
-    const counts: Record<string, number> = { enquiry: enquiries.length };
+    // All-time totals, like the tap counts below — not the length of this page.
+    const counts: Record<string, number> = { enquiry: enquiryTotal };
     for (const t of totals as Array<{ kind: string; _count: { _all: number } }>) counts[t.kind] = t._count._all;
 
     res.json({ ok: true, rows, counts });

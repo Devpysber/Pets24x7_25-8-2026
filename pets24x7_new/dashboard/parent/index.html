@@ -131,7 +131,7 @@
   .vendor-content { padding: 16px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
   .vendor-name { font-size: 16px; font-weight: 700; color: var(--text-main); line-height: 1.3; margin-bottom: 4px; }
   .vendor-address { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
-  .vendor-foot { display: flex; justify-content: space-between; align-items: center; pt: 10px; border-top: 1px solid var(--border); }
+  .vendor-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border); }
 
   /* 2. Find Services - Search Hero */
   .search-hero-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow-card); }
@@ -147,6 +147,24 @@
   .reason-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
   .reason-chip { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px;
     background:#F1F5F9; color:#475569; border:1px solid var(--border); }
+  .reason-chip.primary { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; }
+  .badge-sponsored { position:absolute; top:10px; right:10px; z-index:2; background:rgba(255,255,255,0.95); color:#475569;
+    font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; padding:2px 7px; border-radius:4px;
+    border:1px solid var(--border); }
+  .reco-hint { font-size:12.5px; color:var(--text-muted); margin:-4px 0 12px; }
+  .reco-hint a { cursor:pointer; }
+  .reco-more { display:flex; justify-content:center; margin:-16px 0 32px; }
+  .reco-skel { pointer-events:none; }
+  .reco-skel .sk { background:linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 37%,#F1F5F9 63%); background-size:400% 100%;
+    animation:recoSk 1.4s ease infinite; border-radius:6px; }
+  @keyframes recoSk { 0% { background-position:100% 50%; } 100% { background-position:0 50%; } }
+  @media (prefers-reduced-motion: reduce) { .reco-skel .sk { animation:none; } }
+  .feed-reason { font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+  .feed-code { margin-top:6px; font-size:12px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .feed-code button { font-size:11px; padding:2px 8px; }
+  .feed-date { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:4px 6px;
+    border-radius:8px; background:#DBEAFE; color:#1E40AF; line-height:1.1; }
+  .feed-date b { font-size:16px; } .feed-date span { font-size:10px; font-weight:700; text-transform:uppercase; }
   .member-benefit { margin: 10px 0 0; padding: 7px 10px; border-radius: 8px; background: #FEF3C7; border: 1px solid #FDE68A;
     color: #92400E; font-size: 12px; font-weight: 700; display: inline-block; }
   .member-benefit-off { background: #EFF6FF; border-color: #BFDBFE; color: #1D4ED8; cursor: pointer; }
@@ -178,6 +196,23 @@
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
   .modal-header h3 { font-size: 18px; font-weight: 800; color: var(--text-main); }
   .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+  /* Passport modal card: it has no .modal-box, so it needs its own sizing or it
+     overflows a phone screen with no way to scroll. */
+  .modal-card { width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-dropdown); border: 1px solid var(--border); }
+  .health-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid; }
+  .health-row.ok { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
+  .health-row.due { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+  .health-row.unknown { background: #F8FAFC; border-color: #E2E8F0; color: #475569; }
+  .health-row strong { font-weight: 700; text-align: right; }
+
+  /* "Print Passport" prints the passport, not the whole dashboard behind it. */
+  @media print {
+    body.printing-passport * { visibility: hidden !important; }
+    body.printing-passport #petPassportModal, body.printing-passport #petPassportModal * { visibility: visible !important; }
+    body.printing-passport #petPassportModal { position: absolute; inset: 0; background: #fff; backdrop-filter: none; display: block; padding: 0; }
+    body.printing-passport #petPassportModal .modal-card { max-height: none; overflow: visible; box-shadow: none; margin: 0 auto; }
+    body.printing-passport .no-print { display: none !important; }
+  }
 
   .form-group { margin-bottom: 14px; }
   .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -191,7 +226,161 @@
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   .empty-box { padding: 48px 20px; text-align: center; color: var(--text-muted); background: var(--surface); border: 1px dashed var(--border-dark); border-radius: var(--radius-md); }
+  /* Vendor detail view: two columns on desktop, one on phones (the fixed
+     260px sidebar column used to push the page into horizontal scroll). */
+  .vd-layout { display: grid; grid-template-columns: minmax(0,2fr) minmax(260px,1fr); gap: 18px; align-items: start; }
+  .vd-gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; height: 320px; margin-bottom: 18px; }
+  @media (max-width: 760px) {
+    .vd-layout { grid-template-columns: minmax(0,1fr); }
+    .vd-layout > .card[style*="sticky"] { position: static !important; }
+    /* Phones: the Enquire / Call / WhatsApp card comes before the long about,
+       map and reviews instead of after them. */
+    .vd-layout > .card[style*="sticky"] { order: -1; margin-bottom: 0; }
+    .vd-gallery { height: 220px; grid-template-columns: 2fr 1fr; }
+    .vd-gallery > div:nth-child(n+4) { display: none; }
+  }
+  .loading-note { color: var(--text-muted); padding: 16px 0; }
   .empty-box h3 { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+
+  /* ---------- Responsive / a11y hardening ---------- */
+  html { -webkit-text-size-adjust: 100%; }
+  /* The hidden attribute must win over component display rules: .btn,
+     .reco-more and .vendor-grid set display, so "Remove photo", "Show more"
+     and empty sections used to stay visible while marked hidden. */
+  [hidden] { display: none !important; }
+  /* Long names, emails and pasted URLs wrap instead of widening the page. */
+  .main-wrapper { min-width: 0; }
+  .main-content, .modal-box, .modal-card { overflow-wrap: anywhere; }
+  img { max-width: 100%; }
+  .page-title { font-size: clamp(22px, 2.2vw + 14px, 26px); }
+  .section-header { gap: 12px; flex-wrap: wrap; }
+  [id] { scroll-margin-top: 72px; }
+
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .btn:focus-visible, .chip:focus-visible, .nav-link:focus-visible, .mobile-tab-btn:focus-visible { outline-offset: 2px; }
+  .category-box:focus-visible { border-color: var(--primary); }
+
+  /* Grids never demand more than the column they sit in (320px phones). */
+  .vendor-grid { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+  .pets-manage-grid { grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
+  #feedGrid { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)) !important; }
+  .search-field { min-width: min(240px, 100%); }
+  /* Six service tiles: 6 across when there is room, else 3 (never 4 + 2). */
+  @media (min-width: 521px) and (max-width: 1100px) { .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .vendor-foot { gap: 8px; }
+  .vendor-foot > span:last-child { margin-left: auto; }
+
+  /* Home: selected-pet card */
+  .pet-info-flex { flex: 1 1 260px; min-width: 0; }
+  .pet-info-flex > div:last-child { min-width: 0; }
+  .pet-avatar { flex-shrink: 0; }
+  .pet-name-h { flex-wrap: wrap; }
+  .pet-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pet-actions .pet-selector-dropdown { max-width: 100%; min-width: 0; }
+
+  /* Mobile top bar */
+  .mobile-top-bar { gap: 12px; padding-top: max(12px, env(safe-area-inset-top)); }
+  .mob-user { font-size: 13px; font-weight: 600; color: var(--text-main); background: none; border: 0; font-family: inherit; cursor: pointer;
+    max-width: 48vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 44px; padding: 0 4px; }
+
+  /* Mobile bottom nav: equal columns, 48px targets, clears the home indicator. */
+  .mobile-bottom-nav { padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); }
+  .mobile-tab-btn { flex: 1 1 0; min-width: 0; min-height: 48px; justify-content: center; font-family: inherit; border-radius: 8px; }
+  .mobile-tab-btn span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  @media (max-width: 840px) { .main-content { padding-bottom: calc(88px + env(safe-area-inset-bottom)); } }
+
+  /* Enquiry / history rows */
+  .enquiry-main { flex: 1 1 260px; min-width: 0; }
+
+  /* Account view */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 16px; margin-bottom: 28px; }
+  .acct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 20px; margin-bottom: 28px; }
+  .kv-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .kv-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .kv-row > span { flex-shrink: 0; }
+  .kv-row > strong { text-align: right; min-width: 0; }
+
+  /* Pets summary strip */
+  .pets-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 16px; margin-bottom: 24px; }
+  .pets-stat { padding: 16px; margin-bottom: 0; display: flex; align-items: center; gap: 14px; }
+  .pets-stat-icon { font-size: 28px; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pets-stat-num { font-size: 20px; font-weight: 800; color: var(--text-main); }
+  .pets-stat-label { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+
+  /* Membership billing switch (segmented control) */
+  .cycle-switch { display: flex; justify-content: center; margin-bottom: 28px; }
+  .cycle-seg { display: inline-flex; background: #E2E8F0; padding: 4px; border-radius: 99px; gap: 2px; max-width: 100%; }
+  .cycle-seg button { border: 0; background: transparent; color: var(--text-muted); padding: 8px 18px; border-radius: 99px; font: 700 13px/1.2 inherit; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+  .cycle-seg button[aria-pressed="true"] { background: #fff; color: var(--primary); box-shadow: var(--shadow-subtle); }
+  .cycle-save { background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 20px; margin-bottom: 36px; padding-top: 12px; }
+  .benefits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 20px; }
+
+  /* Modals: accessible dialog frame, internal scroll, sticky header. */
+  .modal-backdrop { padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); overscroll-behavior: contain; }
+  .modal-box, .modal-card { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overscroll-behavior: contain; }
+  .modal-header { position: sticky; top: -24px; margin-top: -24px; padding-top: 24px; background: var(--surface); z-index: 2; gap: 12px; }
+  .modal-close { width: 44px; height: 44px; margin: -10px -12px -10px 0; border-radius: 8px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .modal-close:hover { background: #F1F5F9; color: var(--text-main); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .modal-actions > .btn { flex: 1 1 120px; }
+  .passport-head { background: linear-gradient(135deg, #1E40AF, #1D4ED8); color: #fff; padding: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .passport-specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)); gap: 12px; font-size: 13px; }
+  .health-row { flex-wrap: wrap; }
+  .health-row > span { flex-shrink: 0; }
+  body.modal-open { overflow: hidden; }
+  /* Small pill controls keep their look but get a 44px-tall hit area. */
+  .hit-pad { position: relative; }
+  .hit-pad::after { content: ''; position: absolute; left: -4px; right: -4px; top: 50%; height: 44px; transform: translateY(-50%); }
+  /* Toasts (ui-dialogs.js) sit above the phone tab bar, not under it. */
+  @media (max-width: 840px) { body { --p24-toast-bottom: 72px; } }
+  .file-input { font-size: 13px; max-width: 100%; }
+
+  @media (max-width: 520px) {
+    .form-grid-2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    /* Phones: dialogs rise from the bottom as a sheet. */
+    .modal-backdrop { align-items: flex-end; padding: 0; padding-top: max(12px, env(safe-area-inset-top)); }
+    .modal-box, .modal-card { max-width: none !important; border-radius: 16px 16px 0 0 !important; max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px);
+      padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .modal-box { padding-left: 18px; padding-right: 18px; }
+    .passport-body { padding: 18px !important; }
+    .passport-head { padding: 20px 18px; }
+    .featured-pet-container { padding: 18px; }
+    .pet-actions { width: 100%; }
+    .pet-actions > * { flex: 1 1 140px; }
+    .pets-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .pets-stat { flex-direction: column; text-align: center; gap: 6px; padding: 12px 8px; }
+    .pets-stat-icon { width: 38px; height: 38px; font-size: 20px; border-radius: 10px; }
+    .pets-stat-num { font-size: 18px; }
+    .pets-stat-label { font-size: 11.5px; line-height: 1.3; }
+    .category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .category-box { padding: 14px 6px; }
+    .category-box .icon { font-size: 24px; margin-bottom: 6px; }
+    .category-box .title { font-size: 12px; }
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .stat-grid .category-box { padding: 14px !important; }
+    .kv-row { flex-direction: column; gap: 2px; }
+    .kv-row > strong { text-align: left; }
+    .enquiry-row { padding: 16px; }
+    .search-input-group > .search-field { flex: 1 1 100%; max-width: none !important; }
+    .vd-title { font-size: 21px !important; }
+  }
+
+  /* Touch: 44px targets, and 16px inputs so iOS does not zoom on focus. */
+  @media (max-width: 840px), (pointer: coarse) {
+    .btn { min-height: 44px; }
+    .chip { min-height: 44px; }
+    .section-link { display: inline-flex; align-items: center; min-height: 44px; }
+    .form-group input, .form-group select, .form-group textarea, .search-field, .pet-selector-dropdown { font-size: 16px; min-height: 44px; }
+    .form-group input[type="file"] { min-height: 0; font-size: 14px; }
+    .form-group textarea { min-height: 88px; }
+    .pet-selector-dropdown { padding: 8px 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    .category-box:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -206,22 +395,22 @@
 
     <nav class="sidebar-nav">
       <div class="nav-label">Navigation</div>
-      <a class="nav-link active" onclick="navigate('home')">
+      <a class="nav-link active" data-view="home" onclick="navigate('home')">
         <span class="icon">🏠</span> <span>Home</span>
       </a>
-      <a class="nav-link" onclick="navigate('search')">
+      <a class="nav-link" data-view="search" onclick="navigate('search')">
         <span class="icon">🔍</span> <span>Find Services</span>
       </a>
-      <a class="nav-link" onclick="navigate('pets')">
+      <a class="nav-link" data-view="pets" onclick="navigate('pets')">
         <span class="icon">🐾</span> <span>My Pets</span>
       </a>
-      <a class="nav-link" onclick="navigate('enquiries')">
+      <a class="nav-link" data-view="enquiries" onclick="navigate('enquiries')">
         <span class="icon">💬</span> <span>My Enquiries</span>
       </a>
-      <a class="nav-link" onclick="navigate('membership')">
+      <a class="nav-link" data-view="membership" onclick="navigate('membership')">
         <span class="icon">⭐</span> <span>Membership</span>
       </a>
-      <a class="nav-link" onclick="navigate('account')">
+      <a class="nav-link" data-view="account" onclick="navigate('account')">
         <span class="icon">👤</span> <span>My Account</span>
       </a>
     </nav>
@@ -238,11 +427,11 @@
 
   <!-- Mobile Top Bar -->
   <div class="mobile-top-bar">
-    <a href="/" title="Go to Pets24x7.com" style="display: flex; align-items: center; gap: 10px; text-decoration:none;">
-      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:30px;width:auto;max-width:150px;object-fit:contain;display:block;" />
-      <span style="font-weight: 800; font-size: 17px; color: var(--primary);">Pets24x7</span>
+    <!-- The logo image already carries the wordmark, so no duplicate text. -->
+    <a href="/" title="Go to Pets24x7.com" style="display: flex; align-items: center; min-height: 44px; flex-shrink: 0; text-decoration:none;">
+      <img src="/pets24x7_logo.png" alt="Pets24x7.com home" style="height:30px;width:auto;max-width:130px;object-fit:contain;display:block;" />
     </a>
-    <span style="font-size: 13px; font-weight: 600;" id="mobUserLabel">Pet Parent</span>
+    <button type="button" class="mob-user" id="mobUserLabel" onclick="navigate('account')" aria-label="My account">Pet Parent</button>
   </div>
 
   <!-- Main Wrapper -->
@@ -261,9 +450,7 @@
           <span class="section-title">Selected Pet</span>
           <a class="section-link" onclick="navigate('pets')">Manage All Pets →</a>
         </div>
-        <div id="homePetOverview">
-          <!-- Rendered via JS -->
-        </div>
+        <div id="homePetOverview"><p class="loading-note">Loading…</p></div>
 
         <!-- Find a Service Prominent Bar -->
         <div class="card" style="padding: 22px; margin-top: 24px; margin-bottom: 28px;">
@@ -309,8 +496,10 @@
         <div class="section-header">
           <span class="section-title" id="homeRecomTitle">Recommended for Your Pet</span>
         </div>
-        <div class="vendor-grid" id="homeRecomGrid">
-          <!-- Rendered via JS -->
+        <p class="reco-hint" id="homeRecomHint" hidden></p>
+        <div class="vendor-grid" id="homeRecomGrid"><p class="loading-note">Loading…</p></div>
+        <div class="reco-more" id="homeRecomMoreWrap" hidden>
+          <button class="btn" id="homeRecomMore" type="button" onclick="loadMoreRecommendations()">Show more</button>
         </div>
 
         <!-- Nearby Businesses -->
@@ -330,7 +519,7 @@
 
         <!-- Nearby Deals & Events -->
         <div class="section-header" id="feedHeader" hidden>
-          <span class="section-title">Deals &amp; Events Near You</span>
+          <span class="section-title">Deals &amp; Events for You</span>
         </div>
         <div id="feedGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;" hidden></div>
       </section>
@@ -344,7 +533,7 @@
 
         <div class="search-hero-box">
           <div class="search-input-group">
-            <input type="text" id="searchInput" class="search-field" placeholder="Search businesses or services" oninput="runSearch()" />
+            <input type="text" id="searchInput" class="search-field" placeholder="Search businesses or services" oninput="runSearchDebounced()" onkeyup="if(event.key==='Enter') runSearch()" />
             <select id="searchCity" class="search-field" style="max-width: 200px;" onchange="runSearch()">
               <!-- Populated dynamically -->
             </select>
@@ -395,9 +584,7 @@
           <!-- Rendered via JS -->
         </div>
 
-        <div class="pets-manage-grid" id="petsListGrid">
-          <!-- Rendered via JS -->
-        </div>
+        <div class="pets-manage-grid" id="petsListGrid"><p class="loading-note">Loading…</p></div>
       </section>
 
       <!-- ==================== 5. MY ENQUIRIES VIEW ==================== -->
@@ -407,9 +594,7 @@
           <p class="page-subtitle">Track your enquiries with pet businesses.</p>
         </div>
 
-        <div class="enquiries-table-card" id="enquiriesTableBody">
-          <!-- Rendered via JS -->
-        </div>
+        <div class="enquiries-table-card" id="enquiriesTableBody"><p class="loading-note" style="padding:16px 20px;">Loading…</p></div>
       </section>
 
       <!-- ==================== 6. MEMBERSHIP VIEW ==================== -->
@@ -419,9 +604,8 @@
           <p class="page-subtitle">Your Pets24x7 membership status and benefits.</p>
         </div>
 
-        <div id="membershipBody">
-          <!-- Rendered via JS from /api/parent/dashboard + /api/memberships/me -->
-        </div>
+        <!-- Rendered via JS from /api/memberships/plans + /api/memberships/me -->
+        <div id="membershipBody"><p class="loading-note">Loading…</p></div>
       </section>
 
       <!-- ==================== 7. ACCOUNT VIEW ==================== -->
@@ -431,9 +615,7 @@
           <p class="page-subtitle">Manage your profile, account preferences, and view account activity.</p>
         </div>
 
-        <div id="accountOverviewContainer">
-          <!-- Rendered dynamically via JS -->
-        </div>
+        <div id="accountOverviewContainer"><p class="loading-note">Loading…</p></div>
       </section>
 
     </main>
@@ -442,23 +624,23 @@
 
 <!-- Mobile Bottom Navigation -->
 <div class="mobile-bottom-nav">
-  <button class="mobile-tab-btn active" onclick="navigate('home')">
+  <button class="mobile-tab-btn active" data-view="home" onclick="navigate('home')">
     <span style="font-size: 18px;">🏠</span>
     <span>Home</span>
   </button>
-  <button class="mobile-tab-btn" onclick="navigate('search')">
+  <button class="mobile-tab-btn" data-view="search" onclick="navigate('search')">
     <span style="font-size: 18px;">🔍</span>
     <span>Services</span>
   </button>
-  <button class="mobile-tab-btn" onclick="navigate('pets')">
+  <button class="mobile-tab-btn" data-view="pets" onclick="navigate('pets')">
     <span style="font-size: 18px;">🐾</span>
     <span>My Pets</span>
   </button>
-  <button class="mobile-tab-btn" onclick="navigate('enquiries')">
+  <button class="mobile-tab-btn" data-view="enquiries" onclick="navigate('enquiries')">
     <span style="font-size: 18px;">💬</span>
     <span>Enquiries</span>
   </button>
-  <button class="mobile-tab-btn" onclick="navigate('account')">
+  <button class="mobile-tab-btn" data-view="account" onclick="navigate('account')">
     <span style="font-size: 18px;">👤</span>
     <span>Account</span>
   </button>
@@ -468,22 +650,22 @@
 
 <!-- 1. Add / Edit Pet Modal -->
 <div class="modal-backdrop" id="petModal">
-  <div class="modal-box">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="petModalTitle">
     <div class="modal-header">
       <h3 id="petModalTitle">Add Pet</h3>
-      <button class="modal-close" onclick="closePetModal()">✕</button>
+      <button type="button" class="modal-close" onclick="closePetModal()" aria-label="Close">✕</button>
     </div>
     <form id="petForm" onsubmit="savePet(event)">
       <input type="hidden" id="petEditId" />
       <input type="hidden" id="pAvatar" />
       <div class="form-group">
-        <label>Photo</label>
-        <div style="display:flex;align-items:center;gap:14px;">
-          <div id="pAvatarPreview" style="width:76px;height:76px;border-radius:16px;background:var(--bg-alt);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0;">🐾</div>
-          <div>
-            <input type="file" id="pPhotoFile" accept="image/png,image/jpeg,image/webp" style="font-size:13px;" />
+        <label for="pPhotoFile">Photo</label>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div id="pAvatarPreview" style="width:76px;height:76px;border-radius:16px;background:var(--bg);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0;">🐾</div>
+          <div style="flex:1 1 180px;min-width:0;">
+            <input type="file" id="pPhotoFile" class="file-input" accept="image/png,image/jpeg,image/webp" />
             <button type="button" class="btn btn-sm" id="pPhotoRemove" hidden style="margin-top:8px;">Remove photo</button>
-            <div id="pPhotoMsg" style="font-size:12px;color:var(--text-muted);margin-top:6px;">JPG, PNG or WebP. Resized on your device before upload.</div>
+            <div id="pPhotoMsg" aria-live="polite" style="font-size:12px;color:var(--text-muted);margin-top:6px;">JPG, PNG or WebP. Resized on your device before upload.</div>
           </div>
         </div>
       </div>
@@ -492,16 +674,16 @@
         <div id="petPhotoGrid" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;"></div>
         <input type="file" id="petPhotoFile" accept="image/png,image/jpeg,image/webp" style="display:none;" />
         <button type="button" class="btn btn-sm" id="petPhotoAdd" onclick="document.getElementById('petPhotoFile').click()">+ Add photo</button>
-        <div id="petPhotoMsg" style="font-size:12px; color:var(--text-muted); margin-top:6px;"></div>
+        <div id="petPhotoMsg" aria-live="polite" style="font-size:12px; color:var(--text-muted); margin-top:6px;"></div>
       </div>
 
       <div class="form-group">
-        <label>Pet Name *</label>
-        <input type="text" id="pName" placeholder="e.g. Buddy" required />
+        <label for="pName">Pet Name *</label>
+        <input type="text" id="pName" placeholder="e.g. Buddy" required maxlength="60" autocomplete="off" />
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Animal Type *</label>
+          <label for="pSpecies">Animal Type *</label>
           <select id="pSpecies" required>
             <option value="DOG">Dog</option>
             <option value="CAT">Cat</option>
@@ -513,16 +695,16 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Breed</label>
-          <input type="text" id="pBreed" placeholder="e.g. Golden Retriever" />
+          <label for="pBreed">Breed</label>
+          <input type="text" id="pBreed" placeholder="e.g. Golden Retriever" autocomplete="off" />
         </div>
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Age</label>
-          <div style="display:flex; gap:8px;">
-            <input type="number" id="pAge" min="0" max="40" placeholder="Years" aria-label="Age in years" style="flex:1;" />
-            <select id="pAgeMonths" aria-label="Age in months" style="flex:1;">
+          <label for="pAge">Age</label>
+          <div style="display:flex; gap:8px; min-width:0;">
+            <input type="number" id="pAge" min="0" max="40" step="1" inputmode="numeric" placeholder="Years" aria-label="Age in years" style="flex:1; min-width:0;" />
+            <select id="pAgeMonths" aria-label="Age in months" style="flex:1; min-width:0;">
               <option value="">Months</option>
               <option value="0">0 months</option>
               <option value="1">1 month</option>
@@ -540,7 +722,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Gender</label>
+          <label for="pGender">Gender</label>
           <select id="pGender">
             <option value="Unspecified">Not specified</option>
             <option value="Male">Male</option>
@@ -549,7 +731,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Vaccinated?</label>
+        <label for="pVac">Vaccinated?</label>
         <select id="pVac">
           <option value="true">Yes, Vaccinated</option>
           <option value="false">No / Not sure</option>
@@ -557,30 +739,30 @@
       </div>
       <!-- Optional dates. Each one switches on a health reminder; leaving one
            blank simply means that reminder never fires for this pet. -->
-      <div class="form-row">
+      <div class="form-grid-2">
         <div class="form-group">
-          <label>Date of birth <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <label for="pDob">Date of birth <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
           <input type="date" id="pDob" />
         </div>
         <div class="form-group">
-          <label>Last vaccinated <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+          <label for="pVacDate">Last vaccinated <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
           <input type="date" id="pVacDate" />
         </div>
       </div>
       <div class="form-group">
-        <label>Last vet check-up <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+        <label for="pCheckup">Last vet check-up <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
         <input type="date" id="pCheckup" />
         <p style="font-size:12px;color:var(--text-muted);margin-top:6px">
           We use these to remind you about a birthday, a booster coming due, or a yearly check-up. Nothing else.
         </p>
       </div>
       <div class="form-group">
-        <label>Notes / Medical Info</label>
+        <label for="pNotes">Notes / Medical Info</label>
         <textarea id="pNotes" rows="2" placeholder="Dietary needs, allergies, behavior..."></textarea>
       </div>
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button type="button" class="btn" style="flex: 1;" onclick="closePetModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Pet</button>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closePetModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Pet</button>
       </div>
     </form>
   </div>
@@ -588,10 +770,10 @@
 
 <!-- 2. Enquiry Modal -->
 <div class="modal-backdrop" id="enquiryModal">
-  <div class="modal-box">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="enquiryModalTitle">
     <div class="modal-header">
-      <h3>Enquire / Book Service</h3>
-      <button class="modal-close" onclick="closeEnquiryModal()">✕</button>
+      <h3 id="enquiryModalTitle">Enquire / Book Service</h3>
+      <button type="button" class="modal-close" onclick="closeEnquiryModal()" aria-label="Close">✕</button>
     </div>
     <form id="enquiryForm" onsubmit="submitEnquiry(event)">
       <input type="hidden" id="enqListingId" />
@@ -599,28 +781,28 @@
       <input type="hidden" id="enqCategory" />
 
       <div class="form-group">
-        <label>Business</label>
-        <input type="text" id="enqDisplayVendor" readonly style="background: #F8FAFC; font-weight: 700;" />
+        <label for="enqDisplayVendor">Business</label>
+        <input type="text" id="enqDisplayVendor" readonly tabindex="-1" style="background: #F8FAFC; font-weight: 700;" />
         <div id="enqMemberBenefit" style="margin-top:8px;"></div>
       </div>
       <div class="form-group">
-        <label>Select Pet</label>
+        <label for="enqPetSelect">Select Pet</label>
         <select id="enqPetSelect">
           <!-- Populated via JS -->
         </select>
       </div>
       <div class="form-group">
-        <label>Preferred Date</label>
+        <label for="enqDate">Preferred Date</label>
         <input type="date" id="enqDate" required />
       </div>
       <div class="form-group">
-        <label>Message / Requirements *</label>
-        <textarea id="enqNotes" rows="3" placeholder="Specify consultation reason, preferred time, or questions..." required></textarea>
+        <label for="enqNotes">Message / Requirements *</label>
+        <textarea id="enqNotes" rows="3" maxlength="2000" placeholder="Specify consultation reason, preferred time, or questions..." required></textarea>
       </div>
 
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button type="button" class="btn" style="flex: 1;" onclick="closeEnquiryModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Send Enquiry →</button>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeEnquiryModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Send Enquiry →</button>
       </div>
     </form>
   </div>
@@ -628,20 +810,20 @@
 
 <!-- 3. Edit Profile Modal -->
 <div class="modal-backdrop" id="profileModal">
-  <div class="modal-box">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
     <div class="modal-header">
-      <h3>Edit Profile</h3>
-      <button class="modal-close" onclick="closeProfileModal()">✕</button>
+      <h3 id="profileModalTitle">Edit Profile</h3>
+      <button type="button" class="modal-close" onclick="closeProfileModal()" aria-label="Close">✕</button>
     </div>
-    <form onsubmit="saveProfile(event)">
+    <form id="profileForm" onsubmit="saveProfile(event)">
       <div class="form-group">
-        <label>Your Name *</label>
-        <input type="text" id="profName" required />
+        <label for="profName">Your Name *</label>
+        <input type="text" id="profName" required autocomplete="name" />
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" id="profEmail" disabled />
+          <label for="profEmail">Email Address</label>
+          <input type="email" id="profEmail" disabled autocomplete="email" />
           <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
             This is your sign-in address, so we change it for you rather than letting it be edited here.
             <a href="mailto:hello@pets24x7.com?subject=Change%20my%20Pets24x7%20email" style="font-weight:700;">Email support</a>
@@ -649,131 +831,37 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Mobile / Phone Number *</label>
-          <input type="tel" id="profPhone" placeholder="e.g. +91 98765 43210" required />
+          <label for="profPhone">Mobile / Phone Number *</label>
+          <input type="tel" id="profPhone" placeholder="e.g. +91 98765 43210" required autocomplete="tel" inputmode="tel" />
         </div>
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>City / Location</label>
-          <input type="text" id="profCity" placeholder="e.g. Mumbai" />
+          <label for="profCity">City / Location</label>
+          <input type="text" id="profCity" placeholder="e.g. Mumbai" autocomplete="address-level2" />
         </div>
         <div class="form-group">
-          <label>Country</label>
-          <select id="profCountry">
+          <label for="profCountry">Country</label>
+          <select id="profCountry" autocomplete="country">
             <option value="">—</option>
             <option value="IN">India</option>
             <option value="US">United States</option>
           </select>
         </div>
       </div>
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button type="button" class="btn" style="flex: 1;" onclick="closeProfileModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeProfileModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Payment Gateway Modal (Razorpay Integrated) -->
-<div id="paymentModal" class="modal-backdrop">
-  <div class="modal-card" style="max-width: 460px; padding: 0; border-radius: 16px; overflow: hidden; background: #ffffff;">
-    <div style="background: #1E40AF; color: #ffffff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.85;">Pets24x7 Checkout</div>
-        <h3 style="font-size: 18px; font-weight: 800; margin-top: 2px;" id="payModalPlanTitle">Membership Subscription</h3>
-      </div>
-      <div style="text-align: right;">
-        <div style="font-size: 11px; opacity: 0.85;">Amount Due</div>
-        <div style="font-size: 22px; font-weight: 800;" id="payModalAmount">₹0</div>
-      </div>
-    </div>
-
-    <div style="background: #EFF6FF; border-bottom: 1px solid #DBEAFE; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #1E40AF; font-weight: 600;">
-      <span>🔒 256-bit Encrypted SSL Payment</span>
-      <span>Secured by <strong>Razorpay</strong></span>
-    </div>
-
-    <div style="padding: 24px;">
-      <!-- Payment Tabs -->
-      <div style="display: flex; gap: 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 20px;">
-        <button type="button" id="payTabUpi" class="pay-tab-btn" onclick="switchPayTab('upi')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid #1E40AF; color: #1E40AF;">
-          📱 UPI / QR
-        </button>
-        <button type="button" id="payTabCard" class="pay-tab-btn" onclick="switchPayTab('card')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; color: #64748B;">
-          💳 Card
-        </button>
-        <button type="button" id="payTabNet" class="pay-tab-btn" onclick="switchPayTab('net')" style="flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; border: none; background: transparent; cursor: pointer; color: #64748B;">
-          🏦 Net Banking
-        </button>
-      </div>
-
-      <!-- Tab 1: UPI -->
-      <div id="payPanelUpi" class="pay-panel">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Enter VPA / UPI ID (Google Pay, PhonePe, Paytm)</label>
-          <input type="text" id="payUpiId" class="form-input" placeholder="e.g. 9876543210@paytm" value="parent@upi" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
-        </div>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;">
-          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">Google Pay</span>
-          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">PhonePe</span>
-          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">Paytm</span>
-          <span style="font-size: 11px; background: #F1F5F9; color: #475569; padding: 4px 8px; border-radius: 4px; font-weight: 600;">BHIM</span>
-        </div>
-      </div>
-
-      <!-- Tab 2: Card -->
-      <div id="payPanelCard" class="pay-panel" style="display: none;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Card Number</label>
-          <input type="text" id="payCardNum" class="form-input" placeholder="4532 •••• •••• 8892" value="4532 8892 1029 3847" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Expiry Date</label>
-            <input type="text" id="payCardExp" class="form-input" placeholder="MM/YY" value="12/28" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
-          </div>
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">CVV</label>
-            <input type="password" id="payCardCvv" class="form-input" placeholder="123" maxlength="4" value="882" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom: 20px;">
-          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Cardholder Name</label>
-          <input type="text" id="payCardName" class="form-input" placeholder="Name on card" value="Pet Parent" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;" />
-        </div>
-      </div>
-
-      <!-- Tab 3: Net Banking -->
-      <div id="payPanelNet" class="pay-panel" style="display: none; margin-bottom: 20px;">
-        <div class="form-group">
-          <label style="font-size: 12px; font-weight: 700; display: block; margin-bottom: 4px;">Select Bank</label>
-          <select id="payNetBank" class="form-input" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
-            <option value="HDFC">HDFC Bank</option>
-            <option value="SBI">State Bank of India</option>
-            <option value="ICICI">ICICI Bank</option>
-            <option value="AXIS">Axis Bank</option>
-            <option value="KOTAK">Kotak Mahindra Bank</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Modal Actions -->
-      <div style="display: flex; gap: 12px;">
-        <button type="button" class="btn" style="flex: 1;" onclick="closePaymentModal()">Cancel</button>
-        <button type="button" id="paySubmitBtn" class="btn btn-primary" style="flex: 2; font-weight: 800; background: #1E40AF;" onclick="submitPayment()">
-          Pay Now &rarr;
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Digital Pet Health Passport Modal -->
 <div id="petPassportModal" class="modal-backdrop">
-  <div class="modal-card" style="max-width: 540px; padding: 0; border-radius: 16px; overflow: hidden; background: #ffffff;">
-    <div style="background: linear-gradient(135deg, #1E40AF, #1D4ED8); color: #ffffff; padding: 24px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="passportPetName" style="max-width: 540px; padding: 0; border-radius: 16px; background: #ffffff;">
+    <div class="passport-head">
+      <div style="min-width: 0;">
         <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Pets24x7 Digital Pet Passport</div>
         <h2 style="font-size: 22px; font-weight: 800; margin-top: 4px;" id="passportPetName">Pet Passport</h2>
         <div style="font-size: 12px; opacity: 0.85; margin-top: 2px;" id="passportCode">ID: P24X7-PET-0000</div>
@@ -783,10 +871,10 @@
       </div>
     </div>
 
-    <div style="padding: 24px;">
+    <div class="passport-body" style="padding: 24px;">
       <!-- Specs Grid -->
       <div class="card" style="padding: 16px; margin-bottom: 20px; background: #F8FAFC; border: 1px solid #E2E8F0;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+        <div class="passport-specs">
           <div><span style="color: var(--text-muted);">Species:</span> <strong id="passportSpecies">Dog</strong></div>
           <div><span style="color: var(--text-muted);">Breed:</span> <strong id="passportBreed">Golden Retriever</strong></div>
           <div><span style="color: var(--text-muted);">Age:</span> <strong id="passportAge">3 Years</strong></div>
@@ -799,20 +887,9 @@
       <!-- Vaccination Tracker -->
       <div style="margin-bottom: 20px;">
         <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-main);">Vaccination & Protection Record</h4>
-        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; color: #065F46;">
-            <span>💉 Rabies Immunization</span>
-            <span style="font-weight: 700;">✓ Up to Date</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; color: #065F46;">
-            <span>💉 Core Combination (DHPP / FVRCP)</span>
-            <span style="font-weight: 700;">✓ Up to Date</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; color: #92400E;">
-            <span>🐛 Parasite & Deworming Control</span>
-            <span style="font-weight: 700;">Annual Checkup Recommended</span>
-          </div>
-        </div>
+        <!-- Built from the pet's own record (vaccinated flag + health dates) in
+             renderPassportHealth(); nothing here is assumed. -->
+        <div id="passportHealth" style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px;"></div>
       </div>
 
       <!-- Care Notes -->
@@ -824,9 +901,10 @@
       </div>
 
       <!-- Actions -->
-      <div style="display: flex; gap: 10px;">
-        <button type="button" class="btn" style="flex: 1;" onclick="closePetPassportModal()">Close</button>
-        <button type="button" class="btn btn-primary" style="flex: 1;" onclick="window.print()">🖨️ Print Passport</button>
+      <div class="no-print" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn" style="flex: 1 1 120px;" onclick="closePetPassportModal()">Close</button>
+        <button type="button" class="btn" style="flex: 1 1 140px;" id="passportEditBtn">✏️ Update records</button>
+        <button type="button" class="btn btn-primary" style="flex: 1 1 140px;" onclick="printPassport()">🖨️ Print Passport</button>
       </div>
     </div>
   </div>
@@ -838,6 +916,7 @@
 <script src="/api-client.js"></script>
 <script src="/ui-dialogs.js"></script>
 <script src="/pet-images.js"></script>
+<script src="/reco-track.js" defer></script>
 <script>
   // State
   var state = {
@@ -859,6 +938,30 @@
 
   function esc(s) { return (s || '').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
+  // A value passed as a JS string argument inside an inline onclick="...".
+  // esc() alone is not enough there: the HTML parser decodes &#39; back to a
+  // quote before the handler runs, so an id containing ' or " broke out of the
+  // string. JSON.stringify makes a valid JS literal; esc makes it attribute-safe.
+  function jsArg(v) { return esc(JSON.stringify(String(v == null ? '' : v))); }
+
+  // Only http(s) links from data may become an href (no javascript: URLs).
+  function safeUrl(u) { return (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? u.trim() : ''; }
+  // Image sources: hosted URLs, site-relative paths, or resized data:image uploads.
+  function safeImg(u) { return typeof u === 'string' && (/^https?:\/\//i.test(u) || /^\/[^/]/.test(u) || /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(u)); }
+
+  // Plans and payments carry their own currency (INR paise / USD cents).
+  function fmtMoney(minor, currency) {
+    var cur = String(currency || 'INR').toUpperCase();
+    var major = (Number(minor) || 0) / 100;
+    var sym = cur === 'USD' ? '$' : cur === 'INR' ? '₹' : cur + ' ';
+    var locale = cur === 'USD' ? 'en-US' : 'en-IN';
+    return sym + major.toLocaleString(locale, { maximumFractionDigits: major % 1 ? 2 : 0 });
+  }
+
+  function loadingHtml(text) {
+    return '<p style="color:var(--text-muted); padding:16px 0;">' + esc(text || 'Loading…') + '</p>';
+  }
+
   // Navigation controller
   function navigate(pageId) {
     var views = document.querySelectorAll('.view-pane');
@@ -867,75 +970,89 @@
     var target = document.getElementById('view-' + pageId);
     if (target) target.classList.add('active');
 
-    // Sidebar active indicator
-    var links = document.querySelectorAll('.sidebar-nav .nav-link');
-    var map = ['home', 'search', 'pets', 'enquiries', 'membership', 'account'];
-    links.forEach(function(l, idx) {
-      if (map[idx] === pageId) l.classList.add('active');
-      else l.classList.remove('active');
-    });
-
-    // Mobile bottom nav active indicator
-    var mobBtns = document.querySelectorAll('.mobile-tab-btn');
-    mobBtns.forEach(function(b, idx) {
-      if (map[idx] === pageId) b.classList.add('active');
-      else b.classList.remove('active');
+    // Active indicator, keyed by each button's own data-view. The mobile bar has
+    // five buttons and the sidebar six, so matching by position lit up the wrong
+    // tab on phones (Account never highlighted; Membership lit Account).
+    // A vendor page opened from search keeps "Find Services" lit.
+    var navKey = pageId === 'vendor-details' ? 'search' : pageId;
+    document.querySelectorAll('.sidebar-nav .nav-link, .mobile-tab-btn').forEach(function(l) {
+      // The phone bar has no Membership tab; it lives under Account there.
+      var key = (navKey === 'membership' && l.classList.contains('mobile-tab-btn')) ? 'account' : navKey;
+      var on = l.getAttribute('data-view') === key;
+      l.classList.toggle('active', on);
+      if (on) l.setAttribute('aria-current', 'page'); else l.removeAttribute('aria-current');
     });
 
     window.scrollTo(0, 0);
 
-    if (pageId === 'search' && !state.searchResults.length) {
+    if (pageId === 'search' && !state.searchResults.length && !state.searchInFlight) {
       runSearch();
     }
   }
 
   // Load Dashboard Data (real API only — no mock fallback)
   function loadData() {
-    initCitySelector();
+    // loadData re-runs after every pet save / payment; rebuilding the city
+    // picker each time threw away the city the parent had chosen in search.
+    var citySel = document.getElementById('searchCity');
+    if (citySel && !citySel.options.length) initCitySelector();
 
     api.parentDashboard().then(function(d) {
+      clearLoadError();
+      state.dashboardLoaded = true;
+      var cityBefore = (state.parent && state.parent.city) || '';
       if (d.parent) state.parent = d.parent;
       state.pets = d.pets || [];
       state.enquiries = d.enquiries || [];
       state.saved = d.saved || [];
       state.nearbyDeals = d.nearbyDeals || [];
       state.upcomingEvents = d.upcomingEvents || [];
-      state.membership = d.membership || state.membership;
-      if (state.pets.length) state.selectedPetId = state.pets[0].id;
+      // /api/memberships/me carries planId + discountPercent; the dashboard
+      // summary does not. Whichever answers last must not downgrade the richer
+      // one, or "Current plan" and the member-discount strip disappear.
+      if (!state.membershipFromMe) state.membership = d.membership || state.membership;
+      // Keep the pet the parent was looking at (e.g. after editing it).
+      var keep = state.pets.some(function(p){ return p.id === state.selectedPetId; });
+      if (!keep) state.selectedPetId = state.pets.length ? state.pets[0].id : null;
+      // The city picker was built before the profile arrived; rebuild it once
+      // we know the parent's real city/country.
+      if ((state.parent.city || '') !== cityBefore) { initCitySelector(); runSearch(); }
       renderAll();
       loadRecommendations();
+      loadRecoFeed();
     }).catch(function(err) {
       // 401 is the server saying the cookie is gone. Everything else leaves the
       // session alone and shows a retry banner.
-      if (err && err.status === 401) { location.href = '/parent-login/'; return; }
+      if (err && err.status === 401) { location.href = parentLoginUrl(); return; }
       showLoadError(fmtErr(err));
     });
 
     // Pull full membership history and available plans for the Membership view.
+    state.plansError = false;
     api.membershipPlans().then(function(p) {
       state.availablePlans = p.plans || [];
       renderMembership();
-    }).catch(function() {});
+      renderVendorGrids(); // benefit strip quotes the best real discount
+    }).catch(function() {
+      state.plansError = true;
+      renderMembership();
+    });
 
     api.membershipMe().then(function(m) {
       state.membershipHistory = m.history || [];
-      if (m.active) {
-        state.membership = {
-          active: true,
-          plan: (m.active.plan && m.active.plan.name) || 'Membership',
-          planId: (m.active.plan && m.active.plan.id) || null,
-          tier: (m.active.plan && m.active.plan.tier) || null,
-          discountPercent: (m.active.plan && m.active.plan.discountPercent) || 0,
-          renewsAt: m.active.endsAt || null,
-          autoRenew: !!m.active.autoRenew,
-          cancelledAt: m.active.cancelledAt || null
-        };
-      }
+      state.membership = mapMembership(m);
+      state.membershipFromMe = true;
       renderVendorGrids();
       renderMembership();
+      if (state.dashboardLoaded) renderAccount();
     }).catch(function() { /* non-fatal — dashboard already gave summary */ });
 
-    runSearch();
+    if (!state.searchResults.length && !state.searchInFlight) runSearch();
+  }
+
+  function clearLoadError() {
+    var bar = document.getElementById('loadErrBar');
+    if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
   }
 
   function showLoadError(msg) {
@@ -955,11 +1072,25 @@
   function initCitySelector() {
     var sel = document.getElementById('searchCity');
     if (!sel) return;
-    var index = window.PETS_INDEX || [{ city: 'Mumbai', count: 772 }, { city: 'Bengaluru', count: 658 }];
-    var html = '<option value="all">All Cities</option>';
-    index.slice(0, 35).forEach(function(c) {
-      var selAttr = (c.city.toLowerCase() === (state.parent.city || 'mumbai').toLowerCase()) ? ' selected' : '';
-      html += '<option value="' + esc(c.city) + '"' + selAttr + '>' + esc(c.city) + ' (' + c.count + ')</option>';
+    var parent = state.parent || {};
+    var country = parent.country === 'US' ? 'US' : 'IN';
+    var index = (window.PETS_INDEX || [{ country: 'IN', city: 'Mumbai', count: 772 }, { country: 'IN', city: 'Bengaluru', count: 658 }])
+      // A US parent was being offered 35 Indian cities; list their own country.
+      .filter(function(c) { return (c.country || 'IN') === country; });
+    var mine = (parent.city || '').trim();
+    var top = index.slice(0, 35);
+    // The parent's own city must always be pickable, even when it is not one
+    // of the 35 largest.
+    if (mine && !top.some(function(c){ return c.city.toLowerCase() === mine.toLowerCase(); })) {
+      var hit = index.filter(function(c){ return c.city.toLowerCase() === mine.toLowerCase(); })[0];
+      top.unshift(hit || { city: mine, count: null });
+    }
+    // No city on the profile → search everywhere rather than guessing Mumbai.
+    var wanted = (mine || 'all').toLowerCase();
+    var html = '<option value="all"' + (wanted === 'all' ? ' selected' : '') + '>All Cities</option>';
+    top.forEach(function(c) {
+      var selAttr = c.city.toLowerCase() === wanted ? ' selected' : '';
+      html += '<option value="' + esc(c.city) + '"' + selAttr + '>' + esc(c.city) + (c.count != null ? ' (' + c.count + ')' : '') + '</option>';
     });
     sel.innerHTML = html;
   }
@@ -985,7 +1116,7 @@
     var orig = el.textContent;
     el.textContent = '(Sending…)';
     api.parentResend(state.parent.email).then(function() {
-      toast('Verification email sent to ' + state.parent.email + '. Please check your inbox.', 'error');
+      toast('Verification email sent to ' + state.parent.email + '. Please check your inbox.', 'ok');
       el.textContent = '(Sent!)';
     }).catch(function(err) {
       toast('Could not resend verification email: ' + fmtErr(err), 'error');
@@ -1008,7 +1139,7 @@
     var isEmailVerified = !!p.emailVerified;
     var emailBadgeHtml = isEmailVerified
       ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#059669;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">✓ Verified</span>'
-      : '<span style="display:inline-flex;align-items:center;gap:4px;background:#FFFBEB;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">Unverified <a onclick="resendVerificationLink(this)" style="color:#D97706;text-decoration:underline;cursor:pointer;margin-left:4px;">(Resend)</a></span>';
+      : '<span style="display:inline-flex;align-items:center;gap:4px;background:#FFFBEB;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:6px;">Unverified <button type="button" class="hit-pad" onclick="resendVerificationLink(this)" style="color:#B45309;text-decoration:underline;cursor:pointer;margin-left:4px;background:none;border:0;padding:0;font:inherit;">(Resend)</button></span>';
 
     var memberBadgeHtml = m.active
       ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#FEF3C7;color:#92400E;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;">⭐ ' + esc(m.plan || 'Member') + '</span>'
@@ -1018,16 +1149,16 @@
       <!-- Top Profile Banner -->
       <div class="card" style="padding: 24px; margin-bottom: 24px; background: #ffffff;">
         <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-          <div class="pet-avatar" style="width: 72px; height: 72px; font-size: 32px; background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary-border); font-weight: 800;">
-            ${initials}
+          <div class="pet-avatar" aria-hidden="true" style="width: 72px; height: 72px; font-size: 32px; background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary-border); font-weight: 800;">
+            ${esc(initials)}
           </div>
-          <div style="flex: 1; min-width: 220px;">
+          <div style="flex: 1 1 220px; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;">
               <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main);">${esc(p.name || 'Pet Parent')}</h2>
               ${memberBadgeHtml}
             </div>
             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; flex-wrap: wrap;">
-              <span>✉️ ${esc(p.email || 'No email on file')}</span> ${emailBadgeHtml}
+              <span style="min-width: 0;">✉️ ${esc(p.email || 'No email on file')}</span> ${emailBadgeHtml}
             </div>
             <div style="color: var(--text-muted); font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap;">
               <span>📞 ${esc(p.phone || 'No phone set')}</span>
@@ -1039,7 +1170,7 @@
       </div>
 
       <!-- 4 Key Stat Cards (Backend Connected) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px;">
+      <div class="stat-grid">
         <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('pets')">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-size: 24px;">🐾</span>
@@ -1058,7 +1189,7 @@
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${enquiriesCount === 1 ? '1 enquiry sent' : enquiriesCount + ' enquiries sent'}</div>
         </div>
 
-        <div class="category-box" style="text-align: left; padding: 20px;" onclick="navigate('search')">
+        <div class="category-box" style="text-align: left; padding: 20px;" onclick="showSavedBusinesses()">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-size: 24px;">♥</span>
             <span style="font-size: 22px; font-weight: 800; color: var(--primary);">${savedCount}</span>
@@ -1078,33 +1209,33 @@
       </div>
 
       <!-- Account Details & Actions Section -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 28px;">
+      <div class="acct-grid">
         <!-- Profile Information Details -->
         <div class="card" style="margin-bottom: 0;">
-          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
             <span>Account Overview</span>
             <button class="btn btn-sm" onclick="openProfileModal()">Edit Profile</button>
           </h3>
           <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px;">
-            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <div class="kv-row">
               <span style="color: var(--text-muted);">Full Name</span>
               <strong style="color: var(--text-main);">${esc(p.name || 'Pet Parent')}</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <div class="kv-row">
               <span style="color: var(--text-muted);">Email Address</span>
               <strong style="color: var(--text-main);">${esc(p.email || '—')}</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <div class="kv-row">
               <span style="color: var(--text-muted);">Mobile Number</span>
               <strong style="color: var(--text-main);">${esc(p.phone || '—')}</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <div class="kv-row">
               <span style="color: var(--text-muted);">City / Location</span>
               <strong style="color: var(--text-main);">${esc(p.city || 'Not specified')}</strong>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="kv-row">
               <span style="color: var(--text-muted);">Country</span>
-              <strong style="color: var(--text-main);">${p.country === 'US' ? 'United States' : 'India'}</strong>
+              <strong style="color: var(--text-main);">${p.country === 'US' ? 'United States' : p.country === 'IN' ? 'India' : 'Not specified'}</strong>
             </div>
           </div>
         </div>
@@ -1132,7 +1263,51 @@
           </div>
         </div>
       </div>
+
+      <!-- Email preferences -->
+      <div class="card" style="margin-bottom: 28px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Email Preferences</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 220px;">
+            <label for="digestFrequencySel" style="font-size: 14px; font-weight: 600; color: var(--text-main);">Recommendation emails</label>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Picks for your pets from trusted local businesses. Booking and enquiry emails are not affected.</div>
+          </div>
+          <select id="digestFrequencySel" class="search-field" style="flex: 0 1 200px; min-width: 160px;" onchange="saveDigestFrequency(this)">
+            ${digestOptionsHtml(p.digestFrequency)}
+          </select>
+        </div>
+      </div>
     `;
+  }
+
+  // "Recommendation emails" cadence (PATCH /api/parent/profile digestFrequency).
+  // null on the server means the site default, which is weekly.
+  var DIGEST_OPTIONS = [['WEEKLY', 'Weekly'], ['DAILY', 'Daily'], ['OFF', 'Off']];
+  function digestValue(v) {
+    v = String(v || '').toUpperCase();
+    return DIGEST_OPTIONS.some(function(o){ return o[0] === v; }) ? v : 'WEEKLY';
+  }
+  function digestOptionsHtml(current) {
+    var cur = digestValue(current);
+    return DIGEST_OPTIONS.map(function(o) {
+      return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+  }
+  function saveDigestFrequency(sel) {
+    var prev = digestValue(state.parent && state.parent.digestFrequency);
+    var next = digestValue(sel.value);
+    if (next === prev && state.parent && state.parent.digestFrequency) return;
+    sel.disabled = true;
+    api.parentProfileUpdate({ digestFrequency: next }).then(function(r) {
+      if (r && r.parent) state.parent = r.parent;
+      state.parent.digestFrequency = (r && r.parent && r.parent.digestFrequency) || next;
+      toast(next === 'OFF' ? 'Recommendation emails turned off' : 'You will get recommendation emails ' + (next === 'DAILY' ? 'daily' : 'weekly'), 'ok');
+    }).catch(function(err) {
+      sel.value = prev;
+      toast('Could not update email preference: ' + fmtErr(err), 'error');
+    }).finally(function() {
+      sel.disabled = false;
+    });
   }
 
   function cleanWebsite(w) {
@@ -1153,8 +1328,8 @@
     var list = state.saved || [];
     if (!list.length) { grid.innerHTML = ''; grid.hidden = true; hdr.hidden = true; return; }
     grid.innerHTML = list.map(function(s) {
-      var v = { category_slug: (s.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') };
-      var idAttr = esc(s.listingId);
+      var v = { id: s.listingId, category_slug: (s.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') };
+      var idAttr = jsArg(s.listingId);
       return `
         <div class="vendor-card">
           <div class="vendor-banner" style="position:relative; height:110px; background:linear-gradient(135deg, #DBEAFE, #C7D2FE); overflow:hidden;">
@@ -1166,10 +1341,10 @@
               <div class="vendor-address">${esc(s.category || '')}${s.city ? ' · ' + esc(s.city) : ''}</div>
             </div>
             <div class="vendor-foot" style="flex-wrap:wrap; gap:6px;">
-              <button class="btn btn-sm" style="color:var(--danger);" onclick="unsave('${idAttr}')">♥ Remove</button>
+              <button class="btn btn-sm" style="color:var(--danger);" onclick="unsave(${idAttr})">♥ Remove</button>
               <span style="display:flex; gap:6px;">
-                <button class="btn btn-sm" onclick="viewVendorDetails('${idAttr}')">Details</button>
-                <button class="btn btn-sm btn-primary" onclick="openEnquiryModal('${idAttr}')">Enquire</button>
+                <button class="btn btn-sm" onclick="viewVendorDetails(${idAttr})">Details</button>
+                <button class="btn btn-sm btn-primary" onclick="openEnquiryModal(${idAttr})">Enquire</button>
               </span>
             </div>
           </div>
@@ -1181,10 +1356,57 @@
   }
 
   function unsave(listingId) {
-    api.parentUnsave(listingId).then(function() {
+    return api.parentUnsave(listingId).then(function() {
       state.saved = (state.saved || []).filter(function(x){ return x.listingId !== listingId; });
       renderSaved();
+      renderAccount();
+      refreshSaveButton(listingId);
     }).catch(function(err) { toast('Could not remove: ' + fmtErr(err), 'error'); });
+  }
+
+  function isSaved(listingId) {
+    return (state.saved || []).some(function(x){ return x.listingId === listingId; });
+  }
+
+  // Bookmark a business from its detail view (POST /api/parent/saved). The
+  // saved list feeds the home "Saved Businesses" grid and the recommender.
+  function toggleSave(listingId, btn) {
+    if (!listingId) return;
+    if (btn) btn.disabled = true;
+    var done = function() { if (btn) btn.disabled = false; };
+    if (isSaved(listingId)) { unsave(listingId).then(done, done); return; }
+    var v = findVendor(listingId) || {};
+    var country = String(v.country || '').toUpperCase();
+    api.parentSave({
+      listingId: listingId,
+      listingName: v.name || undefined,
+      category: v.category || undefined,
+      city: v.city || undefined,
+      country: (country === 'IN' || country === 'US') ? country : undefined
+    }).then(function(r) {
+      var row = (r && r.saved) || { listingId: listingId, listingName: v.name, category: v.category, city: v.city };
+      state.saved = [row].concat((state.saved || []).filter(function(x){ return x.listingId !== listingId; }));
+      renderSaved();
+      renderAccount();
+      refreshSaveButton(listingId);
+      toast('Saved to your businesses', 'ok');
+    }).catch(function(err) {
+      toast('Could not save: ' + fmtErr(err), 'error');
+    }).finally(done);
+  }
+
+  function saveButtonLabel(listingId) { return isSaved(listingId) ? '♥ Saved' : '♡ Save business'; }
+
+  function refreshSaveButton(listingId) {
+    var b = document.getElementById('vendorSaveBtn');
+    if (b && b.getAttribute('data-id') === listingId) b.textContent = saveButtonLabel(listingId);
+  }
+
+  function showSavedBusinesses() {
+    navigate('home');
+    var hdr = document.getElementById('savedHeader');
+    if (hdr && !hdr.hidden) { hdr.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    toast('No saved businesses yet. Open a business and tap "Save business".', 'info');
   }
 
   // 6. Membership view — real status from API
@@ -1200,62 +1422,6 @@
     renderMembership();
   }
 
-  var currentCheckoutData = null;
-
-  function switchPayTab(tab) {
-    ['upi', 'card', 'net'].forEach(function(t) {
-      var btn = document.getElementById('payTab' + t.charAt(0).toUpperCase() + t.slice(1));
-      var pnl = document.getElementById('payPanel' + t.charAt(0).toUpperCase() + t.slice(1));
-      if (!btn || !pnl) return;
-      if (t === tab) {
-        btn.style.color = '#1E40AF';
-        btn.style.borderBottom = '2px solid #1E40AF';
-        pnl.style.display = 'block';
-      } else {
-        btn.style.color = '#64748B';
-        btn.style.borderBottom = 'none';
-        pnl.style.display = 'none';
-      }
-    });
-  }
-
-  function openPaymentModal(orderId, amountRs, planName) {
-    currentCheckoutData = { orderId: orderId, amountRs: amountRs, planName: planName };
-    document.getElementById('payModalPlanTitle').textContent = planName || 'Membership Subscription';
-    document.getElementById('payModalAmount').textContent = '₹' + (amountRs || 0).toLocaleString('en-IN');
-    var btn = document.getElementById('paySubmitBtn');
-    if (btn) { btn.disabled = false; btn.textContent = 'Pay Now →'; }
-    document.getElementById('paymentModal').classList.add('show');
-  }
-
-  function closePaymentModal() {
-    document.getElementById('paymentModal').classList.remove('show');
-    currentCheckoutData = null;
-  }
-
-  function submitPayment() {
-    if (!currentCheckoutData) return;
-    var btn = document.getElementById('paySubmitBtn');
-    btn.disabled = true;
-    btn.textContent = 'Processing Payment…';
-
-    setTimeout(function() {
-      api.razorpayVerify({
-        razorpay_order_id: currentCheckoutData.orderId,
-        razorpay_payment_id: 'pay_' + Math.random().toString(36).substring(2, 12),
-        razorpay_signature: 'dev_signature'
-      }).then(function() {
-        closePaymentModal();
-        toast('Payment successful! Welcome to Pets24x7 Membership.', 'ok');
-        loadData();
-      }).catch(function(err) {
-        toast('Payment verification failed: ' + fmtErr(err), 'error');
-        btn.disabled = false;
-        btn.textContent = 'Pay Now →';
-      });
-    }, 1000);
-  }
-
   function loadRazorpay() {
     return new Promise(function (resolve, reject) {
       if (window.Razorpay) return resolve();
@@ -1269,22 +1435,40 @@
   function subscribePlan(planId, btn) {
     if (!planId) return;
     var origText = btn.textContent;
+    var reset = function() { btn.disabled = false; btn.textContent = origText; };
     btn.disabled = true;
-    btn.textContent = 'Opening Razorpay…';
+    btn.textContent = 'Starting checkout…';
 
     var planObj = (state.availablePlans || []).find(function(p) { return p.id === planId; });
     var planName = planObj ? planObj.name : 'Pets24x7 Membership';
 
     api.membershipCheckout(planId).then(function(r) {
-      var c = r.checkout || {};
-      var amountMinor = c.amountMinor || (planObj ? planObj.priceMinor : 9900);
-      var keyId = c.keyId || 'rzp_test_571408892';
+      var c = (r && r.checkout) || {};
 
-      loadRazorpay().then(function() {
-        var options = {
-          key: keyId,
-          amount: amountMinor,
-          currency: c.currency || 'INR',
+      // Hosted/redirect checkout (also the dev gateway bypass): the server has
+      // already created the payment; the gateway sends the parent on to
+      // /membership/return/ which polls the result.
+      if (c.mode === 'redirect' || (!c.orderId && r && r.redirectUrl)) {
+        var url = c.redirectUrl || r.redirectUrl;
+        if (!url) throw new Error('Payment page is unavailable — please try again');
+        location.href = url;
+        return;
+      }
+
+      // Razorpay needs the server's order + key, or the signature can never
+      // verify. No client-side fallbacks: a made-up order or key only produces
+      // a payment the server will reject.
+      if (c.mode !== 'razorpay' || !c.orderId || !c.keyId) {
+        throw new Error('Payment gateway did not return an order — please try again');
+      }
+      btn.textContent = 'Opening Razorpay…';
+
+      return loadRazorpay().then(function() {
+        var rzp = new Razorpay({
+          key: c.keyId,
+          order_id: c.orderId,
+          amount: c.amountMinor,
+          currency: c.currency || (planObj && planObj.currency) || 'INR',
           name: 'Pets24x7.com',
           description: planName + ' Subscription',
           image: '/pets24x7_logo.png',
@@ -1293,52 +1477,91 @@
             email: (state.parent && state.parent.email) || '',
             contact: (state.parent && state.parent.phone) || ''
           },
+          notes: { merchantTxnId: r.merchantTxnId || '' },
           theme: { color: '#1E40AF' },
           handler: function (resp) {
             btn.textContent = 'Verifying payment…';
             api.razorpayVerify({
-              razorpay_order_id: resp.razorpay_order_id || c.orderId || ('order_' + Math.random().toString(36).substring(2, 12)),
-              razorpay_payment_id: resp.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12)),
-              razorpay_signature: resp.razorpay_signature || 'dev_signature'
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature
             }).then(function () {
               toast('Payment successful! Welcome to Pets24x7 Membership.', 'ok');
               loadData();
             }).catch(function (e) {
-              toast('Payment verification failed: ' + fmtErr(e), 'error');
-              btn.disabled = false;
-              btn.textContent = origText;
+              // The webhook still reconciles a captured payment, so point the
+              // parent at the status page rather than implying money was lost.
+              toast('We could not confirm the payment yet: ' + fmtErr(e) + '. If you were charged, it will appear here shortly.', 'error');
+              reset();
+              if (r.merchantTxnId) setTimeout(loadData, 5000);
             });
           },
-          modal: {
-            ondismiss: function () {
-              btn.disabled = false;
-              btn.textContent = origText;
-            }
-          }
-        };
-
-        // Only include order_id if it's a genuine non-dev server order
-        if (c.orderId && !c.orderId.startsWith('order_dev_') && !c.orderId.startsWith('order_cm')) {
-          options.order_id = c.orderId;
-        }
-
-        var rzp = new Razorpay(options);
+          modal: { ondismiss: reset }
+        });
         rzp.on('payment.failed', function (e) {
           toast('Payment failed: ' + ((e.error && e.error.description) || 'Transaction unsuccessful'), 'error');
-          btn.disabled = false;
-          btn.textContent = origText;
+          reset();
         });
         rzp.open();
-      }).catch(function(err) {
-        toast('Could not load Razorpay SDK: ' + fmtErr(err), 'error');
-        btn.disabled = false;
-        btn.textContent = origText;
       });
     }).catch(function(err) {
       toast('Could not start checkout: ' + fmtErr(err), 'error');
-      btn.disabled = false;
-      btn.textContent = origText;
+      reset();
     });
+  }
+
+  // Plans in the parent's own currency when the catalogue has any (a US parent
+  // sees USD plans, an Indian parent INR); otherwise every active plan.
+  function plansForParent(plans) {
+    var want = (state.parent && state.parent.country === 'US') ? 'USD' : 'INR';
+    var mine = (plans || []).filter(function(p) { return String(p.currency || 'INR').toUpperCase() === want; });
+    return mine.length ? mine : (plans || []);
+  }
+
+  // Best annual-vs-12×monthly saving for the same tier, from real prices.
+  function annualSavingPercent(plans) {
+    var monthly = {}, best = 0;
+    plans.forEach(function(p) {
+      if ((p.billingPeriod || '').toUpperCase() === 'MONTHLY') monthly[p.tier + '|' + p.currency] = p.priceMinor;
+    });
+    plans.forEach(function(p) {
+      if ((p.billingPeriod || '').toUpperCase() !== 'ANNUAL') return;
+      var m = monthly[p.tier + '|' + p.currency];
+      if (m > 0 && p.priceMinor > 0) best = Math.max(best, Math.round((1 - p.priceMinor / (m * 12)) * 100));
+    });
+    return best > 0 ? best : 0;
+  }
+
+  // Largest member discount on offer, from the plan rows. 0 while plans load.
+  function maxMemberDiscount() {
+    return plansForParent(state.availablePlans || []).reduce(function(mx, p) {
+      return Math.max(mx, Number(p.discountPercent) || 0);
+    }, 0);
+  }
+
+  function plansPlaceholderHtml(plans, cycle) {
+    var style = 'grid-column:1/-1; text-align:center; padding:32px 16px; color:var(--text-muted); background:var(--surface); border:1px dashed var(--border-dark); border-radius:var(--radius-md);';
+    if (state.plansError) {
+      return '<div style="' + style + '">Could not load membership plans. ' +
+        '<button class="btn btn-sm" onclick="retryPlans()">Try again</button></div>';
+    }
+    if (!state.availablePlans) return '<div style="' + style + '">Loading plans…</div>';
+    if (plans.length) {
+      var other = cycle === 'MONTHLY' ? 'ANNUAL' : 'MONTHLY';
+      return '<div style="' + style + '">No ' + (cycle === 'MONTHLY' ? 'monthly' : 'annual') + ' plans right now. ' +
+        '<button class="btn btn-sm" onclick="setMembershipBillingCycle(\'' + other + '\')">See ' + (other === 'MONTHLY' ? 'monthly' : 'annual') + ' plans</button></div>';
+    }
+    return '<div style="' + style + '">Membership plans are not available yet — check back soon.</div>';
+  }
+
+  function retryPlans() {
+    state.plansError = false;
+    state.availablePlans = null;
+    renderMembership();
+    api.membershipPlans().then(function(p) {
+      state.availablePlans = p.plans || [];
+      renderMembership();
+    }).catch(function() { state.plansError = true; renderMembership(); });
   }
 
   function renderMembership() {
@@ -1373,25 +1596,13 @@
       `;
     }
 
-    // Filter available plans by selected billing cycle (MONTHLY vs ANNUAL)
-    var filteredPlans = plans.filter(function(p) { return (p.billingPeriod || 'MONTHLY').toUpperCase() === cycle; });
-
-    // Fallback display if plans haven't arrived yet
-    if (!filteredPlans.length) {
-      if (cycle === 'MONTHLY') {
-        filteredPlans = [
-          { id: 'bronze_monthly', tier: 'BRONZE', name: 'Bronze · Monthly', priceMinor: 9900, discountPercent: 10, tagline: 'Basic Member Savings', perks: ['10% Off Partner Vets & Clinics', 'Digital Pet Health Records', 'WhatsApp Support'] },
-          { id: 'silver_monthly', tier: 'SILVER', name: 'Silver · Monthly', priceMinor: 24900, discountPercent: 20, tagline: 'Most Popular Choice', perks: ['20% Off Vets, Groomers & Boarding', 'Priority WhatsApp Support', 'Digital Pet Health Passports', 'Early Deal Notifications'] },
-          { id: 'gold_monthly', tier: 'GOLD', name: 'Gold · Monthly', priceMinor: 49900, discountPercent: 30, tagline: 'Full VIP Coverage', perks: ['30% Off All Partner Pet Services', '24/7 Priority Vet Helpline', 'Unlimited Pets Health Passports', 'Free Emergency Concierge', 'VIP Event Passes'] }
-        ];
-      } else {
-        filteredPlans = [
-          { id: 'bronze_annual', tier: 'BRONZE', name: 'Bronze · Annual', priceMinor: 99000, discountPercent: 10, tagline: 'Save 17% yearly', perks: ['10% Off Partner Vets & Clinics', 'Digital Pet Health Records', 'WhatsApp Support'] },
-          { id: 'silver_annual', tier: 'SILVER', name: 'Silver · Annual', priceMinor: 249000, discountPercent: 20, tagline: 'Best Value for Active Parents', perks: ['20% Off Vets, Groomers & Boarding', 'Priority WhatsApp Support', 'Digital Pet Health Passports', 'Early Deal Notifications'] },
-          { id: 'gold_annual', tier: 'GOLD', name: 'Gold · Annual', priceMinor: 499000, discountPercent: 30, tagline: 'Full VIP Annual Access', perks: ['30% Off All Partner Pet Services', '24/7 Priority Vet Helpline', 'Unlimited Pets Health Passports', 'Free Emergency Concierge', 'VIP Event Passes'] }
-        ];
-      }
-    }
+    // Plans come only from GET /api/memberships/plans. The old hard-coded
+    // fallback cards carried made-up ids ("bronze_monthly") that the checkout
+    // endpoint rejects, so "Select plan" on them always failed.
+    var plansForMe = plansForParent(plans);
+    var filteredPlans = plansForMe.filter(function(p) { return (p.billingPeriod || 'MONTHLY').toUpperCase() === cycle; });
+    var annualSave = annualSavingPercent(plansForMe);
+    var maxDisc = maxMemberDiscount();
 
     var TIER_META = {
       BRONZE: { icon: '🥉', badgeBg: '#F1F5F9', badgeColor: '#475569', highlight: false },
@@ -1401,7 +1612,6 @@
 
     var plansCardsHtml = filteredPlans.map(function(p) {
       var meta = TIER_META[p.tier] || TIER_META.BRONZE;
-      var priceRs = Math.round((p.priceMinor || 0) / 100);
       var periodLabel = cycle === 'ANNUAL' ? '/year' : '/month';
       var isCurrentPlan = m.active && m.planId === p.id;
       var perksList = Array.isArray(p.perks) ? p.perks : ['Verified vendor discounts', 'Pet Health Passport', 'WhatsApp Support'];
@@ -1422,7 +1632,7 @@
             <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">${esc(p.tagline || 'Member plan')}</p>
 
             <div style="margin-bottom: 20px; display: flex; align-items: baseline; gap: 4px;">
-              <span style="font-size: 32px; font-weight: 800; color: var(--text-main); line-height: 1;">₹${priceRs.toLocaleString('en-IN')}</span>
+              <span style="font-size: 32px; font-weight: 800; color: var(--text-main); line-height: 1;">${esc(fmtMoney(p.priceMinor, p.currency))}</span>
               <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">${periodLabel}</span>
             </div>
 
@@ -1437,7 +1647,7 @@
           <div>
             ${isCurrentPlan
               ? '<button class="btn" style="width: 100%; background: #ECFDF5; color: #059669; border-color: #A7F3D0; font-weight: 700;" disabled>✓ Current Active Plan</button>'
-              : '<button class="btn ' + (meta.highlight ? 'btn-primary' : '') + '" style="width: 100%; font-weight: 700;" onclick="subscribePlan(\'' + esc(p.id) + '\', this)">Select ' + esc(p.tier) + ' Plan &rarr;</button>'}
+              : '<button class="btn ' + (meta.highlight ? 'btn-primary' : '') + '" style="width: 100%; font-weight: 700;" onclick="subscribePlan(' + jsArg(p.id) + ', this)">Select ' + esc(p.tier) + ' Plan &rarr;</button>'}
           </div>
         </div>
       `;
@@ -1452,18 +1662,18 @@
         <div class="enquiries-table-card">
           ${hist.map(function(h) {
             var planName = (h.plan && h.plan.name) || 'Membership';
-            var amt = h.pricePaidMinor != null ? '₹' + (h.pricePaidMinor / 100).toLocaleString('en-IN') : '';
+            var amt = h.pricePaidMinor != null ? fmtMoney(h.pricePaidMinor, h.currency || (h.plan && h.plan.currency)) + ' · ' : '';
             return `
               <div class="enquiry-row">
                 <div class="enquiry-main">
                   <h4>${esc(planName)}</h4>
-                  <p>${esc(amt)} · Started ${fmtDate(h.startsAt)}${h.endsAt ? ' · Valid until ' + fmtDate(h.endsAt) : ''}</p>
+                  <p>${esc(amt)}Started ${fmtDate(h.startsAt)}${h.endsAt ? ' · Valid until ' + fmtDate(h.endsAt) : ''}</p>
                 </div>
-                <div style="text-align:right">
+                <div style="text-align:right; flex-shrink:0;">
                   <span class="status-pill ${h.status === 'ACTIVE' ? 'responded' : 'pending'}">
                     ${esc(MEMBERSHIP_STATUS_LABEL[h.status] || h.status)}
                   </span>
-                  ${h.invoiceUrl ? '<div style="margin-top:6px"><a href="' + esc(h.invoiceUrl) + '" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:600">Invoice ↓</a></div>' : ''}
+                  ${safeUrl(h.invoiceUrl) ? '<div style="margin-top:6px"><a href="' + esc(safeUrl(h.invoiceUrl)) + '" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:600">Invoice ↓</a></div>' : ''}
                 </div>
               </div>
             `;
@@ -1476,37 +1686,36 @@
       ${activeHtml}
 
       <!-- Value Proposition Banner -->
-      <div style="background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%); border-radius: var(--radius-md); padding: 28px; color: #ffffff; margin-bottom: 28px; box-shadow: var(--shadow-card);">
+      <div style="background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%); border-radius: var(--radius-md); padding: clamp(20px, 4vw, 28px); color: #ffffff; margin-bottom: 28px; box-shadow: var(--shadow-card);">
         <div style="max-width: 680px;">
           <span style="background: rgba(255,255,255,0.2); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 10px; border-radius: 99px;">Pets24x7 Club</span>
-          <h2 style="font-size: 24px; font-weight: 800; margin: 10px 0 6px; color: #ffffff;">Unlock Exclusive Member Savings & VIP Pet Care</h2>
-          <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">Save up to 30% on vet consultations, pet grooming, boarding, and enjoy 24/7 WhatsApp veterinary support for your pets.</p>
+          <h2 style="font-size: clamp(20px, 2vw + 12px, 24px); font-weight: 800; margin: 10px 0 6px; color: #ffffff;">Unlock Exclusive Member Savings & VIP Pet Care</h2>
+          <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">${maxDisc ? 'Save up to ' + maxDisc + '% on' : 'Save on'} vet consultations, pet grooming, boarding, and enjoy 24/7 WhatsApp veterinary support for your pets.</p>
         </div>
       </div>
 
-      <!-- Cycle Selector Toggle -->
-      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 28px;">
-        <span style="font-size: 14px; font-weight: ${cycle === 'MONTHLY' ? '700' : '500'}; color: ${cycle === 'MONTHLY' ? 'var(--text-main)' : 'var(--text-muted)'};">Monthly Billing</span>
-        <div style="display: inline-flex; background: #E2E8F0; padding: 3px; border-radius: 99px; cursor: pointer;" onclick="setMembershipBillingCycle('${cycle === 'MONTHLY' ? 'ANNUAL' : 'MONTHLY'}')">
-          <button style="border: none; background: ${cycle === 'MONTHLY' ? '#ffffff' : 'transparent'}; color: ${cycle === 'MONTHLY' ? 'var(--primary)' : 'var(--text-muted)'}; padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: ${cycle === 'MONTHLY' ? 'var(--shadow-subtle)' : 'none'};">Monthly</button>
-          <button style="border: none; background: ${cycle === 'ANNUAL' ? '#ffffff' : 'transparent'}; color: ${cycle === 'ANNUAL' ? 'var(--primary)' : 'var(--text-muted)'}; padding: 6px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: ${cycle === 'ANNUAL' ? 'var(--shadow-subtle)' : 'none'};">Annual (Save 17%)</button>
+      <!-- Billing cycle: each option selects itself. The old pill toggled on any
+           click, so tapping the already-selected "Monthly" switched to Annual. -->
+      <div class="cycle-switch">
+        <div class="cycle-seg" role="group" aria-label="Billing cycle">
+          <button type="button" aria-pressed="${cycle === 'MONTHLY'}" onclick="setMembershipBillingCycle('MONTHLY')">Monthly</button>
+          <button type="button" aria-pressed="${cycle === 'ANNUAL'}" onclick="setMembershipBillingCycle('ANNUAL')">Annual${annualSave ? ' <span class="cycle-save">Save ' + annualSave + '%</span>' : ''}</button>
         </div>
-        <span style="font-size: 14px; font-weight: ${cycle === 'ANNUAL' ? '700' : '500'}; color: ${cycle === 'ANNUAL' ? 'var(--text-main)' : 'var(--text-muted)'};">Annual Billing <span style="background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">Save 17%</span></span>
       </div>
 
       <!-- 3-Tier Plan Grid -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 36px;">
-        ${plansCardsHtml}
+      <div class="plans-grid">
+        ${plansCardsHtml || plansPlaceholderHtml(plans, cycle)}
       </div>
 
       <!-- Member Benefits Features Grid -->
-      <div class="card" style="padding: 28px; margin-bottom: 28px; background: #ffffff;">
+      <div class="card" style="padding: clamp(20px, 4vw, 28px); margin-bottom: 28px; background: #ffffff;">
         <h3 style="font-size: 17px; font-weight: 800; margin-bottom: 20px; color: var(--text-main);">Why Join Pets24x7 Membership?</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+        <div class="benefits-grid">
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">🏥</div>
             <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Instant Booking Discounts</h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Get 10% to 30% off automatically when booking partner vet clinics, groomers, and pet resorts.</p>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">${maxDisc ? 'Get up to ' + maxDisc + '% off' : 'Member pricing'} when booking partner vet clinics, groomers, and pet resorts.</p>
           </div>
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">📱</div>
@@ -1566,7 +1775,7 @@
       renderMembership();
     }).catch(function(err) {
       toast('Could not cancel: ' + fmtErr(err), 'error');
-      btn.disabled = false; btn.textContent = 'Cancel membership';
+      btn.disabled = false; btn.textContent = 'Cancel auto-renew';
     });
   }
 
@@ -1593,21 +1802,44 @@
     if (!deals.length && !events.length) { grid.innerHTML = ''; grid.hidden = true; hdr.hidden = true; return; }
     var cards = [];
     deals.forEach(function(d) {
+      if (!d) return;
+      var reasonText = d.reason && d.reason.text ? String(d.reason.text) : '';
+      var endsOk = d.endsAt && !isNaN(new Date(d.endsAt).getTime());
+      var titleHtml = esc(d.title);
+      // A deal tied to a listing opens that business inside the dashboard.
+      if (d.listingId) {
+        titleHtml = '<a style="cursor:pointer; color:inherit;" onclick="viewVendorDetails(' + jsArg(d.listingId) + ')">' + titleHtml + '</a>';
+      } else if (safeUrl(d.url)) {
+        titleHtml = '<a href="' + esc(safeUrl(d.url)) + '" target="_blank" rel="noopener" style="color:inherit;">' + titleHtml + '</a>';
+      }
       cards.push('<div class="card" style="padding:16px;">' +
         '<span style="display:inline-block;background:#DCFCE7;color:#166534;font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;">' + esc(d.offerLabel || 'Deal') + '</span>' +
-        '<h4 style="margin:8px 0 4px;font-size:14px;">' + esc(d.title) + '</h4>' +
-        '<p style="font-size:12.5px;color:var(--text-muted);">' + esc(d.description || '') + '</p>' +
-        (d.code ? '<div style="margin-top:6px;font-size:12px;">Code: <strong>' + esc(d.code) + '</strong></div>' : '') +
-        (d.endsAt ? '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Ends ' + new Date(d.endsAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + '</div>' : '') +
+        '<h4 style="margin:8px 0 4px;font-size:14px;">' + titleHtml + '</h4>' +
+        (d.vendor ? '<div style="font-size:12px;font-weight:600;color:var(--text-main);">' + esc(d.vendor) + '</div>' : '') +
+        (reasonText ? '<div class="feed-reason">' + esc(reasonText) + '</div>' : '') +
+        '<p style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">' + esc(d.description || '') + '</p>' +
+        (d.code ? '<div class="feed-code">Code: <strong>' + esc(d.code) + '</strong>' +
+          '<button type="button" class="btn btn-sm" data-label="Copy" aria-label="Copy code ' + esc(d.code) + '" onclick="copyDealCode(this, ' + jsArg(d.code) + ')">Copy</button></div>' : '') +
+        (endsOk ? '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">Ends ' + esc(new Date(d.endsAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})) + '</div>' : '') +
         '</div>');
     });
     events.forEach(function(e) {
+      if (!e) return;
+      var start = new Date(e.startsAt);
+      var startOk = !isNaN(start.getTime());
+      var reasonText = e.reason && e.reason.text ? String(e.reason.text) : '';
       cards.push('<div class="card" style="padding:16px;">' +
-        '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;">Event</span>' +
-        '<h4 style="margin:8px 0 4px;font-size:14px;">' + esc(e.title) + '</h4>' +
-        '<p style="font-size:12.5px;color:var(--text-muted);">' + esc(e.venue || e.city || '') + '</p>' +
-        '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">' + new Date(e.startsAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</div>' +
-        (e.rsvpUrl ? '<a href="' + esc(e.rsvpUrl) + '" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:8px;display:inline-block;font-size:12px;">RSVP</a>' : '') +
+        '<div style="display:flex; gap:10px; align-items:flex-start;">' +
+          (startOk ? '<div class="feed-date" aria-hidden="true"><b>' + start.getDate() + '</b><span>' + esc(start.toLocaleDateString('en-IN',{month:'short'})) + '</span></div>' : '') +
+          '<div style="min-width:0;">' +
+            '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;">Event</span>' +
+            '<h4 style="margin:6px 0 4px;font-size:14px;">' + esc(e.title) + '</h4>' +
+          '</div>' +
+        '</div>' +
+        '<p style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">' + esc(e.venue || e.city || '') + '</p>' +
+        (reasonText ? '<div class="feed-reason">' + esc(reasonText) + '</div>' : '') +
+        (startOk ? '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">' + esc(start.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) + '</div>' : '') +
+        (safeUrl(e.rsvpUrl) ? '<a href="' + esc(safeUrl(e.rsvpUrl)) + '" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:8px;display:inline-block;font-size:12px;">RSVP</a>' : '') +
         '</div>');
     });
     grid.innerHTML = cards.join('');
@@ -1639,7 +1871,8 @@
     var icon = SPECIES_ICON[selectedPet.species] || '🐾';
     var vacBadge = selectedPet.vaccinated ? '<span class="pet-badge vac">Vaccinated</span>' : '<span class="pet-badge" style="background:#FEE2E2;color:#991B1B">Not Vaccinated</span>';
 
-    document.getElementById('homeRecomTitle').textContent = 'Recommended for ' + esc(selectedPet.name);
+    // textContent, so no esc(): escaping here showed "&amp;" in a name like "Tom & Jerry".
+    document.getElementById('homeRecomTitle').textContent = 'Recommended for ' + selectedPet.name;
 
     var metaBits = [SPECIES_LABEL[selectedPet.species] || 'Pet'];
     if (selectedPet.breed) metaBits.push(esc(selectedPet.breed));
@@ -1649,25 +1882,27 @@
     // Build Pet Switcher Options if multiple pets exist
     var switcherHtml = '';
     if (state.pets.length > 1) {
-      switcherHtml = '<select class="pet-selector-dropdown" onchange="changeSelectedPet(this.value)">' +
+      switcherHtml = '<select class="pet-selector-dropdown" aria-label="Choose which pet to show" onchange="changeSelectedPet(this.value)">' +
         state.pets.map(function(p) {
           var sel = p.id === selectedPet.id ? ' selected' : '';
-          return '<option value="' + esc(p.id) + '"' + sel + '>' + esc(p.name) + ' (' + (SPECIES_LABEL[p.species] || 'Pet') + ')</option>';
+          return '<option value="' + esc(p.id) + '"' + sel + '>' + esc(p.name) + ' (' + esc(SPECIES_LABEL[p.species] || 'Pet') + ')</option>';
         }).join('') + '</select>';
     }
 
     box.innerHTML = `
       <div class="featured-pet-container">
         <div class="pet-info-flex">
-          <div class="pet-avatar">${icon}</div>
+          <div class="pet-avatar" style="overflow:hidden;">${safeImg(selectedPet.avatarUrl)
+            ? '<img src="' + esc(selectedPet.avatarUrl) + '" alt="' + esc(selectedPet.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+            : icon}</div>
           <div>
             <div class="pet-name-h">${esc(selectedPet.name)} ${vacBadge}</div>
             <div class="pet-meta-sub">${metaBits.join(' · ')}</div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div class="pet-actions">
           ${switcherHtml}
-          <button class="btn" onclick="navigate('pets')">View Pet</button>
+          <button class="btn" onclick="openPetPassportModal(${jsArg(selectedPet.id)})">View Passport</button>
         </div>
       </div>
     `;
@@ -1698,8 +1933,9 @@
     if (m.active) {
       return '<div class="member-benefit">⭐ ' + esc(String(m.plan || 'Member')) + ' benefits apply</div>';
     }
+    var maxDisc = maxMemberDiscount();
     return '<div class="member-benefit member-benefit-off" onclick="navigate(&quot;membership&quot;)" role="button" ' +
-           'title="See membership plans">🔓 Members save up to 30% — join →</div>';
+           'title="See membership plans">🔓 ' + (maxDisc ? 'Members save up to ' + maxDisc + '%' : 'Members get exclusive savings') + ' — join →</div>';
   }
 
   // Re-render whatever vendor grids are on screen (used after membership loads,
@@ -1713,40 +1949,311 @@
   }
 
   // ---- Recommendations ----
-  // Server-ranked (GET /api/recommendations) from this parent's pets, past
-  // enquiries, saved businesses and city. Each card shows why it was picked.
+  // Server-ranked (GET /api/recommendations, the parent surface of the reco
+  // engine) from this parent's pets, past enquiries, saved and viewed
+  // businesses and city. Each card shows why it was picked (reason.text);
+  // paid placements come back in reserved slots flagged sponsored:true and are
+  // always labelled. Every card carries data-rid/lid/pos/reason/sp so
+  // impressions and clicks can be reported to POST /api/reco/events.
+  var RECO_SURFACE = 'parent_home';
+  var RECO_SRC = 'reco_' + RECO_SURFACE;
+  var recoSeq = 0;
+
+  // Tracking goes through the shared /reco-track.js when it is on the page.
+  // Until then (or if it fails to load) this small in-page fallback does the
+  // same job against the same contract: >=50% visible for 1s, once per
+  // rid+listing, batched, sent with sendBeacon (text/plain) or keepalive fetch.
+  var recoTrackLocal = (function () {
+    var queue = [], sent = {}, timer = null, io = null, timers = {};
+    function key(ev) { return ev.rid + '|' + ev.listingId + '|' + ev.type; }
+    function evFrom(el, type) {
+      if (!el || !el.getAttribute) return null;
+      var rid = el.getAttribute('data-rid'), lid = el.getAttribute('data-lid');
+      if (!rid || !lid) return null;
+      var ev = { rid: rid, type: type, listingId: lid, sponsored: el.getAttribute('data-sp') === '1' };
+      var pos = parseInt(el.getAttribute('data-pos'), 10);
+      if (pos > 0) ev.pos = pos;
+      var reason = el.getAttribute('data-reason');
+      if (reason) ev.reason = reason;
+      var surface = el.getAttribute('data-surface');
+      if (surface) ev.surface = surface;
+      return ev;
+    }
+    function push(ev) {
+      if (!ev) return;
+      var k = key(ev);
+      if (sent[k]) return;
+      sent[k] = 1;
+      queue.push(ev);
+      if (queue.length >= 50) flush();
+      else if (!timer) timer = setTimeout(flush, 5000);
+    }
+    function flush() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (!queue.length) return;
+      var batch = queue.splice(0, 50);
+      var body = JSON.stringify({ events: batch });
+      var url = ((window.api && api.base) || '') + '/api/reco/events';
+      try {
+        if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))) {
+          if (queue.length) flush();
+          return;
+        }
+      } catch (e) { /* fall through to fetch */ }
+      try {
+        fetch(url, { method: 'POST', credentials: 'include', keepalive: true,
+          headers: { 'Content-Type': 'application/json' }, body: body }).catch(function () {});
+      } catch (e) { /* tracking is best-effort */ }
+      if (queue.length) flush();
+    }
+    function observe(container, surface) {
+      if (!container) return;
+      var cards = container.querySelectorAll('[data-rid][data-lid]:not([data-reco-obs])');
+      Array.prototype.forEach.call(cards, function (el) {
+        el.setAttribute('data-reco-obs', '1');
+        if (surface && !el.getAttribute('data-surface')) el.setAttribute('data-surface', surface);
+        if (!('IntersectionObserver' in window)) { push(evFrom(el, 'impression')); return; }
+        if (!io) {
+          io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (en) {
+              var t = en.target, k = t.getAttribute('data-rid') + '|' + t.getAttribute('data-lid');
+              if (en.isIntersecting && en.intersectionRatio >= 0.5) {
+                if (!timers[k]) timers[k] = setTimeout(function () {
+                  delete timers[k];
+                  push(evFrom(t, 'impression'));
+                  io.unobserve(t);
+                }, 1000);
+              } else if (timers[k]) { clearTimeout(timers[k]); delete timers[k]; }
+            });
+          }, { threshold: [0, 0.5] });
+        }
+        io.observe(el);
+      });
+    }
+    function click(el) {
+      var card = el && el.closest ? el.closest('[data-rid][data-lid]') : el;
+      var ev = evFrom(card, 'click');
+      if (!ev) return;
+      try {
+        sessionStorage.setItem('reco:last', JSON.stringify({ rid: ev.rid, listingId: ev.listingId, surface: ev.surface || '', at: Date.now() }));
+      } catch (e) { /* storage may be blocked */ }
+      push(ev);
+      flush();
+    }
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+    return { observe: observe, click: click, flush: flush };
+  })();
+
+  function recoObserve(container, surface) {
+    try {
+      if (window.recoTrack && typeof window.recoTrack.observe === 'function') window.recoTrack.observe(container, surface);
+      else recoTrackLocal.observe(container, surface);
+    } catch (e) { /* tracking must never break the page */ }
+  }
+  function recoClick(el) {
+    try {
+      var card = el && el.closest ? el.closest('[data-rid][data-lid]') : el;
+      if (!card) return;
+      if (window.recoTrack && typeof window.recoTrack.click === 'function') window.recoTrack.click(card);
+      else recoTrackLocal.click(card);
+    } catch (e) { /* tracking must never break the page */ }
+  }
+
+  // External vendor links opened from a recommendation carry UTM so the vendor
+  // can see Pets24x7 traffic in their own analytics. Internal links never do.
+  function withRecoUtm(url, src) {
+    if (!url || !src || src.indexOf('reco_') !== 0) return url;
+    try {
+      var u = new URL(url);
+      if (u.origin === location.origin) return url;
+      if (!u.searchParams.has('utm_source')) {
+        u.searchParams.set('utm_source', 'pets24x7');
+        u.searchParams.set('utm_medium', 'referral');
+        u.searchParams.set('utm_campaign', src);
+      }
+      return u.href;
+    } catch (e) { return url; }
+  }
+
+  function recoResetPaging() {
+    state.recoRid = null;
+    state.recoNextCursor = null;
+    state.recoFallback = null;
+    state.recoCity = '';
+  }
+
   function loadRecommendations() {
     var petId = state.selectedPetId || '';
+    // Switching pets quickly must not let an older, slower answer win.
+    var seq = ++recoSeq;
+    state.recommendationsLoading = true;
+    state.recoMoreLoading = false;
+    renderRecommendations();
     return api.recommendations({ limit: 6, petId: petId })
       .then(function (r) {
-        state.recommendations = r.recommendations || [];
+        if (seq !== recoSeq) return;
+        r = r || {};
+        state.recommendationsLoading = false;
+        state.recommendationsFetched = true;
+        state.recommendationsError = false;
+        state.recoRid = r.rid || null;
+        state.recoNextCursor = r.nextCursor || null;
+        state.recoFallback = r.fallback || null;
+        state.recoCity = r.city || '';
+        state.recommendations = recoTag(r.recommendations || r.items || [], r.rid, 0);
         state.recommendationsPersonalised = !!r.personalised;
         renderRecommendations();
       })
       .catch(function () {
+        if (seq !== recoSeq) return;
+        state.recommendationsLoading = false;
+        state.recommendationsFetched = true;
+        state.recommendationsError = true;
         state.recommendations = [];
+        recoResetPaging();
         renderRecommendations();
       });
+  }
+
+  // Remember which response (rid) served each item and its 1-based position,
+  // so tracking reports exactly what the server registered for that rid.
+  function recoTag(list, rid, offset) {
+    return (list || []).filter(function (v) { return v && v.id; }).map(function (v, i) {
+      v._rid = v._rid || rid || '';
+      if (!(v.pos > 0)) v.pos = offset + i + 1;
+      return v;
+    });
+  }
+
+  function loadMoreRecommendations() {
+    var cursor = state.recoNextCursor;
+    if (!cursor || state.recoMoreLoading) return;
+    var seq = recoSeq;
+    state.recoMoreLoading = true;
+    renderRecoMore();
+    var p = { cursor: cursor };
+    if (state.selectedPetId) p.petId = state.selectedPetId;
+    var call = api.recoParent
+      ? api.recoParent(p)
+      : api.get('/api/reco/parent?' + Object.keys(p).map(function (k) { return k + '=' + encodeURIComponent(p[k]); }).join('&'));
+    call.then(function (r) {
+      if (seq !== recoSeq) return; // pet switched meanwhile; that load owns the grid now
+      r = r || {};
+      var have = {};
+      (state.recommendations || []).forEach(function (v) { have[v.id] = true; });
+      var offset = (state.recommendations || []).length;
+      var fresh = recoTag(r.items || r.recommendations || [], r.rid || state.recoRid, offset)
+        .filter(function (v) { if (have[v.id]) return false; have[v.id] = true; return true; });
+      state.recommendations = (state.recommendations || []).concat(fresh);
+      state.recoNextCursor = fresh.length ? (r.nextCursor || null) : null;
+      state.recoMoreLoading = false;
+      renderRecommendations();
+    }).catch(function (err) {
+      if (seq !== recoSeq) return;
+      state.recoMoreLoading = false;
+      renderRecoMore();
+      toast('Could not load more recommendations: ' + fmtErr(err), 'error');
+    });
+  }
+
+  function renderRecoMore() {
+    var wrap = document.getElementById('homeRecomMoreWrap');
+    var btn = document.getElementById('homeRecomMore');
+    if (!wrap || !btn) return;
+    var show = !!state.recoNextCursor && !state.recommendationsLoading && !state.recommendationsError &&
+      (state.recommendations || []).length > 0;
+    wrap.hidden = !show;
+    btn.disabled = !!state.recoMoreLoading;
+    btn.textContent = state.recoMoreLoading ? 'Loading…' : 'Show more';
+  }
+
+  function renderRecoHint() {
+    var hint = document.getElementById('homeRecomHint');
+    if (!hint) return;
+    var list = state.recommendations || [];
+    if (state.recoFallback === 'default_city' && list.length && !state.recommendationsLoading) {
+      hint.innerHTML = 'Showing picks for ' + esc(state.recoCity || 'a popular city') +
+        '. <a onclick="openProfileModal()">Add your city</a> for local results.';
+      hint.hidden = false;
+    } else {
+      hint.innerHTML = '';
+      hint.hidden = true;
+    }
+  }
+
+  function recoSkeletonHtml(n) {
+    var one = '<div class="vendor-card reco-skel" aria-hidden="true">' +
+      '<div class="vendor-banner sk" style="height:120px; border-radius:0;"></div>' +
+      '<div class="vendor-content">' +
+        '<div class="sk" style="height:16px; width:70%; margin-bottom:8px;"></div>' +
+        '<div class="sk" style="height:12px; width:90%; margin-bottom:12px;"></div>' +
+        '<div class="sk" style="height:20px; width:55%; border-radius:999px;"></div>' +
+      '</div></div>';
+    var out = '';
+    for (var i = 0; i < (n || 3); i++) out += one;
+    return out;
   }
 
   function renderRecommendations() {
     var box = document.getElementById('homeRecomGrid');
     if (!box) return;
+    renderRecoHint();
+    renderRecoMore();
     var list = state.recommendations || [];
+    if (state.recommendationsLoading || !state.recommendationsFetched) {
+      box.setAttribute('aria-busy', 'true');
+      box.innerHTML = recoSkeletonHtml(3) + '<span class="sr-only" style="position:absolute;left:-9999px;">Finding the best matches…</span>';
+      return;
+    }
+    box.removeAttribute('aria-busy');
     if (!list.length) {
-      box.innerHTML = '<p style="color:var(--text-muted); padding:16px 0;">Add a pet to get recommendations tailored to them.</p>';
+      if (state.recommendationsError) {
+        box.innerHTML = '<p style="color:var(--text-muted); padding:16px 0;">Could not load recommendations right now. ' +
+          '<a style="cursor:pointer;" onclick="loadRecommendations()">Try again</a></p>';
+        return;
+      }
+      box.innerHTML = state.pets.length
+        ? '<p style="color:var(--text-muted); padding:16px 0;">No recommendations in your city yet. ' +
+          (state.parent && state.parent.city ? '' : '<a style="cursor:pointer;" onclick="openProfileModal()">Add your city</a> for local picks, or ') +
+          '<a style="cursor:pointer;" onclick="navigate(&quot;search&quot;)">browse all services</a>.</p>'
+        : '<p style="color:var(--text-muted); padding:16px 0;">Popular picks will appear here. ' +
+          '<a style="cursor:pointer;" onclick="openAddPetModal()">Add a pet</a> to get recommendations tailored to them.</p>';
       return;
     }
     box.innerHTML = list.map(function (v) {
-      var reasons = (v.reasons || []).map(function (t) {
-        return '<span class="reason-chip">' + esc(t) + '</span>';
-      }).join('');
-      var idAttr = esc(v.id);
-      return '<div class="vendor-card">' +
+      var reasonObj = v.reason && typeof v.reason === 'object' ? v.reason : null;
+      var sponsored = v.sponsored === true || (reasonObj && reasonObj.code === 'SPONSORED');
+      var primary = reasonObj && reasonObj.text ? String(reasonObj.text) : '';
+      var chips = '';
+      // A paid placement shows its "Sponsored" label instead of a reason chip.
+      if (!sponsored) {
+        var texts = [];
+        if (primary) texts.push(primary);
+        (v.reasons || []).forEach(function (t) {
+          t = t == null ? '' : String(t);
+          if (t && texts.indexOf(t) === -1) texts.push(t);
+        });
+        chips = texts.slice(0, 3).map(function (t, i) {
+          return '<span class="reason-chip' + (i === 0 ? ' primary' : '') + '">' + esc(t) + '</span>';
+        }).join('');
+      }
+      var label = String(v.label || 'Sponsored');
+      var idAttr = jsArg(v.id);
+      var srcAttr = jsArg(RECO_SRC);
+      var reasonCode = reasonObj && reasonObj.code ? String(reasonObj.code) : (sponsored ? 'SPONSORED' : '');
+      return '<div class="vendor-card"' +
+          ((v._rid || state.recoRid) ? ' data-rid="' + esc(v._rid || state.recoRid) + '"' : '') +
+          ' data-lid="' + esc(v.id) + '"' +
+          ' data-pos="' + esc(String(v.pos || '')) + '"' +
+          ' data-reason="' + esc(reasonCode) + '"' +
+          ' data-sp="' + (sponsored ? '1' : '0') + '"' +
+          ' data-surface="' + RECO_SURFACE + '">' +
         '<div class="vendor-banner" style="position:relative; height:120px; background:linear-gradient(135deg,#DBEAFE,#C7D2FE); font-size:40px; overflow:hidden;">' +
           '<span aria-hidden="true" style="position:absolute; z-index:0;">' + catIcon(v) + '</span>' +
           '<img loading="lazy" src="' + esc(vendorImg(v)) + '" alt="' + esc(v.category || 'Pet service') + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1;" onerror="this.remove()">' +
           '<span class="vendor-tag" style="z-index:2; position:absolute; top:10px; left:10px;">' + catIcon(v) + ' ' + esc(v.category || 'Pet Service') + '</span>' +
+          (sponsored ? '<span class="badge-sponsored" aria-label="Sponsored listing">' + esc(label) + '</span>' : '') +
           (typeof v.rating === 'number' && v.rating > 0
             ? '<span class="vendor-rating" style="z-index:2; position:absolute; bottom:10px; right:10px;">⭐ ' + v.rating.toFixed(1) + '</span>' : '') +
         '</div>' +
@@ -1754,20 +2261,66 @@
           '<div>' +
             '<div class="vendor-name">' + esc(v.name) + '</div>' +
             (v.address ? '<div class="vendor-address">📍 ' + esc(v.address) + '</div>' : '') +
-            (reasons ? '<div class="reason-row">' + reasons + '</div>' : '') +
+            (chips ? '<div class="reason-row">' + chips + '</div>' : '') +
           '</div>' +
           memberBenefitHtml() +
           '<div class="vendor-foot" style="flex-wrap:wrap; gap:6px;">' +
             '<span style="font-size:12px; font-weight:600; color:var(--text-muted);">' +
               (v.review_count ? v.review_count + ' reviews' : 'No reviews yet') + '</span>' +
             '<span style="display:flex; gap:6px;">' +
-              '<button class="btn btn-sm" onclick="viewVendorDetails(&quot;' + idAttr + '&quot;)">Details</button>' +
-              '<button class="btn btn-sm btn-primary" onclick="openEnquiryModal(&quot;' + idAttr + '&quot;)">Enquire</button>' +
+              '<button class="btn btn-sm" onclick="recoClick(this); viewVendorDetails(' + idAttr + ', ' + srcAttr + ')">Details</button>' +
+              '<button class="btn btn-sm btn-primary" onclick="recoClick(this); openEnquiryModal(' + idAttr + ')">Enquire</button>' +
             '</span>' +
           '</div>' +
         '</div>' +
       '</div>';
     }).join('');
+    recoObserve(box, RECO_SURFACE);
+  }
+
+  // ---- Deals & events for you ----
+  // GET /api/reco/parent/feed ranks deals by the parent's pet needs / saved
+  // categories and events by proximity in time. If it fails, the unranked
+  // nearbyDeals / upcomingEvents from /api/parent/dashboard are shown instead,
+  // so the section never sticks.
+  var recoFeedSeq = 0;
+  function loadRecoFeed() {
+    var seq = ++recoFeedSeq;
+    var city = (state.parent && state.parent.city) || '';
+    var call;
+    if (api.recoParentFeed) call = api.recoParentFeed(city);
+    else call = api.get('/api/reco/parent/feed?limit=6' + (city ? '&city=' + encodeURIComponent(city) : ''));
+    return call.then(function (r) {
+      if (seq !== recoFeedSeq) return;
+      r = r || {};
+      if (!Array.isArray(r.deals) && !Array.isArray(r.events)) return; // unexpected shape: keep the fallback
+      state.feedRanked = true;
+      state.nearbyDeals = r.deals || [];
+      state.upcomingEvents = r.events || [];
+      renderFeed();
+    }).catch(function () { /* keep the dashboard's own deals/events */ });
+  }
+
+  function copyDealCode(btn, code) {
+    function done(ok) {
+      var orig = btn.getAttribute('data-label') || 'Copy';
+      btn.textContent = ok ? 'Copied' : 'Copy failed';
+      setTimeout(function () { btn.textContent = orig; }, 1500);
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = code; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      done(ok);
+    } catch (e) { done(false); }
   }
 
   // Render Vendor Grids (deduplicated; only real scrape fields — no stock photos, no fake distances)
@@ -1795,7 +2348,7 @@
         ? v.review_count + (v.review_count === 1 ? ' review' : ' reviews')
         : 'No reviews yet';
       var loc = esc(v.address || [v.city, v.state].filter(Boolean).join(', ') || '');
-      var idAttr = esc(v.id);
+      var idAttr = jsArg(v.id);
       return `
         <div class="vendor-card">
           <div class="vendor-banner" style="position:relative; height:120px; background:linear-gradient(135deg, #DBEAFE, #C7D2FE); font-size:40px; overflow:hidden;">
@@ -1813,8 +2366,8 @@
             <div class="vendor-foot" style="flex-wrap:wrap; gap:6px;">
               <span style="font-size:12px; font-weight:600; color:var(--text-muted);">${reviewText}</span>
               <span style="display:flex; gap:6px;">
-                <button class="btn btn-sm" onclick="viewVendorDetails('${idAttr}')">Details</button>
-                <button class="btn btn-sm btn-primary" onclick="openEnquiryModal('${idAttr}')">Enquire</button>
+                <button class="btn btn-sm" onclick="viewVendorDetails(${idAttr})">Details</button>
+                <button class="btn btn-sm btn-primary" onclick="openEnquiryModal(${idAttr})">Enquire</button>
               </span>
             </div>
           </div>
@@ -1824,10 +2377,18 @@
   }
 
   // Resolve a vendor/listing object by id from whatever list we currently hold.
+  // Recommendations and saved rows count too: an Enquire tapped on a
+  // recommended card used to find nothing and send "this business" as the
+  // listing name to the vendor.
   function findVendor(id) {
-    return (state.searchResults || []).find(function(x){ return x.id === id; })
+    if (!id) return null;
+    var match = function(x){ return x && x.id === id; };
+    var hit = (state.searchResults || []).find(match)
         || (state.currentVendor && state.currentVendor.id === id ? state.currentVendor : null)
-        || null;
+        || (state.recommendations || []).find(match);
+    if (hit) return hit;
+    var s = (state.saved || []).find(function(x){ return x.listingId === id; });
+    return s ? { id: s.listingId, name: s.listingName, category: s.category, city: s.city, country: s.country } : null;
   }
 
   function changeSelectedPet(petId) {
@@ -1838,12 +2399,32 @@
   }
 
   // Search Logic (Deduplicated)
+  // Every keystroke used to fire its own request, and a slow early answer
+  // could land after a later one and show results for text no longer in the
+  // box. Debounce typing, and drop any answer that is not the latest.
+  var searchSeq = 0, searchTimer = null;
+  function runSearchDebounced() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearch, 300);
+  }
+
   function runSearch() {
+    clearTimeout(searchTimer);
     var q = document.getElementById('searchInput').value.trim();
     var city = document.getElementById('searchCity').value;
     var cat = state.selectedCategory;
+    var seq = ++searchSeq;
+    state.searchInFlight = true;
+
+    var grid = document.getElementById('searchResultsGrid');
+    if (grid && !state.searchResults.length) grid.innerHTML = loadingHtml('Searching…');
+    var nearby = document.getElementById('homeNearbyGrid');
+    if (nearby && !nearby.children.length) nearby.innerHTML = loadingHtml();
+    document.getElementById('searchCountHeader').textContent = 'Searching…';
 
     api.listingsSearch({ q: q, category: cat, city: city, limit: 40 }).then(function(r) {
+      if (seq !== searchSeq) return;
+      state.searchInFlight = false;
       var raw = r.listings || [];
       var seen = {};
       var list = [];
@@ -1856,16 +2437,23 @@
       });
       state.searchResults = list;
 
-      document.getElementById('searchCountHeader').textContent = list.length + ' Available Businesses';
+      document.getElementById('searchCountHeader').textContent =
+        list.length === 1 ? '1 Available Business' : list.length + ' Available Businesses';
       renderVendorGrid(list, 'searchResultsGrid');
 
       // "Nearby" is just the city list; "Recommended" comes from the ranking
       // engine (loadRecommendations), never from the first rows of a search.
       renderVendorGrid(list.slice(0, 6), 'homeNearbyGrid');
     }).catch(function(err) {
+      if (seq !== searchSeq) return;
+      state.searchInFlight = false;
       state.searchResults = [];
-      var msg = '<p style="color:var(--danger); padding: 20px 0;">Could not load businesses: ' + esc(fmtErr(err)) + '</p>';
-      ['searchResultsGrid','homeRecomGrid','homeNearbyGrid'].forEach(function(id){
+      document.getElementById('searchCountHeader').textContent = 'Available Businesses';
+      var msg = '<p style="color:var(--danger); padding: 20px 0;">Could not load businesses: ' + esc(fmtErr(err)) +
+        ' <a style="cursor:pointer;" onclick="runSearch()">Try again</a></p>';
+      // Recommendations come from their own endpoint; a search failure must
+      // not wipe them out.
+      ['searchResultsGrid','homeNearbyGrid'].forEach(function(id){
         var el = document.getElementById(id); if (el) el.innerHTML = msg;
       });
     });
@@ -1898,8 +2486,11 @@
   // listing and used to leave no trace, so the vendor could not be shown it and
   // support could not answer "who contacted us". Best-effort: never blocks the
   // call from being placed.
-  function logListingTap(listingId, kind) {
-    if (window.api && api.activityLog) api.activityLog(listingId, kind, 'dashboard');
+  // Taps inside a business opened from a recommendation keep its src
+  // (reco_parent_home), so the reco funnel reaches views and contact taps.
+  function logListingTap(listingId, kind, source) {
+    var src = source || (state.vendorSrc && state.currentVendor && state.currentVendor.id === listingId ? state.vendorSrc : '') || 'dashboard';
+    if (window.api && api.activityLog) api.activityLog(listingId, kind, src);
     return true;
   }
 
@@ -1910,45 +2501,67 @@
     return '/' + country + '/' + citySlug + '/' + v.id + '/';
   }
 
-  function viewVendorDetails(vendorId) {
+  var vendorSeq = 0;
+  function viewVendorDetails(vendorId, src) {
     var body = document.getElementById('vendorDetailsBody');
     navigate('vendor-details');
-    body.innerHTML = '<p style="color:var(--text-muted); padding:20px 0;">Loading…</p>';
+    var seq = ++vendorSeq;
+    // Where the parent came from (e.g. reco_parent_home) — attributes the
+    // listing view and taps, and adds UTM to the outbound website link.
+    state.vendorSrc = typeof src === 'string' ? src.slice(0, 40) : '';
+    var recoHit = state.vendorSrc ? (state.recommendations || []).find(function(x){ return x && x.id === vendorId; }) : null;
+    state.vendorSponsored = !!(recoHit && recoHit.sponsored);
 
+    // Show what we already hold straight away, then upgrade from
+    // GET /api/listings/:id — only that route merges the claimed owner's
+    // photos, about text, hours and services, which search and
+    // recommendation rows do not carry.
     var known = findVendor(vendorId);
-    var p = known ? Promise.resolve({ listing: known }) : api.get('/api/listings/' + encodeURIComponent(vendorId));
+    if (known && known.name) { state.currentVendor = known; renderVendorDetails(known); }
+    else body.innerHTML = loadingHtml();
 
-    p.then(function(r) {
+    api.get('/api/listings/' + encodeURIComponent(vendorId)).then(function(r) {
+      if (seq !== vendorSeq) return;
       var v = r.listing || r;
       state.currentVendor = v;
       renderVendorDetails(v);
+      // Counts toward the owner's "profile views" (deduped server-side).
+      logListingTap(v.id, 'listing_view');
       // Published Pets24x7 reviews for this listing (best-effort).
       api.listingReviews(v.id).then(function(rev) {
-        if (rev && rev.count) renderListingReviews(rev);
+        if (seq === vendorSeq && rev && rev.count) renderListingReviews(rev);
       }).catch(function(){});
     }).catch(function(err) {
+      if (seq !== vendorSeq) return;
+      if (known && known.name) return; // keep the summary we already showed
       body.innerHTML = '<p style="color:var(--danger); padding:20px 0;">Could not load this business: ' + esc(fmtErr(err)) + '</p>';
     });
   }
 
   function renderVendorDetails(v) {
     var body = document.getElementById('vendorDetailsBody');
-    var loc = esc(v.address || [v.city, v.state].filter(Boolean).join(', ') || '');
+    var locRaw = v.address || [v.city, v.state].filter(Boolean).join(', ') || '';
+    var loc = esc(locRaw);
+    var idArg = jsArg(v.id);
     var hasRating = Number(v.rating) > 0;
     var rating = Number(v.rating) || 0;
     var website = cleanWebsite(v.website);
-    var phone = v.phone ? v.phone.replace(/\s+/g, '') : '';
+    // Opened from a recommendation: the outbound link gets UTM (display text
+    // stays clean) and a paid placement is marked rel="sponsored".
+    var websiteHref = website ? withRecoUtm(website, state.vendorSrc) : null;
+    var websiteRel = state.vendorSponsored ? 'sponsored noopener nofollow' : 'noopener nofollow';
+    var phone = v.phone ? String(v.phone).replace(/\s+/g, '') : '';
 
     // The public listing page shows a photo gallery, an about block, hours,
     // services and a map. This view used to show one photo and three lines,
     // which is why it read as a different (and emptier) business page.
     var photos = [];
-    if (v.imageUrl) photos.push(v.imageUrl);
-    (v.gallery || []).forEach(function(g) { if (g && photos.indexOf(g) === -1) photos.push(g); });
+    if (safeImg(v.imageUrl)) photos.push(v.imageUrl);
+    (v.gallery || []).forEach(function(g) { if (safeImg(g) && photos.indexOf(g) === -1) photos.push(g); });
     while (photos.length < 5) photos.push(vendorImg(v, 600, 450));
 
     var galleryHtml =
-      '<div style="display:grid; grid-template-columns:2fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; height:320px; margin-bottom:18px;">' +
+      '<div class="vd-gallery">' +
         photos.slice(0, 5).map(function(src, i) {
           var span = i === 0 ? 'grid-row:span 2;' : '';
           return '<div style="' + span + 'border-radius:10px; overflow:hidden; background:linear-gradient(135deg,#DBEAFE,#C7D2FE);">' +
@@ -1958,8 +2571,10 @@
         }).join('') +
       '</div>';
 
-    var about = v.about || (esc(v.name) + ' is a Google-listed ' + esc(String(v.category || 'pet service').toLowerCase()) +
-      (loc ? ' at ' + loc : '') + '. Pets24x7 shows verified public listing details only — confirm exact services, ' +
+    // Plain text; escaped once where it is rendered (it used to be escaped
+    // twice, so "&" showed up as "&amp;").
+    var about = v.about || (String(v.name || 'This business') + ' is a Google-listed ' + String(v.category || 'pet service').toLowerCase() +
+      (locRaw ? ' at ' + locRaw : '') + '. Pets24x7 shows verified public listing details only — confirm exact services, ' +
       'availability and pricing with the business directly.');
 
     var services = (v.servicesList || '').split(/[,;\n]+/).map(function(x){ return x.trim(); }).filter(Boolean);
@@ -1970,8 +2585,8 @@
 
     body.innerHTML =
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">' +
-        '<div>' +
-          '<h2 style="font-size:24px; font-weight:800; letter-spacing:-0.4px;">' + esc(v.name) + '</h2>' +
+        '<div style="min-width:0; flex:1 1 280px;">' +
+          '<h2 class="vd-title" style="font-size:24px; font-weight:800; letter-spacing:-0.4px;">' + esc(v.name) + '</h2>' +
           '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; font-size:13px; color:var(--text-muted);">' +
             (hasRating ? '<span style="background:#DCFCE7; color:#166534; font-weight:800; padding:2px 10px; border-radius:99px;">★ ' + rating.toFixed(1) + '</span>' : '') +
             (v.review_count ? '<span>' + v.review_count + ' Google ratings</span>' : '') +
@@ -1985,7 +2600,7 @@
 
       galleryHtml +
 
-      '<div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); gap:18px; align-items:start;">' +
+      '<div class="vd-layout">' +
         '<div>' +
           '<div class="card" style="padding:22px;">' +
             '<div class="section-title" style="margin-bottom:8px;">About this listing</div>' +
@@ -2000,7 +2615,7 @@
               ? '<div class="section-title" style="margin:18px 0 6px;">Opening hours</div><p style="font-size:13.5px; color:var(--text-main);">🕒 ' + esc(v.openingHours) + '</p>'
               : '') +
             (loc ? '<div class="section-title" style="margin:18px 0 6px;">Address</div><p style="font-size:13.5px;">📍 ' + loc + '</p>' : '') +
-            (website ? '<p style="margin-top:8px; font-size:13.5px;">🌐 <a href="' + esc(website) + '" target="_blank" rel="noopener nofollow" style="font-weight:600;">' + esc(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a></p>' : '') +
+            (website ? '<p style="margin-top:8px; font-size:13.5px;">🌐 <a href="' + esc(websiteHref) + '" target="_blank" rel="' + websiteRel + '" onclick="logListingTap(' + idArg + ', \'website_click\')" style="font-weight:600;">' + esc(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a></p>' : '') +
           '</div>' +
           (mapSrc
             ? '<div class="card" style="padding:0; overflow:hidden;">' +
@@ -2018,10 +2633,12 @@
             (v.review_count ? ' · ' + v.review_count + ' Google reviews' : '') +
             (v.city ? ' · ' + esc(v.city) : '') +
           '</div>' +
-          '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(\'' + esc(v.id) + '\')">Enquire / Book</button>' +
-          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="tel:' + esc(phone) + '" onclick="logListingTap(\'' + esc(v.id) + '\', \'phone_click\')">📞 Call ' + esc(v.phone) + '</a>' : '') +
-          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/' + esc(phone.replace(/[^0-9]/g, '')) + '?text=' + encodeURIComponent("Hi! I found " + v.name + " on Pets24x7 and would like to know more.") + '" onclick="logListingTap(\'' + esc(v.id) + '\', \'whatsapp_click\')">💬 WhatsApp enquiry</a>' : '') +
-          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + publicListingUrl(v) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
+          '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(' + idArg + ')">Enquire / Book</button>' +
+          '<button class="btn" id="vendorSaveBtn" data-id="' + esc(v.id) + '" style="width:100%; justify-content:center; margin-top:8px;" onclick="toggleSave(' + idArg + ', this)">' + saveButtonLabel(v.id) + '</button>' +
+          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="tel:' + esc(phone) + '" onclick="logListingTap(' + idArg + ', \'phone_click\')">📞 Call ' + esc(v.phone) + '</a>' : '') +
+          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/' + esc(phone.replace(/[^0-9]/g, '')) + '?text=' + encodeURIComponent("Hi! I found " + v.name + " on Pets24x7 and would like to know more.") + '" onclick="logListingTap(' + idArg + ', \'whatsapp_click\')">💬 WhatsApp enquiry</a>' : '') +
+          (website ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="' + websiteRel + '" href="' + esc(websiteHref) + '" onclick="logListingTap(' + idArg + ', \'website_click\')">🌐 Visit website</a>' : '') +
+          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + esc(publicListingUrl(v)) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
         '</div>' +
       '</div>';
   }
@@ -2046,7 +2663,8 @@
 
   // 4. My Pets Grid & Health Passport Logic
   function toggleVaccinated(petId, newStatus) {
-    api.petUpdate(petId, { vaccinated: newStatus }).then(function(r) {
+    // api.petUpdate never existed, so this badge threw a TypeError on click.
+    api.parentPetUpdate(petId, { vaccinated: newStatus }).then(function(r) {
       if (r.pet) {
         var idx = state.pets.findIndex(function(p){ return p.id === petId; });
         if (idx !== -1) state.pets[idx] = r.pet;
@@ -2056,6 +2674,9 @@
       }
       renderPetsGrid();
       renderHomePetCard();
+      toast(newStatus ? 'Marked as vaccinated' : 'Marked as needing a vaccine', 'ok');
+      // Recommendations weigh vaccination status (vaccination centres rank up).
+      loadRecommendations();
     }).catch(function(err) {
       toast('Could not update vaccination status: ' + fmtErr(err), 'error');
     });
@@ -2067,7 +2688,7 @@
 
     var icon = SPECIES_ICON[p.species] || '🐾';
     var avatarBox = document.getElementById('passportAvatar');
-    if (p.avatarUrl) {
+    if (safeImg(p.avatarUrl)) {
       avatarBox.innerHTML = '<img src="' + esc(p.avatarUrl) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">';
     } else {
       avatarBox.innerHTML = icon;
@@ -2080,17 +2701,84 @@
     document.getElementById('passportAge').textContent = petAgeLabel(p, 'Not specified');
     document.getElementById('passportGender').textContent = p.gender || 'Unspecified';
     document.getElementById('passportOwner').textContent = state.parent.name || 'Pet Parent';
-    document.getElementById('passportVac').textContent = p.vaccinated ? '✓ Vaccinated' : '⚠️ Needs Vaccine';
+    var vacEl = document.getElementById('passportVac');
+    vacEl.textContent = p.vaccinated ? '✓ Vaccinated' : '⚠️ Needs Vaccine';
+    vacEl.style.color = p.vaccinated ? '#059669' : '#B45309';
     document.getElementById('passportNotes').textContent = p.notes || 'No special medical notes added.';
+    renderPassportHealth(p);
+    var editBtn = document.getElementById('passportEditBtn');
+    if (editBtn) editBtn.onclick = function() { closePetPassportModal(); openEditPetModal(p.id); };
 
     document.getElementById('petPassportModal').classList.add('show');
+  }
+
+  /**
+   * Health rows from the pet's own record. The passport used to show
+   * "Rabies ✓ Up to Date" for every pet, including ones marked unvaccinated.
+   * Yearly boosters / check-ups are the common vet guidance the reminder mails
+   * already key off; anything unknown says so instead of guessing.
+   */
+  function renderPassportHealth(p) {
+    var box = document.getElementById('passportHealth');
+    if (!box) return;
+    var YEAR = 365 * 24 * 3600 * 1000;
+    var now = Date.now();
+    function row(cls, label, status) {
+      return '<div class="health-row ' + cls + '"><span>' + label + '</span><strong>' + esc(status) + '</strong></div>';
+    }
+    function dated(v) { var t = v ? new Date(v).getTime() : NaN; return isNaN(t) ? null : t; }
+    var rows = [];
+
+    var vac = dated(p.lastVaccinatedAt);
+    if (vac) {
+      var due = vac + YEAR;
+      rows.push(due > now
+        ? row('ok', '💉 Vaccination', 'Last given ' + fmtDate(vac) + ' · next due ' + fmtDate(due))
+        : row('due', '💉 Vaccination', 'Booster overdue since ' + fmtDate(due)));
+    } else if (p.vaccinated) {
+      rows.push(row('ok', '💉 Vaccination', 'Vaccinated · add the date to get booster reminders'));
+    } else {
+      rows.push(row('due', '💉 Vaccination', 'Not vaccinated / not recorded'));
+    }
+
+    var chk = dated(p.lastCheckupAt);
+    if (chk) {
+      rows.push(chk + YEAR > now
+        ? row('ok', '🩺 Vet check-up', 'Last visit ' + fmtDate(chk))
+        : row('due', '🩺 Vet check-up', 'Yearly check-up due (last ' + fmtDate(chk) + ')'));
+    } else {
+      rows.push(row('unknown', '🩺 Vet check-up', 'No check-up recorded · yearly visit recommended'));
+    }
+
+    var dob = dated(p.dateOfBirth);
+    if (dob) rows.push(row('unknown', '🎂 Date of birth', fmtDate(dob)));
+
+    box.innerHTML = rows.join('');
   }
 
   function closePetPassportModal() {
     document.getElementById('petPassportModal').classList.remove('show');
   }
 
+  function printPassport() {
+    document.body.classList.add('printing-passport');
+    var done = function() { document.body.classList.remove('printing-passport'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 1000); // browsers without afterprint
+  }
+
+  // "Find Vets" for this pet: exotic species go to specialty vets, which is
+  // where the listings for birds, reptiles and small mammals actually are.
   function searchForPet(species) {
+    var exotic = { BIRD: 1, REPTILE: 1, RABBIT: 1, SMALL_MAMMAL: 1 };
+    if (exotic[species]) {
+      navigate('search');
+      state.selectedCategory = 'Specialty Vets';
+      document.querySelectorAll('#catChipBar .chip').forEach(function(c) { c.classList.remove('active'); });
+      runSearch();
+      return;
+    }
     filterCategoryAndSearch('Veterinary');
   }
 
@@ -2100,31 +2788,35 @@
 
     var totalPets = state.pets.length;
     var vacCount = state.pets.filter(function(p){ return p.vaccinated; }).length;
+    // Unvaccinated, or a booster / check-up more than a year old.
+    var YEAR_MS = 365 * 24 * 3600 * 1000;
+    var dueCount = state.pets.filter(function(p) {
+      var old = function(v) { var t = v ? new Date(v).getTime() : NaN; return !isNaN(t) && Date.now() - t > YEAR_MS; };
+      return !p.vaccinated || old(p.lastVaccinatedAt) || old(p.lastCheckupAt);
+    }).length;
 
     if (summaryBox) {
       summaryBox.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
-            <div style="font-size: 28px; background: #EFF6FF; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">🐾</div>
+        <div class="pets-stats">
+          <div class="card pets-stat">
+            <div class="pets-stat-icon" style="background: #EFF6FF;" aria-hidden="true">🐾</div>
             <div>
-              <div style="font-size: 20px; font-weight: 800; color: var(--text-main);">${totalPets}</div>
-              <div style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Registered Pets</div>
+              <div class="pets-stat-num">${totalPets}</div>
+              <div class="pets-stat-label">Registered Pets</div>
             </div>
           </div>
-
-          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
-            <div style="font-size: 28px; background: #ECFDF5; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">💉</div>
+          <div class="card pets-stat">
+            <div class="pets-stat-icon" style="background: #ECFDF5;" aria-hidden="true">💉</div>
             <div>
-              <div style="font-size: 20px; font-weight: 800; color: #059669;">${vacCount} / ${totalPets}</div>
-              <div style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Vaccinated Pets</div>
+              <div class="pets-stat-num" style="color: #059669;">${vacCount} / ${totalPets}</div>
+              <div class="pets-stat-label">Vaccinated Pets</div>
             </div>
           </div>
-
-          <div class="card" style="padding: 16px; margin-bottom: 0; background: #ffffff; display: flex; align-items: center; gap: 14px;">
-            <div style="font-size: 28px; background: #FEF3C7; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">📋</div>
+          <div class="card pets-stat">
+            <div class="pets-stat-icon" style="background: #FEF3C7;" aria-hidden="true">📋</div>
             <div>
-              <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">Digital Passports</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Active for all profiles</div>
+              <div class="pets-stat-num">${dueCount}</div>
+              <div class="pets-stat-label">${dueCount === 1 ? 'Pet needs attention' : 'Pets need attention'}</div>
             </div>
           </div>
         </div>
@@ -2145,10 +2837,10 @@
     grid.innerHTML = state.pets.map(function(p) {
       var icon = SPECIES_ICON[p.species] || '🐾';
       var vacBadge = p.vaccinated
-        ? '<span style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#059669;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;cursor:pointer;" onclick="toggleVaccinated(\'' + esc(p.id) + '\', false)" title="Click to toggle">✓ Vaccinated</span>'
-        : '<span style="display:inline-flex;align-items:center;gap:4px;background:#FEF2F2;color:#DC2626;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;cursor:pointer;" onclick="toggleVaccinated(\'' + esc(p.id) + '\', true)" title="Click to update">⚠️ Needs Vaccine</span>';
+        ? '<button type="button" class="hit-pad" style="display:inline-flex;align-items:center;gap:4px;background:#ECFDF5;color:#047857;font:700 11.5px/1.4 inherit;padding:3px 10px;border-radius:99px;border:0;cursor:pointer;" onclick="toggleVaccinated(' + jsArg(p.id) + ', false)" title="Tap to mark as not vaccinated" aria-label="Vaccinated. Tap to mark as not vaccinated">✓ Vaccinated</button>'
+        : '<button type="button" class="hit-pad" style="display:inline-flex;align-items:center;gap:4px;background:#FEF2F2;color:#B91C1C;font:700 11.5px/1.4 inherit;padding:3px 10px;border-radius:99px;border:0;cursor:pointer;" onclick="toggleVaccinated(' + jsArg(p.id) + ', true)" title="Tap to mark as vaccinated" aria-label="Needs vaccine. Tap to mark as vaccinated">⚠️ Needs Vaccine</button>';
 
-      var avatarContent = p.avatarUrl
+      var avatarContent = safeImg(p.avatarUrl)
         ? '<img src="' + esc(p.avatarUrl) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
         : icon;
 
@@ -2166,7 +2858,7 @@
                   ${vacBadge}
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">
-                  ${SPECIES_LABEL[p.species] || 'Pet'} · ${esc(p.breed || 'Mixed Breed')}
+                  ${esc(SPECIES_LABEL[p.species] || 'Pet')} · ${esc(p.breed || 'Mixed Breed')}
                 </div>
                 <div style="font-size: 12.5px; color: var(--text-subtle); display: flex; gap: 12px; flex-wrap: wrap;">
                   <span>🎂 ${petAgeLabel(p, 'Age n/a')}</span>
@@ -2181,19 +2873,19 @@
 
           <!-- Actions Bar -->
           <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm" style="flex: 1; justify-content: center; font-weight: 700; background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE;" onclick="openPetPassportModal('${esc(p.id)}')">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-sm" style="flex: 1 1 120px; justify-content: center; font-weight: 700; background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE;" onclick="openPetPassportModal(${jsArg(p.id)})">
                 📋 Passport
               </button>
-              <button class="btn btn-sm" style="flex: 1; justify-content: center; font-weight: 600;" onclick="searchForPet('${esc(p.species)}')">
+              <button class="btn btn-sm" style="flex: 1 1 120px; justify-content: center; font-weight: 600;" onclick="searchForPet(${jsArg(p.species)})">
                 🩺 Find Vets
               </button>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm" style="flex: 1; justify-content: center;" onclick="openEditPetModal('${esc(p.id)}')">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-sm" style="flex: 1 1 120px; justify-content: center;" onclick="openEditPetModal(${jsArg(p.id)})">
                 ✏️ Edit Profile
               </button>
-              <button class="btn btn-sm" style="flex: 1; justify-content: center; color: var(--danger); border-color: #FCA5A5; background: #FEF2F2;" onclick="deletePet('${esc(p.id)}')">
+              <button class="btn btn-sm" style="flex: 1 1 120px; justify-content: center; color: var(--danger); border-color: #FCA5A5; background: #FEF2F2;" onclick="deletePet(${jsArg(p.id)})">
                 🗑️ Delete
               </button>
             </div>
@@ -2367,27 +3059,6 @@
     }
   }
 
-  function resizePetImage(file, maxDim, quality) {
-    return new Promise(function(resolve, reject) {
-      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return reject(new Error('Use a JPG, PNG or WebP image.'));
-      if (file.size > 12 * 1024 * 1024) return reject(new Error('Image is too large (max 12MB).'));
-      var img = new Image();
-      var url = URL.createObjectURL(file);
-      img.onload = function() {
-        URL.revokeObjectURL(url);
-        var w = img.naturalWidth, h = img.naturalHeight;
-        var scale = Math.min(1, maxDim / Math.max(w, h));
-        var cw = Math.round(w * scale), ch = Math.round(h * scale);
-        var c = document.createElement('canvas');
-        c.width = cw; c.height = ch;
-        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
-        resolve(c.toDataURL('image/jpeg', quality || 0.82));
-      };
-      img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('Could not read that image.')); };
-      img.src = url;
-    });
-  }
-
   (function wirePetPhoto() {
     var input = document.getElementById('pPhotoFile');
     if (!input) return;
@@ -2425,10 +3096,13 @@
   function savePet(e) {
     e.preventDefault();
     var editId = document.getElementById('petEditId').value;
+    // On edit an emptied field must be sent as '' so it actually clears;
+    // undefined means "leave unchanged" to the PATCH route.
+    var blank = editId ? '' : undefined;
     var payload = {
       name: document.getElementById('pName').value.trim(),
       species: document.getElementById('pSpecies').value,
-      breed: document.getElementById('pBreed').value.trim() || undefined,
+      breed: document.getElementById('pBreed').value.trim() || blank,
       ageYears: document.getElementById('pAge').value ? Number(document.getElementById('pAge').value) : undefined,
       ageMonths: document.getElementById('pAgeMonths').value !== ''
         ? Number(document.getElementById('pAgeMonths').value)
@@ -2438,17 +3112,21 @@
       dateOfBirth: document.getElementById('pDob').value || '',
       lastVaccinatedAt: document.getElementById('pVacDate').value || '',
       lastCheckupAt: document.getElementById('pCheckup').value || '',
-      notes: document.getElementById('pNotes').value.trim() || undefined,
+      notes: document.getElementById('pNotes').value.trim() || blank,
       avatarUrl: document.getElementById('pAvatar').value || '',
       photos: petPhotos
     };
 
     if (!payload.name) { toast('Pet name is required.', 'error'); return; }
+    if (payload.ageYears != null && (payload.ageYears < 0 || payload.ageYears > 40 || payload.ageYears % 1)) {
+      toast('Age in years must be a whole number between 0 and 40.', 'error'); return;
+    }
     var btn = document.querySelector('#petForm button[type="submit"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     var op = editId ? api.parentPetUpdate(editId, payload) : api.parentPetCreate(payload);
     op.then(function() {
       closePetModal();
+      toast(editId ? 'Pet updated' : payload.name + ' added to your pets', 'ok');
       loadData();
     }).catch(function(err) {
       toast('Could not save pet: ' + fmtErr(err), 'error');
@@ -2482,7 +3160,9 @@
     var vendorCat = v.category || '';
 
     document.getElementById('enqListingId').value = vendorId || '';
-    document.getElementById('enqListingName').value = vendorName;
+    // Only a real name is sent; when unknown the API fills it from the listing
+    // index by id (sending "this business" overrode that).
+    document.getElementById('enqListingName').value = v.name || '';
     document.getElementById('enqCategory').value = vendorCat;
     document.getElementById('enqDisplayVendor').value = vendorName + (vendorCat ? ' (' + vendorCat + ')' : '');
     var mb = document.getElementById('enqMemberBenefit');
@@ -2492,19 +3172,27 @@
     if (state.pets.length) {
       petSel.innerHTML = state.pets.map(function(p){
         var label = (SPECIES_LABEL[p.species] || 'Pet');
-        return '<option value="' + esc(label) + '">' + esc(p.name) + ' · ' + esc(label) + '</option>';
+        var selAttr = p.id === state.selectedPetId ? ' selected' : '';
+        return '<option value="' + esc(label) + '"' + selAttr + '>' + esc(p.name) + ' · ' + esc(label) + '</option>';
       }).join('') + '<option value="General">General enquiry (not pet-specific)</option>';
     } else {
       petSel.innerHTML = '<option value="General">General enquiry</option>';
     }
 
     document.getElementById('enqNotes').value = '';
+    // Local calendar days: valueAsDate / toISOString use UTC, which after
+    // midnight in India pre-filled "today" and allowed yesterday as the minimum.
     var tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('enqDate').valueAsDate = tomorrow;
-    document.getElementById('enqDate').min = new Date().toISOString().slice(0, 10);
+    document.getElementById('enqDate').value = localDay(tomorrow);
+    document.getElementById('enqDate').min = localDay(new Date());
 
     document.getElementById('enquiryModal').classList.add('show');
+  }
+
+  function localDay(d) {
+    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
 
   function closeEnquiryModal() {
@@ -2516,7 +3204,8 @@
     var notes = document.getElementById('enqNotes').value.trim();
     if (!notes) { toast('Please describe what you need.', 'error'); return; }
     if (!state.parent.phone || state.parent.phone.replace(/[^0-9]/g, '').length < 10) {
-      toast('Add a valid phone number to your profile before sending an enquiry.', 'ok');
+      toast('Add a valid phone number to your profile so the business can reach you.', 'info');
+      closeEnquiryModal();
       navigate('account'); openProfileModal();
       return;
     }
@@ -2525,7 +3214,7 @@
       phone: state.parent.phone,
       email: state.parent.email || '',
       listingId: document.getElementById('enqListingId').value || undefined,
-      listingName: document.getElementById('enqListingName').value,
+      listingName: document.getElementById('enqListingName').value || undefined,
       category: document.getElementById('enqCategory').value || undefined,
       city: state.parent.city || undefined,
       country: (state.parent.country === 'IN' || state.parent.country === 'US') ? state.parent.country : undefined,
@@ -2539,12 +3228,14 @@
 
     api.enquiryCreate(payload).then(function() {
       closeEnquiryModal();
+      toast('Enquiry sent to ' + (payload.listingName || 'the business') + '.' + (payload.email ? ' A copy is on its way to your inbox.' : ''), 'ok');
       navigate('enquiries');
       // Refresh from server so the row shows its real persisted status.
       return api.parentEnquiries().then(function(r) {
         state.enquiries = r.enquiries || state.enquiries;
         renderEnquiriesTable();
-      });
+        renderAccount();
+      }).catch(function() { /* sent fine; the list refreshes on next load */ });
     }).catch(function(err) {
       toast('Could not send enquiry: ' + fmtErr(err), 'error');
     }).finally(function() {
@@ -2578,11 +3269,11 @@
             ${e.notes ? '<p style="margin-top: 4px; color: var(--text-main);">' + esc(e.notes) + '</p>' : ''}
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Sent ${esc(dateStr)}${prefDate ? ' · Preferred: ' + esc(prefDate) : ''}</p>
             <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-              ${e.listingId ? '<button class="btn btn-sm" onclick="viewVendorDetails(\'' + esc(e.listingId) + '\')">View business</button>' : ''}
+              ${e.listingId ? '<button class="btn btn-sm" onclick="viewVendorDetails(' + jsArg(e.listingId) + ')">View business</button>' : ''}
               <a class="btn btn-sm" href="https://wa.me/919930090487?text=${waMsg}" target="_blank" rel="noopener">Follow up on WhatsApp</a>
             </div>
           </div>
-          <div>${enquiryStatusPill(e.status)}</div>
+          <div style="flex-shrink:0;">${enquiryStatusPill(e.status)}</div>
         </div>
       `;
     }).join('');
@@ -2615,7 +3306,7 @@
     document.getElementById('profileModal').classList.remove('show');
   }
 
-  function saveProfile(e) {
+  function saveProfile(e, phoneCode) {
     e.preventDefault();
     var name = document.getElementById('profName').value.trim();
     if (name.length < 1) { toast('Please enter your name.', 'error'); return; }
@@ -2627,21 +3318,50 @@
       city: document.getElementById('profCity').value.trim()
     };
     if (country === 'IN' || country === 'US') payload.country = country;
+    if (phoneCode) payload.phoneCode = phoneCode;
     var btn = document.querySelector('#profileModal button[type="submit"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     api.parentProfileUpdate(payload).then(function(r) {
       if (r.parent) state.parent = r.parent;
       else {
         state.parent.name = payload.name;
-        state.parent.email = payload.email;
         state.parent.phone = payload.phone;
         state.parent.city = payload.city;
         if (payload.country) state.parent.country = payload.country;
       }
       closeProfileModal();
+      toast('Profile saved', 'ok');
       initCitySelector();
+      runSearch();
       renderAll();
+      // City drives the recommendations; refresh them for the new one.
+      loadRecommendations();
+      loadRecoFeed();
     }).catch(function(err) {
+      // A changed phone number needs a WhatsApp code first: request one and
+      // collect it instead of just showing the raw "verify your phone" error.
+      if (err && err.data && err.data.error === 'phone_otp_required') {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+        api.parentProfilePhoneOtp({ phone: phone, country: (country === 'IN' || country === 'US') ? country : undefined })
+          .then(function() {
+            return uiPrompt({
+              title: 'Verify your new number',
+              body: 'We sent a 6-digit code to ' + phone + ' on WhatsApp.',
+              label: 'WhatsApp code',
+              placeholder: '000000',
+              type: 'text',
+              confirmLabel: 'Verify & save',
+            });
+          })
+          .then(function(code) {
+            if (!code) return;
+            saveProfile(e, code.trim());
+          })
+          .catch(function(otpErr) {
+            uiAlert({ title: 'Could not send the code', body: fmtErr(otpErr) });
+          });
+        return;
+      }
       // The address is unique per account, so the common failure is that it is
       // already on another one. Say that rather than "could not save".
       var msg = fmtErr(err);
@@ -2657,23 +3377,87 @@
     });
   }
 
-  // Modal UX: click backdrop or press Escape to close.
+  // Modal UX: click backdrop or press Escape to close; while one is open the
+  // page behind does not scroll, focus moves into the dialog, Tab stays inside
+  // it, and focus returns to whatever opened it on close.
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  function openModals() { return Array.prototype.slice.call(document.querySelectorAll('.modal-backdrop.show')); }
+  function topModal() { var m = openModals(); return m[m.length - 1] || null; }
   document.querySelectorAll('.modal-backdrop').forEach(function(bd) {
     bd.addEventListener('click', function(ev) { if (ev.target === bd) bd.classList.remove('show'); });
+    new MutationObserver(function() {
+      var shown = bd.classList.contains('show');
+      if (shown === !!bd._wasShown) return;
+      bd._wasShown = shown;
+      document.body.classList.toggle('modal-open', openModals().length > 0);
+      if (shown) {
+        bd._returnFocus = document.activeElement;
+        var box = bd.querySelector('.modal-box, .modal-card');
+        if (box) box.scrollTop = 0;
+        // First form field (not on touch, where it would pop the keyboard over
+        // the dialog), else the close button.
+        var touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+        var first = !touch && bd.querySelector('form input:not([type="hidden"]):not([type="file"]):not([readonly]):not([disabled]), form select, form textarea');
+        (first || bd.querySelector('.modal-close, button') || box).focus({ preventScroll: true });
+      } else if (bd._returnFocus && document.contains(bd._returnFocus) && bd._returnFocus.focus) {
+        bd._returnFocus.focus({ preventScroll: true });
+      }
+    }).observe(bd, { attributes: true, attributeFilter: ['class'] });
   });
   document.addEventListener('keydown', function(ev) {
-    if (ev.key === 'Escape') {
-      document.querySelectorAll('.modal-backdrop.show').forEach(function(bd) { bd.classList.remove('show'); });
-    }
+    var bd = topModal();
+    if (!bd) return;
+    // A confirm/prompt from ui-dialogs.js sits above the dashboard modal and
+    // handles its own keys.
+    if (document.querySelector('.p24-dlg-back')) return;
+    if (ev.key === 'Escape') { bd.classList.remove('show'); return; }
+    if (ev.key !== 'Tab') return;
+    var items = Array.prototype.filter.call(bd.querySelectorAll(FOCUSABLE), function(el) { return el.offsetParent !== null; });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (ev.shiftKey && (document.activeElement === first || !bd.contains(document.activeElement))) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && (document.activeElement === last || !bd.contains(document.activeElement))) { ev.preventDefault(); first.focus(); }
+  });
+
+  // Many controls are <a>/<div>/<span> with an inline onclick and no href, so
+  // keyboard users could not reach them. Give every such element button
+  // semantics, and let Enter / Space activate it.
+  function a11yClickables(root) {
+    (root || document).querySelectorAll('[onclick]:not(button):not(input):not(select):not(textarea):not([href]):not([role])').forEach(function(el) {
+      el.setAttribute('role', 'button');
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    });
+    (root || document).querySelectorAll('[role="button"]:not([tabindex])').forEach(function(el) { el.setAttribute('tabindex', '0'); });
+  }
+  a11yClickables(document);
+  new MutationObserver(function(muts) {
+    muts.forEach(function(m) { m.addedNodes.forEach(function(n) { if (n.nodeType === 1) a11yClickables(n.parentNode || n); }); });
+  }).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('keydown', function(ev) {
+    var el = ev.target;
+    if (!el || el.getAttribute('role') !== 'button' || /^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); el.click(); }
   });
 
   // Init — require a signed-in pet parent. requireRole only bounces on a
   // definitive signed-out answer; an unreachable API is retried, then surfaced
   // as a load error rather than silently logging the user out.
-  requireRole('pet_parent', '/parent-login/').then(function(r) {
+  // Sign-in page with ?next= back to this exact URL, so a deep link from an
+  // email (?view=membership) survives the login round-trip.
+  function parentLoginUrl() {
+    return '/parent-login/?next=' + encodeURIComponent(location.pathname + location.search);
+  }
+
+  requireRole('pet_parent', parentLoginUrl()).then(function(r) {
     if (!r) return;
     if (r.user) state.parent = r.user;
     loadData();
+    // Email buttons deep-link with ?view=pets|enquiries|membership|account|search.
+    // vendor-details needs a selected business, so it is not deep-linkable.
+    var v = new URLSearchParams(location.search).get('view');
+    if (v && v !== 'home' && v !== 'vendor-details' && /^[a-z-]+$/.test(v) && document.getElementById('view-' + v)) {
+      navigate(v);
+    }
   }).catch(function(err) {
     showLoadError(fmtErr(err));
   });

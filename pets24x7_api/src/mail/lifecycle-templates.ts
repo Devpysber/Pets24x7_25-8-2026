@@ -11,14 +11,14 @@
 // mail: it carries kind:'marketing' so an opt-out suppresses it and every send
 // gets an unsubscribe link. Security notices are always transactional.
 
-import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
-import { Button, InfoBox, Note, Quote, Text, day, dayTime, esc, h, money, page } from './components.js';
+import { retryUrlFor } from './action-templates.js';
+import { Button, InfoBox, Note, Quote, Text, adminDash, day, dayTime, esc, h, money, page, parentDash, siteUrl, vendorDash, who } from './components.js';
 
-const PARENT_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/parent/`;
-const VENDOR_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/vendor/`;
-const MEMBERSHIP = () => `${env.PUBLIC_SITE_URL}/membership/`;
-const ADMIN_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/admin/`;
+const PARENT_DASH = () => parentDash();
+const VENDOR_DASH = () => vendorDash();
+const MEMBERSHIP = () => siteUrl('/membership/');
+const ADMIN_DASH = () => adminDash();
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -27,7 +27,9 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 // ===========================================================================
 
 export function passwordResetEmail(to: string, name: string, link: string, ttlMinutes: number): MailInput {
+  name = who(name);
   return {
+    tag: 'password_reset',
     to,
     subject: 'Reset your Pets24x7 password',
     html: page({
@@ -47,7 +49,9 @@ export function passwordResetEmail(to: string, name: string, link: string, ttlMi
 }
 
 export function passwordChangedEmail(to: string, name: string, at: Date, ip: string | null): MailInput {
+  name = who(name);
   return {
+    tag: 'password_changed',
     to,
     subject: 'Your Pets24x7 password was changed',
     html: page({
@@ -69,7 +73,9 @@ export function passwordChangedEmail(to: string, name: string, at: Date, ip: str
 }
 
 export function emailChangedEmail(to: string, name: string, newEmail: string): MailInput {
+  name = who(name);
   return {
+    tag: 'email_changed',
     to,
     subject: 'The email on your Pets24x7 account changed',
     html: page({
@@ -86,6 +92,7 @@ export function emailChangedEmail(to: string, name: string, newEmail: string): M
 
 export function accountDeletedEmail(to: string, name: string): MailInput {
   return {
+    tag: 'account_deleted',
     to,
     subject: 'Your Pets24x7 account is closed',
     html: page({
@@ -94,16 +101,17 @@ export function accountDeletedEmail(to: string, name: string): MailInput {
       intro: h`Hi ${name} — your Pets24x7 account, your pets' profiles and your saved places have been deleted.`,
       blocks: [
         Note('Payment records are kept for as long as tax law requires, and nothing else remains.'),
-        Button('Start again any time', `${env.PUBLIC_SITE_URL}/login/`),
+        Button('Start again any time', siteUrl('/login/')),
       ],
       preheader: 'Your Pets24x7 account has been closed.',
     }),
-    text: `Hi ${name},\n\nYour Pets24x7 account and its data have been deleted. Payment records are kept only for as long as tax law requires.\n`,
+    text: `Hi ${name},\n\nYour Pets24x7 account and its data have been deleted. Payment records are kept only for as long as tax law requires.\n\nStart again any time: ${siteUrl('/login/')}\n`,
   };
 }
 
 export function emailVerifiedEmail(to: string, name: string): MailInput {
   return {
+    tag: 'email_verified',
     to,
     subject: 'Email verified 🎉',
     html: page({
@@ -130,7 +138,9 @@ export function membershipExpiringEmail(
   daysLeft: number,
 ): MailInput {
   const when = daysLeft <= 1 ? 'tomorrow' : `in ${plural(daysLeft, 'day')}`;
+  name = who(name);
   return {
+    tag: 'membership_expiring',
     kind: 'marketing',
     to,
     subject: `Your ${planName} membership ends ${when}`,
@@ -160,7 +170,9 @@ export function membershipRenewingEmail(
   currency: string,
   renewsAt: Date,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'membership_renewing',
     to,
     subject: `Your ${planName} membership renews on ${day(renewsAt)}`,
     html: page({
@@ -197,7 +209,9 @@ export function membershipUpgradedEmail(
   ];
   if (creditMinor > 0) rows.push(['Unused time credited', money(creditMinor, currency)]);
   rows.push(['Runs until', day(endsAt)]);
+  name = who(name);
   return {
+    tag: 'membership_upgraded',
     to,
     subject: `You are now on ${toPlan}`,
     html: page({
@@ -208,12 +222,14 @@ export function membershipUpgradedEmail(
       blocks: [InfoBox(rows), Button('See what is included', MEMBERSHIP())],
       preheader: `You are now on ${toPlan}.`,
     }),
-    text: `Hi ${name},\n\nYou moved from ${fromPlan} to ${toPlan}${creditMinor > 0 ? `, with ${money(creditMinor, currency)} of unused time credited` : ''}. It runs until ${day(endsAt)}.\n`,
+    text: `Hi ${name},\n\nYou moved from ${fromPlan} to ${toPlan}${creditMinor > 0 ? `, with ${money(creditMinor, currency)} of unused time credited` : ''}. It runs until ${day(endsAt)}.\n\nSee what is included: ${MEMBERSHIP()}\n`,
   };
 }
 
 export function winbackEmail(to: string, name: string, planName: string): MailInput {
+  name = who(name);
   return {
+    tag: 'winback',
     kind: 'marketing',
     to,
     subject: 'Come back to Pets24x7 membership',
@@ -241,7 +257,9 @@ export function paymentReceiptEmail(
   merchantTxnId: string,
   paidAt: Date,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'payment_receipt',
     to,
     subject: `Receipt — ${money(amountMinor, currency)} for ${what}`,
     html: page({
@@ -256,7 +274,7 @@ export function paymentReceiptEmail(
           ['Paid on', dayTime(paidAt)],
           ['Reference', merchantTxnId],
         ]),
-        Note('Need a GST invoice with your business details? Reply to this email and we will send one.'),
+        Note('Need an invoice with your business details? Reply to this email and we will send one.'),
       ],
       preheader: `${money(amountMinor, currency)} paid for ${what}.`,
     }),
@@ -265,7 +283,9 @@ export function paymentReceiptEmail(
 }
 
 export function paymentPendingEmail(to: string, name: string, what: string, merchantTxnId: string): MailInput {
+  name = who(name);
   return {
+    tag: 'payment_pending',
     to,
     subject: 'Your payment is still processing',
     html: page({
@@ -291,7 +311,9 @@ export function refundInitiatedEmail(
   currency: string,
   merchantTxnId: string,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'refund_initiated',
     to,
     subject: 'Your refund has been started',
     html: page({
@@ -319,8 +341,11 @@ export function paymentRetryEmail(
   what: string,
   amountMinor: number,
   currency: string,
+  retryUrl: string = retryUrlFor(what),
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'payment_retry',
     to,
     subject: `Payment for ${what} did not go through`,
     html: page({
@@ -329,12 +354,12 @@ export function paymentRetryEmail(
       heading: 'That payment did not go through',
       intro: h`Hi ${name} — your bank declined the ${money(amountMinor, currency)} payment for ${what}. Nothing has been charged.`,
       blocks: [
-        Button('Try again', MEMBERSHIP()),
+        Button('Try again', retryUrl),
         Note('A different card, UPI app or net banking usually clears it. Cards often decline online payments until you enable them in your bank app.'),
       ],
       preheader: 'Your payment was declined — nothing was charged.',
     }),
-    text: `Hi ${name},\n\nThe ${money(amountMinor, currency)} payment for ${what} was declined and nothing was charged. Try again: ${MEMBERSHIP()}\n`,
+    text: `Hi ${name},\n\nThe ${money(amountMinor, currency)} payment for ${what} was declined and nothing was charged. Try again: ${retryUrl}\n`,
   };
 }
 
@@ -343,7 +368,9 @@ export function paymentRetryEmail(
 // ===========================================================================
 
 export function petBirthdayEmail(to: string, name: string, petName: string, age: number | null): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_birthday',
     kind: 'marketing',
     to,
     subject: `Happy birthday, ${petName}! 🎂`,
@@ -352,12 +379,12 @@ export function petBirthdayEmail(to: string, name: string, petName: string, age:
       heading: `Happy birthday, ${petName}!`,
       intro: h`Hi ${name} — ${petName} is${age ? ` ${age} today` : ' celebrating today'}. Groomers and pet bakeries near you would love to make a fuss.`,
       blocks: [
-        Button('Find a treat nearby', `${env.PUBLIC_SITE_URL}/`),
+        Button('Find a treat nearby', siteUrl()),
         Note('A yearly check-up around a birthday is the easiest one to remember.'),
       ],
       preheader: `${petName} is celebrating today.`,
     }),
-    text: `Hi ${name},\n\nHappy birthday to ${petName}! Find something nearby: ${env.PUBLIC_SITE_URL}/\n`,
+    text: `Hi ${name},\n\nHappy birthday to ${petName}! Find something nearby: ${siteUrl()}\n`,
   };
 }
 
@@ -368,7 +395,9 @@ export function vaccinationDueEmail(
   vaccine: string,
   dueAt: Date,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'vaccination_due',
     kind: 'marketing',
     to,
     subject: `${petName}'s ${vaccine} is due`,
@@ -378,17 +407,19 @@ export function vaccinationDueEmail(
       heading: `${petName} is due for a ${vaccine}`,
       intro: h`Hi ${name} — ${petName}'s ${vaccine} is due on ${day(dueAt)}. Book a vet near you before it lapses.`,
       blocks: [
-        Button('Find a vet nearby', `${env.PUBLIC_SITE_URL}/`),
+        Button('Find a vet nearby', siteUrl()),
         Note('Already done? Update the date on your dashboard and we will stop reminding you.'),
       ],
       preheader: `${vaccine} due ${day(dueAt)}.`,
     }),
-    text: `Hi ${name},\n\n${petName}'s ${vaccine} is due on ${day(dueAt)}. Find a vet: ${env.PUBLIC_SITE_URL}/\n`,
+    text: `Hi ${name},\n\n${petName}'s ${vaccine} is due on ${day(dueAt)}. Find a vet: ${siteUrl()}\n`,
   };
 }
 
 export function petCheckupEmail(to: string, name: string, petName: string, monthsSince: number): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_checkup',
     kind: 'marketing',
     to,
     subject: `Time for ${petName}'s check-up`,
@@ -396,27 +427,37 @@ export function petCheckupEmail(to: string, name: string, petName: string, month
       eyebrow: 'Reminder',
       heading: `${petName} is due a check-up`,
       intro: h`Hi ${name} — it has been ${plural(monthsSince, 'month')} since ${petName}'s last recorded vet visit. A yearly look-over catches the expensive things early.`,
-      blocks: [Button('Book a vet near you', `${env.PUBLIC_SITE_URL}/`)],
+      blocks: [Button('Book a vet near you', siteUrl())],
       preheader: `${petName} is due a check-up.`,
     }),
-    text: `Hi ${name},\n\nIt's been ${plural(monthsSince, 'month')} since ${petName}'s last vet visit. Find one nearby: ${env.PUBLIC_SITE_URL}/\n`,
+    text: `Hi ${name},\n\nIt's been ${plural(monthsSince, 'month')} since ${petName}'s last vet visit. Find one nearby: ${siteUrl()}\n`,
   };
 }
 
 export function inactivityNudgeEmail(to: string, name: string, city: string | null): MailInput {
   const where = city ? ` in ${city}` : ' near you';
+  name = who(name);
   return {
+    tag: 'inactivity_nudge',
     kind: 'marketing',
     to,
-    subject: 'New pet services near you',
+    // Sent only to quiet parents (jobs/engagement.ts), so it claims nothing it
+    // cannot back up: the old "we have added new places since you last looked"
+    // went out whether or not anything had been added.
+    subject: city ? `Pet services in ${city}, rated and reviewed` : 'Find trusted pet services near you',
     html: page({
       eyebrow: 'Nearby',
-      heading: `New places${where}`,
-      intro: h`Hi ${name} — we have added new vets, groomers and boarding houses${where} since you last looked.`,
-      blocks: [Button('See what is new', PARENT_DASH())],
-      preheader: `New pet services${where}.`,
+      heading: `Pet care${where}, in one place`,
+      intro: h`Hi ${name} — vets, groomers, boarding and trainers${where}, with ratings, reviews and a WhatsApp button to reach them directly.`,
+      blocks: [
+        Button('Browse services', parentDash('search')),
+        ...(city
+          ? []
+          : [Note('Add your city in your account and we will show you places close to you.')]),
+      ],
+      preheader: `Vets, groomers and boarding${where}.`,
     }),
-    text: `Hi ${name},\n\nNew pet services${where}. Take a look: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\nVets, groomers, boarding and trainers${where}, with ratings and reviews: ${parentDash('search')}\n`,
   };
 }
 
@@ -425,7 +466,9 @@ export function dealNearbyEmail(
   name: string,
   deal: { title: string; businessName: string; city: string | null; endsAt: Date | null; url?: string },
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'deal_nearby',
     kind: 'marketing',
     to,
     subject: `${deal.businessName}: ${deal.title}`,
@@ -435,42 +478,48 @@ export function dealNearbyEmail(
       intro: h`Hi ${name} — ${deal.businessName}${deal.city ? ` in ${deal.city}` : ''} is running this for Pets24x7 members.`,
       blocks: [
         ...(deal.endsAt ? [InfoBox([['Offer ends', day(deal.endsAt)]] as Array<[string, string]>)] : []),
-        Button('See the offer', deal.url || `${env.PUBLIC_SITE_URL}/`),
+        Button('See the offer', deal.url || parentDash('home')),
       ],
       preheader: `${deal.title} at ${deal.businessName}.`,
     }),
-    text: `Hi ${name},\n\n${deal.businessName}: ${deal.title}${deal.endsAt ? ` (ends ${day(deal.endsAt)})` : ''}\n${deal.url || env.PUBLIC_SITE_URL}\n`,
+    text: `Hi ${name},\n\n${deal.businessName}: ${deal.title}${deal.endsAt ? ` (ends ${day(deal.endsAt)})` : ''}\n${deal.url || parentDash('home')}\n`,
   };
 }
 
 export function eventReminderEmail(
   to: string,
   name: string,
-  ev: { title: string; startsAt: Date; venue: string | null; city: string | null; url?: string },
+  ev: { title: string; startsAt: Date; venue: string | null; city: string | null; url?: string; timeZone?: string },
 ): MailInput {
+  name = who(name);
+  const when = dayTime(ev.startsAt, ev.timeZone);
+  const url = ev.url || siteUrl('/search/');
   return {
+    tag: 'event_reminder',
     kind: 'marketing',
     to,
-    subject: `${ev.title} — ${day(ev.startsAt)}`,
+    subject: `${ev.title} — ${day(ev.startsAt, ev.timeZone)}`,
     html: page({
       eyebrow: 'Event',
       heading: ev.title,
       intro: h`Hi ${name} — this is happening near you soon.`,
       blocks: [
         InfoBox([
-          ['When', dayTime(ev.startsAt)],
-          ['Where', [ev.venue, ev.city].filter(Boolean).join(', ') || 'See listing'],
+          ['When', when],
+          ['Where', [ev.venue, ev.city].filter(Boolean).join(', ') || 'See event details'],
         ]),
-        Button('Event details', ev.url || `${env.PUBLIC_SITE_URL}/`),
+        Button('Event details', url),
       ],
-      preheader: `${ev.title} on ${day(ev.startsAt)}.`,
+      preheader: `${ev.title} on ${day(ev.startsAt, ev.timeZone)}.`,
     }),
-    text: `Hi ${name},\n\n${ev.title}\n${dayTime(ev.startsAt)}\n${[ev.venue, ev.city].filter(Boolean).join(', ')}\n${ev.url || env.PUBLIC_SITE_URL}\n`,
+    text: `Hi ${name},\n\n${ev.title}\n${when}\n${[ev.venue, ev.city].filter(Boolean).join(', ')}\n${url}\n`,
   };
 }
 
 export function referralInviteEmail(to: string, fromName: string, link: string): MailInput {
+  fromName = who(fromName, 'A friend');
   return {
+    tag: 'referral_invite',
     kind: 'marketing',
     to,
     subject: `${fromName} thinks your pet would like Pets24x7`,
@@ -489,7 +538,9 @@ export function referralInviteEmail(to: string, fromName: string, link: string):
 }
 
 export function enquiryReplyEmail(to: string, name: string, businessName: string, message: string): MailInput {
+  name = who(name);
   return {
+    tag: 'enquiry_reply',
     to,
     subject: `${businessName} replied to your enquiry`,
     html: page({
@@ -497,15 +548,17 @@ export function enquiryReplyEmail(to: string, name: string, businessName: string
       banner: ['New reply', 'success'],
       heading: `${businessName} got back to you`,
       intro: h`Hi ${name} — here is what they said.`,
-      blocks: [Quote(message), Button('Open my enquiries', PARENT_DASH())],
+      blocks: [Quote(message), Button('Open my enquiries', parentDash('enquiries'))],
       preheader: `${businessName} replied to your enquiry.`,
     }),
-    text: `Hi ${name},\n\n${businessName} replied:\n\n"${message}"\n\n${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\n${businessName} replied:\n\n"${message}"\n\n${parentDash('enquiries')}\n`,
   };
 }
 
 export function reviewThanksEmail(to: string, name: string, businessName: string): MailInput {
+  name = who(name);
   return {
+    tag: 'review_thanks',
     to,
     subject: 'Thanks for the review',
     html: page({
@@ -515,7 +568,7 @@ export function reviewThanksEmail(to: string, name: string, businessName: string
       blocks: [Button('Review somewhere else', PARENT_DASH())],
       preheader: `Your review of ${businessName} is live.`,
     }),
-    text: `Hi ${name},\n\nYour review of ${businessName} is live. Thank you.\n`,
+    text: `Hi ${name},\n\nYour review of ${businessName} is live. Thank you.\n\nReview somewhere else: ${PARENT_DASH()}\n`,
   };
 }
 
@@ -524,7 +577,9 @@ export function reviewThanksEmail(to: string, name: string, businessName: string
 // ===========================================================================
 
 export function vendorClaimSubmittedEmail(to: string, businessName: string, listingName: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_claim_submitted',
     to,
     subject: `We have your claim for ${listingName}`,
     html: page({
@@ -538,7 +593,7 @@ export function vendorClaimSubmittedEmail(to: string, businessName: string, list
       ],
       preheader: `Your claim for ${listingName} is with our team.`,
     }),
-    text: `Hi ${businessName},\n\nWe have your claim for ${listingName}. An admin reviews it by hand, usually within a working day.\n`,
+    text: `Hi ${businessName},\n\nWe have your claim for ${listingName}. An admin reviews it by hand, usually within a working day.\n\nDashboard: ${VENDOR_DASH()}\n`,
   };
 }
 
@@ -548,7 +603,9 @@ export function vendorClaimReminderEmail(
   listingName: string,
   daysWaiting: number,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_claim_reminder',
     kind: 'marketing',
     to,
     subject: 'Still finishing your Pets24x7 listing?',
@@ -556,15 +613,16 @@ export function vendorClaimReminderEmail(
       eyebrow: 'Claim',
       heading: 'Your listing is half-finished',
       intro: h`Hi ${businessName} — ${listingName} has been waiting ${plural(daysWaiting, 'day')} with no photos, services or opening hours. Listings with all three get several times more enquiries.`,
-      blocks: [Button('Finish my listing', VENDOR_DASH()), Note('It takes about five minutes.')],
+      blocks: [Button('Finish my listing', vendorDash('listing')), Note('It takes about five minutes.')],
       preheader: 'Finish your listing to start getting enquiries.',
     }),
-    text: `Hi ${businessName},\n\n${listingName} is still missing photos, services or hours. Finish it: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n${listingName} is still missing photos, services or hours. Finish it: ${vendorDash('listing')}\n`,
   };
 }
 
 export function vendorEmailVerifiedEmail(to: string, businessName: string): MailInput {
   return {
+    tag: 'vendor_email_verified',
     to,
     subject: 'Business email verified',
     html: page({
@@ -585,7 +643,9 @@ export function vendorEnquiryUnansweredEmail(
   count: number,
   oldestAt: Date,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_enquiry_unanswered',
     to,
     subject: count === 1 ? 'An enquiry is still waiting for you' : `${count} enquiries are still waiting`,
     html: page({
@@ -594,12 +654,12 @@ export function vendorEnquiryUnansweredEmail(
       heading: count === 1 ? 'One enquiry is waiting' : `${count} enquiries are waiting`,
       intro: h`Hi ${businessName} — ${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply. The oldest came in on ${day(oldestAt)}.`,
       blocks: [
-        Button('Reply now', `${VENDOR_DASH()}?view=enquiries`),
+        Button('Reply now', vendorDash('enquiries')),
         Note('Pet parents usually book the first business that answers. A one-line reply is enough.'),
       ],
       preheader: `${plural(count, 'enquiry', 'enquiries')} waiting for a reply.`,
     }),
-    text: `Hi ${businessName},\n\n${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply — oldest ${day(oldestAt)}.\nReply: ${VENDOR_DASH()}?view=enquiries\n`,
+    text: `Hi ${businessName},\n\n${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply — oldest ${day(oldestAt)}.\nReply: ${vendorDash('enquiries')}\n`,
   };
 }
 
@@ -608,7 +668,9 @@ export function vendorWeeklyDigestEmail(
   businessName: string,
   stats: { views: number; enquiries: number; reviews: number; rating: number | null; weekEnding: Date },
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_weekly_digest',
     kind: 'marketing',
     to,
     subject: `Your week: ${stats.enquiries} enquiries, ${stats.views} views`,
@@ -623,7 +685,7 @@ export function vendorWeeklyDigestEmail(
           ['New reviews', String(stats.reviews)],
           ['Rating', stats.rating ? `${stats.rating.toFixed(1)} ★` : 'No rating yet'],
         ]),
-        Button('Open my dashboard', VENDOR_DASH()),
+        Button('Open my dashboard', vendorDash('performance')),
         Note('Asking happy customers for a review is the fastest way to move these numbers.'),
       ],
       preheader: `${stats.enquiries} enquiries and ${stats.views} views this week.`,
@@ -633,7 +695,9 @@ export function vendorWeeklyDigestEmail(
 }
 
 export function vendorReviewNudgeEmail(to: string, businessName: string, reviewCount: number): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_review_nudge',
     kind: 'marketing',
     to,
     subject: 'Ask this week’s customers for a review',
@@ -642,12 +706,12 @@ export function vendorReviewNudgeEmail(to: string, businessName: string, reviewC
       heading: 'Reviews decide who gets called',
       intro: h`Hi ${businessName} — you have ${plural(reviewCount, 'review')}. Businesses above twenty reviews get roughly twice the enquiries on Pets24x7.`,
       blocks: [
-        Button('Send review requests', `${VENDOR_DASH()}?view=reviews`),
+        Button('Send review requests', vendorDash('reviews')),
         Note('Paste in customer numbers and we send the WhatsApp asks for you.'),
       ],
       preheader: 'Send this week’s review requests.',
     }),
-    text: `Hi ${businessName},\n\nYou have ${plural(reviewCount, 'review')}. Send more requests: ${VENDOR_DASH()}?view=reviews\n`,
+    text: `Hi ${businessName},\n\nYou have ${plural(reviewCount, 'review')}. Send more requests: ${vendorDash('reviews')}\n`,
   };
 }
 
@@ -657,7 +721,9 @@ export function featuredExpiringEmail(
   endsAt: Date,
   daysLeft: number,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'featured_expiring',
     to,
     subject: `Your featured placement ends in ${plural(daysLeft, 'day')}`,
     html: page({
@@ -665,10 +731,10 @@ export function featuredExpiringEmail(
       banner: [`Ends ${day(endsAt)}`, 'warning'],
       heading: 'Your featured placement is ending',
       intro: h`Hi ${businessName} — top-of-city placement for your listing ends on ${day(endsAt)}. Renew to stay above the fold.`,
-      blocks: [Button('Renew placement', `${VENDOR_DASH()}?view=marketing&featured=1`)],
+      blocks: [Button('Renew placement', vendorDash('grow'))],
       preheader: `Featured placement ends ${day(endsAt)}.`,
     }),
-    text: `Hi ${businessName},\n\nYour featured placement ends on ${day(endsAt)}. Renew: ${VENDOR_DASH()}?view=marketing&featured=1\n`,
+    text: `Hi ${businessName},\n\nYour featured placement ends on ${day(endsAt)}. Renew: ${vendorDash('grow')}\n`,
   };
 }
 
@@ -679,7 +745,9 @@ export function campaignEndingEmail(
   endsAt: Date,
   daysLeft: number,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_ending',
     to,
     subject: `Your campaign ends in ${plural(daysLeft, 'day')}`,
     html: page({
@@ -687,10 +755,10 @@ export function campaignEndingEmail(
       banner: [`Ends ${day(endsAt)}`, 'warning'],
       heading: 'Your campaign is nearly done',
       intro: h`Hi ${businessName} — your ${goal} campaign finishes on ${day(endsAt)}. Extend it now and the ads keep running without a gap.`,
-      blocks: [Button('Extend the campaign', `${VENDOR_DASH()}?view=marketing`)],
+      blocks: [Button('Extend the campaign', vendorDash('grow'))],
       preheader: `Campaign ends ${day(endsAt)}.`,
     }),
-    text: `Hi ${businessName},\n\nYour ${goal} campaign ends on ${day(endsAt)}. Extend it: ${VENDOR_DASH()}?view=marketing\n`,
+    text: `Hi ${businessName},\n\nYour ${goal} campaign ends on ${day(endsAt)}. Extend it: ${vendorDash('grow')}\n`,
   };
 }
 
@@ -701,7 +769,9 @@ export function campaignReportEmail(
   stats: { impressions: number; clicks: number; enquiries: number; spendMinor: number; currency: string },
 ): MailInput {
   const cpe = stats.enquiries > 0 ? money(Math.round(stats.spendMinor / stats.enquiries), stats.currency) : '—';
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_report',
     to,
     subject: `Campaign report — ${stats.enquiries} enquiries`,
     html: page({
@@ -716,7 +786,7 @@ export function campaignReportEmail(
           ['Spend', money(stats.spendMinor, stats.currency)],
           ['Cost per enquiry', cpe],
         ]),
-        Button('Run it again', `${VENDOR_DASH()}?view=marketing`),
+        Button('Run it again', vendorDash('grow')),
       ],
       preheader: `${stats.enquiries} enquiries for ${money(stats.spendMinor, stats.currency)}.`,
     }),
@@ -725,7 +795,9 @@ export function campaignReportEmail(
 }
 
 export function vendorPhotosUpdatedEmail(to: string, businessName: string, count: number): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_photos_updated',
     to,
     subject: 'Your listing photos are live',
     html: page({
@@ -733,15 +805,16 @@ export function vendorPhotosUpdatedEmail(to: string, businessName: string, count
       banner: ['Photos live', 'success'],
       heading: 'Your photos are up',
       intro: h`Hi ${businessName} — ${plural(count, 'photo')} now show on your listing. Listings with photos get noticeably more enquiries.`,
-      blocks: [Button('View my listing', VENDOR_DASH())],
+      blocks: [Button('View my listing', vendorDash('listing'))],
       preheader: `${plural(count, 'photo')} are live on your listing.`,
     }),
-    text: `Hi ${businessName},\n\n${plural(count, 'photo')} are live on your listing: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n${plural(count, 'photo')} are live on your listing: ${vendorDash('listing')}\n`,
   };
 }
 
 export function vendorReactivatedEmail(to: string, businessName: string): MailInput {
   return {
+    tag: 'vendor_reactivated',
     to,
     subject: 'Your listing is live again',
     html: page({
@@ -763,7 +836,9 @@ export function vendorPayoutNoticeEmail(
   currency: string,
   periodEnding: Date,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_payout_notice',
     to,
     subject: `Payout of ${money(amountMinor, currency)} sent`,
     html: page({
@@ -788,19 +863,38 @@ export function vendorPayoutNoticeEmail(
 // Admin / internal
 // ===========================================================================
 
+/**
+ * Tells ops a business just joined. A proven claim (CLAIMED) and a
+ * self-registration (ACTIVE) go live straight away, so for those this is a
+ * "new business, give it a look" alert. A claim whose phone was never proven
+ * lands PENDING and stays hidden from leads until an admin approves it, so
+ * with `needsReview` the mail asks for that decision instead.
+ */
 export function adminNewClaimEmail(
   to: string,
   adminName: string,
   vendor: { businessName: string; phone: string; city: string | null; listingName: string | null },
+  kind: 'claim' | 'registration' = 'claim',
+  needsReview = false,
 ): MailInput {
+  adminName = who(adminName, 'Admin');
+  const isClaim = kind === 'claim';
+  const what = isClaim ? `claimed ${vendor.listingName || 'a listing'}` : 'registered a new business';
+  const url = adminDash('vendors');
+  const next = needsReview
+    ? 'The phone number was not verified, so the account is PENDING: approve or reject it in Vendors.'
+    : 'It is live now, so give it a quick look.';
   return {
+    tag: 'admin_new_claim',
     to,
-    subject: `Claim to review — ${vendor.businessName}`,
+    subject: needsReview
+      ? `Claim needs review — ${vendor.businessName}`
+      : isClaim ? `Listing claimed — ${vendor.businessName}` : `New business registered — ${vendor.businessName}`,
     html: page({
       eyebrow: 'Admin',
-      banner: ['Needs review', 'warning'],
-      heading: 'A vendor claimed a listing',
-      intro: h`Hi ${adminName} — ${vendor.businessName} is waiting for approval.`,
+      banner: needsReview ? ['Needs review', 'warning'] : ['New business', 'info'],
+      heading: needsReview ? 'A claim needs review' : isClaim ? 'A listing was claimed' : 'A business registered',
+      intro: h`Hi ${adminName} — ${vendor.businessName} ${what} on Pets24x7. ${next}`,
       blocks: [
         InfoBox([
           ['Business', vendor.businessName],
@@ -808,11 +902,56 @@ export function adminNewClaimEmail(
           ['City', vendor.city || '—'],
           ['Listing', vendor.listingName || '—'],
         ]),
-        Button('Review the claim', `${ADMIN_DASH()}?view=vendors&status=PENDING`),
+        Button(needsReview ? 'Review vendors' : 'Open vendors', url),
       ],
-      preheader: `${vendor.businessName} is waiting for approval.`,
+      preheader: `${vendor.businessName} ${what}.`,
     }),
-    text: `Hi ${adminName},\n\n${vendor.businessName} (${vendor.phone}) claimed ${vendor.listingName || 'a listing'}. Review: ${ADMIN_DASH()}?view=vendors&status=PENDING\n`,
+    text: `Hi ${adminName},\n\n${vendor.businessName} (${vendor.phone}) ${what} on Pets24x7. ${next}\n\nVendors: ${url}\n`,
+  };
+}
+
+export function adminNewLeadEmail(
+  to: string,
+  lead: {
+    name: string;
+    phone: string;
+    email: string | null;
+    business: string | null;
+    category: string | null;
+    city: string | null;
+    notes: string;
+    source: string;
+  },
+): MailInput {
+  const label = lead.business || lead.name;
+  const url = adminDash('enquiries');
+  return {
+    tag: 'admin_new_lead',
+    to,
+    subject: `New marketing lead — ${label}${lead.city ? ` (${lead.city})` : ''}`,
+    html: page({
+      eyebrow: 'Admin',
+      banner: ['New lead', 'info'],
+      heading: 'A business wants to grow with us',
+      intro: h`${lead.name} filled in the marketing form. Call them while the interest is fresh.`,
+      blocks: [
+        InfoBox([
+          ['Name', lead.name],
+          ['Phone', lead.phone],
+          ['Email', lead.email || '—'],
+          ['Business', lead.business || '—'],
+          ['Category', lead.category || '—'],
+          ['City', lead.city || '—'],
+          ['Source', lead.source],
+        ]),
+        ...(lead.notes ? [Quote(lead.notes)] : []),
+        Button('Open enquiries', url),
+      ],
+      preheader: `${label} — ${lead.phone}`,
+    }),
+    text:
+      `New marketing lead\n\nName: ${lead.name}\nPhone: ${lead.phone}\nEmail: ${lead.email || '-'}\nBusiness: ${lead.business || '-'}\n` +
+      `Category: ${lead.category || '-'}\nCity: ${lead.city || '-'}\nSource: ${lead.source}\n\n${lead.notes || 'No message left.'}\n\nEnquiries: ${url}\n`,
   };
 }
 
@@ -830,7 +969,9 @@ export function adminDailySummaryEmail(
     pendingClaims: number;
   },
 ): MailInput {
+  adminName = who(adminName, 'Admin');
   return {
+    tag: 'admin_daily_summary',
     to,
     subject: `Pets24x7 daily — ${money(stats.revenueMinor, stats.currency)}, ${stats.signups} signups`,
     html: page({
@@ -859,7 +1000,9 @@ export function adminPaymentAlertEmail(
   adminName: string,
   detail: { merchantTxnId: string; amountMinor: number; currency: string; reason: string; who: string },
 ): MailInput {
+  adminName = who(adminName, 'Admin');
   return {
+    tag: 'admin_payment_alert',
     to,
     subject: `Payment problem — ${detail.merchantTxnId}`,
     html: page({
@@ -874,7 +1017,7 @@ export function adminPaymentAlertEmail(
           ['Amount', money(detail.amountMinor, detail.currency)],
           ['Problem', detail.reason],
         ]),
-        Button('Open payments', `${ADMIN_DASH()}?view=payments`),
+        Button('Open payments', adminDash('payments')),
       ],
       preheader: `${detail.merchantTxnId} needs attention.`,
     }),
@@ -894,6 +1037,7 @@ export function adminBroadcastEmail(
     .map((p) => `<p style="margin:0 0 14px;line-height:24px">${esc(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
   return {
+    tag: 'admin_broadcast',
     kind: 'marketing',
     to,
     subject: heading,
@@ -909,7 +1053,9 @@ export function adminBroadcastEmail(
 }
 
 export function maintenanceNoticeEmail(to: string, name: string, startsAt: Date, minutes: number): MailInput {
+  name = who(name);
   return {
+    tag: 'maintenance_notice',
     to,
     subject: 'Planned maintenance on Pets24x7',
     html: page({
@@ -959,6 +1105,7 @@ export function adminDailyDigestEmail(
   const money = d.paymentsRupees > 0 ? `₹${d.paymentsRupees.toLocaleString('en-IN')}` : '—';
 
   return {
+    tag: 'admin_daily_digest',
     to,
     subject: waiting > 0
       ? `Pets24x7 daily: ${waiting} waiting on you`

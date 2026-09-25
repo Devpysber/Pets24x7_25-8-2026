@@ -1,13 +1,13 @@
 // OTP issue + verify, backed by the OtpCode table.
 // - 6-digit numeric, expires in 10 minutes
 // - Max 5 attempts per code
-// - Resend cool-down of 60 seconds enforced at the route layer
+// - Resend cool-down of 60 seconds enforced at the DB layer (per phone+purpose)
 // - Code is stored hashed; we compare via timingSafeEqual
 
 import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
 import { prisma } from '../db.js';
-import { sendOtpTemplate } from './cloud-api.js';
-import { TooManyRequestsError, BadRequestError } from '../shared/errors.js';
+import { sendOtpTemplate, whatsappConfigured } from './cloud-api.js';
+import { TooManyRequestsError, BadRequestError, HttpError } from '../shared/errors.js';
 import type { OtpPurpose } from '@prisma/client';
 import { normalizePhone } from '../shared/phone.js';
 
@@ -21,6 +21,13 @@ function hash(code: string): string {
 
 export async function issueOtp(rawPhone: string, purpose: OtpPurpose, ctx: { ip?: string; ua?: string } = {}) {
   const phone = normalizePhone(rawPhone);
+
+  // Without real Cloud API credentials the send is a guaranteed failure. Say
+  // so plainly (503) instead of storing a code nobody can receive and then
+  // surfacing Meta's "Invalid OAuth access token" as a 500.
+  if (!whatsappConfigured()) {
+    throw new HttpError(503, 'WhatsApp verification is not available right now. Please sign in with email instead.', 'whatsapp_unavailable');
+  }
 
   // Rate-limit by phone+purpose at the DB layer.
   const last = await prisma.otpCode.findFirst({
@@ -39,7 +46,7 @@ export async function issueOtp(rawPhone: string, purpose: OtpPurpose, ctx: { ip?
   });
 
   const code = randomInt(100_000, 1_000_000).toString();
-  await prisma.otpCode.create({
+  const row = await prisma.otpCode.create({
     data: {
       phone,
       code: hash(code),
@@ -50,7 +57,14 @@ export async function issueOtp(rawPhone: string, purpose: OtpPurpose, ctx: { ip?
     },
   });
 
-  await sendOtpTemplate(phone, code);
+  try {
+    await sendOtpTemplate(phone, code);
+  } catch (err) {
+    // Nobody received this code, so it must not hold the 60-second cool-down
+    // against an immediate retry.
+    await prisma.otpCode.update({ where: { id: row.id }, data: { consumedAt: new Date(0) } }).catch(() => {});
+    throw err;
+  }
   return { phone };
 }
 

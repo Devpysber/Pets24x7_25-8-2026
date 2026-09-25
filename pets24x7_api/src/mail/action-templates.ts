@@ -4,14 +4,14 @@
 // send through notify()/notifyIf() so a mail failure never fails the action.
 // Layout primitives live in components.ts.
 
-import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
-import { Button, CodeBlock, InfoBox, Note, Quote, Text, day, dayTime, esc, h, money, page } from './components.js';
+import { Button, CodeBlock, InfoBox, Note, Quote, Text, adminDash, day, dayTime, esc, h, money, page, parentDash, siteUrl, vendorDash, who } from './components.js';
 import { campaignGoalLabel } from '../payments/pricing.js';
+import { digestSubject } from './reco-templates.js';
 
-const PARENT_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/parent/`;
-const VENDOR_DASH = () => `${env.PUBLIC_SITE_URL}/dashboard/vendor/`;
-const MEMBERSHIP = () => `${env.PUBLIC_SITE_URL}/membership/`;
+const PARENT_DASH = () => parentDash();
+const VENDOR_DASH = () => vendorDash();
+const MEMBERSHIP = () => siteUrl('/membership/');
 
 // ===========================================================================
 // Pet parent — account
@@ -25,6 +25,7 @@ const MEMBERSHIP = () => `${env.PUBLIC_SITE_URL}/membership/`;
 export function loginCodeEmail(to: string, name: string | null, code: string, ttlMinutes: number): MailInput {
   const greeting = name ? `Hi ${name}` : 'Your sign-in code';
   return {
+    tag: 'login_code',
     to,
     // The subject carries the code itself, so this must never be logged verbatim.
     sensitive: true,
@@ -55,7 +56,9 @@ If you didn't try to sign in, ignore this email.
 // The events worth telling someone about — a password change, an email change,
 // a claim — each have their own template above and below.
 export function profileUpdatedEmail(to: string, name: string, changed: string[]): MailInput {
+  name = who(name);
   return {
+    tag: 'profile_updated',
     to,
     subject: 'Your Pets24x7 profile was updated',
     html: page({
@@ -66,7 +69,7 @@ export function profileUpdatedEmail(to: string, name: string, changed: string[])
       blocks: [
         InfoBox([['Updated', changed.length ? changed.join(', ') : 'Profile details']]),
         Note("If you didn't make this change, reply to this email straight away."),
-        Button('Review my profile', PARENT_DASH()),
+        Button('Review my profile', parentDash('account')),
       ],
     }),
     text: `Hi ${name},\n\nYour Pets24x7 profile was updated (${changed.join(', ') || 'profile details'}).\n\nIf this wasn't you, reply to this email.\n`,
@@ -91,7 +94,9 @@ export function petAddedEmail(
   name: string,
   pet: { name: string; species: string; breed: string | null; ageYears: number | null; ageMonths?: number | null },
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_added',
     to,
     subject: `${pet.name} has been added to your profile`,
     html: page({
@@ -106,29 +111,34 @@ export function petAddedEmail(
           ['Breed', pet.breed || '—'],
           ['Age', formatPetAge(pet.ageYears, pet.ageMonths ?? null)],
         ]),
-        Button('View my pets', PARENT_DASH()),
+        Button('View my pets', parentDash('pets')),
       ],
     }),
-    text: `Hi ${name},\n\n${pet.name} (${pet.species}${pet.breed ? `, ${pet.breed}` : ''}) was added to your Pets24x7 profile.\n\nDashboard: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\n${pet.name} (${pet.species}${pet.breed ? `, ${pet.breed}` : ''}) was added to your Pets24x7 profile.\n\nDashboard: ${parentDash('pets')}\n`,
   };
 }
 
 export function petUpdatedEmail(to: string, name: string, petName: string): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_updated',
     to,
     subject: `${petName}'s profile was updated`,
     html: page({
       eyebrow: 'My pets',
       heading: `${petName}'s details changed`,
       intro: h`Hi ${name} — the profile for <strong>${petName}</strong> was just updated.`,
-      blocks: [Button('View my pets', PARENT_DASH())],
+      blocks: [Button('View my pets', parentDash('pets'))],
+      preheader: `${petName}'s profile was just updated.`,
     }),
-    text: `Hi ${name},\n\nThe profile for ${petName} was updated.\n\nDashboard: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\nThe profile for ${petName} was updated.\n\nDashboard: ${parentDash('pets')}\n`,
   };
 }
 
 export function petRemovedEmail(to: string, name: string, petName: string): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_removed',
     to,
     subject: `${petName} was removed from your profile`,
     html: page({
@@ -138,10 +148,11 @@ export function petRemovedEmail(to: string, name: string, petName: string): Mail
       intro: h`Hi ${name} — <strong>${petName}</strong> is no longer on your Pets24x7 profile.`,
       blocks: [
         Note("Removed by mistake? Add the pet again from your dashboard — it only takes a moment."),
-        Button('Open my dashboard', PARENT_DASH()),
+        Button('Open my dashboard', parentDash('pets')),
       ],
+      preheader: `${petName} was removed from your profile.`,
     }),
-    text: `Hi ${name},\n\n${petName} was removed from your Pets24x7 profile. You can add the pet again from your dashboard: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\n${petName} was removed from your Pets24x7 profile. You can add the pet again from your dashboard: ${parentDash('pets')}\n`,
   };
 }
 
@@ -151,7 +162,9 @@ export function petRemovedEmail(to: string, name: string, petName: string): Mail
 
 export function listingSavedEmail(to: string, name: string, listingName: string | null): MailInput {
   const what = listingName || 'a business';
+  name = who(name);
   return {
+    tag: 'listing_saved',
     to,
     subject: `Saved: ${what}`,
     html: page({
@@ -159,6 +172,7 @@ export function listingSavedEmail(to: string, name: string, listingName: string 
       heading: 'Added to your saved list',
       intro: h`Hi ${name} — <strong>${what}</strong> is saved to your Pets24x7 account, so it's one click away next time.`,
       blocks: [Button('View saved businesses', PARENT_DASH())],
+      preheader: `${what} is saved to your account.`,
     }),
     text: `Hi ${name},\n\n${what} was saved to your Pets24x7 account.\n\nDashboard: ${PARENT_DASH()}\n`,
   };
@@ -176,7 +190,9 @@ export function membershipActivatedEmail(
   merchantTxnId: string,
   invoiceUrl?: string,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'membership_activated',
     to,
     subject: `Your ${plan.name} membership is active`,
     html: page({
@@ -194,9 +210,9 @@ export function membershipActivatedEmail(
           ['Active until', day(endsAt)],
           ['Reference', merchantTxnId],
         ]),
-        Button('Open my dashboard', PARENT_DASH()),
+        Button('Open my dashboard', parentDash('membership')),
         ...(invoiceUrl
-          ? [Note(`Need a tax invoice? <a href="${esc(invoiceUrl)}" style="color:#ff6b35;font-weight:600">Download it here</a> — it opens in your browser and prints to PDF.`)]
+          ? [Note(`Need an invoice? <a href="${esc(invoiceUrl)}" style="color:#c2410c;font-weight:600">Download it here</a> — it opens in your browser and prints to PDF.`)]
           : []),
         Note('Keep this email as your receipt.'),
       ],
@@ -213,16 +229,18 @@ Your ${plan.name} membership is active.
 Reference: ${merchantTxnId}
 ` +
       (invoiceUrl ? `
-Tax invoice: ${invoiceUrl}
+Invoice: ${invoiceUrl}
 ` : '') +
       `
-Dashboard: ${PARENT_DASH()}
+Dashboard: ${parentDash('membership')}
 `,
   };
 }
 
 export function membershipCancelledEmail(to: string, name: string, planName: string, endsAt: Date | null): MailInput {
+  name = who(name);
   return {
+    tag: 'membership_cancelled',
     to,
     subject: 'Auto-renew turned off',
     html: page({
@@ -239,13 +257,16 @@ export function membershipCancelledEmail(to: string, name: string, planName: str
         Note("Nothing is lost — you keep every benefit until that date."),
         Button('Resume auto-renew', MEMBERSHIP()),
       ],
+      preheader: `Benefits continue until ${day(endsAt)}, no more charges.`,
     }),
     text: `Hi ${name},\n\nAuto-renew is off for your ${planName} membership. Benefits stay active until ${day(endsAt)} and you won't be charged again.\n\nResume anytime: ${MEMBERSHIP()}\n`,
   };
 }
 
 export function membershipResumedEmail(to: string, name: string, planName: string, endsAt: Date | null): MailInput {
+  name = who(name);
   return {
+    tag: 'membership_resumed',
     to,
     subject: 'Auto-renew is back on',
     html: page({
@@ -255,15 +276,18 @@ export function membershipResumedEmail(to: string, name: string, planName: strin
       intro: h`Hi ${name} — auto-renew is back on for your <strong>${planName}</strong> membership.`,
       blocks: [
         InfoBox([['Plan', planName], ['Next renewal', day(endsAt)]]),
-        Button('Open my dashboard', PARENT_DASH()),
+        Button('Open my dashboard', parentDash('membership')),
       ],
+      preheader: `Next renewal ${day(endsAt)}.`,
     }),
-    text: `Hi ${name},\n\nAuto-renew is back on for your ${planName} membership. Next renewal: ${day(endsAt)}.\n\nDashboard: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\nAuto-renew is back on for your ${planName} membership. Next renewal: ${day(endsAt)}.\n\nDashboard: ${parentDash('membership')}\n`,
   };
 }
 
 export function membershipExpiredEmail(to: string, name: string, planName: string): MailInput {
+  name = who(name);
   return {
+    tag: 'membership_expired',
     to,
     subject: 'Your Pets24x7 membership has ended',
     html: page({
@@ -275,9 +299,18 @@ export function membershipExpiredEmail(to: string, name: string, planName: strin
         Note('Your account, pets and saved businesses all stay exactly as they are.'),
         Button('Renew my membership', MEMBERSHIP()),
       ],
+      preheader: `Your ${planName} plan has ended.`,
     }),
     text: `Hi ${name},\n\nYour ${planName} membership has ended. Your account, pets and saved businesses are untouched.\n\nRenew: ${MEMBERSHIP()}\n`,
   };
+}
+
+/**
+ * Where "Try again" should go. A vendor whose campaign or featured payment
+ * failed must land on the vendor Grow page, not the pet-parent membership page.
+ */
+export function retryUrlFor(what: string): string {
+  return /campaign|featured|placement/i.test(what) ? vendorDash('grow') : MEMBERSHIP();
 }
 
 export function paymentFailedEmail(
@@ -287,8 +320,11 @@ export function paymentFailedEmail(
   amountMinor: number,
   currency: string,
   merchantTxnId: string,
+  retryUrl: string = retryUrlFor(what),
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'payment_failed',
     to,
     subject: 'Your payment did not go through',
     html: page({
@@ -299,10 +335,11 @@ export function paymentFailedEmail(
       blocks: [
         InfoBox([['Amount', money(amountMinor, currency)], ['Reference', merchantTxnId]]),
         Note('If money left your account, your bank returns it — usually within 5 working days.'),
-        Button('Try again', MEMBERSHIP()),
+        Button('Try again', retryUrl),
       ],
+      preheader: `Payment for ${what} did not complete — nothing was activated.`,
     }),
-    text: `Hi ${name},\n\nYour payment for ${what} (${money(amountMinor, currency)}, ref ${merchantTxnId}) did not complete, so nothing was activated.\n\nAny debited amount is returned by your bank, usually within 5 working days.\n\nTry again: ${MEMBERSHIP()}\n`,
+    text: `Hi ${name},\n\nYour payment for ${what} (${money(amountMinor, currency)}, ref ${merchantTxnId}) did not complete, so nothing was activated.\n\nAny debited amount is returned by your bank, usually within 5 working days.\n\nTry again: ${retryUrl}\n`,
   };
 }
 
@@ -314,7 +351,9 @@ export function paymentRefundedEmail(
   currency: string,
   merchantTxnId: string,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'payment_refunded',
     to,
     subject: 'Your refund is on its way',
     html: page({
@@ -330,6 +369,7 @@ export function paymentRefundedEmail(
         ]),
         Note('The refund goes back to the account you paid from. Any access tied to this payment has ended.'),
       ],
+      preheader: `${money(amountMinor, currency)} refunded for ${what}.`,
     }),
     text: `Hi ${name},\n\nWe've refunded ${money(amountMinor, currency)} for ${what} (ref ${merchantTxnId}). It reaches the account you paid from within 5-7 working days.\n`,
   };
@@ -341,7 +381,9 @@ export function paymentRefundedEmail(
 
 export function enquiryReceivedEmail(to: string, name: string, listingName: string | null): MailInput {
   const target = listingName ? `<strong>${esc(listingName)}</strong>` : 'the Pets24x7 team';
+  name = who(name);
   return {
+    tag: 'enquiry_received',
     to,
     subject: 'We got your enquiry',
     html: page({
@@ -351,10 +393,11 @@ export function enquiryReceivedEmail(to: string, name: string, listingName: stri
       intro: h`Thanks ${name} — your enquiry has reached ` + target + '.',
       blocks: [
         Note("You'll usually hear back within a few hours. We follow up on WhatsApp if there's no reply."),
-        Button('Browse more services', `${env.PUBLIC_SITE_URL}/`),
+        Button('Browse more services', siteUrl()),
       ],
+      preheader: `Your enquiry reached ${listingName || 'the business'}.`,
     }),
-    text: `Hi ${name},\n\nYour enquiry reached ${listingName ?? 'the Pets24x7 team'}. You'll usually hear back within a few hours.\n`,
+    text: `Hi ${name},\n\nYour enquiry reached ${listingName ?? 'the Pets24x7 team'}. You'll usually hear back within a few hours.\n\nBrowse more services: ${siteUrl()}\n`,
   };
 }
 
@@ -364,40 +407,43 @@ export function enquiryStatusEmail(
   listingName: string | null,
   status: 'RESPONDED' | 'COMPLETED' | 'ARCHIVED' | 'NEW',
 ): MailInput {
-  const who = listingName || 'The business';
+  const biz = listingName || 'The business';
   const copy: Record<string, { subject: string; heading: string; intro: string }> = {
     RESPONDED: {
       subject: 'Your enquiry has been picked up',
       heading: 'Someone is on it',
-      intro: `${who} has picked up your enquiry and should be in touch shortly.`,
+      intro: `${biz} has picked up your enquiry and should be in touch shortly.`,
     },
     COMPLETED: {
       subject: 'Your enquiry is closed',
       heading: 'Enquiry closed',
-      intro: `${who} has marked your enquiry as handled. We hope it went well.`,
+      intro: `${biz} has marked your enquiry as handled. We hope it went well.`,
     },
     ARCHIVED: {
       subject: 'Your enquiry was archived',
       heading: 'Enquiry archived',
-      intro: `${who} archived your enquiry. If you still need help, send a fresh one — we'll chase it.`,
+      intro: `${biz} archived your enquiry. If you still need help, send a fresh one — we'll chase it.`,
     },
     NEW: {
       subject: 'Your enquiry was reopened',
       heading: 'Enquiry reopened',
-      intro: `${who} has reopened your enquiry.`,
+      intro: `${biz} has reopened your enquiry.`,
     },
   };
   const c = copy[status]!;
+  name = who(name);
   return {
+    tag: 'enquiry_status',
     to,
     subject: c.subject,
     html: page({
       eyebrow: 'Enquiry',
       heading: c.heading,
       intro: h`Hi ${name} — ${c.intro}`,
-      blocks: [Button('View my enquiries', PARENT_DASH())],
+      blocks: [Button('View my enquiries', parentDash('enquiries'))],
+      preheader: c.intro,
     }),
-    text: `Hi ${name},\n\n${c.intro}\n\nDashboard: ${PARENT_DASH()}\n`,
+    text: `Hi ${name},\n\n${c.intro}\n\nDashboard: ${parentDash('enquiries')}\n`,
   };
 }
 
@@ -413,7 +459,12 @@ export function vendorNewEnquiryEmail(
     city: string | null;
   },
 ): MailInput {
+  // Digits-only dial string, so the call / WhatsApp buttons work from a phone.
+  const digits = String(enquiry.phone ?? '').replace(/[^\d+]/g, '');
+  const dial = digits.replace(/\D/g, '').length >= 7 ? digits : '';
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_new_enquiry',
     to,
     subject: `New enquiry for ${businessName}`,
     html: page({
@@ -430,11 +481,14 @@ export function vendorNewEnquiryEmail(
           ['City', enquiry.city || '—'],
         ]),
         Quote(enquiry.notes || 'No message left.'),
-        Button('Open vendor dashboard', VENDOR_DASH()),
+        ...(dial
+          ? [Button(`Call ${enquiry.name}`, `tel:${dial}`),
+             Note(`Prefer WhatsApp? <a href="${esc(`https://wa.me/${dial.replace(/^\+/, '')}`)}" style="color:#c2410c;font-weight:600">Message them on WhatsApp</a> &middot; <a href="${esc(vendorDash('enquiries'))}" style="color:#c2410c;font-weight:600">Open in dashboard</a>`)]
+          : [Button('Open vendor dashboard', vendorDash('enquiries'))]),
       ],
       preheader: `${enquiry.name} · ${enquiry.phone}`,
     }),
-    text: `New enquiry for ${businessName}\n\nName: ${enquiry.name}\nPhone: ${enquiry.phone}\nPet: ${enquiry.petType || '-'}\nPreferred date: ${enquiry.preferredDate ? day(enquiry.preferredDate) : '-'}\nCity: ${enquiry.city || '-'}\n\n${enquiry.notes || 'No message left.'}\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `New enquiry for ${businessName}\n\nName: ${enquiry.name}\nPhone: ${enquiry.phone}\nPet: ${enquiry.petType || '-'}\nPreferred date: ${enquiry.preferredDate ? day(enquiry.preferredDate) : '-'}\nCity: ${enquiry.city || '-'}\n\n${enquiry.notes || 'No message left.'}\n\nDashboard: ${vendorDash('enquiries')}\n`,
   };
 }
 
@@ -443,7 +497,9 @@ export function vendorNewEnquiryEmail(
 // ===========================================================================
 
 export function vendorWelcomeEmail(to: string, businessName: string, listingName: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_welcome',
     to,
     subject: 'Your Pets24x7 listing is claimed',
     html: page({
@@ -453,15 +509,18 @@ export function vendorWelcomeEmail(to: string, businessName: string, listingName
       intro: h`You've claimed <strong>${listingName}</strong> on Pets24x7. Enquiries now come straight to you.`,
       blocks: [
         Text('Next: add your services and photos so parents can see what you offer, then start collecting reviews.'),
-        Button('Complete my profile', VENDOR_DASH()),
+        Button('Complete my profile', vendorDash('listing')),
       ],
+      preheader: `You've claimed ${listingName} — enquiries now come straight to you.`,
     }),
-    text: `Welcome, ${businessName}!\n\nYou've claimed ${listingName} on Pets24x7. Enquiries now come straight to you.\n\nComplete your profile: ${VENDOR_DASH()}\n`,
+    text: `Welcome, ${businessName}!\n\nYou've claimed ${listingName} on Pets24x7. Enquiries now come straight to you.\n\nComplete your profile: ${vendorDash('listing')}\n`,
   };
 }
 
 export function vendorProfileUpdatedEmail(to: string, businessName: string, changed: string[]): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_profile_updated',
     to,
     subject: 'Your business profile was updated',
     html: page({
@@ -471,15 +530,17 @@ export function vendorProfileUpdatedEmail(to: string, businessName: string, chan
       intro: h`The public profile for <strong>${businessName}</strong> was just changed. It's live on your listing now.`,
       blocks: [
         InfoBox([['Updated', changed.length ? changed.join(', ') : 'Business details']]),
-        Button('View my listing', VENDOR_DASH()),
+        Button('View my listing', vendorDash('listing')),
       ],
+      preheader: `${changed.length ? changed.join(', ') : 'Your profile'} just changed and is live.`,
     }),
-    text: `Hi ${businessName},\n\nYour Pets24x7 profile was updated (${changed.join(', ') || 'business details'}) and is live on your listing.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour Pets24x7 profile was updated (${changed.join(', ') || 'business details'}) and is live on your listing.\n\nDashboard: ${vendorDash('listing')}\n`,
   };
 }
 
 export function vendorApprovedEmail(to: string, businessName: string): MailInput {
   return {
+    tag: 'vendor_approved',
     to,
     subject: 'Your Pets24x7 listing is approved',
     html: page({
@@ -491,13 +552,16 @@ export function vendorApprovedEmail(to: string, businessName: string): MailInput
         Text('You can now send review requests, list services, run campaigns and feature your listing.'),
         Button('Open vendor dashboard', VENDOR_DASH()),
       ],
+      preheader: `${businessName} is approved and visible to pet parents now.`,
     }),
     text: `Hi ${businessName},\n\nYour Pets24x7 listing is approved and live. You can now send review requests, list services, run campaigns and feature your listing.\n\nDashboard: ${VENDOR_DASH()}\n`,
   };
 }
 
 export function vendorRejectedEmail(to: string, businessName: string, reason: string | null): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_rejected',
     to,
     subject: 'About your Pets24x7 listing claim',
     html: page({
@@ -509,6 +573,7 @@ export function vendorRejectedEmail(to: string, businessName: string, reason: st
         ...(reason ? [InfoBox([['Reason', reason]])] : []),
         Note('Think this is a mistake? Reply to this email with proof of ownership and we\'ll take another look.'),
       ],
+      preheader: `Your claim for ${businessName} was not approved.`,
     }),
     text: `Hi,\n\nYour Pets24x7 claim for ${businessName} was not approved.${reason ? `\nReason: ${reason}` : ''}\n\nReply to this email with proof of ownership and we'll review it again.\n`,
   };
@@ -516,6 +581,7 @@ export function vendorRejectedEmail(to: string, businessName: string, reason: st
 
 export function vendorSuspendedEmail(to: string, businessName: string): MailInput {
   return {
+    tag: 'vendor_suspended',
     to,
     subject: 'Your Pets24x7 listing has been suspended',
     html: page({
@@ -524,6 +590,7 @@ export function vendorSuspendedEmail(to: string, businessName: string): MailInpu
       heading: 'Listing suspended',
       intro: h`<strong>${businessName}</strong> is temporarily hidden from Pets24x7 and is not receiving enquiries.`,
       blocks: [Note('Reply to this email and we\'ll walk you through what is needed to restore it.')],
+      preheader: `${businessName} is temporarily hidden and not receiving enquiries.`,
     }),
     text: `Hi,\n\n${businessName} has been suspended on Pets24x7 and is not receiving enquiries. Reply to this email to sort it out.\n`,
   };
@@ -538,7 +605,9 @@ export function serviceAddedEmail(
   businessName: string,
   service: { name: string; priceMinor: number; currency: string; durationLabel: string },
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'service_added',
     to,
     subject: `"${service.name}" is on your listing`,
     html: page({
@@ -552,29 +621,35 @@ export function serviceAddedEmail(
           ['Price', money(service.priceMinor, service.currency)],
           ['Duration', service.durationLabel],
         ]),
-        Button('Manage services', VENDOR_DASH()),
+        Button('Manage services', vendorDash('services')),
       ],
+      preheader: `${service.name} now shows on your listing.`,
     }),
-    text: `Hi ${businessName},\n\n"${service.name}" (${money(service.priceMinor, service.currency)}, ${service.durationLabel}) was added to your listing.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n"${service.name}" (${money(service.priceMinor, service.currency)}, ${service.durationLabel}) was added to your listing.\n\nDashboard: ${vendorDash('services')}\n`,
   };
 }
 
 export function serviceUpdatedEmail(to: string, businessName: string, serviceName: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'service_updated',
     to,
     subject: `"${serviceName}" was updated`,
     html: page({
       eyebrow: 'Services',
       heading: 'Service updated',
       intro: h`The details for <strong>${serviceName}</strong> on the ${businessName} listing were changed and are live.`,
-      blocks: [Button('Manage services', VENDOR_DASH())],
+      blocks: [Button('Manage services', vendorDash('services'))],
+      preheader: `${serviceName} was updated and is live.`,
     }),
-    text: `Hi ${businessName},\n\n"${serviceName}" was updated on your listing.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n"${serviceName}" was updated on your listing.\n\nDashboard: ${vendorDash('services')}\n`,
   };
 }
 
 export function serviceRemovedEmail(to: string, businessName: string, serviceName: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'service_removed',
     to,
     subject: `"${serviceName}" was removed`,
     html: page({
@@ -582,9 +657,10 @@ export function serviceRemovedEmail(to: string, businessName: string, serviceNam
       banner: ['Service removed', 'warning'],
       heading: 'Service removed',
       intro: h`<strong>${serviceName}</strong> no longer appears on the ${businessName} listing.`,
-      blocks: [Button('Manage services', VENDOR_DASH())],
+      blocks: [Button('Manage services', vendorDash('services'))],
+      preheader: `${serviceName} was removed from your listing.`,
     }),
-    text: `Hi ${businessName},\n\n"${serviceName}" was removed from your listing.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n"${serviceName}" was removed from your listing.\n\nDashboard: ${vendorDash('services')}\n`,
   };
 }
 
@@ -595,7 +671,9 @@ export function serviceModeratedEmail(
   status: 'ACTIVE' | 'HIDDEN',
 ): MailInput {
   const hidden = status === 'HIDDEN';
+  businessName = who(businessName, 'there');
   return {
+    tag: 'service_moderated',
     to,
     subject: hidden ? `"${serviceName}" was hidden by our team` : `"${serviceName}" is visible again`,
     html: page({
@@ -607,8 +685,9 @@ export function serviceModeratedEmail(
         : h`<strong>${serviceName}</strong> is showing on the ${businessName} listing again.`,
       blocks: [
         ...(hidden ? [Note('Reply to this email if you think this was a mistake — we read every reply.')] : []),
-        Button('Manage services', VENDOR_DASH()),
+        Button('Manage services', vendorDash('services')),
       ],
+      preheader: hidden ? `${serviceName} was hidden while we check it.` : `${serviceName} is visible again.`,
     }),
     text: hidden
       ? `Hi ${businessName},\n\nOur team hid "${serviceName}" on your listing while we check it. Reply to this email if that looks wrong.\n`
@@ -625,7 +704,9 @@ export function reviewRequestsSentEmail(
   businessName: string,
   stats: { sent: number; failed: number; remainingToday: number },
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'review_requests_sent',
     to,
     subject: `${stats.sent} review request${stats.sent === 1 ? '' : 's'} sent`,
     html: page({
@@ -640,10 +721,11 @@ export function reviewRequestsSentEmail(
           ['Remaining today', String(stats.remainingToday)],
         ]),
         Note('We email you the moment a review lands.'),
-        Button('Track requests', VENDOR_DASH()),
+        Button('Track requests', vendorDash('reviews')),
       ],
+      preheader: `${stats.sent} sent · ${stats.failed} failed · ${stats.remainingToday} left today.`,
     }),
-    text: `Hi ${businessName},\n\n${stats.sent} review request(s) sent, ${stats.failed} failed, ${stats.remainingToday} left in today's cap.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\n${stats.sent} review request(s) sent, ${stats.failed} failed, ${stats.remainingToday} left in today's cap.\n\nDashboard: ${vendorDash('reviews')}\n`,
   };
 }
 
@@ -653,7 +735,9 @@ export function vendorNewReviewEmail(
   review: { reviewerName: string; rating: number; text: string },
 ): MailInput {
   const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+  businessName = who(businessName, 'there');
   return {
+    tag: 'vendor_new_review',
     to,
     subject: `New ${review.rating}-star review for ${businessName}`,
     html: page({
@@ -664,11 +748,11 @@ export function vendorNewReviewEmail(
       blocks: [
         Quote(review.text),
         Note('It goes live on your listing once our team has checked it — usually within a day.'),
-        Button('View my reviews', VENDOR_DASH()),
+        Button('View my reviews', vendorDash('reviews')),
       ],
       preheader: `${review.rating}/5 from ${review.reviewerName}`,
     }),
-    text: `New ${review.rating}-star review for ${businessName}\n\nFrom: ${review.reviewerName}\n"${review.text}"\n\nIt goes live after moderation, usually within a day.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `New ${review.rating}-star review for ${businessName}\n\nFrom: ${review.reviewerName}\n"${review.text}"\n\nIt goes live after moderation, usually within a day.\n\nDashboard: ${vendorDash('reviews')}\n`,
   };
 }
 
@@ -677,7 +761,9 @@ export function reviewPublishedEmail(
   businessName: string,
   review: { reviewerName: string; rating: number },
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'review_published',
     to,
     subject: 'A review just went live on your listing',
     html: page({
@@ -687,10 +773,11 @@ export function reviewPublishedEmail(
       intro: h`The ${review.rating}-star review from <strong>${review.reviewerName}</strong> is now public on the ${businessName} listing.`,
       blocks: [
         Note('Replying to reviews lifts conversion — a short, warm reply is enough.'),
-        Button('Reply to it', VENDOR_DASH()),
+        Button('Reply to it', vendorDash('reviews')),
       ],
+      preheader: `${review.rating}-star review from ${review.reviewerName} is now public.`,
     }),
-    text: `Hi ${businessName},\n\nThe ${review.rating}-star review from ${review.reviewerName} is now live on your listing.\n\nReply from your dashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nThe ${review.rating}-star review from ${review.reviewerName} is now live on your listing.\n\nReply from your dashboard: ${vendorDash('reviews')}\n`,
   };
 }
 
@@ -700,7 +787,9 @@ export function reviewRejectedEmail(
   review: { reviewerName: string; rating: number },
   reason: string | null,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'review_rejected',
     to,
     subject: 'A review on your listing was not published',
     html: page({
@@ -708,14 +797,17 @@ export function reviewRejectedEmail(
       banner: ['Not published', 'warning'],
       heading: 'Review rejected by moderation',
       intro: h`The ${review.rating}-star review from <strong>${review.reviewerName}</strong> did not pass our checks, so it will not appear on the ${businessName} listing.`,
-      blocks: [...(reason ? [InfoBox([['Reason', reason]])] : []), Button('View my reviews', VENDOR_DASH())],
+      blocks: [...(reason ? [InfoBox([['Reason', reason]])] : []), Button('View my reviews', vendorDash('reviews'))],
+      preheader: `${review.rating}-star review from ${review.reviewerName} was not published.`,
     }),
-    text: `Hi ${businessName},\n\nThe ${review.rating}-star review from ${review.reviewerName} was not published.${reason ? `\nReason: ${reason}` : ''}\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nThe ${review.rating}-star review from ${review.reviewerName} was not published.${reason ? `\nReason: ${reason}` : ''}\n\nDashboard: ${vendorDash('reviews')}\n`,
   };
 }
 
 export function reviewReplyPostedEmail(to: string, businessName: string, reviewerName: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'review_reply_posted',
     to,
     subject: 'Your reply is live',
     html: page({
@@ -723,9 +815,10 @@ export function reviewReplyPostedEmail(to: string, businessName: string, reviewe
       banner: ['Reply posted', 'success'],
       heading: 'Reply posted',
       intro: h`Your reply to <strong>${reviewerName}</strong> is now showing under their review on the ${businessName} listing.`,
-      blocks: [Button('View my reviews', VENDOR_DASH())],
+      blocks: [Button('View my reviews', vendorDash('reviews'))],
+      preheader: `Your reply to ${reviewerName} is live.`,
     }),
-    text: `Hi ${businessName},\n\nYour reply to ${reviewerName} is live under their review.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour reply to ${reviewerName} is live under their review.\n\nDashboard: ${vendorDash('reviews')}\n`,
   };
 }
 
@@ -739,7 +832,9 @@ export function campaignCreatedEmail(
   campaign: { goal: string; durationDays: number; priceMinor: number; currency: string },
   merchantTxnId: string,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_created',
     to,
     subject: 'Finish paying for your campaign',
     html: page({
@@ -754,10 +849,11 @@ export function campaignCreatedEmail(
           ['Amount', money(campaign.priceMinor, campaign.currency)],
           ['Reference', merchantTxnId],
         ]),
-        Button('Complete payment', VENDOR_DASH()),
+        Button('Complete payment', vendorDash('grow')),
       ],
+      preheader: `${campaignGoalLabel(campaign.goal)} campaign reserved — pay to start it.`,
     }),
-    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(campaign.goal)} campaign (${campaign.durationDays} days, ${money(campaign.priceMinor, campaign.currency)}, ref ${merchantTxnId}) is reserved and awaiting payment.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(campaign.goal)} campaign (${campaign.durationDays} days, ${money(campaign.priceMinor, campaign.currency)}, ref ${merchantTxnId}) is reserved and awaiting payment.\n\nDashboard: ${vendorDash('grow')}\n`,
   };
 }
 
@@ -766,8 +862,11 @@ export function campaignSubmittedEmail(
   businessName: string,
   campaign: { goal: string; durationDays: number; priceMinor: number; currency: string },
   merchantTxnId: string,
+  invoiceUrl: string | null = null,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_submitted',
     to,
     subject: 'Campaign paid — now in review',
     html: page({
@@ -782,10 +881,12 @@ export function campaignSubmittedEmail(
           ['Amount paid', money(campaign.priceMinor, campaign.currency)],
           ['Reference', merchantTxnId],
         ]),
-        Button('Track my campaign', VENDOR_DASH()),
+        Button('Track my campaign', vendorDash('grow')),
+        ...(invoiceUrl ? [invoiceNote(invoiceUrl)] : []),
       ],
+      preheader: 'Payment received — your campaign is in review.',
     }),
-    text: `Hi ${businessName},\n\nPayment received for your ${campaignGoalLabel(campaign.goal)} campaign (${campaign.durationDays} days, ${money(campaign.priceMinor, campaign.currency)}, ref ${merchantTxnId}). It is now in review; we'll email you when it goes live.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nPayment received for your ${campaignGoalLabel(campaign.goal)} campaign (${campaign.durationDays} days, ${money(campaign.priceMinor, campaign.currency)}, ref ${merchantTxnId}). It is now in review; we'll email you when it goes live.\n\nDashboard: ${vendorDash('grow')}\n${invoiceUrl ? `Invoice: ${invoiceUrl}\n` : ''}`,
   };
 }
 
@@ -795,7 +896,9 @@ export function campaignApprovedEmail(
   campaign: { goal: string; durationDays: number },
   endsAt: Date | null,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_approved',
     to,
     subject: 'Your campaign is live',
     html: page({
@@ -805,15 +908,18 @@ export function campaignApprovedEmail(
       intro: h`Your <strong>${campaignGoalLabel(campaign.goal)}</strong> campaign for ${businessName} is live and pushing your listing to pet parents.`,
       blocks: [
         InfoBox([['Goal', campaignGoalLabel(campaign.goal)], ['Runs for', `${campaign.durationDays} days`], ['Ends', day(endsAt)]]),
-        Button('See performance', VENDOR_DASH()),
+        Button('See performance', vendorDash('grow')),
       ],
+      preheader: `Your campaign is live, running until ${day(endsAt)}.`,
     }),
-    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(campaign.goal)} campaign is live and runs for ${campaign.durationDays} days, ending ${day(endsAt)}.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(campaign.goal)} campaign is live and runs for ${campaign.durationDays} days, ending ${day(endsAt)}.\n\nDashboard: ${vendorDash('grow')}\n`,
   };
 }
 
 export function campaignCancelledEmail(to: string, businessName: string, goal: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_cancelled',
     to,
     subject: 'Your campaign was cancelled',
     html: page({
@@ -822,13 +928,16 @@ export function campaignCancelledEmail(to: string, businessName: string, goal: s
       heading: 'Campaign cancelled',
       intro: h`Your <strong>${campaignGoalLabel(goal)}</strong> campaign for ${businessName} has been cancelled and is not running.`,
       blocks: [Note('If you were charged, the refund follows automatically. Reply here with any questions.')],
+      preheader: 'Your campaign was cancelled and is not running.',
     }),
     text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(goal)} campaign was cancelled and is not running. Any charge is refunded automatically.\n`,
   };
 }
 
 export function campaignCompletedEmail(to: string, businessName: string, goal: string): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'campaign_completed',
     to,
     subject: 'Your campaign has finished',
     html: page({
@@ -838,16 +947,21 @@ export function campaignCompletedEmail(to: string, businessName: string, goal: s
       intro: h`Your <strong>${campaignGoalLabel(goal)}</strong> campaign for ${businessName} has run its full term.`,
       blocks: [
         Note('Enquiries that came in during the run are all in your dashboard.'),
-        Button('Run it again', VENDOR_DASH()),
+        Button('Run it again', vendorDash('grow')),
       ],
+      preheader: 'Your campaign has run its full term.',
     }),
-    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(goal)} campaign has finished its run. Every enquiry it brought in is in your dashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour ${campaignGoalLabel(goal)} campaign has finished its run. Every enquiry it brought in is in your dashboard: ${vendorDash('grow')}\n`,
   };
 }
 
 // ===========================================================================
 // Vendor — featured listings
 // ===========================================================================
+
+/** The "download your invoice" line under a vendor receipt. */
+const invoiceNote = (url: string) =>
+  Note(`Need an invoice? <a href="${esc(url)}" style="color:#c2410c;font-weight:600">Download it here</a> — sign in to your business account and it opens in your browser, ready to print to PDF.`);
 
 export function featuredLiveEmail(
   to: string,
@@ -856,6 +970,7 @@ export function featuredLiveEmail(
   endsAt: Date | null,
   merchantTxnId: string,
   startsAt: Date | null = null,
+  invoiceUrl: string | null = null,
 ): MailInput {
   // A slot bought while another is still running is queued, not live — telling
   // the vendor "you're featured now" would be wrong for its whole first term.
@@ -867,7 +982,9 @@ export function featuredLiveEmail(
     ['Amount paid', money(featured.priceMinor, featured.currency)],
     ['Reference', merchantTxnId],
   );
+  businessName = who(businessName, 'there');
   return {
+    tag: 'featured_live',
     to,
     subject: queued ? 'Your featured placement is booked' : 'Your listing is now featured',
     html: page({
@@ -877,16 +994,24 @@ export function featuredLiveEmail(
       intro: queued
         ? h`<strong>${businessName}</strong> is booked for the top of its category and city results, starting when your current placement ends.`
         : h`<strong>${businessName}</strong> is now boosted to the top of its category and city results.`,
-      blocks: [InfoBox(rows), Button('See my placement', VENDOR_DASH())],
+      blocks: [
+        InfoBox(rows),
+        Button('See my placement', vendorDash('grow')),
+        ...(invoiceUrl ? [invoiceNote(invoiceUrl)] : []),
+      ],
     }),
-    text: queued
-      ? `Hi ${businessName},\n\nYour featured placement is booked for ${featured.durationDays} days, starting ${day(startsAt)} and running until ${day(endsAt)}. Paid: ${money(featured.priceMinor, featured.currency)} (ref ${merchantTxnId}).\n\nDashboard: ${VENDOR_DASH()}\n`
-      : `Hi ${businessName},\n\nYour listing is featured for ${featured.durationDays} days, until ${day(endsAt)}. Paid: ${money(featured.priceMinor, featured.currency)} (ref ${merchantTxnId}).\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text:
+      (queued
+        ? `Hi ${businessName},\n\nYour featured placement is booked for ${featured.durationDays} days, starting ${day(startsAt)} and running until ${day(endsAt)}. Paid: ${money(featured.priceMinor, featured.currency)} (ref ${merchantTxnId}).\n\nDashboard: ${vendorDash('grow')}\n`
+        : `Hi ${businessName},\n\nYour listing is featured for ${featured.durationDays} days, until ${day(endsAt)}. Paid: ${money(featured.priceMinor, featured.currency)} (ref ${merchantTxnId}).\n\nDashboard: ${vendorDash('grow')}\n`) +
+      (invoiceUrl ? `Invoice: ${invoiceUrl}\n` : ''),
   };
 }
 
 export function featuredEndedEmail(to: string, businessName: string, cancelled = false): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'featured_ended',
     to,
     subject: cancelled ? 'Your featured placement was cancelled' : 'Your featured placement has ended',
     html: page({
@@ -896,11 +1021,12 @@ export function featuredEndedEmail(to: string, businessName: string, cancelled =
       intro: cancelled
         ? h`The featured boost for <strong>${businessName}</strong> was cancelled and is no longer running.`
         : h`The featured boost for <strong>${businessName}</strong> has run its full term. Your listing is back in normal ranking.`,
-      blocks: [Button('Feature it again', VENDOR_DASH())],
+      blocks: [Button('Feature it again', vendorDash('grow'))],
+      preheader: cancelled ? 'Your featured placement was cancelled.' : 'Your featured placement has ended.',
     }),
     text: cancelled
-      ? `Hi ${businessName},\n\nYour featured placement was cancelled.\n\nDashboard: ${VENDOR_DASH()}\n`
-      : `Hi ${businessName},\n\nYour featured placement has ended and your listing is back in normal ranking.\n\nFeature it again: ${VENDOR_DASH()}\n`,
+      ? `Hi ${businessName},\n\nYour featured placement was cancelled.\n\nDashboard: ${vendorDash('grow')}\n`
+      : `Hi ${businessName},\n\nYour featured placement has ended and your listing is back in normal ranking.\n\nFeature it again: ${vendorDash('grow')}\n`,
   };
 }
 
@@ -910,7 +1036,9 @@ export function petPhotoUpdatedEmail(
   petName: string,
   removed = false,
 ): MailInput {
+  name = who(name);
   return {
+    tag: 'pet_photo_updated',
     to,
     subject: removed ? `${petName}'s photo was removed` : `${petName} has a new photo`,
     html: page({
@@ -920,17 +1048,19 @@ export function petPhotoUpdatedEmail(
       intro: removed
         ? h`Hi ${name} — the photo on ${petName}'s profile was removed. You can add a new one anytime.`
         : h`Hi ${name} — ${petName}'s new profile photo is saved and showing on your dashboard.`,
-      blocks: [Button('View my pets', PARENT_DASH())],
+      blocks: [Button('View my pets', parentDash('pets'))],
     }),
     text: removed
-      ? `Hi ${name},\n\n${petName}'s photo was removed. Add a new one anytime: ${PARENT_DASH()}\n`
-      : `Hi ${name},\n\n${petName}'s new profile photo is saved.\n\nDashboard: ${PARENT_DASH()}\n`,
+      ? `Hi ${name},\n\n${petName}'s photo was removed. Add a new one anytime: ${parentDash('pets')}\n`
+      : `Hi ${name},\n\n${petName}'s new profile photo is saved.\n\nDashboard: ${parentDash('pets')}\n`,
   };
 }
 
 export function listingUnsavedEmail(to: string, name: string, listingName: string | null): MailInput {
   const what = listingName || 'A business';
+  name = who(name);
   return {
+    tag: 'listing_unsaved',
     to,
     subject: `Removed from your saved list`,
     html: page({
@@ -938,9 +1068,10 @@ export function listingUnsavedEmail(to: string, name: string, listingName: strin
       banner: ['Removed', 'warning'],
       heading: 'Removed from your saved list',
       intro: h`Hi ${name} — ${what} is no longer saved to your Pets24x7 account.`,
-      blocks: [Button('Browse services', `${env.PUBLIC_SITE_URL}/`)],
+      blocks: [Button('Browse services', siteUrl())],
+      preheader: `${what} was removed from your saved list.`,
     }),
-    text: `Hi ${name},\n\n${what} was removed from your saved list.\n`,
+    text: `Hi ${name},\n\n${what} was removed from your saved list.\n\nBrowse services: ${siteUrl()}\n`,
   };
 }
 
@@ -950,7 +1081,9 @@ export function featuredCreatedEmail(
   featured: { priceMinor: number; currency: string; durationDays: number },
   merchantTxnId: string,
 ): MailInput {
+  businessName = who(businessName, 'there');
   return {
+    tag: 'featured_created',
     to,
     subject: 'Finish paying for your featured placement',
     html: page({
@@ -964,10 +1097,90 @@ export function featuredCreatedEmail(
           ['Amount', money(featured.priceMinor, featured.currency)],
           ['Reference', merchantTxnId],
         ]),
-        Button('Complete payment', VENDOR_DASH()),
+        Button('Complete payment', vendorDash('grow')),
       ],
     }),
-    text: `Hi ${businessName},\n\nYour featured placement (${featured.durationDays} days, ${money(featured.priceMinor, featured.currency)}, ref ${merchantTxnId}) is reserved and awaiting payment.\n\nDashboard: ${VENDOR_DASH()}\n`,
+    text: `Hi ${businessName},\n\nYour featured placement (${featured.durationDays} days, ${money(featured.priceMinor, featured.currency)}, ref ${merchantTxnId}) is reserved and awaiting payment.\n\nDashboard: ${vendorDash('grow')}\n`,
+  };
+}
+
+// ===========================================================================
+// Vendor — subscription plans
+// ===========================================================================
+
+const periodLabel = (p: string | null | undefined) => (p === 'ANNUAL' ? 'Annual' : 'Monthly');
+
+/** A paid vendor plan is live. Doubles as the receipt for the purchase. */
+export function vendorSubscriptionActivatedEmail(
+  to: string,
+  businessName: string,
+  plan: { planName: string; billingPeriod: string; amountMinor: number; currency?: string },
+  endsAt: Date | null,
+  merchantTxnId: string,
+): MailInput {
+  businessName = who(businessName);
+  const currency = plan.currency || 'INR';
+  const label = `${plan.planName} (${periodLabel(plan.billingPeriod)})`;
+  return {
+    tag: 'vendor_subscription_activated',
+    to,
+    subject: `Your ${plan.planName} plan is active`,
+    html: page({
+      eyebrow: 'Subscription',
+      banner: ['Payment received', 'success'],
+      heading: `${plan.planName} is live`,
+      intro: h`Hi ${businessName} — your <strong>${label}</strong> plan is active right away. Your badge and lead limits are already updated on your listing.`,
+      blocks: [
+        InfoBox([
+          ['Plan', label],
+          ['Amount paid', money(plan.amountMinor, currency)],
+          ['Active until', day(endsAt)],
+          ['Reference', merchantTxnId],
+        ]),
+        Button('View my plan', vendorDash('subscriptions')),
+        Note('Plans do not renew automatically, so we will remind you before this one ends. Keep this email as your receipt.'),
+      ],
+      preheader: `${label} active until ${day(endsAt)}.`,
+    }),
+    text: `Hi ${businessName},\n\nYour ${label} plan is active.\nAmount paid: ${money(plan.amountMinor, currency)}\nActive until: ${day(endsAt)}\nReference: ${merchantTxnId}\n\nPlans do not renew automatically.\n\nDashboard: ${vendorDash('subscriptions')}\n`,
+  };
+}
+
+/** A paid vendor plan ends soon. Nothing auto-renews, so this is the nudge. */
+export function vendorSubscriptionExpiringEmail(to: string, businessName: string, planName: string, endsAt: Date): MailInput {
+  businessName = who(businessName);
+  return {
+    tag: 'vendor_subscription_expiring',
+    to,
+    subject: `Your ${planName} plan ends on ${day(endsAt)}`,
+    html: page({
+      eyebrow: 'Subscription',
+      banner: ['Ending soon', 'warning'],
+      heading: 'Your plan is ending soon',
+      intro: h`Hi ${businessName} — your <strong>${planName}</strong> plan ends on ${day(endsAt)}. After that your listing moves back to the free Basic tier.`,
+      blocks: [Button('Renew my plan', vendorDash('subscriptions')), Note('Renewing before it ends adds the new term on top, so no days are lost.')],
+      preheader: `${planName} ends ${day(endsAt)}.`,
+    }),
+    text: `Hi ${businessName},\n\nYour ${planName} plan ends on ${day(endsAt)}, then your listing moves back to the free Basic tier. Renewing early adds the new term on top.\n\nRenew: ${vendorDash('subscriptions')}\n`,
+  };
+}
+
+/** A paid vendor plan has lapsed back to the free tier. */
+export function vendorSubscriptionExpiredEmail(to: string, businessName: string, planName: string): MailInput {
+  businessName = who(businessName);
+  return {
+    tag: 'vendor_subscription_expired',
+    to,
+    subject: `Your ${planName} plan has ended`,
+    html: page({
+      eyebrow: 'Subscription',
+      banner: ['Plan ended', 'warning'],
+      heading: `Your ${planName} plan has ended`,
+      intro: h`Hi ${businessName} — your paid plan is over, so your listing is back on the free Basic tier. Your listing, reviews and enquiries are untouched.`,
+      blocks: [Button('Choose a plan', vendorDash('subscriptions'))],
+      preheader: 'Your listing is back on the Basic tier.',
+    }),
+    text: `Hi ${businessName},\n\nYour ${planName} plan has ended and your listing is back on the free Basic tier. Your listing, reviews and enquiries are untouched.\n\nChoose a plan: ${vendorDash('subscriptions')}\n`,
   };
 }
 
@@ -1011,16 +1224,19 @@ export function recommendationsEmail(
         <div style="font-size:15px;font-weight:700;line-height:1.35">${title}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:3px">${esc(it.category)}${it.city ? ` · ${esc(it.city)}` : ''}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:3px">${esc(stars)}${esc(reviews)}</div>
-        ${why ? `<div style="font-size:12px;color:#ff6b35;font-weight:600;margin-top:5px">${esc(why)}</div>` : ''}
+        ${why ? `<div style="font-size:12px;color:#c2410c;font-weight:600;margin-top:5px">${esc(why)}</div>` : ''}
       </td></tr>`;
     })
     .join('');
 
   const forPet = petName ? ` for ${petName}` : '';
+  name = who(name);
   return {
+    tag: 'recommendations',
     kind: 'marketing',
     to,
-    subject: petName ? `Picked for ${petName}` : 'Pet services picked for you',
+    // Same rotating subject as the reco digest: leads with this mail's first pick.
+    subject: digestSubject(to, petName, items.slice(0, 5)),
     html: page({
       eyebrow: 'Recommendations',
       heading: petName ? `Picked for ${petName}` : 'Picked for you',
@@ -1060,7 +1276,9 @@ export function importFinishedEmail(
   },
 ): MailInput {
   const clean = job.failed === 0;
+  name = who(name);
   return {
+    tag: 'import_finished',
     to,
     subject: `Import finished — ${job.created} added, ${job.updated} updated`,
     html: page({
@@ -1078,7 +1296,7 @@ export function importFinishedEmail(
           ['Failed', String(job.failed)],
         ]),
         ...(clean ? [] : [Note('Failed rows are listed in the admin Import view, with the reason for each.')]),
-        Button('Open admin', `${env.PUBLIC_SITE_URL}/dashboard/admin/`),
+        Button('Open admin', adminDash('import')),
       ],
       preheader: `${job.created} created · ${job.updated} updated · ${job.failed} failed`,
     }),
@@ -1091,8 +1309,10 @@ export function claimCredentialsEmail(
   businessName: string,
   tempPassword: string,
 ): MailInput {
-  const loginUrl = `${env.PUBLIC_SITE_URL}/vendor-login/`;
+  const loginUrl = siteUrl('/vendor-login/');
+  businessName = who(businessName, 'there');
   return {
+    tag: 'claim_credentials',
     to,
     sensitive: true,
     subject: `Welcome to Pets24x7! Temporary Credentials for ${businessName}`,
@@ -1129,8 +1349,10 @@ export function businessRegisteredEmail(
   businessName: string,
   city: string,
 ): MailInput {
-  const dashboardUrl = `${env.PUBLIC_SITE_URL}/dashboard/vendor/`;
+  const dashboardUrl = vendorDash('listing');
+  businessName = who(businessName, 'there');
   return {
+    tag: 'business_registered',
     to,
     subject: `Your Pets24x7 business has been registered successfully`,
     html: page({
@@ -1176,7 +1398,9 @@ export function adminProfileChangedEmail(
     change.passwordChanged ? 'the password' : null,
     change.emailChanged ? 'the sign-in email' : null,
   ].filter(Boolean).join(' and ');
+  name = who(name);
   return {
+    tag: 'admin_profile_changed',
     to,
     sensitive: true,
     subject: `Your Pets24x7 admin account changed`,
@@ -1189,7 +1413,7 @@ export function adminProfileChangedEmail(
         InfoBox([
           ['Password changed', change.passwordChanged ? 'Yes — other sessions were signed out' : 'No'],
           ['Email changed', change.emailChanged ? `Yes — now ${change.newEmail ?? '—'}` : 'No'],
-          ['When', new Date().toLocaleString()],
+          ['When', dayTime(new Date())],
         ]),
         Note('If this was not you, change the password immediately and tell the other admins.'),
       ],

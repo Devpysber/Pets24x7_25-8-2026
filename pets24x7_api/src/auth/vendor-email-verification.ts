@@ -67,8 +67,13 @@ export async function consumeVendorVerificationToken(token: string): Promise<Ven
   if (row.expiresAt.getTime() <= Date.now()) return { ok: false, reason: 'expired' };
 
   const now = new Date();
+  // Conditional claim so a double click cannot verify twice (see password-reset.ts).
+  const claimed = await prisma.vendorEmailToken.updateMany({
+    where: { id: row.id, usedAt: null },
+    data: { usedAt: now },
+  });
+  if (claimed.count === 0) return { ok: false, reason: 'used' };
   await prisma.$transaction([
-    prisma.vendorEmailToken.update({ where: { id: row.id }, data: { usedAt: now } }),
     prisma.vendorEmailToken.updateMany({
       where: { vendorId: row.vendorId, usedAt: null },
       data: { usedAt: now },

@@ -6,14 +6,28 @@
 //   • featured placements and marketing campaigns ending in 3 / 1 days
 //   • enquiries a vendor has left unanswered for more than two days
 //
-// Dedupe: there is no per-row "reminded at" column, so a process-local set
-// remembers what has already gone out, keyed by row id and bucket. A restart
-// can therefore repeat at most one reminder per row per bucket, which is a far
-// smaller problem than a schema migration on every deploy. Nothing here is a
-// direct consequence of a user action, so each mail is best-effort.
+// Dedupe without a "reminded at" column: every sweep owns exactly one clock
+// hour, the one that has just finished, and only mails rows whose reminder
+// moment (endsAt minus the bucket) fell inside that hour. Each row crosses
+// each bucket in exactly one hour, so only the sweep for that hour mails it.
+// A restart does not re-send: the new process picks up at the next hour
+// boundary instead of re-walking a whole day-wide bucket, which is what the
+// old process-local set allowed on every deploy. The query is also bounded by
+// construction — it only loads the rows crossing a threshold this hour.
+//
+// The unanswered-enquiry nudge is evaluated daily, in one fixed hour per
+// audience (mid-morning local time), for the same reason. It only goes out on
+// a day with something new to say — an enquiry crossed the two-day line since
+// yesterday — or once a week while the backlog sits there. It used to repeat
+// the identical "3 enquiries are still waiting" every single morning.
+//
+// The in-process set below is a second guard, for a sweep that somehow runs
+// twice for the same hour inside one process. Nothing here is a direct
+// consequence of a user action, so each mail is best-effort.
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
+import { withJobLock } from '../shared/job-lock.js';
 import { notifyIf } from '../mail/notify.js';
 import {
   campaignEndingEmail,
@@ -22,13 +36,27 @@ import {
   vendorEnquiryUnansweredEmail,
 } from '../mail/lifecycle-templates.js';
 
-const DAY = 24 * 3600 * 1000;
+const HOUR = 3600 * 1000;
+const DAY = 24 * HOUR;
 
 /** Days before expiry at which each kind of reminder goes out. */
 const MEMBERSHIP_BUCKETS = [7, 3, 1];
 const PLACEMENT_BUCKETS = [3, 1];
 /** An enquiry with no reply after this long earns the vendor a nudge. */
 const UNANSWERED_AFTER_DAYS = 2;
+/** With nothing newly overdue, the same backlog is re-nudged this often. */
+const UNANSWERED_REPEAT_DAYS = 7;
+
+type Audience = 'IN' | 'US';
+/**
+ * The UTC hour boundary whose sweep sends the daily unanswered-enquiry nudge,
+ * per audience: 05:00 UTC is ~10:30 IST, 15:00 UTC is ~10-11am US Eastern.
+ */
+const ENQUIRY_NUDGE_UTC_HOUR: Record<Audience, number> = { IN: 5, US: 15 };
+/** Minutes after the hour a sweep runs, so rows written on the boundary are in. */
+const RUN_OFFSET_MS = 2 * 60 * 1000;
+/** Vendor lookups are chunked so a large `in` list stays a sane query. */
+const VENDOR_CHUNK = 500;
 
 /**
  * Already-sent markers, `${kind}:${id}:${bucket}`. Bounded by trimming the
@@ -52,37 +80,52 @@ function claim(key: string): boolean {
   return true;
 }
 
-/** Whole days from now until `at`, rounded up: 0.5 days left counts as 1. */
-function daysUntil(at: Date, now: Date): number {
-  return Math.ceil((at.getTime() - now.getTime()) / DAY);
+interface HourWindow { start: number; end: number }
+
+/** The clock hour that has just finished, [start, end), in epoch ms. */
+function finishedHour(now: Date): HourWindow {
+  const end = Math.floor(now.getTime() / HOUR) * HOUR;
+  return { start: end - HOUR, end };
 }
 
-/** The bucket a row falls in right now, or null if it is not due a reminder. */
-function bucketFor(at: Date, now: Date, buckets: number[]): number | null {
-  const left = daysUntil(at, now);
-  return buckets.includes(left) ? left : null;
+/** Prisma filter: `endsAt` minus one of the buckets falls inside the window. */
+function crossingFilter(win: HourWindow, buckets: number[]) {
+  return buckets.map((b) => ({
+    endsAt: { gte: new Date(win.start + b * DAY), lt: new Date(win.end + b * DAY) },
+  }));
 }
 
-export async function runReminderSweep(): Promise<{
+/** Which bucket this row crossed in the window, or null. */
+function crossedBucket(endsAt: Date, win: HourWindow, buckets: number[]): number | null {
+  for (const b of buckets) {
+    const t = endsAt.getTime() - b * DAY;
+    if (t >= win.start && t < win.end) return b;
+  }
+  return null;
+}
+
+export async function runReminderSweep(now = new Date()): Promise<{
   memberships: number;
   featured: number;
   campaigns: number;
   enquiries: number;
 }> {
-  const now = new Date();
-  const horizon = new Date(now.getTime() + (Math.max(...MEMBERSHIP_BUCKETS) + 1) * DAY);
+  const win = finishedHour(now);
   const out = { memberships: 0, featured: 0, campaigns: 0, enquiries: 0 };
 
   // ---- Memberships about to lapse ----
-  // Only ones that will not renew themselves: an auto-renewing membership gets
-  // the renewal notice instead, and telling both is how people cancel by mistake.
+  // Every active membership, including autoRenew=true ones: there is no
+  // recurring charge or renewal notice yet, so an "auto-renewing" membership
+  // still lapses at endsAt and its owner must be warned like anyone else.
+  // Once real recurring billing exists, route autoRenew rows to
+  // membershipRenewingEmail instead of this reminder.
   const memberships = await prisma.membership.findMany({
-    where: { status: 'ACTIVE', endsAt: { gt: now, lt: horizon }, autoRenew: false },
-    include: { plan: true, parent: true },
+    where: { status: 'ACTIVE', OR: crossingFilter(win, MEMBERSHIP_BUCKETS) },
+    include: { plan: true, parent: { select: { email: true, name: true } } },
   });
   for (const m of memberships) {
     if (!m.endsAt) continue;
-    const bucket = bucketFor(m.endsAt, now, MEMBERSHIP_BUCKETS);
+    const bucket = crossedBucket(m.endsAt, win, MEMBERSHIP_BUCKETS);
     if (bucket === null || !claim(`membership:${m.id}:${bucket}`)) continue;
     notifyIf(m.parent?.email, (to) =>
       membershipExpiringEmail(to, m.parent?.name ?? 'there', m.plan.name, m.endsAt!, bucket),
@@ -92,12 +135,12 @@ export async function runReminderSweep(): Promise<{
 
   // ---- Featured placements ending ----
   const featured = await prisma.featuredListing.findMany({
-    where: { status: 'ACTIVE', endsAt: { gt: now, lt: new Date(now.getTime() + 4 * DAY) } },
-    include: { vendor: true },
+    where: { status: 'ACTIVE', OR: crossingFilter(win, PLACEMENT_BUCKETS) },
+    include: { vendor: { select: { email: true, businessName: true } } },
   });
   for (const f of featured) {
     if (!f.endsAt) continue;
-    const bucket = bucketFor(f.endsAt, now, PLACEMENT_BUCKETS);
+    const bucket = crossedBucket(f.endsAt, win, PLACEMENT_BUCKETS);
     if (bucket === null || !claim(`featured:${f.id}:${bucket}`)) continue;
     notifyIf(f.vendor?.email, (to) => featuredExpiringEmail(to, f.vendor.businessName, f.endsAt!, bucket));
     out.featured++;
@@ -105,12 +148,12 @@ export async function runReminderSweep(): Promise<{
 
   // ---- Campaigns ending ----
   const campaigns = await prisma.marketingCampaign.findMany({
-    where: { status: 'ACTIVE', endsAt: { gt: now, lt: new Date(now.getTime() + 4 * DAY) } },
-    include: { vendor: true },
+    where: { status: 'ACTIVE', OR: crossingFilter(win, PLACEMENT_BUCKETS) },
+    include: { vendor: { select: { email: true, businessName: true } } },
   });
   for (const c of campaigns) {
     if (!c.endsAt) continue;
-    const bucket = bucketFor(c.endsAt, now, PLACEMENT_BUCKETS);
+    const bucket = crossedBucket(c.endsAt, win, PLACEMENT_BUCKETS);
     if (bucket === null || !claim(`campaign:${c.id}:${bucket}`)) continue;
     notifyIf(c.vendor?.email, (to) =>
       campaignEndingEmail(to, c.vendor.businessName, String(c.goal), c.endsAt!, bucket),
@@ -119,55 +162,109 @@ export async function runReminderSweep(): Promise<{
   }
 
   // ---- Enquiries nobody has answered ----
-  // Grouped per vendor so a busy listing gets one nudge, not one per enquiry.
-  const staleBefore = new Date(now.getTime() - UNANSWERED_AFTER_DAYS * DAY);
-  const stale = await prisma.enquiry.findMany({
-    where: { status: 'NEW', createdAt: { lt: staleBefore }, listingId: { not: null } },
-    select: { id: true, listingId: true, createdAt: true },
-    orderBy: { createdAt: 'asc' },
-    take: 500,
-  });
-  if (stale.length > 0) {
-    const byListing = new Map<string, { count: number; oldest: Date }>();
-    for (const e of stale) {
-      const key = e.listingId!;
-      const seen = byListing.get(key);
-      if (seen) seen.count++;
-      else byListing.set(key, { count: 1, oldest: e.createdAt });
-    }
-    const vendors = await prisma.vendor.findMany({
-      where: { status: 'ACTIVE', listingId: { in: [...byListing.keys()] }, email: { not: null } },
-      select: { id: true, email: true, businessName: true, listingId: true },
-    });
-    for (const v of vendors) {
-      const agg = v.listingId ? byListing.get(v.listingId) : undefined;
-      if (!agg) continue;
-      // One nudge per vendor per day, however many enquiries are waiting.
-      const dayKey = Math.floor(now.getTime() / DAY);
-      if (!claim(`enquiries:${v.id}:${dayKey}`)) continue;
-      notifyIf(v.email, (to) => vendorEnquiryUnansweredEmail(to, v.businessName, agg.count, agg.oldest));
-      out.enquiries++;
-    }
-  }
+  // Once a day per audience, in that audience's morning.
+  const endHourUtc = new Date(win.end).getUTCHours();
+  const due = (Object.keys(ENQUIRY_NUDGE_UTC_HOUR) as Audience[]).filter(
+    (a) => ENQUIRY_NUDGE_UTC_HOUR[a] === endHourUtc,
+  );
+  if (due.length > 0) out.enquiries = await nudgeUnansweredEnquiries(now, due, win);
 
   const total = out.memberships + out.featured + out.campaigns + out.enquiries;
   if (total > 0) logger.info(out, 'reminder sweep sent');
   return out;
 }
 
+/**
+ * Aggregated in the database per listing, so a busy listing gets one nudge
+ * rather than one per enquiry, and no listing is starved by a fixed "oldest
+ * 500 enquiries" window the way the in-memory grouping was.
+ */
+async function nudgeUnansweredEnquiries(now: Date, audiences: Audience[], win: HourWindow): Promise<number> {
+  const staleBefore = new Date(now.getTime() - UNANSWERED_AFTER_DAYS * DAY);
+  const grouped = await prisma.enquiry.groupBy({
+    by: ['listingId'],
+    where: { status: 'NEW', createdAt: { lt: staleBefore }, listingId: { not: null } },
+    _count: { _all: true },
+    _min: { createdAt: true },
+    _max: { createdAt: true },
+  });
+  if (grouped.length === 0) return 0;
+
+  // Worth a mail today: an enquiry went overdue in the last day, or the oldest
+  // has now been overdue for a whole number of weeks.
+  const newlyStaleAfter = staleBefore.getTime() - DAY;
+  const byListing = new Map<string, { count: number; oldest: Date }>();
+  for (const g of grouped) {
+    if (!g.listingId || !g._min?.createdAt) continue;
+    const fresh = (g._max?.createdAt?.getTime() ?? 0) >= newlyStaleAfter;
+    const overdueDays = Math.floor((staleBefore.getTime() - g._min.createdAt.getTime()) / DAY);
+    const weekly = overdueDays > 0 && overdueDays % UNANSWERED_REPEAT_DAYS === 0;
+    if (!fresh && !weekly) continue;
+    byListing.set(g.listingId, { count: g._count?._all ?? 0, oldest: g._min.createdAt });
+  }
+  if (byListing.size === 0) return 0;
+
+  // A vendor with no country on file is treated as India, the app's default.
+  const audienceFilter =
+    audiences.length > 1
+      ? {}
+      : audiences[0] === 'US'
+        ? { country: 'US' }
+        : { OR: [{ country: null }, { country: { not: 'US' } }] };
+
+  const listingIds = [...byListing.keys()];
+  const dayKey = Math.floor(win.end / DAY);
+  let count = 0;
+  for (let i = 0; i < listingIds.length; i += VENDOR_CHUNK) {
+    const vendors = await prisma.vendor.findMany({
+      where: {
+        // CLAIMED is the status the claim flow leaves a live business in.
+        status: { in: ['ACTIVE', 'CLAIMED'] },
+        listingId: { in: listingIds.slice(i, i + VENDOR_CHUNK) },
+        email: { not: null },
+        ...audienceFilter,
+      },
+      select: { id: true, email: true, businessName: true, listingId: true },
+    });
+    for (const v of vendors) {
+      const agg = v.listingId ? byListing.get(v.listingId) : undefined;
+      if (!agg || agg.count === 0) continue;
+      // One nudge per vendor per day, however many enquiries are waiting.
+      if (!claim(`enquiries:${v.id}:${dayKey}`)) continue;
+      notifyIf(v.email, (to) => vendorEnquiryUnansweredEmail(to, v.businessName, agg.count, agg.oldest));
+      count++;
+    }
+  }
+  return count;
+}
+
 let timer: NodeJS.Timeout | null = null;
 
+/** Milliseconds until the next hour boundary plus the run offset. */
+function msToNextRun(nowMs: number): number {
+  let next = Math.floor(nowMs / HOUR) * HOUR + RUN_OFFSET_MS;
+  if (next <= nowMs) next += HOUR;
+  return next - nowMs;
+}
+
 /**
- * Hourly is often enough: every bucket is a whole day wide, and a reminder that
- * lands an hour late reads exactly the same to the recipient.
+ * Hourly, aligned to the wall clock (a couple of minutes past each hour) so
+ * that each sweep owns one distinct clock hour. Nothing runs on boot: the first
+ * sweep is at the next boundary, which is what keeps a restart from re-sending.
+ * Every bucket is a whole day wide, so a reminder landing within the hour reads
+ * exactly the same to the recipient.
  */
-export function startReminderJob(intervalMs = 60 * 60 * 1000): void {
+export function startReminderJob(): void {
   if (timer) return;
-  setTimeout(() => {
-    runReminderSweep().catch((err) => logger.warn({ err }, 'reminder sweep failed'));
-  }, 60_000);
-  timer = setInterval(() => {
-    runReminderSweep().catch((err) => logger.warn({ err }, 'reminder sweep failed'));
-  }, intervalMs);
-  timer.unref?.();
+  const schedule = () => {
+    timer = setTimeout(() => {
+      // Every instance wakes at the same wall-clock minute; the lease (held
+      // half an hour) lets exactly one of them sweep this hour.
+      withJobLock('reminder-sweep', () => runReminderSweep(), { minHoldMs: 30 * 60_000 })
+        .catch((err) => logger.warn({ err }, 'reminder sweep failed'))
+        .finally(schedule);
+    }, msToNextRun(Date.now()));
+    timer.unref?.();
+  };
+  schedule();
 }

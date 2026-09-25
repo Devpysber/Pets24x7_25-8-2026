@@ -2,7 +2,7 @@
   "name": "pets24x7-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Pets24x7.com \u2014 Node + Express + Prisma + Postgres backend for pet parents, vendors, and admins.",
+  "description": "Pets24x7.com — Node + Express + Prisma + Postgres backend for pet parents, vendors, and admins.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -32,11 +32,14 @@
     "ejs": "^3.1.10",
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",
+    "fflate": "^0.8.3",
     "google-auth-library": "^11.0.2",
+    "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^9.1.0",
     "pino": "^9.4.0",
     "pino-http": "^10.3.0",
+    "read-excel-file": "^9.3.10",
     "zod": "^3.23.8"
   },
   "devDependencies": {

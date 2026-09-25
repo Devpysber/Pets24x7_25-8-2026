@@ -7,14 +7,14 @@
 
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { BadRequestError, ForbiddenError, TooManyRequestsError } from '../shared/errors.js';
+import { makeLimiter } from '../shared/rate-limit.js';
+import { ForbiddenError, NotFoundError, TooManyRequestsError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { sendReviewRequestTemplate, whatsappConfigured } from '../whatsapp/cloud-api.js';
 import { getListingById } from '../listings/index.js';
@@ -22,15 +22,32 @@ import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { reviewReplyPostedEmail, reviewRequestsSentEmail } from '../mail/action-templates.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
+import { invalidateVendorInsights } from '../feed/reco/vendor-insights.js';
 
 export const vendorReviewsRouter = Router();
 vendorReviewsRouter.use(requireAuth('vendor'));
 
 const DAILY_CAP = 50;
+/** A customer asked within this window is not messaged again. */
+const RESEND_WINDOW_MS = 7 * 24 * 3600 * 1000;
 
-// URL-safe 10-char code (base64url-ish, no ambiguous chars).
+/**
+ * Which reviews belong to this vendor. A review left on the public listing
+ * before the business claimed it has vendorId null and only the listingId, so
+ * matching on vendorId alone hid those from the business entirely — they could
+ * neither read nor reply to them. Exported for the dashboard rollup.
+ */
+export async function vendorReviewScope(vendorId: string) {
+  const v = await prisma.vendor.findUnique({ where: { id: vendorId }, select: { listingId: true } });
+  return v?.listingId
+    ? { OR: [{ vendorId }, { listingId: v.listingId, vendorId: null }] }
+    : { vendorId };
+}
+
+// URL-safe 10-char code (base64url-ish, no ambiguous chars). 12 random bytes
+// give 16 base64 characters, so dropping +/= never leaves fewer than 10.
 function newCode(): string {
-  return randomBytes(8)
+  return randomBytes(12)
     .toString('base64')
     .replace(/[+/=]/g, '')
     .replace(/[01OIl]/g, 'X') // strip ambiguous
@@ -56,7 +73,7 @@ const BulkBody = z.object({
 });
 
 // Stricter route limiter on top of global.
-const bulkLimiter = rateLimit({ windowMs: 60 * 60_000, max: 5, standardHeaders: true });
+const bulkLimiter = makeLimiter('reviews-vendor-bulk', { windowMs: 60 * 60_000, max: 5, standardHeaders: true });
 
 vendorReviewsRouter.post(
   '/requests/bulk',
@@ -107,9 +124,46 @@ vendorReviewsRouter.post(
       error?: string;
     }
 
+    // A bare 10-digit number is completed with the vendor's own country code;
+    // defaulting to +91 sent a US business's customers' links to India.
+    const phoneCountry: 'IN' | 'US' =
+      String(vendor.country || listing?.country || 'IN').toUpperCase() === 'US' ? 'US' : 'IN';
+
+    // The same customer must not be messaged twice: once per batch (a pasted
+    // list with a repeated row), and not again while an earlier ask is recent.
+    // A repeat gets the existing link back instead of a second WhatsApp.
+    const since = new Date(Date.now() - RESEND_WINDOW_MS);
+    const batchPhones = [...new Set(toSend.map((c) => normalizePhone(c.phone, phoneCountry)))];
+    const recentAsks = await prisma.reviewRequest.findMany({
+      where: { vendorId, customerPhone: { in: batchPhones }, sentAt: { gte: since } },
+      orderBy: { sentAt: 'desc' },
+      select: { customerPhone: true, code: true },
+    });
+    const recentByPhone = new Map<string, string>();
+    for (const r of recentAsks) if (!recentByPhone.has(r.customerPhone)) recentByPhone.set(r.customerPhone, r.code);
+    const seenInBatch = new Set<string>();
+
     const results: BulkResult[] = [];
     for (const c of toSend) {
-      const phone = normalizePhone(c.phone);
+      const phone = normalizePhone(c.phone, phoneCountry);
+      if (seenInBatch.has(phone)) continue;
+      seenInBatch.add(phone);
+      const priorCode = recentByPhone.get(phone);
+      if (priorCode) {
+        const url = `${env.PUBLIC_SHORTLINK_BASE}/r/${priorCode}`;
+        const text =
+          `Hi ${c.name || 'there'}! Thanks for choosing ${businessName}. ` +
+          `Could you leave us a quick review? ${url}`;
+        results.push({
+          phone,
+          status: 'link_only',
+          code: priorCode,
+          url,
+          shareUrl: `https://wa.me/${phone.replace(/^\+/, '')}?text=${encodeURIComponent(text)}`,
+          error: 'Already asked in the last 7 days — not messaged again',
+        });
+        continue;
+      }
       const code = await uniqueCode();
       const url = `${env.PUBLIC_SHORTLINK_BASE}/r/${code}`;
       const text =
@@ -152,11 +206,14 @@ vendorReviewsRouter.post(
       });
     }
 
+    const newRows = results.filter((r) => !recentByPhone.has(r.phone)).length;
+
     await prisma.auditLog.create({
       data: {
         actorType: 'VENDOR', actorId: vendorId, action: 'review_request.bulk',
         meta: {
           attempted: toSend.length,
+          created: newRows,
           sent: results.filter((r) => r.status === 'sent').length,
           linkOnly: results.filter((r) => r.status === 'link_only').length,
         },
@@ -168,7 +225,8 @@ vendorReviewsRouter.post(
     // Not an error: the link exists and works, it just needs sending by hand.
     const linkOnly = results.filter((r) => r.status === 'link_only').length;
     const failed = linkOnly;
-    const dailyRemaining = Math.max(0, remaining - toSend.length);
+    // Only rows actually created count against today's cap.
+    const dailyRemaining = Math.max(0, remaining - newRows);
     if (sent > 0) {
       notifyIf(vendor.email, (to) =>
         reviewRequestsSentEmail(to, vendor.businessName, { sent, failed, remainingToday: dailyRemaining }),
@@ -193,24 +251,23 @@ vendorReviewsRouter.get(
   asyncHandler(async (req, res) => {
     const vendorId = req.auth!.sub;
     try {
-      const [requests, totals] = await Promise.all([
+      // Counted in the database: tallying the newest 100 rows capped "opened"
+      // and "completed" at 100 while "total" kept growing.
+      const [requests, total, opened, completed] = await Promise.all([
         prisma.reviewRequest.findMany({
           where: { vendorId },
           orderBy: { sentAt: 'desc' },
           take: 100,
           include: { review: true },
         }),
-        prisma.reviewRequest.aggregate({
-          where: { vendorId },
-          _count: true,
-        }),
+        prisma.reviewRequest.count({ where: { vendorId } }),
+        prisma.reviewRequest.count({ where: { vendorId, openedAt: { not: null } } }),
+        prisma.reviewRequest.count({ where: { vendorId, reviewSubmittedAt: { not: null } } }),
       ]);
-      const opened    = requests.filter(r => r.openedAt).length;
-      const completed = requests.filter(r => r.reviewSubmittedAt).length;
 
       res.json({
         ok: true,
-        counts: { total: totals._count, opened, completed },
+        counts: { total, opened, completed },
         requests,
       });
     } catch (err) {
@@ -231,7 +288,7 @@ vendorReviewsRouter.get(
     const vendorId = req.auth!.sub;
     try {
       const reviews = await prisma.review.findMany({
-        where: { vendorId },
+        where: await vendorReviewScope(vendorId),
         orderBy: { createdAt: 'desc' },
         take: 100,
       });
@@ -244,22 +301,35 @@ vendorReviewsRouter.get(
 );
 
 // ----- PATCH /:id/reply — vendor's public reply to one of their reviews -----
-const ReplyBody = z.object({ reply: z.string().min(1).max(1000) });
+const ReplyBody = z.object({ reply: z.string().trim().min(1).max(1000) });
 vendorReviewsRouter.patch(
   '/:id/reply',
   asyncHandler(async (req, res) => {
     const { reply } = ReplyBody.parse(req.body);
     const review = await prisma.review.findUnique({ where: { id: req.params.id ?? '' } });
-    if (!review) throw new BadRequestError('Review not found');
-    if (review.vendorId !== req.auth!.sub) throw new ForbiddenError();
+    if (!review) throw new NotFoundError('Review not found');
+    const vendor = await prisma.vendor
+      .findUnique({ where: { id: req.auth!.sub }, select: { email: true, businessName: true, listingId: true } })
+      .catch(() => null);
+    // Own it by vendor id, or by the claimed listing for a review written
+    // before the claim (vendorId still null — never someone else's).
+    const ownsIt =
+      review.vendorId === req.auth!.sub ||
+      (review.vendorId === null && !!vendor?.listingId && review.listingId === vendor.listingId);
+    if (!ownsIt) throw new ForbiddenError();
     const updated = await prisma.review.update({
       where: { id: review.id },
-      data: { vendorReply: reply, vendorReplyAt: new Date() },
+      // Adopt a pre-claim review on first reply, so moderation mails and the
+      // rollups find it by vendorId from now on.
+      data: { vendorReply: reply, vendorReplyAt: new Date(), ...(review.vendorId ? {} : { vendorId: req.auth!.sub }) },
     });
-    const vendor = await prisma.vendor
-      .findUnique({ where: { id: req.auth!.sub }, select: { email: true, businessName: true } })
-      .catch(() => null);
-    notifyIf(vendor?.email, (to) => reviewReplyPostedEmail(to, vendor!.businessName, review.reviewerName));
+    // The dashboard's "reply to your reviews" action reads the cached insights.
+    invalidateVendorInsights(req.auth!.sub);
+    // Confirm the first reply only. Editing it (fixing a typo) mailed the same
+    // "your reply is live" notice again on every save.
+    if (!review.vendorReply) {
+      notifyIf(vendor?.email, (to) => reviewReplyPostedEmail(to, vendor!.businessName, review.reviewerName));
+    }
     res.json({ ok: true, review: { id: updated.id, vendorReply: updated.vendorReply, vendorReplyAt: updated.vendorReplyAt } });
   }),
 );

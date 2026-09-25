@@ -66,13 +66,18 @@ export async function consumeResetToken(token: string): Promise<ResetConsumeResu
   if (row.expiresAt.getTime() <= Date.now()) return { ok: false, reason: 'expired' };
 
   const now = new Date();
-  await prisma.$transaction([
-    prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: now } }),
-    prisma.passwordResetToken.updateMany({
-      where: { parentId: row.parentId, usedAt: null },
-      data: { usedAt: now },
-    }),
-  ]);
+  // Claimed with a conditional update, not the read above: two requests racing
+  // with the same link both passed the usedAt check and both set a password.
+  // Only the one whose update matched the still-unused row goes on.
+  const claimed = await prisma.passwordResetToken.updateMany({
+    where: { id: row.id, usedAt: null },
+    data: { usedAt: now },
+  });
+  if (claimed.count === 0) return { ok: false, reason: 'used' };
+  await prisma.passwordResetToken.updateMany({
+    where: { parentId: row.parentId, usedAt: null },
+    data: { usedAt: now },
+  });
 
   return { ok: true, parentId: row.parentId };
 }

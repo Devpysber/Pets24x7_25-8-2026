@@ -165,6 +165,11 @@ def main():
                     state    = (r.get("State") or "").strip()
                     pincode  = (r.get("Pincode") or "").strip()
                     cid      = (r.get("Cid") or r.get("CID") or "").strip()
+                    # A CSV that went through a spreadsheet can come back with
+                    # the CID as "6.47E+18": the digits are gone, so
+                    # maps?cid=6.47E+18 is a dead link. Keep the row (it still
+                    # came from Google) but only publish a CID that is one.
+                    cid_ok   = cid.isdigit()
                     review   = (r.get("Review") or "").strip()
                     rcount   = (r.get("Rating count") or "").strip()
 
@@ -175,19 +180,16 @@ def main():
                     if "no result" in name.lower() or "no email" in name.lower():
                         continue
 
+                    # Only what the source says. A default rating and a count
+                    # derived from the CID used to be published as "Rated 4.4/5
+                    # on Google from 237 reviews" and as AggregateRating JSON-LD:
+                    # fabricated review data, which Google penalises. Unknown
+                    # stays unknown: rating None (null in the JSON), count 0.
+                    # Templates show a rating only with a count behind it
+                    # (build_pages.has_rating), so a score the source gave
+                    # without a count is kept in the data but not displayed.
                     rating = parse_rating(review)
-                    if rating is None:
-                        rating = 4.4  # neutral default when source omitted it
-
-                    # review_count: source often empty; synthesize a stable, plausible value
-                    if rcount and rcount.isdigit():
-                        review_count = int(rcount)
-                    elif cid:
-                        # deterministic: derive from CID hash, range 18..480
-                        seed = sum(int(ch) for ch in cid if ch.isdigit()) or 31
-                        review_count = 18 + (seed * 7919) % 462
-                    else:
-                        review_count = 0
+                    review_count = int(rcount) if (rcount and rcount.isdigit()) else 0
 
                     city = clean_city(raw_city, location, address)
                     category, icon = categorize(keyword)
@@ -218,10 +220,11 @@ def main():
                         "phone": phone,
                         "website": website,
                         "pincode": pincode,
-                        "rating": round(rating, 1),
+                        "rating": round(rating, 1) if rating else None,
                         "review_count": review_count,
-                        "google_cid": cid,
-                        "gmb_link": f"https://www.google.com/maps?cid={cid}" if cid else "",
+                        "google_cid": cid if cid_ok else "",
+                        "gmb_link": f"https://www.google.com/maps?cid={cid}" if cid_ok else "",
+                        "has_cid": bool(cid),
                         "active": "yes",
                     })
                     cnt += 1
@@ -239,16 +242,32 @@ def main():
     before = len(rows)
     rows = [
         r for r in rows
-        if r["google_cid"]
+        if r.pop("has_cid")
         and r["category"] != "Pet Services"
         and r["name"]
         and "no result" not in r["name"].lower()
     ]
     print(f"[info] after quality filter: {len(rows)} (dropped {before - len(rows)})")
 
-    # 4. Cap per (city, category) to keep bundle size sane.
+    # 4. One row per Google business. The same place turns up in several
+    #    keyword CSVs (boarding + grooming, city + suburb); each copy got its
+    #    own city-prefixed id, so the site showed it twice and built two pages
+    #    for it. Done after the filter so a copy filed under a keyword we drop
+    #    cannot shadow a good one. First file wins, so surviving ids are stable.
+    seen_cids = set()
+    deduped = []
+    for r in rows:
+        if r["google_cid"]:
+            if r["google_cid"] in seen_cids:
+                continue
+            seen_cids.add(r["google_cid"])
+        deduped.append(r)
+    print(f"[info] after de-duplicating by Google CID: {len(deduped)} (dropped {len(rows) - len(deduped)})")
+    rows = deduped
+
+    # 5. Cap per (city, category) to keep bundle size sane.
     PER_BUCKET_CAP = 60
-    rows.sort(key=lambda x: (x["country"], x["city"], x["category"], -x["rating"], -x["review_count"], x["name"]))
+    rows.sort(key=lambda x: (x["country"], x["city"], x["category"], -(x["rating"] or 0), -x["review_count"], x["name"]))
     capped = []
     bucket_counts = {}
     for r in rows:
@@ -262,7 +281,7 @@ def main():
     print(f"[info] after per-(city,category) cap of {PER_BUCKET_CAP}: {len(rows)}")
 
     # Final sort: country, city, then rating desc within city.
-    rows.sort(key=lambda x: (x["country"], x["city"], -x["rating"], -x["review_count"], x["name"]))
+    rows.sort(key=lambda x: (x["country"], x["city"], -(x["rating"] or 0), -x["review_count"], x["name"]))
 
     # --- Architecture:
     #   pets-data.js  : tiny index (cities + counts + featured) loaded on every page.
@@ -292,7 +311,7 @@ def main():
     for (country, city_slug), items in by_key.items():
         city_name = _Counter(r["city"] for r in items).most_common(1)[0][0]
         # sort within city: rating desc, then review_count desc
-        items.sort(key=lambda x: (-x["rating"], -x["review_count"], x["name"]))
+        items.sort(key=lambda x: (-(x["rating"] or 0), -x["review_count"], x["name"]))
         # category breakdown for this city
         cat_counts = {}
         for it in items:
@@ -313,7 +332,7 @@ def main():
             "city_slug": city_slug,
             "count": len(items),
             "top_categories": [c["slug"] for c in categories[:4]],
-            "top_rating": max(it["rating"] for it in items),
+            "top_rating": max((it["rating"] or 0) for it in items),
         })
 
     # Every city stays in the index. Dropping the small ones here is what left
@@ -326,10 +345,14 @@ def main():
         c["thin"] = c["count"] < THIN_CITY_MAX
     city_index.sort(key=lambda x: (x["country"], -x["count"]))
 
-    # Featured: top 24 highest rated across all data (with review_count >= 25)
+    # Featured: top 24 highest rated across all data, those with 25+ reviews
+    # first. The scraped CSVs carry no review counts, so without the old
+    # invented ones that filter alone left the home page strip empty; the
+    # source score still orders the rest (templates show a score only with a
+    # count behind it, so nothing unbacked is displayed).
     featured = sorted(
-        [r for r in rows if r["review_count"] >= 25],
-        key=lambda x: (-x["rating"], -x["review_count"])
+        [r for r in rows if r["rating"]],
+        key=lambda x: (x["review_count"] < 25, -(x["rating"] or 0), -x["review_count"], x["name"])
     )[:24]
 
     js = (

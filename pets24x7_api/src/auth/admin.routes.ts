@@ -3,19 +3,19 @@
 // an OWNER from the admin panel later.
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
 import { prisma } from '../db.js';
 import { setAuthCookie, clearAuthCookie } from './jwt.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { UnauthorizedError } from '../shared/errors.js';
+import { makeLimiter } from '../shared/rate-limit.js';
+import { TooManyRequestsError, UnauthorizedError } from '../shared/errors.js';
 import { EMAIL_OTP_TTL_MIN, issueEmailOtp, normEmail, verifyEmailOtp } from './email-otp.js';
 
 export const adminAuthRouter = Router();
 
-const loginLimiter = rateLimit({ windowMs: 5 * 60_000, max: 10, standardHeaders: true });
+const loginLimiter = makeLimiter('admin-login', { windowMs: 5 * 60_000, max: 10, standardHeaders: true });
 
 const LoginBody = z.object({ email: z.string().email(), password: z.string().min(8) });
 
@@ -48,7 +48,7 @@ adminAuthRouter.post(
 //   POST /api/admin/email/otp/verify  { email, code }
 // ---------------------------------------------------------------------------
 
-const otpLimiter = rateLimit({ windowMs: 5 * 60_000, max: 10, standardHeaders: true });
+const otpLimiter = makeLimiter('admin-email-otp', { windowMs: 5 * 60_000, max: 10, standardHeaders: true });
 
 adminAuthRouter.post(
   '/email/otp/request',
@@ -81,11 +81,18 @@ adminAuthRouter.post(
       .parse(req.body);
     const email = normEmail(body.email);
 
-    const ok = await verifyEmailOtp(email, body.code, 'EMAIL_LOGIN_ADMIN');
-    if (!ok) throw new UnauthorizedError('Incorrect code');
-
+    // An address with no admin row never gets a code, so "no active code" here
+    // would tell a prober which addresses are staff. Only the "too many
+    // attempts" signal (which requires a real code to exist) is passed through.
     const admin = await prisma.admin.findUnique({ where: { email } });
-    if (!admin) throw new UnauthorizedError('Invalid credentials');
+    let ok = false;
+    try {
+      ok = admin ? await verifyEmailOtp(email, body.code, 'EMAIL_LOGIN_ADMIN') : false;
+    } catch (err) {
+      if (err instanceof TooManyRequestsError) throw err;
+      ok = false;
+    }
+    if (!ok || !admin) throw new UnauthorizedError('Incorrect or expired code. Request a new one if needed.');
 
     await prisma.admin.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
     await prisma.auditLog.create({

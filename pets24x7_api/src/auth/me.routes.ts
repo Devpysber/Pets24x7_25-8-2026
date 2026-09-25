@@ -4,9 +4,9 @@
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
-import { readAuthCookie, verifyToken, clearAuthCookie, type ActorRole } from './jwt.js';
+import { readAuthCookie, verifyToken, clearAuthCookie, type ActorRole, type AuthPayload } from './jwt.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { revokeSessions } from './actor.js';
+import { revokeSessions, tokenRevoked } from './actor.js';
 
 export const meRouter = Router();
 
@@ -30,6 +30,15 @@ meRouter.get(
     // login page" actually is. Tracked here and answered with 503 instead.
     let lookupFailed = false;
 
+    // A token minted before "sign out everywhere" (or an admin disabling the
+    // account) is refused by every guarded route. Reporting it here as a live
+    // session made dashboards render and then fail on their first data call.
+    const revoked = (role: ActorRole, payload: AuthPayload, row: { sessionsRevokedAt?: Date | null }) => {
+      if (!tokenRevoked(payload, row.sessionsRevokedAt)) return false;
+      clearAuthCookie(res, role);
+      return true;
+    };
+
     for (const role of roles) {
       const tok = readAuthCookie(cookies, role);
       if (!tok) continue;
@@ -41,19 +50,22 @@ meRouter.get(
         try {
           p = await prisma.petParent.findUnique({
             where: { id: payload.sub },
-            select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true },
+            select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true, sessionsRevokedAt: true },
           });
         } catch (err) {
           req.log.warn({ err, role }, 'session lookup failed');
           lookupFailed = true;
         }
-        if (p) return res.json({ ok: true, role, user: p });
+        if (p && !revoked(role, payload, p)) {
+          const { sessionsRevokedAt: _r, ...user } = p;
+          return res.json({ ok: true, role, user });
+        }
       } else if (role === 'vendor') {
         let v: any = null;
         try {
           v = await prisma.vendor.findUnique({
             where: { id: payload.sub },
-            select: { id: true, phone: true, businessName: true, status: true, listingId: true, city: true, category: true, profileCompletion: true },
+            select: { id: true, phone: true, businessName: true, status: true, listingId: true, city: true, category: true, profileCompletion: true, sessionsRevokedAt: true },
           });
         } catch (err) {
           req.log.warn({ err, role }, 'session lookup failed');
@@ -65,19 +77,25 @@ meRouter.get(
           clearAuthCookie(res, 'vendor');
           return res.json({ ok: true, role: null, user: null, disabled: v.status });
         }
-        if (v) return res.json({ ok: true, role, user: v });
+        if (v && !revoked(role, payload, v)) {
+          const { sessionsRevokedAt: _r, ...user } = v;
+          return res.json({ ok: true, role, user });
+        }
       } else {
         let a: any = null;
         try {
           a = await prisma.admin.findUnique({
             where: { id: payload.sub },
-            select: { id: true, email: true, name: true, role: true },
+            select: { id: true, email: true, name: true, role: true, sessionsRevokedAt: true },
           });
         } catch (err) {
           req.log.warn({ err, role }, 'session lookup failed');
           lookupFailed = true;
         }
-        if (a) return res.json({ ok: true, role, user: a });
+        if (a && !revoked(role, payload, a)) {
+          const { sessionsRevokedAt: _r, ...user } = a;
+          return res.json({ ok: true, role, user });
+        }
       }
     }
     if (lookupFailed) {

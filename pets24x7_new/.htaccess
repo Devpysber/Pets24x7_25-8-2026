@@ -26,23 +26,63 @@ DirectoryIndex index.html
   #   /city.html?country=IN&city=mumbai            -> /in/mumbai/
   #   /city.html?country=IN&city=mumbai&cat=foo    -> /in/mumbai/foo/
   #   /listing.html?country=IN&city=mumbai&id=xyz  -> /in/mumbai/xyz/
-  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)&cat=([a-z0-9-]+)
-  RewriteRule ^city\.html$ /%1/%2/%3/? [L,R=301,NE]
+  # One hop straight to the lowercase prefix (the old ([A-Z]+) capture went to
+  # /IN/... and needed a second 301). country may sit anywhere in the query;
+  # %N back-references come from the last RewriteCond only, so the country is
+  # matched in its own condition and spelled out per rule.
+  RewriteCond %{QUERY_STRING} (?:^|&)country=in(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)&(?:.*&)?cat=([a-z0-9-]+)
+  RewriteRule ^city\.html$ /in/%1/%2/? [L,R=301,NE]
+  RewriteCond %{QUERY_STRING} (?:^|&)country=us(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)&(?:.*&)?cat=([a-z0-9-]+)
+  RewriteRule ^city\.html$ /us/%1/%2/? [L,R=301,NE]
 
-  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)
-  RewriteRule ^city\.html$ /%1/%2/? [L,R=301,NE]
+  RewriteCond %{QUERY_STRING} (?:^|&)country=in(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)(?:&|$)
+  RewriteRule ^city\.html$ /in/%1/? [L,R=301,NE]
+  RewriteCond %{QUERY_STRING} (?:^|&)country=us(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)(?:&|$)
+  RewriteRule ^city\.html$ /us/%1/? [L,R=301,NE]
 
-  RewriteCond %{QUERY_STRING} (?:^|&)country=([A-Z]+)&city=([a-z0-9-]+)&id=([a-z0-9-]+)
-  RewriteRule ^listing\.html$ /%1/%2/%3/? [L,R=301,NE]
+  RewriteCond %{QUERY_STRING} (?:^|&)country=in(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)&(?:.*&)?id=([a-z0-9-]+)
+  RewriteRule ^listing\.html$ /in/%1/%2/? [L,R=301,NE]
+  RewriteCond %{QUERY_STRING} (?:^|&)country=us(?:&|$) [NC]
+  RewriteCond %{QUERY_STRING} (?:^|&)city=([a-z0-9-]+)&(?:.*&)?id=([a-z0-9-]+)
+  RewriteRule ^listing\.html$ /us/%1/%2/? [L,R=301,NE]
 
   # Force trailing slash on directory URLs that resolve to a real directory.
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteCond %{REQUEST_URI} !/$
   RewriteRule ^(.+)$ /$1/ [L,R=301]
 
+  # Cities and listings added after the last static build have no folder yet.
+  # Hand those clean URLs to the generic pages (internal rewrite, so the URL
+  # stays clean); they load the record from the API instead of a 404.
+  # A city+category URL has the same shape as a listing URL, so known category
+  # slugs go to the city page first.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(in|us)/[a-z0-9-]+/(veterinary-clinics|emergency-animal-hospital|vaccination-centers|mobile-vet-services|specialty-vets-exotics-avian-reptiles|veterinary-labs-diagnostics|pet-dental-care|pet-physiotherapy-rehab|pet-grooming-spa|pet-boarding-daycare|pet-walking|pet-training-obedience-behavior|pet-sitting-in-home-care|pet-relocation-services|pet-taxi-transport|pet-therapy-services)/?$ /city.html [L]
+  # A city page number past the last pre-built one (the city grew since the
+  # build) goes to the city page too, as nginx and serve.py do.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(in|us)/[a-z0-9-]+/page/[0-9]+/?$ /city.html [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(in|us)/[a-z0-9-]+/[^/]+/?$ /listing.html [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(in|us)/[a-z0-9-]+/?$ /city.html [L]
+
   # Block direct access to the legacy fallback HTML (canonical now lives at
   # /in/<city>/ etc.) — visitors get the JS redirect from the file itself,
   # but bots that try /city.html with no query string should land on home.
+  # Only for requests that asked for the file by name: the fallback rewrites
+  # above re-enter this ruleset with REDIRECT_STATUS set, and must not be
+  # bounced to the home page.
+  RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{QUERY_STRING} ^$
   RewriteRule ^(city|listing)\.html$ / [L,R=301]
 </IfModule>

@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { NotFoundError, ForbiddenError } from '../shared/errors.js';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
 import { notifyIf } from '../mail/notify.js';
 import { serviceAddedEmail, serviceRemovedEmail, serviceUpdatedEmail } from '../mail/action-templates.js';
 
@@ -20,10 +20,12 @@ export const vendorServicesRouter = Router();
 /** Address + business name for the action mails below; null when unknown. */
 function vendorContact(vendorId: string) {
   return prisma.vendor
-    .findUnique({ where: { id: vendorId }, select: { email: true, businessName: true } })
+    .findUnique({ where: { id: vendorId }, select: { email: true, businessName: true, country: true } })
     .catch(() => null);
 }
 vendorServicesRouter.use(requireAuth('vendor'));
+
+const MAX_SERVICES = 100;
 
 const ServiceBody = z.object({
   name: z.string().min(1).max(120),
@@ -50,19 +52,27 @@ vendorServicesRouter.post(
   '/',
   asyncHandler(async (req, res) => {
     const body = ServiceBody.parse(req.body);
+    // A price list, not a catalogue: the listing page renders every row, and
+    // nothing else bounds how many a script can insert.
+    const existingCount = await prisma.service.count({ where: { vendorId: req.auth!.sub } });
+    if (existingCount >= MAX_SERVICES) {
+      throw new BadRequestError(`You can list up to ${MAX_SERVICES} services. Remove one to add another.`);
+    }
+    const vendor = await vendorContact(req.auth!.sub);
     const service = await prisma.service.create({
       data: {
         vendorId: req.auth!.sub,
         name: body.name,
         description: body.description ?? null,
         priceMinor: body.priceMinor,
-        currency: body.currency ?? 'INR',
+        // The dashboard never sends a currency, so a US business's $40 service
+        // was stored (and mailed back) as ₹40. Default from the vendor's country.
+        currency: (body.currency ?? (String(vendor?.country ?? '').toUpperCase() === 'US' ? 'USD' : 'INR')).toUpperCase(),
         durationLabel: body.durationLabel ?? '30 mins',
         status: body.status ?? 'ACTIVE',
         sortOrder: body.sortOrder ?? 0,
       },
     });
-    const vendor = await vendorContact(req.auth!.sub);
     notifyIf(vendor?.email, (to) =>
       serviceAddedEmail(to, vendor!.businessName, {
         name: service.name,
@@ -88,8 +98,16 @@ vendorServicesRouter.patch(
       if (body[k] !== undefined) data[k] = body[k];
     }
     const service = await prisma.service.update({ where: { id: existing.id }, data });
-    const vendor = await vendorContact(req.auth!.sub);
-    notifyIf(vendor?.email, (to) => serviceUpdatedEmail(to, vendor!.businessName, service.name));
+    // Only a change the customer-facing listing shows is worth a mail. The
+    // edit form re-sends unchanged fields, and reordering the list PATCHes
+    // sortOrder on every row — each of those mailed "service updated".
+    const visibleChange = (['name', 'description', 'priceMinor', 'currency', 'durationLabel', 'status'] as const).some(
+      (k) => k in data && (existing[k] ?? null) !== (service[k] ?? null),
+    );
+    if (visibleChange) {
+      const vendor = await vendorContact(req.auth!.sub);
+      notifyIf(vendor?.email, (to) => serviceUpdatedEmail(to, vendor!.businessName, service.name));
+    }
     res.json({ ok: true, service });
   }),
 );

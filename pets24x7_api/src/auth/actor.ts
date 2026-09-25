@@ -26,10 +26,22 @@ export type ActorResult =
  * a token issued in the same second as the revocation is treated as revoked
  * rather than accepted — erring towards logging someone out.
  */
-function tokenRevoked(payload: AuthPayload, revokedAt: Date | null | undefined): boolean {
+export function tokenRevoked(payload: AuthPayload, revokedAt: Date | null | undefined): boolean {
   if (!revokedAt) return false;
   if (!payload.iat) return true; // no issue time to compare — refuse it
   return payload.iat * 1000 <= revokedAt.getTime();
+}
+
+/**
+ * A sessionsRevokedAt value for "end every other session" when the caller is
+ * handed a fresh cookie in the same response. `new Date()` is milliseconds
+ * past the start of this second while the new token's iat is that whole
+ * second, so tokenRevoked() killed the fresh cookie too and signed the user out
+ * of the tab they had just changed their password in. Backdated to just before
+ * this second instead (same rule the parent password reset uses).
+ */
+export function revocationCutoff(): Date {
+  return new Date(Math.floor(Date.now() / 1000) * 1000 - 1);
 }
 
 export async function resolveActor(payload: AuthPayload): Promise<ActorResult> {

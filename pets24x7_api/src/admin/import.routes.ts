@@ -1,4 +1,4 @@
-// Admin bulk import — CSV / JSON in, mapped rows into the DB, stats back out.
+// Admin bulk import — CSV / JSON / Excel (.xlsx) in, mapped rows into the DB, stats back out.
 // Implements complete validation, duplicate detection, city & category exclusion,
 // matching signals, row action overrides, Google Sheets sync & audit history.
 
@@ -11,7 +11,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
 import { logger } from '../logger.js';
-import { parseTable, suggestMapping } from './import.parse.js';
+import { parseUpload, suggestMapping } from './import.parse.js';
 import { notifyIf } from '../mail/notify.js';
 import { importFinishedEmail } from '../mail/action-templates.js';
 import { syncListingsToGoogleSheets } from '../shared/google-sheets.js';
@@ -65,6 +65,7 @@ const TARGETS: TargetSpec[] = [
     fields: [
       { key: 'businessName', label: 'Business Name', required: true, aliases: ['name', 'business', 'company', 'title', 'listing_name', 'clinic_name'] },
       { key: 'city', label: 'City', aliases: ['town', 'location', 'city_name'] },
+      { key: 'state', label: 'State', aliases: ['province', 'region', 'state_name'] },
       { key: 'phone', label: 'Phone', required: true, aliases: ['mobile', 'whatsapp', 'contact', 'phone_number', 'telephone'] },
       { key: 'address', label: 'Address', aliases: ['street', 'location_address', 'full_address'] },
       { key: 'category', label: 'Category', aliases: ['type', 'service', 'segment', 'business_type'] },
@@ -73,9 +74,9 @@ const TARGETS: TargetSpec[] = [
       { key: 'whatsapp', label: 'WhatsApp', aliases: ['wa_phone', 'whatsapp_number'] },
       { key: 'locality', label: 'Locality / Area', aliases: ['area', 'neighborhood', 'suburb'] },
       { key: 'pincode', label: 'Pincode', aliases: ['zip', 'zipcode', 'postal_code'] },
-      { key: 'about', label: 'About Business', aliases: ['description', 'notes', 'bio'] },
-      { key: 'openingHours', label: 'Opening Hours', aliases: ['hours', 'timing', 'schedule'] },
-      { key: 'servicesList', label: 'Services Offered', aliases: ['services', 'amenities'] },
+      { key: 'about', label: 'Description', aliases: ['description', 'about_business', 'about', 'notes', 'bio'] },
+      { key: 'openingHours', label: 'Opening Hours', aliases: ['hours', 'timing', 'timings', 'schedule', 'opening_hours'] },
+      { key: 'servicesList', label: 'Services Offered', aliases: ['services', 'services_offered', 'amenities'] },
       { key: 'country', label: 'Country', aliases: ['cc'], hint: 'IN or US' },
       { key: 'listingId', label: 'Listing ID', aliases: ['listing', 'gmb_id', 'place_id'] },
     ],
@@ -121,6 +122,93 @@ function normalizeCity(v: string): string {
   return (v || '').toLowerCase().trim();
 }
 
+/** Last 10 digits: the comparable form of a phone however it was typed. */
+function phoneKey(v: string | null | undefined): string {
+  const d = (v || '').replace(/\D/g, '');
+  return d.length >= 7 ? d.slice(-10) : '';
+}
+
+/** Row-level override from the panel. It sends 'Import' / 'Skip'; accept any case. */
+function overrideFor(rowActions: Record<string, string>, rowNo: number): 'IMPORT' | 'SKIP' | null {
+  const v = String(rowActions[String(rowNo)] ?? '').toUpperCase();
+  return v === 'IMPORT' || v === 'SKIP' ? v : null;
+}
+
+interface ExistingMatch {
+  id: string;
+  businessName: string;
+  city: string | null;
+  phone: string | null;
+  category: string | null;
+  source: 'LISTING' | 'VENDOR' | 'PARENT';
+}
+
+/**
+ * Everything an imported row could collide with, keyed by
+ *   p:<last-10 phone>, nc:<name>_<city>, e:<email>.
+ * A vendor import creates directory listings, so the directory itself has to
+ * be in here — matching only against vendor accounts let the same CSV be
+ * imported twice and every row came back as a brand-new duplicate listing.
+ */
+async function loadExistingIndex(target: string): Promise<Map<string, ExistingMatch>> {
+  const idx = new Map<string, ExistingMatch>();
+  const add = (m: ExistingMatch, email?: string | null) => {
+    const pk = phoneKey(m.phone);
+    if (pk && !idx.has(`p:${pk}`)) idx.set(`p:${pk}`, m);
+    if (m.businessName && m.city) {
+      const k = `nc:${normalizeStr(m.businessName)}_${normalizeCity(m.city)}`;
+      if (!idx.has(k)) idx.set(k, m);
+    }
+    if (email) idx.set(`e:${email.toLowerCase()}`, m);
+  };
+
+  if (target === 'parents') {
+    const parents = await prisma.petParent.findMany({ select: { id: true, name: true, email: true, phone: true, city: true } });
+    for (const p of parents) {
+      add({ id: p.id, businessName: p.name, city: null, phone: p.phone, category: null, source: 'PARENT' }, p.email);
+    }
+    return idx;
+  }
+
+  const [vendors, listings] = await Promise.all([
+    prisma.vendor.findMany({ select: { id: true, phone: true, businessName: true, city: true, category: true } }),
+    prisma.listing.findMany({ select: { id: true, name: true, city: true, phone: true, category: true } }),
+  ]);
+  for (const v of vendors) add({ id: v.id, businessName: v.businessName, city: v.city, phone: v.phone, category: v.category, source: 'VENDOR' });
+  for (const l of listings) add({ id: l.id, businessName: l.name, city: l.city, phone: l.phone, category: l.category, source: 'LISTING' });
+  return idx;
+}
+
+/** The lookup keys one CSV row produces (same scheme as loadExistingIndex). */
+function rowKeys(target: string, r: { name: string; city: string; phone: string; email: string }): string[] {
+  const keys: string[] = [];
+  const pk = phoneKey(r.phone);
+  if (pk) keys.push(`p:${pk}`);
+  if (target === 'parents') {
+    if (r.email) keys.push(`e:${r.email.toLowerCase()}`);
+  } else if (r.name && r.city) {
+    keys.push(`nc:${normalizeStr(r.name)}_${normalizeCity(r.city)}`);
+  }
+  return keys;
+}
+
+/** Required-field check per target; returns the reason, or null when the row is usable. */
+function invalidReason(target: string, r: { name: string; city: string; phone: string; email: string }): string | null {
+  if (target === 'parents') {
+    if (!r.name) return 'Missing required Name';
+    if (!r.email && !r.phone) return 'Needs an Email or a Phone';
+    if (r.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) return `Email "${r.email}" is not valid`;
+    return null;
+  }
+  if (!r.name) return 'Missing required Business Name';
+  if (!r.phone) return 'Missing required Phone Number';
+  if (!phoneKey(r.phone)) return `Phone "${r.phone}" is not a valid number`;
+  // A listing lives on a city page. Without a city it used to be filed under
+  // Mumbai, which put businesses on the wrong page for the wrong customers.
+  if (!r.city) return 'Missing City — a listing needs a city page';
+  return null;
+}
+
 function calcSimilarity(a: string, b: string): number {
   const s1 = normalizeStr(a);
   const s2 = normalizeStr(b);
@@ -153,9 +241,12 @@ adminImportRouter.get(
 adminImportRouter.get(
   '/import/template',
   asyncHandler(async (_req, res) => {
-    const csvHeader = 'Business Name,City,Phone,Address,Category,Email,Website,WhatsApp,Locality,Pincode,About Business,Opening Hours,Services Offered\n';
-    const sampleRow1 = 'Paws & Claws Veterinary Clinic,Mumbai,9876543210,123 MG Road Bandra,Pet Clinic,paws@example.com,https://pawsclinic.com,9876543210,Bandra West,400050,Full service vet clinic and surgeries,Mon-Sat 9AM-8PM,Vaccination; Surgery; Dental\n';
-    const sampleRow2 = 'Happy Tails Grooming Spa,Delhi,9876543211,45 Connaught Place,Pet Grooming,grooming@example.com,,9876543211,CP,110001,Professional grooming and bath services,Mon-Sun 10AM-7PM,Bath; Haircut; Nail Trimming\n';
+    // Every column here is stored: Description, Opening Hours, Services
+    // Offered, Email, WhatsApp and Locality used to be read and then dropped.
+    // An .xlsx with the same header row imports the same way.
+    const csvHeader = 'Business Name,City,State,Country,Phone,Address,Category,Email,Website,WhatsApp,Locality,Pincode,Description,Opening Hours,Services Offered\n';
+    const sampleRow1 = 'Paws & Claws Veterinary Clinic,Mumbai,Maharashtra,IN,9876543210,123 MG Road Bandra,Pet Clinic,paws@example.com,https://pawsclinic.com,9876543210,Bandra West,400050,Full service vet clinic and surgeries,Mon-Sat 9AM-8PM,Vaccination; Surgery; Dental\n';
+    const sampleRow2 = 'Happy Tails Grooming Spa,Delhi,Delhi,IN,9876543211,45 Connaught Place,Pet Grooming,grooming@example.com,,9876543211,CP,110001,Professional grooming and bath services,Mon-Sun 10AM-7PM,Bath; Haircut; Nail Trimming\n';
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="pets24x7_import_template.csv"');
@@ -246,35 +337,40 @@ adminImportRouter.post(
       return res.json({ ok: true, synced: 0, failed: 0, message: 'No imported listings to retry' });
     }
 
-    const vendorsToSync = await prisma.vendor.findMany({
+    if (job.target !== 'vendors') {
+      return res.json({ ok: true, synced: 0, failed: 0, message: 'Only listing imports are synced to Google Sheets' });
+    }
+
+    // An import writes directory listings, not vendor accounts — looking the
+    // rows up in the vendor table found nothing, so a retry always synced 0.
+    // Newer jobs record each row's listing id; older ones fall back to name+city.
+    const ids = importedRows.map((r) => r.listingId).filter((x): x is string => typeof x === 'string' && !!x);
+    const legacy = importedRows.filter((r) => !r.listingId && r.businessName);
+    const listings = await prisma.listing.findMany({
       where: {
-        OR: importedRows.map((r) => ({ businessName: r.businessName, city: r.city || undefined })),
+        OR: [
+          ...(ids.length ? [{ id: { in: ids } }] : []),
+          ...legacy.slice(0, 500).map((r) => ({ name: String(r.businessName), ...(r.city ? { city: String(r.city) } : {}) })),
+        ],
       },
-      select: {
-        id: true,
-        listingId: true,
-        businessName: true,
-        city: true,
-        phone: true,
-        address: true,
-        locality: true,
-        pincode: true,
-        category: true,
-        email: true,
-        website: true,
-        whatsapp: true,
-        about: true,
-        openingHours: true,
-        servicesList: true,
-      },
+      select: { id: true, name: true, category: true, city: true, phone: true, website: true, address: true, pincode: true, claimStatus: true },
+      take: 1000,
     });
 
-    const listingsWithClaim = vendorsToSync.map((v) => ({
-      ...v,
-      listingId: v.listingId || v.id,
-      claimStatus: 'UNCLAIMED',
-    }));
-    const sheetsResult = await syncListingsToGoogleSheets(listingsWithClaim);
+    const sheetsResult = await syncListingsToGoogleSheets(
+      listings.map((l) => ({
+        listingId: l.id,
+        businessName: l.name,
+        category: l.category,
+        city: l.city,
+        phone: l.phone,
+        website: l.website,
+        whatsapp: l.phone,
+        address: l.address,
+        pincode: l.pincode,
+        claimStatus: l.claimStatus,
+      })),
+    );
 
     await prisma.importJob.update({
       where: { id: job.id },
@@ -289,9 +385,14 @@ adminImportRouter.post(
 );
 
 // ---------- Parse & Preview ----------
+// `content` is the file's text (CSV/JSON), or base64 for an .xlsx workbook
+// with `encoding: 'base64'` (a .xlsx fileName or zip bytes are detected too).
+const EncodingField = z.enum(['text', 'base64']).optional();
+
 const PreviewBody = z.object({
   fileName: z.string().max(200).optional(),
   content: z.string().min(1).max(MAX_CHARS),
+  encoding: EncodingField,
   target: z.string().max(40).optional(),
 });
 
@@ -301,11 +402,11 @@ adminImportRouter.post(
     const body = PreviewBody.parse(req.body);
     let table;
     try {
-      table = parseTable(body.content, body.fileName);
+      table = await parseUpload(body.content, body.fileName, body.encoding);
     } catch (err: any) {
-      throw new BadRequestError(`Could not parse CSV file: ${String(err?.message ?? err)}`);
+      throw new BadRequestError(`Could not read the file: ${String(err?.message ?? err)}`);
     }
-    if (!table.columns.length) throw new BadRequestError('No columns found in CSV header.');
+    if (!table.columns.length) throw new BadRequestError('No columns found in the header row.');
 
     const suggestions: Record<string, Record<string, string>> = {};
     for (const t of TARGETS) suggestions[t.key] = suggestMapping(table.columns, t.fields);
@@ -365,6 +466,7 @@ const AnalyzeBody = z.object({
   target: z.string().default('vendors'),
   fileName: z.string().optional(),
   content: z.string().min(1).max(MAX_CHARS),
+  encoding: EncodingField,
   mapping: z.record(z.string()),
   categoryMapping: z.record(z.string()).optional().default({}),
   excludedCities: z.array(z.string()).optional().default([]),
@@ -385,9 +487,9 @@ adminImportRouter.post(
 
     let rows: Record<string, string>[];
     try {
-      rows = parseTable(body.content, body.fileName).rows;
+      rows = (await parseUpload(body.content, body.fileName, body.encoding)).rows;
     } catch (err: any) {
-      throw new BadRequestError(`Could not parse CSV file: ${String(err?.message ?? err)}`);
+      throw new BadRequestError(`Could not read the file: ${String(err?.message ?? err)}`);
     }
 
     if (rows.length > MAX_ROWS) rows = rows.slice(0, MAX_ROWS);
@@ -408,23 +510,11 @@ adminImportRouter.post(
       });
     }
 
-    // Existing vendors in DB for matching signals calculation
-    const existingVendors = await prisma.vendor.findMany({
-      select: { id: true, phone: true, businessName: true, city: true, category: true },
-    });
-
-    const dbPhonesMap = new Map<string, typeof existingVendors[0]>();
-    const dbNameCityMap = new Map<string, typeof existingVendors[0]>();
-
-    existingVendors.forEach((v) => {
-      if (v.phone) dbPhonesMap.set(v.phone, v);
-      if (v.businessName && v.city) {
-        dbNameCityMap.set(`${normalizeStr(v.businessName)}_${normalizeCity(v.city)}`, v);
-      }
-    });
-
-    const seenCsvKeys = new Map<string, number>();
-    const seenCsvPhones = new Map<string, number>();
+    // Existing records (directory listings + vendor accounts, or parents) for
+    // matching signals.
+    const existing = await loadExistingIndex(spec.key);
+    // CSV key -> first row number that will be imported with it.
+    const seenCsv = new Map<string, number>();
 
     let newCount = 0;
     let existingCount = 0;
@@ -445,24 +535,21 @@ adminImportRouter.post(
       const category = body.categoryMapping[rawCategory] || rawCategory;
 
       const rawPhone = val(raw, body.mapping, 'phone');
-      const country = normCountry(val(raw, body.mapping, 'country'));
-      const normalizedPh = rawPhone ? normalizePhone(rawPhone, country) : '';
-      const nameCityKey = bName && city ? `${normalizeStr(bName)}_${normalizeCity(city)}` : '';
+      const email = val(raw, body.mapping, 'email');
+      const keys = rowKeys(spec.key, { name: bName, city, phone: rawPhone, email });
+      const csvHit = keys.find((k) => seenCsv.has(k));
+      const dbHit = keys.find((k) => existing.has(k));
+      const invalid = invalidReason(spec.key, { name: bName, city, phone: rawPhone, email });
 
       let classification: 'NEW' | 'EXISTING' | 'DUPLICATE' | 'INVALID' | 'EXCLUDED_CITY' | 'EXCLUDED_CATEGORY' = 'NEW';
-      let reason = 'New listing ready to import';
+      let reason = spec.key === 'parents' ? 'New pet parent ready to import' : 'New listing ready to import';
       let defaultAction: 'Import' | 'Skip' = 'Import';
       let matchingSignals: any = null;
 
       // 1. Validation check
-      if (!bName) {
+      if (invalid) {
         classification = 'INVALID';
-        reason = 'Missing required Business Name';
-        defaultAction = 'Skip';
-        invalidCount++;
-      } else if (!rawPhone) {
-        classification = 'INVALID';
-        reason = 'Missing required Phone Number';
+        reason = invalid;
         defaultAction = 'Skip';
         invalidCount++;
       }
@@ -481,61 +568,83 @@ adminImportRouter.post(
         excludedCategoryCount++;
       }
       // 4. Duplicate within CSV check
-      else if ((normalizedPh && seenCsvPhones.has(normalizedPh)) || (nameCityKey && seenCsvKeys.has(nameCityKey))) {
+      else if (csvHit) {
         classification = 'DUPLICATE';
-        const prevRowNo = (normalizedPh ? seenCsvPhones.get(normalizedPh) : null) || (nameCityKey ? seenCsvKeys.get(nameCityKey) : null);
-        reason = `Duplicate row in uploaded CSV file (matches row #${prevRowNo})`;
+        const prevRowNo = seenCsv.get(csvHit);
+        const byPhone = csvHit.startsWith('p:');
+        reason = `Duplicate row in the uploaded file (matches row #${prevRowNo})`;
         defaultAction = body.skipDuplicates ? 'Skip' : 'Import';
         duplicateCount++;
         matchingSignals = {
           matchedRowNo: prevRowNo,
-          phoneMatch: true,
-          nameMatch: !!nameCityKey,
-          cityMatch: true,
-          reasons: ['Exact phone number match within CSV file', 'Duplicate business name & city'],
+          phoneMatch: byPhone,
+          phoneExactMatch: byPhone,
+          nameMatch: csvHit.startsWith('nc:'),
+          cityMatch: csvHit.startsWith('nc:'),
+          reasons: [
+            byPhone
+              ? 'Same phone number as an earlier row in this file'
+              : csvHit.startsWith('e:')
+                ? 'Same email as an earlier row in this file'
+                : 'Same name & city as an earlier row in this file',
+          ],
         };
       }
-      // 5. Existing listing in DB check
-      else if ((normalizedPh && dbPhonesMap.has(normalizedPh)) || (nameCityKey && dbNameCityMap.has(nameCityKey))) {
+      // 5. Existing record in DB check
+      else if (dbHit) {
         classification = 'EXISTING';
-        const matched = (normalizedPh ? dbPhonesMap.get(normalizedPh) : null) || (nameCityKey ? dbNameCityMap.get(nameCityKey) : null);
-        reason = `Listing already exists in Pets24x7 database ("${matched?.businessName ?? bName}")`;
+        const matched = existing.get(dbHit)!;
+        const phoneExact = keys.some((k) => k.startsWith('p:') && existing.get(k)?.id === matched.id);
+        reason = `Already on Pets24x7 ("${matched.businessName}")`;
         defaultAction = body.skipExisting ? 'Skip' : 'Import';
         existingCount++;
 
-        const simPct = matched ? calcSimilarity(bName, matched.businessName) : 0;
+        const simPct = calcSimilarity(bName, matched.businessName);
+        const cityMatch = city && matched.city ? normalizeCity(city) === normalizeCity(matched.city) : false;
         matchingSignals = {
-          matchedListing: matched
-            ? {
-                id: matched.id,
-                businessName: matched.businessName,
-                city: matched.city,
-                phone: matched.phone,
-                category: matched.category,
-              }
-            : null,
-          phoneExactMatch: normalizedPh ? dbPhonesMap.has(normalizedPh) : false,
+          matchedListing: {
+            id: matched.id,
+            businessName: matched.businessName,
+            city: matched.city,
+            phone: matched.phone,
+            category: matched.category,
+            source: matched.source,
+          },
+          // The names the panel's row drawer reads.
+          matchedVendorId: matched.id,
+          matchedVendorName: matched.businessName,
+          nameSimilarity: simPct,
+          phoneExactMatch: phoneExact,
           nameSimilarityPct: simPct,
-          cityMatch: city && matched?.city ? normalizeCity(city) === normalizeCity(matched.city) : false,
+          cityMatch,
           reasons: [
-            normalizedPh && dbPhonesMap.has(normalizedPh) ? 'Exact phone number match in DB' : '',
-            simPct > 70 ? `${simPct}% business name similarity` : '',
-            city && matched?.city && normalizeCity(city) === normalizeCity(matched.city) ? 'Same city match' : '',
+            phoneExact ? 'Exact phone number match in DB' : '',
+            dbHit.startsWith('e:') ? 'Same email in DB' : '',
+            simPct > 70 ? `${simPct}% name similarity` : '',
+            cityMatch ? 'Same city match' : '',
           ].filter(Boolean),
         };
       } else {
         newCount++;
       }
 
-      if (bName && city) seenCsvKeys.set(nameCityKey, rowNo);
-      if (normalizedPh) seenCsvPhones.set(normalizedPh, rowNo);
+      // Allow admin row-level action override (the panel sends 'Import' /
+      // 'Skip'; upper-case-only matching ignored every toggle). A row missing
+      // required data cannot be forced through: it would create a nameless or
+      // cityless record.
+      const userOverride = overrideFor(body.rowActions, rowNo);
+      const action: 'Import' | 'Skip' = invalid
+        ? 'Skip'
+        : userOverride === 'IMPORT' ? 'Import' : userOverride === 'SKIP' ? 'Skip' : defaultAction;
 
-      // Allow admin row-level action override
-      const userOverride = body.rowActions[String(rowNo)];
-      const action = userOverride === 'IMPORT' || userOverride === 'SKIP' ? userOverride : defaultAction;
-
-      if (action === 'IMPORT') willImportCount++;
-      else willSkipCount++;
+      // Only rows that will actually be written claim their keys — the same
+      // rule commit follows, so the preview and the real run count alike.
+      if (action === 'Import') {
+        for (const k of keys) if (!seenCsv.has(k)) seenCsv.set(k, rowNo);
+        willImportCount++;
+      } else {
+        willSkipCount++;
+      }
 
       return {
         rowNo,
@@ -548,6 +657,8 @@ adminImportRouter.post(
         website: val(raw, body.mapping, 'website') || '',
         openingHours: val(raw, body.mapping, 'openingHours') || '',
         about: val(raw, body.mapping, 'about') || '',
+        // The source row as uploaded, for the panel's row drawer.
+        raw,
         classification,
         reason,
         defaultAction,
@@ -603,6 +714,7 @@ const CommitBody = z.object({
   mapping: z.record(z.string()),
   categoryMapping: z.record(z.string()).optional().default({}),
   content: z.string().min(1).max(MAX_CHARS),
+  encoding: EncodingField,
   fileName: z.string().optional(),
   excludedCities: z.array(z.string()).optional().default([]),
   excludedCategories: z.array(z.string()).optional().default([]),
@@ -612,6 +724,9 @@ const CommitBody = z.object({
   applyCityExclusions: z.boolean().optional().default(true),
   applyCategoryExclusions: z.boolean().optional().default(true),
   rowActions: z.record(z.string()).optional().default({}),
+  // A dry run classifies every row exactly as a real commit would, but writes
+  // nothing: no listings, no parents, no Sheets push, no job row, no email.
+  dryRun: z.boolean().optional().default(false),
 });
 
 adminImportRouter.post(
@@ -619,12 +734,13 @@ adminImportRouter.post(
   asyncHandler(async (req, res) => {
     const body = CommitBody.parse(req.body);
     const spec = targetSpec(body.target);
+    const dryRun = body.dryRun;
 
     let rows: Record<string, string>[];
     try {
-      rows = parseTable(body.content, body.fileName).rows;
+      rows = (await parseUpload(body.content, body.fileName, body.encoding)).rows;
     } catch (err: any) {
-      throw new BadRequestError(`Could not parse CSV file: ${String(err?.message ?? err)}`);
+      throw new BadRequestError(`Could not read the file: ${String(err?.message ?? err)}`);
     }
 
     if (rows.length > MAX_ROWS) rows = rows.slice(0, MAX_ROWS);
@@ -645,20 +761,8 @@ adminImportRouter.post(
       });
     }
 
-    const existingVendors = await prisma.vendor.findMany({
-      select: { phone: true, businessName: true, city: true },
-    });
-
-    const dbPhones = new Set<string>();
-    const dbNameCityKeys = new Set<string>();
-
-    existingVendors.forEach((v) => {
-      if (v.phone) dbPhones.add(v.phone);
-      if (v.businessName && v.city) dbNameCityKeys.add(`${normalizeStr(v.businessName)}_${normalizeCity(v.city)}`);
-    });
-
-    const seenCsvKeys = new Set<string>();
-    const seenCsvPhones = new Set<string>();
+    const existing = await loadExistingIndex(spec.key);
+    const seenCsv = new Set<string>();
 
     let createdCount = 0;
     let updatedCount = 0;
@@ -684,16 +788,18 @@ adminImportRouter.post(
       const rawPhone = val(raw, body.mapping, 'phone');
       const country = normCountry(val(raw, body.mapping, 'country'));
       const normalizedPh = rawPhone ? normalizePhone(rawPhone, country) : '';
-      const nameCityKey = bName && city ? `${normalizeStr(bName)}_${normalizeCity(city)}` : '';
+      const rowEmail = val(raw, body.mapping, 'email');
+      const keys = rowKeys(spec.key, { name: bName, city, phone: rawPhone, email: rowEmail });
+      const invalid = invalidReason(spec.key, { name: bName, city, phone: rawPhone, email: rowEmail });
 
       // Check row action override or default decision
       let defaultAction: 'IMPORT' | 'SKIP' = 'IMPORT';
-      let reason = 'New listing ready to import';
+      let reason = spec.key === 'parents' ? 'New pet parent ready to import' : 'New listing ready to import';
 
-      if (!bName || !rawPhone) {
+      if (invalid) {
         invalidCount++;
         defaultAction = 'SKIP';
-        reason = !bName ? 'Missing required Business Name' : 'Missing required Phone Number';
+        reason = invalid;
       } else if (body.applyCityExclusions && city && excludedCitySet.has(normalizeCity(city))) {
         excludedCityCount++;
         defaultAction = 'SKIP';
@@ -702,17 +808,20 @@ adminImportRouter.post(
         excludedCategoryCount++;
         defaultAction = 'SKIP';
         reason = `Category "${category}" is on the exclusion list`;
-      } else if ((normalizedPh && seenCsvPhones.has(normalizedPh)) || (nameCityKey && seenCsvKeys.has(nameCityKey))) {
+      } else if (keys.some((k) => seenCsv.has(k))) {
         duplicateCount++;
         defaultAction = body.skipDuplicates ? 'SKIP' : 'IMPORT';
-        reason = 'Duplicate row in uploaded CSV file';
-      } else if ((normalizedPh && dbPhones.has(normalizedPh)) || (nameCityKey && dbNameCityKeys.has(nameCityKey))) {
+        reason = 'Duplicate row in the uploaded file';
+      } else if (keys.some((k) => existing.has(k))) {
         defaultAction = body.skipExisting ? 'SKIP' : 'IMPORT';
-        reason = 'Listing already exists in Pets24x7 database';
+        reason = 'Already on Pets24x7';
       }
 
-      const userOverride = body.rowActions[String(rowNo)];
-      const effectiveAction = userOverride === 'IMPORT' || userOverride === 'SKIP' ? userOverride : defaultAction;
+      // The panel's per-row toggles ('Import' / 'Skip'). They were compared
+      // against upper-case strings only, so every override was silently ignored.
+      // Invalid rows cannot be forced through.
+      const userOverride = overrideFor(body.rowActions, rowNo);
+      const effectiveAction = invalid ? 'SKIP' : userOverride ?? defaultAction;
 
       if (effectiveAction === 'SKIP') {
         skippedCount++;
@@ -720,8 +829,7 @@ adminImportRouter.post(
         continue;
       }
 
-      if (bName && city) seenCsvKeys.add(nameCityKey);
-      if (normalizedPh) seenCsvPhones.add(normalizedPh);
+      for (const k of keys) seenCsv.add(k);
 
       try {
         if (spec.key === 'vendors') {
@@ -730,9 +838,29 @@ adminImportRouter.post(
 
           const categoryName = category || 'Pet Service';
           const categorySlug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'pet-service';
-          const cityName = city || 'Mumbai';
-          const citySlug = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'mumbai';
+          const cityName = city; // required — invalidReason() rejects rows without one
+          const citySlug = cityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'unknown';
 
+          const existingListing = getListingById(listingId);
+          // A CSV that carries a listing id must not overwrite a listing a
+          // business has claimed — the import writes it back as UNCLAIMED and
+          // replaces the owner's details with the spreadsheet's.
+          if (existingListing) {
+            const claimedBy =
+              existingListing.claimStatus === 'CLAIMED' ||
+              !!(await prisma.vendor.findUnique({ where: { listingId }, select: { id: true } }).catch(() => null));
+            if (claimedBy) {
+              skippedCount++;
+              reportDetails.push({ rowNo, listingId, businessName: bName, city, phone: rawPhone, category, status: 'SKIPPED', reason: 'Listing is claimed by a business; not overwritten' });
+              continue;
+            }
+          }
+
+          // A blank cell means "not in this file": on an update it leaves the
+          // stored value alone rather than wiping it.
+          const cellOrUndef = (key: string) => val(raw, body.mapping, key) || undefined;
+          const rowWhatsapp = cellOrUndef('whatsapp');
+          const detailEmail = cellOrUndef('email')?.toLowerCase();
           const listingItem: ListingRecord = {
             id: listingId,
             name: bName,
@@ -741,24 +869,42 @@ adminImportRouter.post(
             city: cityName,
             city_slug: citySlug,
             country: country || 'IN',
-            address: val(raw, body.mapping, 'address') || undefined,
+            state: cellOrUndef('state'),
+            address: cellOrUndef('address'),
             phone: normalizedPh || undefined,
-            website: val(raw, body.mapping, 'website') || undefined,
-            pincode: val(raw, body.mapping, 'pincode') || undefined,
-            rating: 4.5,
+            website: cellOrUndef('website'),
+            pincode: cellOrUndef('pincode'),
+            // No reviews yet, so no rating. A made-up 4.5 showed every imported
+            // business to the public as highly rated.
+            rating: 0,
             review_count: 0,
             claimStatus: 'UNCLAIMED',
+            // Directory detail, stored on the listing (these columns used to be
+            // mapped in the panel and then thrown away).
+            description: cellOrUndef('about'),
+            opening_hours: cellOrUndef('openingHours'),
+            services: cellOrUndef('servicesList'),
+            email: detailEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(detailEmail) ? detailEmail : undefined,
+            whatsapp: rowWhatsapp ? normalizePhone(rowWhatsapp, country) : undefined,
+            locality: cellOrUndef('locality'),
           };
+          for (const k of Object.keys(listingItem) as Array<keyof ListingRecord>) {
+            if (listingItem[k] === undefined) delete listingItem[k];
+          }
 
-          const existingListing = getListingById(listingId);
           if (existingListing) {
-            await addAndPersistImportedListing(listingItem);
+            // Keep what the directory already knows (its reputation, Google
+            // CID/Maps link, icon, hidden flag); the file's non-blank cells win.
+            Object.assign(listingItem, { ...existingListing, ...listingItem });
+            listingItem.rating = existingListing.rating;
+            listingItem.review_count = existingListing.review_count;
+            if (!dryRun) await addAndPersistImportedListing(listingItem);
             updatedCount++;
-            reportDetails.push({ rowNo, businessName: bName, city, phone: rawPhone, category, status: 'UPDATED', reason: 'Unclaimed directory listing updated' });
+            reportDetails.push({ rowNo, listingId, businessName: bName, city, phone: rawPhone, category, status: 'UPDATED', reason: 'Unclaimed directory listing updated' });
           } else {
-            await addAndPersistImportedListing(listingItem);
+            if (!dryRun) await addAndPersistImportedListing(listingItem);
             createdCount++;
-            reportDetails.push({ rowNo, businessName: bName, city, phone: rawPhone, category, status: 'IMPORTED', reason: 'New unclaimed directory listing created' });
+            reportDetails.push({ rowNo, listingId, businessName: bName, city, phone: rawPhone, category, status: 'IMPORTED', reason: 'New unclaimed directory listing created' });
           }
 
           importedListingsForSheets.push({
@@ -777,22 +923,30 @@ adminImportRouter.post(
           });
         } else {
           // Pet Parents Target
-          const email = val(raw, body.mapping, 'email').toLowerCase() || null;
-          const parentData = {
-            name: bName,
-            email,
-            phone: normalizedPh || null,
-            city: city || null,
-            country,
-          };
-
-          const existingParent = email ? await prisma.petParent.findUnique({ where: { email } }) : null;
+          const email = rowEmail.toLowerCase() || null;
+          const phone = normalizedPh || null;
+          // Match on email, then phone. Both are unique: creating a second
+          // account with a known phone used to fail the row outright.
+          const existingParent =
+            (email ? await prisma.petParent.findUnique({ where: { email } }) : null) ??
+            (phone ? await prisma.petParent.findUnique({ where: { phone } }) : null);
           if (existingParent) {
-            await prisma.petParent.update({ where: { id: existingParent.id }, data: parentData });
+            // Fill gaps only; never overwrite details the parent set themselves.
+            if (!dryRun) await prisma.petParent.update({
+              where: { id: existingParent.id },
+              data: {
+                name: existingParent.name || bName,
+                ...(email && !existingParent.email ? { email } : {}),
+                ...(phone && !existingParent.phone ? { phone } : {}),
+                ...(city && !existingParent.city ? { city } : {}),
+              },
+            });
             updatedCount++;
+            reportDetails.push({ rowNo, businessName: bName, city, phone: rawPhone, status: 'UPDATED', reason: 'Existing pet parent updated' });
           } else {
-            await prisma.petParent.create({ data: parentData });
+            if (!dryRun) await prisma.petParent.create({ data: { name: bName, email, phone, city: city || null, country } });
             createdCount++;
+            reportDetails.push({ rowNo, businessName: bName, city, phone: rawPhone, status: 'IMPORTED', reason: 'New pet parent created' });
           }
         }
       } catch (err: any) {
@@ -802,6 +956,28 @@ adminImportRouter.post(
         }
         reportDetails.push({ rowNo, businessName: bName, status: 'FAILED', reason: String(err?.message || err) });
       }
+    }
+
+    if (dryRun) {
+      res.json({
+        ok: true,
+        dryRun: true,
+        jobId: null,
+        totalRows: rows.length,
+        created: createdCount,
+        updated: updatedCount,
+        skipped: skippedCount,
+        failed: failedCount,
+        duplicateCount,
+        invalidCount,
+        excludedCityCount,
+        excludedCategoryCount,
+        googleSheetsSyncedCount: 0,
+        googleSheetsFailedCount: 0,
+        errors,
+        rows: reportDetails.slice(0, 500),
+      });
+      return;
     }
 
     // Sync imported listings to Google Sheets Integration
@@ -861,6 +1037,7 @@ adminImportRouter.post(
 
     res.json({
       ok: true,
+      dryRun: false,
       jobId: job.id,
       totalRows: rows.length,
       created: createdCount,

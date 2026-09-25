@@ -7,6 +7,17 @@
 <title>Pet Parent Sign in — Pets24x7.com</title>
 <meta name="description" content="Sign in to your Pets24x7 pet parent dashboard with an emailed code." />
 <meta name="robots" content="noindex" />
+<link rel="canonical" href="https://pets24x7.com/parent-login/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Pet Parent Sign in — Pets24x7.com" />
+<meta property="og:description" content="Sign in to your Pets24x7 pet parent dashboard with an emailed code." />
+<meta property="og:url" content="https://pets24x7.com/parent-login/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Pet Parent Sign in — Pets24x7.com" />
+<meta name="twitter:description" content="Sign in to your Pets24x7 pet parent dashboard with an emailed code." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -48,6 +59,26 @@
   .tabs{display:flex;gap:6px;background:var(--bg-alt);border-radius:12px;padding:5px;margin-bottom:24px}
   .tabs button{flex:1;background:transparent;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:9px;cursor:pointer;color:var(--text-muted)}
   .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+  /* The hidden attribute must win over component display rules (flex banners,
+     dividers, buttons); without this they render even while hidden. */
+  [hidden]{display:none !important}
+
+  /* Phones: 16px inputs stop iOS zooming on focus; 44px tap targets; a card
+     that gives the form its width back instead of spending it on padding. */
+  input,select,textarea{font-size:16px}
+  .btn-link{min-height:44px;display:inline-flex;align-items:center;margin-right:18px}
+  .btn-link:last-child{margin-right:0}
+  .tabs button,.tabs .tab{min-height:44px}
+  p.sub,.err,.ok{overflow-wrap:anywhere}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  #gBtn{max-width:100%;overflow:hidden}
+  @media (max-width:430px){
+    .top{padding:16px}
+    main{padding:8px 16px 32px}
+    .card{padding:26px 20px;border-radius:16px}
+    h1{font-size:21px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
 <body>
@@ -60,12 +91,12 @@
 
 <main>
   <div class="card">
-    <div class="tabs">
-      <button id="tabCode" class="on" type="button">Sign in with code</button>
-      <button id="tabPass" type="button">Sign in with password</button>
+    <div class="tabs" role="tablist" aria-label="Sign-in method">
+      <button id="tabCode" class="on" type="button" role="tab" aria-selected="true" aria-controls="paneCode">Sign in with code</button>
+      <button id="tabPass" type="button" role="tab" aria-selected="false" aria-controls="panePass">Sign in with password</button>
     </div>
 
-    <div id="paneCode">
+    <div id="paneCode" role="tabpanel" aria-labelledby="tabCode">
     <!-- Step 1: email -->
     <section id="step1">
       <div class="step-hint">Step 1 of 2</div>
@@ -107,7 +138,7 @@
     </div>
 
     <!-- Password sign-in, for accounts that set one -->
-    <div id="panePass" hidden>
+    <div id="panePass" role="tabpanel" aria-labelledby="tabPass" hidden>
       <h1>Sign in with your password</h1>
       <p class="sub">Use the email and password on your Pets24x7 account.</p>
 
@@ -136,6 +167,38 @@
   var err2 = document.getElementById('err2');
   var ok2  = document.getElementById('ok2');
   var email = '', isNew = false;
+
+  // Where to land after signing in. A page that sends someone here to sign in
+  // first (e.g. /membership/) passes ?next=/that/page/ so the visitor ends up
+  // back where they started instead of on the dashboard. The API's invoice
+  // route sends an absolute API URL (the invoice is served by the API), so an
+  // absolute URL is accepted only on this site's own origin or the API origin.
+  // Anything else falls back to the dashboard: never an open redirect.
+  var NEXT = (function () {
+    var fallback = '/dashboard/parent/';
+    var m = /[?&]next=([^&#]*)/.exec(location.search);
+    var v = '';
+    try { v = m ? decodeURIComponent(m[1]) : ''; } catch (e) { return fallback; }
+    if (!v) return fallback;
+    // A same-site path. Resolved rather than pattern-matched: the URL parser
+    // drops tabs and newlines, so "/%09/evil.com" passes a "/ not followed by
+    // /" test and still navigates to //evil.com.
+    if (v.charAt(0) === '/') {
+      var rel;
+      try { rel = new URL(v, location.origin); } catch (e) { return fallback; }
+      return rel.origin === location.origin ? rel.pathname + rel.search + rel.hash : fallback;
+    }
+    var u;
+    try { u = new URL(v); } catch (e) { return fallback; }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return fallback;
+    var allowed = [location.origin];
+    try { if (api.base) allowed.push(new URL(api.base).origin); } catch (e) {}
+    if (allowed.indexOf(u.origin) >= 0) return u.href;
+    // Local dev: the API listens on its own localhost port.
+    var local = /^(localhost|127\.0\.0\.1)$/;
+    if (local.test(location.hostname) && local.test(u.hostname)) return u.href;
+    return fallback;
+  })();
 
   function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
   function clearErr(el) { el.classList.remove('show'); }
@@ -184,9 +247,14 @@
 
     this.disabled = true; this.textContent = 'Verifying…';
     var self = this;
-    api.parentEmailOtpVerify(payload).then(function () {
+    api.parentEmailOtpVerify(payload).then(function (r) {
+      // The verify answer (not the earlier request) says whether this code
+      // created the account: that is the pet-parent sign_up conversion.
+      try {
+        if (window.trackEvent) window.trackEvent(r && r.isNewAccount ? 'sign_up' : 'login', { method: 'email_code' });
+      } catch (e) {}
       ok2.classList.add('show');
-      setTimeout(function () { location.href = '/dashboard/parent/'; }, 400);
+      setTimeout(function () { location.href = NEXT; }, 400);
     }).catch(function (e) {
       showErr(err2, fmtErr(e));
       self.disabled = false; self.textContent = 'Verify & sign in';
@@ -204,6 +272,9 @@
   document.getElementById('pEmail').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('sendBtn').click();
   });
+  document.getElementById('pName').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('verifyBtn').click();
+  });
   document.getElementById('otp').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('verifyBtn').click();
   });
@@ -219,12 +290,19 @@
       google.accounts.id.initialize({
         client_id: cfg.googleClientId,
         callback: function (resp) {
-          api.parentGoogle(resp.credential).then(function () {
-            location.href = '/dashboard/parent/';
+          clearErr(err1);
+          api.parentGoogle(resp.credential).then(function (r) {
+            // Older API builds do not say whether the account is new: counted
+            // as a login until they do.
+            try { if (window.trackEvent) window.trackEvent(r && r.isNewAccount ? 'sign_up' : 'login', { method: 'google' }); } catch (e) {}
+            location.href = NEXT;
           }).catch(function (e) { showErr(err1, fmtErr(e)); });
         }
       });
-      google.accounts.id.renderButton(document.getElementById('gBtn'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      // Google renders a fixed-width iframe: 320px overflowed the card on a
+      // 360px phone, so size it to the space actually available (GSI accepts 200-400).
+      var gW = Math.max(200, Math.min(400, Math.floor(document.getElementById('gBtn').clientWidth || Math.min(376, window.innerWidth - 80))));
+      google.accounts.id.renderButton(document.getElementById('gBtn'), { theme: 'outline', size: 'large', width: gW, text: 'continue_with' });
       document.getElementById('gDivider').hidden = false;
     };
     document.head.appendChild(s);
@@ -239,6 +317,7 @@
     var isCode = which === 'code';
     paneCode.hidden = !isCode; panePass.hidden = isCode;
     tabCode.classList.toggle('on', isCode); tabPass.classList.toggle('on', !isCode);
+    tabCode.setAttribute('aria-selected', String(isCode)); tabPass.setAttribute('aria-selected', String(!isCode));
   }
   tabCode.addEventListener('click', function () { selectTab('code'); });
   tabPass.addEventListener('click', function () { selectTab('pass'); });
@@ -260,8 +339,10 @@
     this.disabled = true; this.textContent = 'Signing in…';
     var self = this;
     api.parentLogin(em, pw).then(function () {
+      try { if (window.trackEvent) window.trackEvent('login', { method: 'password' }); } catch (e) {}
+      lpOk.textContent = 'Signed in. Redirecting…';
       lpOk.classList.add('show');
-      setTimeout(function () { location.href = '/dashboard/parent/'; }, 400);
+      setTimeout(function () { location.href = NEXT; }, 400);
     }).catch(function (e) {
       // A 403 here means the address exists but is unverified; the API has
       // already sent a fresh link, so say that rather than "wrong password".
@@ -273,7 +354,7 @@
   });
 
   document.getElementById('lpForgot').addEventListener('click', function () {
-    clearErr(lpErr);
+    clearErr(lpErr); lpOk.classList.remove('show');
     var em = document.getElementById('lpEmail').value.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return showErr(lpErr, 'Enter your email address first.');
     var self = this;
@@ -285,13 +366,18 @@
       .finally(function () { self.disabled = false; self.textContent = 'Forgot your password?'; });
   });
 
+  document.getElementById('lpEmail').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('lpBtn').click();
+  });
   document.getElementById('lpPass').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') document.getElementById('lpBtn').click();
   });
 
-  // Auto-redirect if already signed in
-  api.me().then(function (r) {
-    if (r.role === 'pet_parent') location.href = '/dashboard/parent/';
+  // Auto-redirect if already signed in. Scoped to the parent role: unscoped,
+  // /api/me answers with whichever cookie ranks highest, so a leftover admin or
+  // vendor session hid a perfectly valid parent session and kept them here.
+  api.me('pet_parent').then(function (r) {
+    if (r && r.role === 'pet_parent') location.replace(NEXT);
   }).catch(function () {});
 </script>
 

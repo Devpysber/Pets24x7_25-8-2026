@@ -44,6 +44,23 @@
   .tab.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
   .foot{text-align:center;color:var(--text-muted);font-size:13px;padding:20px}
   .foot a{color:var(--text-muted);margin:0 8px}
+
+  /* Phones: 16px inputs stop iOS zooming on focus; 44px tap targets; a card
+     that gives the form its width back instead of spending it on padding. */
+  input,select,textarea{font-size:16px}
+  .btn-link{min-height:44px;display:inline-flex;align-items:center;margin-right:18px}
+  .btn-link:last-child{margin-right:0}
+  .tabs button,.tabs .tab{min-height:44px}
+  p.sub,.err,.ok{overflow-wrap:anywhere}
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
+  #gBtn{max-width:100%;overflow:hidden}
+  @media (max-width:430px){
+    .top{padding:16px}
+    main{padding:8px 16px 32px}
+    .card{padding:26px 20px;border-radius:16px}
+    h1{font-size:21px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
 <body>
@@ -58,9 +75,9 @@
   <div class="card">
     <div class="badge-tag">🔐 Staff &amp; Admin Portal</div>
     
-    <div class="tabs">
-      <button id="tabPassword" class="tab active" type="button" onclick="setMode('password')">Password</button>
-      <button id="tabEmailOtp" class="tab" type="button" onclick="setMode('emailotp')">Email code</button>
+    <div class="tabs" role="tablist" aria-label="Sign-in method">
+      <button id="tabPassword" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="panePassword" onclick="setMode('password')">Password</button>
+      <button id="tabEmailOtp" class="tab" type="button" role="tab" aria-selected="false" aria-controls="paneEmailOtp" onclick="setMode('emailotp')">Email code</button>
     </div>
 
     <!-- Password Sign-In -->
@@ -92,7 +109,7 @@
         <input id="aoEmail" type="email" placeholder="you@pets24x7.com" autocomplete="username" inputmode="email" />
         
         <div class="err" id="aoErr1"></div>
-        <button class="btn btn-primary" id="aoSendBtn">Email me a code &rarr;</button>
+        <button class="btn btn-primary" id="aoSendBtn" type="button">Email me a code &rarr;</button>
       </div>
 
       <div id="aoStep2" hidden>
@@ -105,9 +122,9 @@
         <div class="err" id="aoErr2"></div>
         <div class="ok" id="aoOk2">Verified. Opening admin dashboard…</div>
         
-        <button class="btn btn-primary" id="aoVerifyBtn">Verify &amp; sign in</button>
-        <button class="btn-link" id="aoResendBtn">Resend code</button>
-        <button class="btn-link" id="aoBackBtn">&larr; Wrong email? Start over</button>
+        <button class="btn btn-primary" id="aoVerifyBtn" type="button">Verify &amp; sign in</button>
+        <button class="btn-link" id="aoResendBtn" type="button">Resend code</button>
+        <button class="btn-link" id="aoBackBtn" type="button">&larr; Wrong email? Start over</button>
       </div>
     </div>
 
@@ -133,6 +150,8 @@
     $('tabEmailOtp').classList.toggle('active', mode === 'emailotp');
     $('panePassword').hidden = (mode !== 'password');
     $('paneEmailOtp').hidden = (mode !== 'emailotp');
+    $('tabPassword').setAttribute('aria-selected', String(mode === 'password'));
+    $('tabEmailOtp').setAttribute('aria-selected', String(mode === 'emailotp'));
   }
 
   // Password Sign-In
@@ -214,11 +233,19 @@
     $('aoStep2').hidden = true;
     $('aoStep1').hidden = false;
     clearErr($('aoErr1')); clearErr($('aoErr2'));
+    $('aoOtp').value = '';
+    $('aoOk2').classList.remove('show');
   });
 
-  // Redirect if already logged in as admin
-  api.me().then(function(r) {
-    if (r && r.role === 'admin') location.href = '/dashboard/admin/';
+  // Enter submits whichever step is showing (the password pane is a <form>
+  // already; the code pane is not).
+  $('aoEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('aoSendBtn').click(); });
+  $('aoOtp').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('aoVerifyBtn').click(); });
+
+  // Redirect if already logged in as admin (scoped lookup, so it answers for
+  // the admin cookie specifically).
+  api.me('admin').then(function(r) {
+    if (r && r.role === 'admin') location.replace('/dashboard/admin/');
   }).catch(function() {});
 </script>
 </body>

@@ -1,11 +1,16 @@
 # Pets24x7 — Netlify cache headers.
 # Static assets get long cache; HTML stays fresh so content edits ship fast.
 
-/*.html
-  Cache-Control: public, max-age=300, s-maxage=600
+# Security headers on every response. Pretty URLs (/in/mumbai/) never match
+# /*.html, so on that rule alone almost no page got them.
+/*
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+
+/*.html
+  Cache-Control: public, max-age=300, s-maxage=600
 
 /styles.css
   Cache-Control: public, max-age=31536000, immutable
@@ -26,6 +31,10 @@
   Cache-Control: public, max-age=1800
 
 /sitemap.xml
+  Cache-Control: public, max-age=3600
+
+# The sitemap index points at these children (sitemap-in-1.xml, sitemap-us-1.xml, ...).
+/sitemap-*.xml
   Cache-Control: public, max-age=3600
 
 /robots.txt

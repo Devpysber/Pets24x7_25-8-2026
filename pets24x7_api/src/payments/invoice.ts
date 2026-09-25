@@ -33,6 +33,26 @@ const SELLER = {
   email: 'support@pets24x7.com',
 };
 
+/**
+ * GST registration, read straight from the environment so it needs no schema
+ * change: SELLER_GSTIN (15 chars) and optionally GST_RATE_PERCENT (default 18).
+ * Prices are GST-inclusive, so the tax is carved out of the total rather than
+ * added on top. Without a GSTIN the document must not call itself a tax
+ * invoice — under GST only a registered supplier can issue one.
+ */
+function gstConfig(): { gstin: string; ratePercent: number } | null {
+  const gstin = (process.env.SELLER_GSTIN ?? '').trim().toUpperCase();
+  if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(gstin)) return null;
+  const rate = Number(process.env.GST_RATE_PERCENT ?? 18);
+  return { gstin, ratePercent: Number.isFinite(rate) && rate > 0 && rate < 100 ? rate : 18 };
+}
+
+/** Splits a GST-inclusive total into taxable value + tax, in whole minor units. */
+export function splitInclusiveGst(totalMinor: number, ratePercent: number): { taxableMinor: number; taxMinor: number } {
+  const taxableMinor = Math.round((totalMinor * 100) / (100 + ratePercent));
+  return { taxableMinor, taxMinor: totalMinor - taxableMinor };
+}
+
 function fmtDate(d: Date): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
@@ -56,6 +76,16 @@ export function renderInvoice(d: InvoiceData): string {
     .join('');
 
   const billLines = [d.billTo.email, d.billTo.phone, d.billTo.city].filter(Boolean) as string[];
+
+  // GST applies to an Indian (INR) sale by a registered seller only.
+  const gst = d.currency.toUpperCase() === 'INR' ? gstConfig() : null;
+  const docTitle = gst ? 'Tax invoice' : 'Invoice';
+  const split = gst ? splitInclusiveGst(d.totalMinor, gst.ratePercent) : null;
+  const taxRows =
+    gst && split
+      ? `<tr><td class="muted">Taxable value</td><td class="num">${esc(money(split.taxableMinor, d.currency))}</td></tr>` +
+        `<tr><td class="muted">GST @ ${esc(String(gst.ratePercent))}% (included)</td><td class="num">${esc(money(split.taxMinor, d.currency))}</td></tr>`
+      : '';
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -89,10 +119,12 @@ export function renderInvoice(d: InvoiceData): string {
   <div class="top">
     <div>
       <h1>${esc(SELLER.name)}</h1>
-      <div class="muted">${esc(SELLER.line1)}<br>${esc(SELLER.site)} · ${esc(SELLER.email)}</div>
+      <div class="muted">${esc(SELLER.line1)}<br>${esc(SELLER.site)} · ${esc(SELLER.email)}${
+        gst ? `<br>GSTIN: ${esc(gst.gstin)}` : ''
+      }</div>
     </div>
     <div class="meta">
-      <div class="label">Tax invoice</div>
+      <div class="label">${docTitle}</div>
       <div style="font-weight:700">${esc(invoiceNumber(d.merchantTxnId))}</div>
       <div class="muted">${esc(fmtDate(d.issuedAt))}</div>
     </div>
@@ -115,6 +147,7 @@ export function renderInvoice(d: InvoiceData): string {
     <thead><tr><th>Description</th><th class="num">Amount</th></tr></thead>
     <tbody>
       ${rows}
+      ${taxRows}
       <tr class="total"><td>Total paid</td><td class="num">${esc(money(d.totalMinor, d.currency))}</td></tr>
     </tbody>
   </table>
@@ -123,7 +156,7 @@ export function renderInvoice(d: InvoiceData): string {
   ${d.footnote ? `<p class="muted" style="margin-top:18px">${esc(d.footnote)}</p>` : ''}
 
   <div class="foot">
-    Amounts are in ${esc(d.currency)} and inclusive of applicable taxes.
+    Amounts are in ${esc(d.currency)}${gst ? ` and include GST at ${esc(String(gst.ratePercent))}%` : ' and inclusive of applicable taxes'}.
     This is a computer-generated invoice and needs no signature.
     Questions? Reply to your confirmation email or write to ${esc(SELLER.email)}.
   </div>

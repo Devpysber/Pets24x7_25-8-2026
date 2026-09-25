@@ -6,6 +6,16 @@
 <meta name="theme-color" content="#2563EB" />
 <title>Find &amp; Claim Your Business Listing — Pets24x7.com</title>
 <meta name="description" content="Find and claim your existing business listing on Pets24x7 to manage your services and get direct WhatsApp enquiries." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Pets24x7" />
+<meta property="og:title" content="Claim your business listing — Pets24x7.com" />
+<meta property="og:description" content="Already listed on Pets24x7? Find and claim your listing to manage it and receive enquiries." />
+<meta property="og:url" content="https://pets24x7.com/find-my-listing/" />
+<meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Claim your business listing — Pets24x7.com" />
+<meta name="twitter:description" content="Already listed on Pets24x7? Find and claim your listing to manage it and receive enquiries." />
+<meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" type="image/png" href="/pets24x7_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -156,7 +166,59 @@
   footer .footer-bottom { border-top: 1px solid #1E293B; padding-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13px; }
   @media(max-width: 768px) { footer .footer-grid { grid-template-columns: 1fr 1fr; } }
   @media(max-width: 480px) { footer .footer-grid { grid-template-columns: 1fr; } }
+  /* Phones: four nav items plus the logo overflowed a 360px screen sideways.
+     Keep "For Vendors" and "Sign In"; the section anchors live in the footer. */
+  @media (max-width: 720px) {
+    .header-inner { padding-left: 16px; padding-right: 16px; }
+    .header-nav { gap: 2px; }
+    .header-nav a.nav-link[href^="/#"] { display: none; }
+    .header-nav a.nav-link, .header-nav button.nav-link { padding: 8px 8px; }
+    .nav-dropdown .dropdown-menu { left: auto; right: 0; transform: translateY(8px); }
+    .nav-dropdown:hover .dropdown-menu, .nav-dropdown:focus-within .dropdown-menu { transform: translateY(4px); }
+  }
+  /* Grid tracks default to min-content, so one long word (a business name, an
+     email) widened the whole column past a phone screen. */
+  .layout-grid > * { min-width: 0; }
+  @media(max-width: 900px) { .layout-grid { grid-template-columns: minmax(0, 1fr); } }
+  input, select, textarea { font-size: 16px; }
+  .btn { min-height: 48px; }
+  .btn-sm { min-height: 44px; }
+  .header-nav a.nav-link, .header-nav button.nav-link { min-height: 44px; display: inline-flex; align-items: center; }
+  .dropdown-item { min-height: 44px; }
+  button:focus-visible, a:focus-visible { outline: 3px solid rgba(37,99,235,0.45); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+  footer li a { display: inline-block; padding: 3px 0; }
+  @media (max-width: 560px) {
+    .page-hero { padding: 36px 16px 48px; }
+    .page-hero p.sub { font-size: 15px; }
+    .badge-item { font-size: 12px; }
+    main { padding: 0 12px; margin-bottom: 40px; }
+    .card { padding: 22px 16px; border-radius: 16px; }
+    .sidebar-box { padding: 20px 16px; }
+    h2.card-title { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .listing-info { min-width: 0; flex: 1; }
+  .listing-info h3, .listing-info p { overflow-wrap: anywhere; }
+  .listing-item > div:last-child { flex-shrink: 0; }
+  .err, .ok, .masked-phone-box, .card-title { overflow-wrap: anywhere; }
+  .ok .btn { display: flex; }
+  .claim-banner { background:#EFF6FF; border:1px solid #BFDBFE; border-radius:var(--radius-lg); padding:20px 24px; margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+  @media (max-width: 560px) {
+    .listing-item { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; }
+    .listing-item .btn-sm { width: 100%; }
+    .claimed-pill { white-space: normal; display: inline-block; }
+    .no-results-box { padding: 22px 16px; }
+    .claim-banner { padding: 18px 16px; }
+    .claim-banner .btn { width: 100% !important; }
+  }
+  input[type=search] { -webkit-appearance: none; appearance: none; }
+  /* With the script running, the open class (not focus) decides; hover still previews on desktop. */
+  .nav-dropdown.js:not(.open):not(:hover) .dropdown-menu { opacity: 0; visibility: hidden; }
+  .nav-dropdown.open .dropdown-menu { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(4px); }
+  @media (max-width: 720px) { .nav-dropdown.open .dropdown-menu { transform: translateY(4px); } }
 </style>
+<link rel="canonical" href="https://pets24x7.com/find-my-listing/" />
 </head>
 <body>
 
@@ -169,7 +231,7 @@
       <a href="/#cats" class="nav-link">Categories</a>
       <a href="/#destinations" class="nav-link">Destinations</a>
       <div class="nav-dropdown">
-        <button class="nav-link dropdown-toggle" type="button" aria-haspopup="true">
+        <button class="nav-link dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
           For Vendors <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="dropdown-menu">
@@ -217,20 +279,20 @@
             <div class="search-grid">
               <div>
                 <label for="qInput">Business Name *</label>
-                <input type="text" id="qInput" placeholder="e.g. Pawsome Clinic" required />
+                <input type="search" id="qInput" placeholder="e.g. Pawsome Clinic" required enterkeyhint="search" autocomplete="organization" />
               </div>
               <div>
                 <label for="cityInput">City (Optional)</label>
-                <input type="text" id="cityInput" placeholder="e.g. Mumbai, Bengaluru" />
+                <input type="text" id="cityInput" placeholder="e.g. Mumbai, Bengaluru" autocomplete="address-level2" enterkeyhint="search" />
               </div>
             </div>
             <button type="submit" class="btn btn-primary" id="searchBtn">Search Listing &rarr;</button>
           </form>
 
-          <div class="err" id="searchErr"></div>
+          <div class="err" id="searchErr" role="alert"></div>
 
           <!-- Results list -->
-          <div id="resultsContainer" hidden>
+          <div id="resultsContainer" hidden aria-live="polite">
             <div style="font-size:13px; font-weight:700; color:var(--text-muted); margin-top:24px;" id="resultsCount">Matching Listings</div>
             <div id="listingsList"></div>
           </div>
@@ -258,7 +320,7 @@
             <input type="tel" id="claimPhone" placeholder="+91 98765 43210" required autocomplete="tel" />
             <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Must match the phone number listed for this business.</div>
 
-            <div class="err" id="phoneErr"></div>
+            <div class="err" id="phoneErr" role="alert"></div>
             <button type="submit" class="btn btn-primary" id="phoneBtn">Verify Phone &rarr;</button>
             <button type="button" class="btn btn-outline" onclick="backToSearch()" style="margin-top:10px;">&larr; Back to Search</button>
           </form>
@@ -275,9 +337,15 @@
 
           <form id="emailForm" onsubmit="handleEmailSubmit(event)">
             <label for="claimEmail">Email Address *</label>
-            <input type="email" id="claimEmail" placeholder="your@email.com" required autocomplete="email" />
+            <input type="email" id="claimEmail" placeholder="your@email.com" required autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" />
 
-            <div class="err" id="emailErr"></div>
+            <div id="claimCodeWrap" hidden style="margin-top:14px;">
+              <label for="claimCode">WhatsApp Verification Code *</label>
+              <input type="text" id="claimCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code" autocomplete="one-time-code" style="letter-spacing:4px;font-weight:700" />
+              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;" id="claimCodeHelp">Enter the 6-digit code we sent on WhatsApp.</div>
+            </div>
+
+            <div class="err" id="emailErr" role="alert"></div>
             <div class="ok" id="emailOk"></div>
             <button type="submit" class="btn btn-primary" id="emailBtn">Continue &amp; Send Credentials &rarr;</button>
           </form>
@@ -286,7 +354,7 @@
       </div>
 
       <!-- Quick Banner for New Registration -->
-      <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:var(--radius-lg); padding:20px 24px; margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+      <div class="claim-banner">
         <div>
           <strong style="font-size:15px; color:#1E40AF; display:block;">Starting a brand new pet business?</strong>
           <span style="font-size:13px; color:var(--text-muted);">Register your new business listing in under 2 minutes.</span>
@@ -409,11 +477,22 @@
   var state = {
     selectedListing: null,
     claimId: null,
-    maskedPhone: ''
+    maskedPhone: '',
+    otpRequired: false
   };
 
   function $(id){ return document.getElementById(id); }
   function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
+  // Moving between claim steps swaps the card's content; on a phone the reader
+  // was often scrolled far down the results list, so bring the card's top back
+  // into view (below the sticky header) and focus the step's first field.
+  function toCardTop(focusId) {
+    var card = document.querySelector('main .card');
+    if (card && card.getBoundingClientRect().top < 70) {
+      window.scrollTo({ top: window.pageYOffset + card.getBoundingClientRect().top - 80, behavior: 'smooth' });
+    }
+    if (focusId && $(focusId)) { try { $(focusId).focus({ preventScroll: true }); } catch (e) {} }
+  }
   function clearErr(el){ el.classList.remove('show'); }
 
   function handleSearch(e) {
@@ -435,11 +514,12 @@
         return;
       }
 
-      $('listingsList').innerHTML = list.map(function(item) {
+      state.results = list;
+      $('listingsList').innerHTML = list.map(function(item, idx) {
         var isClaimed = !!item.claimed;
         var btnHtml = isClaimed
           ? '<span class="claimed-pill">This listing has already been claimed</span>'
-          : '<button type="button" class="btn btn-primary btn-sm" onclick="selectForClaim(\'' + esc(item.id) + '\', \'' + esc(item.name) + '\', \'' + esc(item.phoneMasked || '') + '\')">This is My Business</button>';
+          : '<button type="button" class="btn btn-primary btn-sm" data-claim-idx="' + idx + '">This is My Business</button>';
 
         return `
           <div class="listing-item">
@@ -452,28 +532,57 @@
         `;
       }).join('');
     }).catch(function(err) {
-      showErr($('searchErr'), err.message || 'Error searching listings.');
+      $('resultsContainer').hidden = true;
+      showErr($('searchErr'), fmtErr(err));
     }).finally(function() {
       $('searchBtn').disabled = false; $('searchBtn').textContent = 'Search Listing →';
     });
   }
+
+  // One delegated handler for every result's claim button; the listing data
+  // stays in JS and never passes through an HTML attribute.
+  document.getElementById('listingsList').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-claim-idx]') : null;
+    if (!btn) return;
+    var item = (state.results || [])[Number(btn.getAttribute('data-claim-idx'))];
+    if (item) selectForClaim(item.id, item.name, item.phoneMasked || '');
+  });
+
+  (function deepLink() {
+    var p = new URLSearchParams(location.search);
+    var q = p.get('q') || p.get('name') || '';
+    if (p.get('city')) $('cityInput').value = p.get('city');
+    if (q) { $('qInput').value = q; handleSearch({ preventDefault: function () {} }); }
+  })();
 
   function esc(s){ return (s||'').toString().replace(/[<>&"']/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
   function selectForClaim(id, name, maskedPhone) {
     state.selectedListing = { id: id, name: name, maskedPhone: maskedPhone };
     $('selectedBizName').textContent = 'Claim ' + name;
-    $('maskedPhoneLabel').textContent = maskedPhone || '+91 98••••••42';
+    // Never show a made-up number as if it were the one on file.
+    $('maskedPhoneLabel').textContent = maskedPhone || 'not shown';
+    $('maskedPhoneBox').hidden = !maskedPhone;
     
     $('sectionSearch').hidden = true;
     $('sectionVerifyPhone').hidden = false;
     clearErr($('phoneErr'));
+    toCardTop('claimPhone');
   }
 
   function backToSearch() {
+    state.claimId = null;
+    state.otpRequired = false;
     $('sectionVerifyPhone').hidden = true;
     $('sectionSubmitEmail').hidden = true;
     $('sectionSearch').hidden = false;
+    // A finished (or abandoned) claim must not leave the next one with a
+    // hidden email form and the previous "Credentials Sent" box.
+    $('emailForm').style.display = '';
+    $('emailOk').classList.remove('show');
+    $('emailOk').innerHTML = '';
+    $('emailBtn').disabled = false; $('emailBtn').textContent = 'Continue & Send Credentials →';
+    toCardTop();
   }
 
   function handlePhoneVerify(e) {
@@ -482,15 +591,26 @@
     var phone = $('claimPhone').value.trim();
     if (!phone) return showErr($('phoneErr'), 'Please enter your phone number.');
 
+    if (!state.selectedListing) { backToSearch(); return; }
     $('phoneBtn').disabled = true; $('phoneBtn').textContent = 'Verifying…';
     api.claimVerifyPhone({ listingId: state.selectedListing.id, phone: phone }).then(function(r) {
       state.claimId = r.claimId;
       state.maskedPhone = r.maskedPhone;
+      // With WhatsApp configured the server texts a 6-digit code to the
+      // listing's number and refuses the credentials step without it.
+      state.otpRequired = !!r.otpRequired;
+      $('claimCodeWrap').hidden = !state.otpRequired;
+      $('claimCode').required = state.otpRequired;
+      $('claimCode').value = '';
+      if (state.otpRequired) {
+        $('claimCodeHelp').textContent = 'Enter the 6-digit code we sent on WhatsApp to ' + (r.maskedPhone || "the listing's number") + '.';
+      }
       $('sectionVerifyPhone').hidden = true;
       $('sectionSubmitEmail').hidden = false;
       clearErr($('emailErr'));
+      toCardTop('claimEmail');
     }).catch(function(err) {
-      showErr($('phoneErr'), err.message || 'Verification failed. The phone number does not match.');
+      showErr($('phoneErr'), (err && err.message) || 'Verification failed. The phone number does not match.');
     }).finally(function() {
       $('phoneBtn').disabled = false; $('phoneBtn').textContent = 'Verify Phone →';
     });
@@ -501,14 +621,32 @@
     clearErr($('emailErr'));
     var email = $('claimEmail').value.trim();
     if (!email) return showErr($('emailErr'), 'Please enter your email address.');
+    if (!state.selectedListing || !state.claimId) { backToSearch(); return; }
+    var code = state.otpRequired ? $('claimCode').value.trim() : '';
+    if (state.otpRequired && !/^[0-9]{6}$/.test(code)) {
+      return showErr($('emailErr'), 'Enter the 6-digit code we sent on WhatsApp.');
+    }
 
     $('emailBtn').disabled = true; $('emailBtn').textContent = 'Creating Account…';
-    api.claimSubmitEmail({ listingId: state.selectedListing.id, claimId: state.claimId, email: email }).then(function(r) {
-      $('emailOk').innerHTML = '<strong>Credentials Sent!</strong><br/>We emailed temporary login credentials to <u>' + esc(email) + '</u>.<br/><br/><a href="/vendor-login/change-password/?email=' + encodeURIComponent(email) + '" class="btn btn-primary" style="margin-top:10px;">Proceed to First Login &rarr;</a>';
+    api.claimSubmitEmail({ listingId: state.selectedListing.id, claimId: state.claimId, email: email, code: code || undefined }).then(function(r) {
+      // Claiming creates the business account: same conversion as registering.
+      try { if (window.trackEvent) window.trackEvent('sign_up', { method: 'claim_listing', listing_id: state.selectedListing.id }); } catch (e) {}
+      $('emailOk').innerHTML = '<strong>Credentials Sent!</strong><br/>We emailed temporary login credentials to <u>' + esc(email) + '</u>.' +
+        // No WhatsApp code could prove the number: the account waits for review.
+        (r && r.reviewRequired ? '<br/>Our team will confirm the listing is yours before enquiries are shown in your dashboard.' : '') +
+        '<br/><br/><a href="/vendor-login/change-password/?email=' + encodeURIComponent(email) + '" class="btn btn-primary" style="margin-top:10px;">Proceed to First Login &rarr;</a>';
       $('emailOk').classList.add('show');
       $('emailForm').style.display = 'none';
     }).catch(function(err) {
-      showErr($('emailErr'), err.message || 'Could not submit email.');
+      var msg = (err && err.message) || 'Could not submit email.';
+      $('emailBtn').disabled = false; $('emailBtn').textContent = 'Continue & Send Credentials →';
+      // A stale claim cannot be retried from here; start over at the search.
+      if (/claim session has expired|Invalid or expired claim session|Phone verification required/i.test(msg)) {
+        backToSearch();
+        showErr($('searchErr'), msg);
+        return;
+      }
+      showErr($('emailErr'), msg);
       $('emailBtn').disabled = false; $('emailBtn').textContent = 'Continue & Send Credentials →';
     });
   }
@@ -543,6 +681,22 @@
     })
     .catch(function () {});
 })();
+</script>
+<script>
+  // "For Vendors" menu: hover/focus-within alone never opened it on iOS, where
+  // tapping a button does not focus it. Toggle on click, keep aria-expanded in
+  // step, and close on Escape or a tap elsewhere.
+  (function () {
+    var dd = document.querySelector('.nav-dropdown');
+    if (!dd) return;
+    var btn = dd.querySelector('.dropdown-toggle');
+    dd.classList.add('js');
+    function set(open) { dd.classList.toggle('open', open); btn.setAttribute('aria-expanded', String(open)); }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); set(!dd.classList.contains('open')); });
+    document.addEventListener('click', function (e) { if (!dd.contains(e.target)) set(false); });
+    dd.addEventListener('keydown', function (e) { if (e.key === 'Escape') { set(false); btn.focus(); } });
+    dd.addEventListener('focusout', function (e) { if (!dd.contains(e.relatedTarget)) set(false); });
+  })();
 </script>
 </body>
 </html>

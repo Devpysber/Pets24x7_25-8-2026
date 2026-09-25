@@ -22,6 +22,10 @@ to you.
 | `pets24x7-deploy.sh` | `/usr/local/bin/pets24x7-deploy.sh` (mode 700) |
 | `pets24x7-deploy.service` | `/etc/systemd/system/` |
 | `pets24x7-deploy.timer` | `/etc/systemd/system/` |
+| `pets24x7-publish.sh` | `/usr/local/bin/pets24x7-publish.sh` (mode 700; the deploy reinstalls it) |
+| `pets24x7-publish.service` | `/etc/systemd/system/` |
+| `pets24x7-publish.timer` | `/etc/systemd/system/` (nightly 03:30 IST) |
+| `pets24x7-publish.path` | `/etc/systemd/system/` (admin "Publish site" button) |
 
 The api vhost is certbot-managed: it rewrites the `listen 443` and certificate
 lines on renewal, so re-copy from the server rather than the other way around.
@@ -43,7 +47,22 @@ Two things start a deploy, and they do the same work:
 
 The rollout itself rebuilds the API only when `pets24x7_api/`
 changed and re-renders the site only when `pets24x7_new/` changed, since a full
-render is ~36k files.
+render is ~40k files. The re-render is `pets24x7-publish.sh`: it exports the
+listings table into the release before rendering, so the site always shows the
+database, never the `data/*.json` committed in git.
+
+## Publishing listings from the database
+
+`pets24x7-publish.sh` (export -> render -> checks -> symlink swap -> prune) runs
+nightly from `pets24x7-publish.timer`, when the admin panel writes the request
+file watched by `pets24x7-publish.path`, and from every site deploy. Enable the
+two triggers once with
+`systemctl enable --now pets24x7-publish.timer pets24x7-publish.path`, and
+create the request directory with
+`install -d -o pets24x7 -g pets24x7 /opt/pets24x7/run`. Last run:
+`/var/lib/pets24x7/publish-status.json`; logs:
+`journalctl -u pets24x7-publish.service`. Details in `../DEPLOY.md`,
+"Managing listings".
 
 `/opt/pets24x7/app` is a clone of the deploy branch. `.env`, `node_modules` and `dist`
 are gitignored, so a checkout never touches them. `schema.prisma` is rewritten

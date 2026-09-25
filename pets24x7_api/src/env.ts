@@ -1,12 +1,37 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+// z.coerce.boolean() is Boolean(value), so the string "false" in .env becomes
+// true. That silently turned MAIL_ALLOW_DEV_SEND=false (as shipped in
+// .env.example) into "send real mail from dev", and SMTP_SECURE=false into TLS
+// on a STARTTLS port. Parse the words people actually write instead.
+const envBool = (fallback: boolean) =>
+  z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((v) => {
+      if (typeof v === 'boolean') return v;
+      const s = (v ?? '').trim().toLowerCase();
+      if (s === '') return fallback;
+      return ['1', 'true', 'yes', 'on'].includes(s);
+    });
+
 const Env = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Fails closed. 'development' switches on the OTP bypasses in the parent and
+  // vendor sign-in routes and mounts /dev, which mints admin cookies with no
+  // credential check — a deploy that forgot to set NODE_ENV must not get those.
+  // Local runs set it explicitly (.env.example ships NODE_ENV=development).
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   PORT: z.coerce.number().default(4000),
   // Bind address. Defaults to loopback so the API is only reachable through the
   // reverse proxy; set to 0.0.0.0 only when nothing fronts it.
   HOST: z.string().default('127.0.0.1'),
+  // Reverse-proxy hops in front of the API whose X-Forwarded-For entries are
+  // trusted when working out the client IP (every rate limit keys on it).
+  // Behind nginx alone that is 1. Behind Cloudflare -> nginx it is 2: with 1,
+  // req.ip is a Cloudflare edge address, so each auth limit (4 OTPs a minute,
+  // 10 admin logins per 5 minutes) is shared by everyone on that edge.
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(1),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   PUBLIC_SITE_URL: z.string().url(),
@@ -27,6 +52,9 @@ const Env = z.object({
   WA_BUSINESS_ACCOUNT_ID: z.string().min(1),
   WA_ACCESS_TOKEN: z.string().min(1),
   WA_VERIFY_TOKEN: z.string().min(1),
+  // Meta App Dashboard > Settings > Basic > App secret. Signs webhook payloads
+  // (X-Hub-Signature-256); unset means signatures are not verified.
+  WA_APP_SECRET: z.string().optional().transform((v) => (v && v.trim() ? v.trim() : undefined)),
   WA_OTP_TEMPLATE_NAME: z.string().default('pets24x7_otp'),
   WA_OTP_TEMPLATE_LANG: z.string().default('en'),
   WA_REVIEW_TEMPLATE_NAME: z.string().default('pets24x7_review_request'),
@@ -44,10 +72,15 @@ const Env = z.object({
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
 
+  // ---- Invoices (read by payments/invoice.ts) ----
+  // Set to issue GST "Tax invoice"s; blank renders a plain invoice.
+  SELLER_GSTIN: z.string().optional(),
+  GST_RATE_PERCENT: z.coerce.number().min(0).max(28).optional(),
+
   // ---- Email (any SMTP relay) ----
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.coerce.number().int().default(465),
-  SMTP_SECURE: z.coerce.boolean().default(true),
+  SMTP_SECURE: envBool(true),
   // Not an email address: Gmail uses one, but Resend's SMTP user is the literal
   // string 'resend' and SES uses an IAM SMTP key. Requiring email format here
   // made the API refuse to boot on any provider that authenticates properly.
@@ -62,7 +95,7 @@ const Env = z.object({
   // a background job that mails all of them from the live relay both bounces
   // and burns sender reputation. Sending is therefore off outside production
   // unless this is explicitly set.
-  MAIL_ALLOW_DEV_SEND: z.coerce.boolean().default(false),
+  MAIL_ALLOW_DEV_SEND: envBool(false),
   // Verification links stay valid this long unless used sooner.
   EMAIL_VERIFY_TTL_MIN: z.coerce.number().int().min(1).default(10),
 
@@ -73,6 +106,29 @@ const Env = z.object({
 
   // Inbox for admin-facing alerts raised by public requests (a new vendor
   // signing up). Falls back to the OWNER admins on record, then SEED_ADMIN_EMAIL.
+  // ---- Horizontal scale (all optional; one server needs none of them) ----
+  // Shared cache + rate-limit counters for several API instances behind one
+  // load balancer, e.g. redis://:password@10.0.0.5:6379/0. Unset keeps every
+  // counter and cache in process memory, which is correct for a single server.
+  // See src/shared/kv.ts and DEPLOY.md "Scaling to multiple servers".
+  REDIS_URL: z.string().optional().transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  // Namespace for every key this app writes, so a shared Redis can host other
+  // apps (or a staging copy of this one) without collisions.
+  REDIS_KEY_PREFIX: z.string().default('p24x7:'),
+  // Upper bound on the in-memory cache used when REDIS_URL is unset (and as the
+  // fallback while Redis is unreachable). Least recently used entries go first.
+  KV_MEMORY_MAX_ENTRIES: z.coerce.number().int().min(100).default(10_000),
+  // Background schedulers (reminders, engagement mail, digests, expiry sweep).
+  // Every instance takes a database lease before a run, so leaving this on
+  // everywhere is safe; set false on web-only instances to keep them out of
+  // the rotation entirely.
+  RUN_JOBS: envBool(true),
+  // How often each instance pulls listing rows changed by another instance
+  // (imports, vendor edits, deletions) into its in-memory index. 0 turns it
+  // off. Unset means 60s when REDIS_URL is set (several instances) and off
+  // otherwise: one server already updates its own index on every write.
+  LISTINGS_SYNC_MS: z.coerce.number().int().min(0).optional(),
+
   ADMIN_NOTIFY_EMAIL: z.string().email().optional(),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),

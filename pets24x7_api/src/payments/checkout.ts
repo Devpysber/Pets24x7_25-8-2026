@@ -8,14 +8,18 @@
 // With neither available the checkout fails loudly: silently taking no money
 // while activating nothing is worse than an error the payer can retry.
 
+import { randomBytes } from 'node:crypto';
 import { env } from './../env.js';
-import { createRazorpayOrder, isRazorpayConfigured } from './razorpay.js';
+import { createRazorpayOrder, hasRazorpayKeys } from './razorpay.js';
 
 export function isDevGatewayBypass(): boolean {
   if (env.NODE_ENV !== 'development') return false;
   // A live key on a developer's machine would open real orders against the real
-  // merchant account, so only a test key is honoured here.
-  return !isRazorpayConfigured() || !env.RAZORPAY_KEY_ID!.startsWith('rzp_test_');
+  // merchant account, so only a test key is honoured here. hasRazorpayKeys(),
+  // not isRazorpayConfigured(): the latter is always true in development, which
+  // sent a keyless dev box on to RAZORPAY_KEY_ID!.startsWith() and a TypeError
+  // that failed every checkout.
+  return !hasRazorpayKeys() || !env.RAZORPAY_KEY_ID!.startsWith('rzp_test_');
 }
 
 /**
@@ -43,6 +47,12 @@ export async function startCheckout(opts: {
   currency?: string;
   /** Overrides the per-purpose default. */
   returnUrl?: string;
+  /**
+   * Extra context stored on the gateway order (Razorpay allows 15 notes of up
+   * to 256 chars). Lets a purchase with no DB row of its own be rebuilt from
+   * the order itself.
+   */
+  notes?: Record<string, string>;
 }): Promise<CheckoutResult> {
   if (isDevGatewayBypass()) {
     return {
@@ -52,7 +62,7 @@ export async function startCheckout(opts: {
     };
   }
 
-  if (!isRazorpayConfigured()) {
+  if (!hasRazorpayKeys()) {
     throw new Error('No payment gateway is configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)');
   }
 
@@ -60,7 +70,12 @@ export async function startCheckout(opts: {
     amountMinor: opts.amountMinor,
     currency: opts.currency ?? 'INR',
     receipt: opts.merchantTxnId,
-    notes: { purpose: opts.purpose ?? 'PAYMENT', userId: opts.userId, merchantTxnId: opts.merchantTxnId },
+    notes: {
+      ...(opts.notes ?? {}),
+      purpose: opts.purpose ?? 'PAYMENT',
+      userId: opts.userId,
+      merchantTxnId: opts.merchantTxnId,
+    },
   });
   return {
     mode: 'razorpay',
@@ -73,10 +88,13 @@ export async function startCheckout(opts: {
 }
 
 // Our own reference for a checkout, carried to the gateway as the order
-// receipt: "P24_" + base36 ms timestamp + 4 random chars. Razorpay caps a
-// receipt at 40 characters, so this stays well inside it.
+// receipt: "P24_" + base36 ms timestamp + 6 random hex chars. Razorpay caps a
+// receipt at 40 characters, so this stays well inside it. The random part comes
+// from crypto: Math.random().toString(36) can yield fewer than 4 characters,
+// and two checkouts in the same millisecond then collide on the unique
+// merchantTxnId column and fail with a 500.
 export function newMerchantTxnId(): string {
   const ts = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 6);
+  const rand = randomBytes(3).toString('hex');
   return `P24_${ts}_${rand}`.toUpperCase().slice(0, 35);
 }

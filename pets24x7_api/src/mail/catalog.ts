@@ -1,4 +1,4 @@
-// Admin-facing registry of every transactional template.
+// Admin-facing registry of every mail template (transactional and marketing).
 //
 // Each entry knows how to build itself from a plain data object, and carries
 // realistic sample data so the admin preview renders without a live parent,
@@ -7,14 +7,17 @@
 
 import type { MailInput } from './mailer.js';
 import type { MailKind } from './optout.js';
-import { Button, Note, Text, esc, page } from './components.js';
+import { Button, Note, Text, esc, mailSite, page } from './components.js';
 import { vendorVerifyEmail, verifyEmail, welcomeEmail } from './templates.js';
 import * as T from './action-templates.js';
 import * as L from './lifecycle-templates.js';
+import * as P from './promo-templates.js';
+import * as R from './reco-templates.js';
+import { invoiceUrl } from '../payments/invoice.js';
 
 export interface CatalogEntry {
   id: string;
-  category: 'Generic' | 'Pet parent' | 'Vendor' | 'Payments' | 'Security' | 'Reminders' | 'Admin';
+  category: 'Generic' | 'Pet parent' | 'Vendor' | 'Payments' | 'Security' | 'Reminders' | 'Admin' | 'Marketing';
   label: string;
   description: string;
   /**
@@ -31,6 +34,7 @@ export interface CatalogEntry {
 const soon = () => new Date(Date.now() + 30 * 864e5);
 const PARENT = 'Ashish';
 const BIZ = "Coco's Pet Boarding";
+const VENDOR_CTX = { businessName: BIZ, city: 'Mumbai', listingUrl: 'https://pets24x7.com/in/mumbai/sample/', rating: 4.7, reviewCount: 18 };
 const PLAN = { name: 'Gold · Monthly', priceMinor: 49900, currency: 'INR', discountPercent: 30 };
 
 /** Free-form message an admin types — the one template with no fixed copy. */
@@ -40,6 +44,8 @@ function customEmail(to: string, d: Record<string, any>): MailInput {
     .map((p) => `<p style="margin:0 0 14px;line-height:24px">${esc(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
   return {
+    tag: 'custom',
+    campaign: d.campaign ? String(d.campaign) : undefined,
     to,
     subject: String(d.subject ?? 'A message from Pets24x7'),
     html: page({
@@ -220,7 +226,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     label: 'Membership activated',
     description: 'Receipt sent the moment a membership payment clears.',
     sample: { name: PARENT, plan: PLAN, merchantTxnId: 'P24_SAMPLE_1' },
-    build: (to, d) => T.membershipActivatedEmail(to, d.name, d.plan, soon(), d.merchantTxnId),
+    build: (to, d) => T.membershipActivatedEmail(to, d.name, d.plan, soon(), d.merchantTxnId, invoiceUrl(d.merchantTxnId)),
   },
   {
     id: 'payment/membership_cancelled',
@@ -431,7 +437,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     label: 'Campaign paid, in review',
     description: 'Payment cleared; awaiting admin approval.',
     sample: { businessName: BIZ, campaign: { goal: 'LEADS', durationDays: 30, priceMinor: 299900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_4' },
-    build: (to, d) => T.campaignSubmittedEmail(to, d.businessName, d.campaign, d.merchantTxnId),
+    build: (to, d) => T.campaignSubmittedEmail(to, d.businessName, d.campaign, d.merchantTxnId, invoiceUrl(d.merchantTxnId)),
   },
   {
     id: 'vendor/campaign_approved',
@@ -476,7 +482,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     label: 'Listing featured',
     description: 'Featured placement paid and active.',
     sample: { businessName: BIZ, featured: { priceMinor: 199900, currency: 'INR', durationDays: 30 }, merchantTxnId: 'P24_SAMPLE_5' },
-    build: (to, d) => T.featuredLiveEmail(to, d.businessName, d.featured, soon(), d.merchantTxnId),
+    build: (to, d) => T.featuredLiveEmail(to, d.businessName, d.featured, soon(), d.merchantTxnId, null, invoiceUrl(d.merchantTxnId)),
   },
   {
     id: 'vendor/featured_ended',
@@ -486,6 +492,33 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     description: 'Placement expired, or was cancelled by an admin.',
     sample: { businessName: BIZ, cancelled: false },
     build: (to, d) => T.featuredEndedEmail(to, d.businessName, Boolean(d.cancelled)),
+  },
+  {
+    id: 'vendor/subscription_activated',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Vendor plan activated',
+    description: 'Paid vendor subscription is live; doubles as the receipt.',
+    sample: { businessName: BIZ, plan: { planName: 'Gold', billingPeriod: 'MONTHLY', amountMinor: 99900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_7' },
+    build: (to, d) => T.vendorSubscriptionActivatedEmail(to, d.businessName, d.plan, soon(), d.merchantTxnId),
+  },
+  {
+    id: 'vendor/subscription_expiring',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Vendor plan ending soon',
+    description: 'Paid vendor subscription ends in a few days (nothing auto-renews).',
+    sample: { businessName: BIZ, planName: 'Gold' },
+    build: (to, d) => T.vendorSubscriptionExpiringEmail(to, d.businessName, d.planName, new Date(Date.now() + 3 * 864e5)),
+  },
+  {
+    id: 'vendor/subscription_expired',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Vendor plan ended',
+    description: 'Paid vendor subscription lapsed back to the free Basic tier.',
+    sample: { businessName: BIZ, planName: 'Gold' },
+    build: (to, d) => T.vendorSubscriptionExpiredEmail(to, d.businessName, d.planName),
   },
   // ---------------- Security ----------------
   {
@@ -796,10 +829,24 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     id: 'admin/new_claim',
     kind: 'transactional',
     category: 'Admin',
-    label: 'New listing claim',
-    description: 'Alerts admins that a vendor claim is waiting for approval.',
+    label: 'New business (claim or registration)',
+    description: 'Alerts admins when a vendor claims a listing or registers a new business (kind: claim | registration; needsReview: true for an unproven claim left PENDING).',
     sample: { adminName: 'Admin', vendor: { businessName: BIZ, phone: '+919930090487', city: 'Mumbai', listingName: BIZ } },
-    build: (to, d) => L.adminNewClaimEmail(to, d.adminName, d.vendor),
+    build: (to, d) => L.adminNewClaimEmail(to, d.adminName, d.vendor, d.kind === 'registration' ? 'registration' : 'claim', !!d.needsReview),
+  },
+  {
+    id: 'admin/new_lead',
+    kind: 'transactional',
+    category: 'Admin',
+    label: 'New marketing lead',
+    description: 'A business submitted the marketing / grow-with-us form (enquiry source marketing_*).',
+    sample: {
+      lead: {
+        name: 'Riya Mehta', phone: '+919930090487', email: 'riya@example.com', business: BIZ,
+        category: 'Pet Boarding', city: 'Mumbai', notes: 'Interested in featured placement for Andheri.', source: 'marketing_grow',
+      },
+    },
+    build: (to, d) => L.adminNewLeadEmail(to, d.lead),
   },
   {
     id: 'admin/daily_summary',
@@ -862,6 +909,146 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     description: 'Temporary password issued when an owner claims an existing listing.',
     sample: { businessName: BIZ, tempPassword: 'Temp-9x4Kq2' },
     build: (to, d) => T.claimCredentialsEmail(to, d.businessName, d.tempPassword),
+  },
+
+  // ---------------- Admin security / digest ----------------
+  {
+    id: 'admin/profile_changed',
+    kind: 'transactional',
+    category: 'Admin',
+    label: 'Admin account changed',
+    description: "Sent to an admin's address when their own password or sign-in email changes.",
+    sample: { name: 'Admin', change: { emailChanged: false, passwordChanged: true, newEmail: null } },
+    build: (to, d) => T.adminProfileChangedEmail(to, d.name, d.change ?? { emailChanged: false, passwordChanged: true, newEmail: null }),
+  },
+  {
+    id: 'admin/daily_digest',
+    kind: 'transactional',
+    category: 'Admin',
+    label: 'Daily briefing',
+    description: 'The daily admin digest (jobs/admin-digest.ts): what is waiting on a decision, then what moved yesterday.',
+    sample: {
+      digest: {
+        pendingVendors: 3, pendingReviews: 5, pendingCampaigns: 1, unansweredEnquiries: 7,
+        newEnquiries: 41, newParents: 24, newVendors: 6, newListings: 12,
+        paymentsCount: 9, paymentsRupees: 4491, phoneTaps: 88, whatsappTaps: 132, listingViews: 5210, reviewsSubmitted: 8,
+      },
+    },
+    build: (to, d) => L.adminDailyDigestEmail(to, d.digest, mailSite()),
+  },
+
+  // ---------------- Marketing (paced by jobs/*engagement.ts) ----------------
+  {
+    id: 'marketing/vendor_listing_live',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: your listing is live',
+    description: 'First engagement mail to a vendor — shows how the listing appears to pet owners.',
+    sample: { ctx: VENDOR_CTX, cityListings: 214 },
+    build: (to, d) => P.vendorListingLiveEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }, Number(d.cityListings ?? 0)),
+  },
+  {
+    id: 'marketing/vendor_profile_gaps',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: finish your listing',
+    description: 'Names the specific missing profile fields (photo, hours, services...).',
+    sample: { ctx: VENDOR_CTX, missing: ['A cover photo', 'Opening hours', 'At least one priced service'] },
+    build: (to, d) => P.vendorProfileGapsEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }, Array.isArray(d.missing) ? d.missing : []),
+  },
+  {
+    id: 'marketing/vendor_open_enquiries',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: customers waiting',
+    description: 'Unanswered enquiries on the listing, with a link straight to them.',
+    sample: { ctx: VENDOR_CTX, openCount: 3 },
+    build: (to, d) => P.vendorOpenEnquiriesEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }, Number(d.openCount ?? 1)),
+  },
+  {
+    id: 'marketing/vendor_collect_reviews',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: collect reviews',
+    description: 'Prompts the vendor to send WhatsApp review requests.',
+    sample: { ctx: VENDOR_CTX },
+    build: (to, d) => P.vendorCollectReviewsEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }),
+  },
+  {
+    id: 'marketing/vendor_visibility',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: get seen first',
+    description: 'Featured-placement upsell, with the number of competing listings in the city.',
+    sample: { ctx: VENDOR_CTX, cityListings: 214 },
+    build: (to, d) => P.vendorVisibilityEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }, Number(d.cityListings ?? 0)),
+  },
+  {
+    id: 'marketing/vendor_claim_listing',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Business: claim your listing',
+    description: 'Sent by scripts/claim-campaign.mjs to listed businesses that never claimed their page.',
+    sample: { ctx: VENDOR_CTX },
+    build: (to, d) => P.claimListingEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }),
+  },
+  {
+    id: 'marketing/parent_new_nearby',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Parent: new businesses nearby',
+    description: 'Businesses that joined in the parent\'s city since their last mail.',
+    sample: {
+      name: PARENT,
+      city: 'Mumbai',
+      businesses: [
+        { name: 'Pawfect Grooming Studio', category: 'Pet Grooming', rating: 4.8, url: 'https://pets24x7.com/in/mumbai/sample-1/' },
+        { name: 'Bandra Vet Clinic', category: 'Veterinary Clinic', rating: 4.6, url: 'https://pets24x7.com/in/mumbai/sample-2/' },
+      ],
+    },
+    build: (to, d) => P.parentNewNearbyEmail(to, d.name, d.city ?? 'your city', Array.isArray(d.businesses) ? d.businesses : []),
+  },
+  // ---------------- Recommendations (feed/reco engine; mail/reco-templates.ts) ----------------
+  {
+    id: 'marketing/parent_reco_digest',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Parent: recommendations digest',
+    description:
+      'Weekly (or daily, per the parent\'s setting) picks from the shared engine. Each item shows why it was picked; sponsored places are labelled; carries a digest-only opt-out.',
+    sample: {
+      name: PARENT,
+      petName: 'Bruno',
+      items: [
+        { name: 'Happy Tails Grooming', category: 'Pet Grooming & Spa', city: 'Mumbai', rating: 4.8, reviewCount: 312, url: 'https://pets24x7.com/in/mumbai/sample-1/?src=reco_email_digest', reason: { code: 'SAVED_SIMILAR', text: 'Because you saved Happy Paws' } },
+        { name: 'Bandra Pet Physio', category: 'Pet Physiotherapy & Rehab', city: 'Mumbai', rating: 4.9, reviewCount: 88, url: 'https://pets24x7.com/in/mumbai/sample-2/?src=reco_email_digest', reason: { code: 'PET_NEED', text: 'For Bruno: senior pets benefit from physio' } },
+        { name: "Coco's Pet Boarding", category: 'Pet Boarding & Daycare', city: 'Mumbai', rating: 5, reviewCount: 475, url: 'https://pets24x7.com/in/mumbai/sample-3/?src=reco_email_digest', sponsored: true, label: 'Sponsored', reason: { code: 'SPONSORED', text: 'Sponsored' } },
+        { name: 'Hakimji Clinic', category: 'Emergency Animal Hospital', city: 'Mumbai', rating: 4.7, reviewCount: 640, url: 'https://pets24x7.com/in/mumbai/sample-4/?src=reco_email_digest', reason: { code: 'POPULAR_NEARBY', text: '23 pet parents contacted them this month' } },
+      ],
+      deals: [{ title: 'First grooming session', offerLabel: '20% off', vendor: 'Happy Tails Grooming', endsAt: soon(), code: 'PAWS20' }],
+    },
+    build: (to, d) =>
+      R.recoDigestEmail(to, d.name, d.petName ?? null, Array.isArray(d.items) ? d.items : [], {
+        deals: Array.isArray(d.deals) ? d.deals : [],
+      }),
+  },
+  {
+    id: 'marketing/vendor_growth_digest',
+    kind: 'marketing',
+    category: 'Marketing',
+    label: 'Vendor: weekly growth digest',
+    description: 'The top three recommended actions for the business plus how it compares in its city and category (public data only).',
+    sample: {
+      ctx: VENDOR_CTX,
+      benchmarkLine: 'You rank #7 of 58 pet boarding & daycare businesses in Mumbai · 212 views vs a median of 96',
+      actions: [
+        { title: '2 customers are waiting for a reply', body: 'Pet owners usually book whoever answers first.', metric: { label: 'Unanswered enquiries', value: 2 }, cta: { label: 'Reply now', view: 'enquiries' } },
+        { title: 'Collect more reviews', body: 'Businesses with more reviews rank higher.', metric: { label: 'Reviews · median in Mumbai', value: 18, benchmark: 41 }, cta: { label: 'Request reviews', view: 'reviews' } },
+        { title: 'Get seen first among 58 businesses', body: 'A featured placement puts you in the labelled sponsored spots.', cta: { label: 'See placement options', view: 'grow' } },
+      ],
+    },
+    build: (to, d) =>
+      R.vendorGrowthDigestEmail(to, { ...VENDOR_CTX, ...(d.ctx ?? {}) }, Array.isArray(d.actions) ? d.actions : [], d.benchmarkLine ?? null),
   },
 ];
 

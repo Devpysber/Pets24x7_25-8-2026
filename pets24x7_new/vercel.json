@@ -52,16 +52,123 @@
   "redirects": [
     {
       "source": "/city.html",
-      "destination": "/",
+      "destination": "/in/:city/:cat/",
       "permanent": true,
       "has": [
         {
           "type": "query",
-          "key": "country"
+          "key": "country",
+          "value": "[Ii][Nn]"
         },
         {
           "type": "query",
-          "key": "city"
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        },
+        {
+          "type": "query",
+          "key": "cat",
+          "value": "(?<cat>[a-z0-9-]+)"
+        }
+      ]
+    },
+    {
+      "source": "/city.html",
+      "destination": "/us/:city/:cat/",
+      "permanent": true,
+      "has": [
+        {
+          "type": "query",
+          "key": "country",
+          "value": "[Uu][Ss]"
+        },
+        {
+          "type": "query",
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        },
+        {
+          "type": "query",
+          "key": "cat",
+          "value": "(?<cat>[a-z0-9-]+)"
+        }
+      ]
+    },
+    {
+      "source": "/city.html",
+      "destination": "/in/:city/",
+      "permanent": true,
+      "has": [
+        {
+          "type": "query",
+          "key": "country",
+          "value": "[Ii][Nn]"
+        },
+        {
+          "type": "query",
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        }
+      ]
+    },
+    {
+      "source": "/city.html",
+      "destination": "/us/:city/",
+      "permanent": true,
+      "has": [
+        {
+          "type": "query",
+          "key": "country",
+          "value": "[Uu][Ss]"
+        },
+        {
+          "type": "query",
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        }
+      ]
+    },
+    {
+      "source": "/listing.html",
+      "destination": "/in/:city/:id/",
+      "permanent": true,
+      "has": [
+        {
+          "type": "query",
+          "key": "country",
+          "value": "[Ii][Nn]"
+        },
+        {
+          "type": "query",
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        },
+        {
+          "type": "query",
+          "key": "id",
+          "value": "(?<id>[^&]+)"
+        }
+      ]
+    },
+    {
+      "source": "/listing.html",
+      "destination": "/us/:city/:id/",
+      "permanent": true,
+      "has": [
+        {
+          "type": "query",
+          "key": "country",
+          "value": "[Uu][Ss]"
+        },
+        {
+          "type": "query",
+          "key": "city",
+          "value": "(?<city>[a-z0-9-]+)"
+        },
+        {
+          "type": "query",
+          "key": "id",
+          "value": "(?<id>[^&]+)"
         }
       ]
     },
@@ -94,6 +201,14 @@
     {
       "source": "/review/:code/thanks/",
       "destination": "/review/thanks/index.html?code=:code"
+    },
+    {
+      "source": "/:country(in|us)/:city/(veterinary-clinics|emergency-animal-hospital|vaccination-centers|mobile-vet-services|specialty-vets-exotics-avian-reptiles|veterinary-labs-diagnostics|pet-dental-care|pet-physiotherapy-rehab|pet-grooming-spa|pet-boarding-daycare|pet-walking|pet-training-obedience-behavior|pet-sitting-in-home-care|pet-relocation-services|pet-taxi-transport|pet-therapy-services)/",
+      "destination": "/city.html"
+    },
+    {
+      "source": "/:country(in|us)/:city/page/:n([0-9]+)/",
+      "destination": "/city.html"
     },
     {
       "source": "/:country(in|us)/:city/:id/",
