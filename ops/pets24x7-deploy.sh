@@ -144,9 +144,15 @@ if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
   as_app "cd pets24x7_api && npm run seed:plans"
   as_app "cd pets24x7_api && npm run build"
   systemctl restart pets24x7-api
-  sleep 3
-  systemctl is-active --quiet pets24x7-api || { echo "FAILED: api did not come back"; exit 1; }
-  curl -fsS -m 10 -o /dev/null http://127.0.0.1:4100/health || { echo "FAILED: health check"; exit 1; }
+  # The API loads the whole listing index before it listens, which takes a few
+  # seconds; give it up to a minute instead of failing a good deploy.
+  api_ok=""
+  for _ in $(seq 1 30); do
+    sleep 2
+    systemctl is-active --quiet pets24x7-api || { echo "FAILED: api did not come back"; exit 1; }
+    if curl -fsS -m 5 -o /dev/null http://127.0.0.1:4100/health; then api_ok=1; break; fi
+  done
+  [ -n "$api_ok" ] || { echo "FAILED: health check"; exit 1; }
   echo "-- api ok"
 fi
 
