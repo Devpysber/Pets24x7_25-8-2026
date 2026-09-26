@@ -571,7 +571,7 @@
     </div>
     <div class="steps-grid">
       <div class="step-card"><div class="step-num">1</div><h3>Submit Your Business</h3><p>Send us your business details on WhatsApp — name, address, services, phone, Google reviews link. We handle the rest.</p></div>
-      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team SEO-optimises your listing, links your Google Business profile, embeds your map, and pushes you to relevant city + category pages.</p></div>
+      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team optimises your listing, adds your services and photos, and places you on the right city and category pages.</p></div>
       <div class="step-card"><div class="step-num">3</div><h3>Get Direct Enquiries</h3><p>We pass each enquiry to you on WhatsApp. You confirm bookings. No commission. No middlemen. No surprises.</p></div>
     </div>
   </div>
@@ -632,7 +632,7 @@
       <details class="faq-item"><summary>Can I list multiple locations or branches?</summary><div class="faq-answer">Yes. Each branch gets its own SEO-optimised listing page, with its own Google reviews and WhatsApp routing. We offer bulk-listing discounts for chains.</div></details>
       <details class="faq-item"><summary>What categories of pet businesses can list?</summary><div class="faq-answer">Veterinary clinics, emergency animal hospitals, groomers, boarders, daycare, dog walkers, trainers, sitters, pet taxi &amp; transport, relocators, dental care, physiotherapy, mobile vets, vaccination centres, exotic/avian vets — and more. If you serve pets, we'll find you a category.</div></details>
       <details class="faq-item"><summary>How long does it take to receive my first enquiry?</summary><div class="faq-answer">Most businesses get their first WhatsApp enquiry within 5-7 days of going live. Featured listings often see traction in 24-48 hours.</div></details>
-      <details class="faq-item"><summary>Who owns the customer contact data?</summary><div class="faq-answer">You do. 100%. Pets24x7 never hides customer contact details. Build your CRM, run your own marketing, own your relationships.</div></details>
+      <details class="faq-item"><summary>Who owns the customer contact data?</summary><div class="faq-answer">Every enquiry we pass to you includes the pet parent&rsquo;s name, WhatsApp number and what they need, so you can quote, confirm and look after them as your own customer. Enquiries are also kept in your dashboard.</div></details>
     </div>
   </div>
 </section>
@@ -827,13 +827,12 @@
              '<div class="feat-body">' +
                 '<h3>' + escapeAttr(p.name) + '</h3>' +
                 '<div class="feat-loc">📍 ' + escapeAttr(p.city) + (p.country==='US' && p.state ? ', ' + escapeAttr(p.state) : '') + '</div>' +
-                (why ? '<div class="feat-why">' + escapeAttr(why) + '</div>' : '') +
+                (why && !/on Google|Google reviews/.test(why) ? '<div class="feat-why">' + escapeAttr(why) + '</div>' : '') +
                 '<div class="feat-rating">' +
                   (pRating ? '<span class="rating-pill">★ ' + pRating.toFixed(1) + '</span>' +
                   '<span class="google-badge">' +
-                    '<span class="gscore">' + pRating.toFixed(1) + '/5</span>' +
                     '<span class="glogo"><span class="gB">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span></span>' +
-                    '<span>' + pReviews + ' ratings</span>' +
+                    '<span>' + pReviews + ' reviews</span>' +
                   '</span>' : '') +
                 '</div>' +
              '</div>' +
