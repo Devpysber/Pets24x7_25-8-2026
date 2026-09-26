@@ -389,6 +389,26 @@ def breadcrumb_jsonld(items):
 def abs_url(u):
     return u if re.match(r"^https?://", u or "", re.I) else SITE + "/" + (u or "").lstrip("/")
 
+# Google shows roughly 60 characters of a title and cuts the rest mid-word;
+# scraped business names and the long category labels ("Pet Training
+# (Obedience, Behavior)") pushed most listing titles to 80-120. The first
+# candidate that fits wins; the last one is cut at a word boundary.
+TITLE_MAX = 65
+
+
+def short_category(name):
+    return re.sub(r"\s*\([^)]*\)", "", name or "").strip()
+
+
+def fit_title(*candidates):
+    for t in candidates:
+        if len(t) <= TITLE_MAX:
+            return t
+    last = candidates[-1]
+    cut = last[:TITLE_MAX - 1].rsplit(" ", 1)[0].rstrip(" ,-—|:")
+    return cut + "…"
+
+
 def social_meta(title, desc, url, image=None, image_alt=None, og_type="website", extra=None):
     """Open Graph + Twitter card tags. Every URL is absolute: scrapers do not
     resolve relative ones. `extra` is [(property, content), ...] for og_type
@@ -1199,9 +1219,19 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 
     page_items = items[(page - 1) * page_size : page * page_size]
 
-    title = f"Pet services in {full_city} — {len(items):,} verified vets, groomers, boarders | Pets24x7"
+    n = len(items)
+    providers = f"{n:,} verified provider{'s' if n != 1 else ''}"
+    title = fit_title(
+        *([f"Pet services in {full_city} — {n:,} verified vets, groomers, boarders | Pets24x7"] if n > 1 else []),
+        f"Pet services in {full_city} — {providers} | Pets24x7",
+        f"Pet services in {city} — {providers} | Pets24x7",
+        f"Pet services in {city} | Pets24x7",
+    )
     if page > 1:
-        title = f"Pet services in {full_city} (page {page} of {total_pages}) | Pets24x7"
+        title = fit_title(
+            f"Pet services in {full_city} (page {page} of {total_pages}) | Pets24x7",
+            f"Pet services in {city} (page {page} of {total_pages}) | Pets24x7",
+        )
     desc = (f"Browse {len(items):,} verified pet service businesses in {full_city} on Pets24x7 — "
             f"vets, groomers, boarders, walkers, trainers and more. Direct WhatsApp enquiries, zero booking fees.")
 
@@ -1328,7 +1358,13 @@ def render_category(country, city_slug, city, category_name, category_slug, item
     state = next((b["state"] for b in items if b.get("state")), "")
     full_city = f"{city}{', ' + state if (country == 'US' and state) else ''}"
 
-    title = f"{category_name} in {full_city} — {len(items)} verified provider{'s' if len(items) != 1 else ''} | Pets24x7"
+    providers = f"{len(items)} verified provider{'s' if len(items) != 1 else ''}"
+    title = fit_title(
+        f"{category_name} in {full_city} — {providers} | Pets24x7",
+        f"{short_category(category_name)} in {full_city} — {providers} | Pets24x7",
+        f"{short_category(category_name)} in {city} — {providers} | Pets24x7",
+        f"{short_category(category_name)} in {city} | Pets24x7",
+    )
     desc = (f"Find {len(items)} verified {category_name.lower()} provider{'s' if len(items) != 1 else ''} in {full_city}. "
             f"Google-listed businesses. Direct WhatsApp enquiries. Zero booking fees.")
 
@@ -1450,7 +1486,13 @@ def render_listing(biz, all_in_city, all_cats):
     state = biz.get("state") or ""
     full_city = f"{city}{', ' + state if (country == 'US' and state) else ''}"
 
-    title = f"{biz['name']} — {biz['category']} in {full_city} | Pets24x7"
+    title = fit_title(
+        f"{biz['name']} — {biz['category']} in {full_city} | Pets24x7",
+        f"{biz['name']} — {short_category(biz['category'])} in {city} | Pets24x7",
+        f"{biz['name']} — {short_category(biz['category'])} in {city}",
+        f"{biz['name']} | Pets24x7",
+        f"{biz['name']}",
+    )
     desc = (f"{biz['name']} is a verified {biz['category']} in {full_city}. "
             + (f"Rated {biz['rating']:.1f}/5 on Google from {biz['review_count']} reviews. " if has_rating(biz) else "")
             + "WhatsApp them direct via Pets24x7 — no booking fees.")
