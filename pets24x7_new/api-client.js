@@ -315,7 +315,7 @@
     adminDirectorySuggest: function (qs)  { return req('GET', '/api/admin/directory/suggest' + (qs || '')); },
     adminListing:       function (id)       { return req('GET',    '/api/admin/listings/' + encodeURIComponent(id)); },
     adminListingUpdate: function (id, body) { return req('PATCH',  '/api/admin/listings/' + encodeURIComponent(id), body); },
-    adminListingDelete: function (id)       { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id)); },
+    adminListingDelete: function (id, force) { return req('DELETE', '/api/admin/listings/' + encodeURIComponent(id) + (force ? '?force=1' : '')); },
     // body.force = true adds the listing even when a likely duplicate exists (409 otherwise).
     adminListingCreate: function (body)     { return req('POST',   '/api/admin/listings', body); },
     adminListingHide:   function (id, hide) { return req('POST',   '/api/admin/listings/' + encodeURIComponent(id) + (hide === false ? '/unhide' : '/hide'), {}); },

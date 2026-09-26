@@ -4246,14 +4246,29 @@
       danger: true
     }).then(function (ok) {
       if (!ok) return;
-      api.adminListingDelete(id).then(function () {
-        toast('Deleted ' + (name || 'the listing'), 'ok');
+      function done() {
+        toast('Deleted ' + (name || 'the listing') + '. Press Publish to update the site pages now.', 'ok');
         closeModal('vendorModal');
         // Refresh whichever screens are showing it.
         if (loadedOnce.directory) dirLoad(dirState.page).catch(function () {});
         loadView('vendors', true);
         loadView('dash', true);
-      }).catch(function (e) { uiAlert({ title: 'Could not delete', body: fmtErr(e) }); });
+      }
+      api.adminListingDelete(id).then(done).catch(function (e) {
+        // A claimed listing needs a second, explicit confirmation.
+        if (e && e.status === 409) {
+          return uiConfirm({
+            title: 'This listing is claimed',
+            body: fmtErr(e) + ' Their Featured slot on it, if any, is cancelled.',
+            confirmLabel: 'Delete anyway',
+            danger: true
+          }).then(function (ok2) {
+            if (!ok2) return;
+            return api.adminListingDelete(id, true).then(done);
+          }).catch(function (e2) { uiAlert({ title: 'Could not delete', body: fmtErr(e2) }); });
+        }
+        uiAlert({ title: 'Could not delete', body: fmtErr(e) });
+      });
     });
   };
 
@@ -4607,8 +4622,8 @@
       var acts = '<button class="btn btn-sm" onclick="openVendorModalAt(' + (start + i) + ')">View</button>';
       // A directory row has no account behind it: it can still be inspected and
       // removed, but there is nobody to email.
-      if (v.source !== 'REGISTERED_VENDOR') {
-        acts += ' <button class="btn btn-sm btn-danger" onclick="adminDeleteListing(' + (start + i) + ')">Delete</button>';
+      if (v.source !== 'REGISTERED_VENDOR' || v.listingId) {
+        acts += ' <button class="btn btn-sm btn-danger" onclick="adminDeleteListing(' + (start + i) + ')">Delete' + (v.source === 'REGISTERED_VENDOR' ? ' listing' : '') + '</button>';
       }
       if (v.source === 'REGISTERED_VENDOR') {
         if (v.email && v.email !== '—') {

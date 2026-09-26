@@ -25,6 +25,43 @@ export interface FeaturedLive {
   endsAt: Date | null;
 }
 
+const PAID_TIERS = new Set(['SILVER', 'GOLD', 'DIAMOND', 'PLATINUM']);
+
+/**
+ * Listings whose approved vendor holds an active paid subscription. The
+ * subscription lives in the settings row `vendor_sub:<vendorId>` (see
+ * vendors/vendor.subscriptions.routes.ts); a plan past its endsAt no longer
+ * counts, so a lapsed plan drops out at the next snapshot.
+ */
+async function loadPaidPlans(
+  claimed: Array<{ id: string; listingId: string | null }> | null,
+  now: Date,
+): Promise<Map<string, string> | null> {
+  if (!claimed) return null;
+  try {
+    const listingByVendor = new Map(claimed.filter((v) => v.listingId).map((v) => [v.id, v.listingId as string]));
+    if (!listingByVendor.size) return new Map();
+    const rows = await prisma.setting.findMany({
+      where: { key: { in: [...listingByVendor.keys()].map((id) => `vendor_sub:${id}`) } },
+      select: { key: true, value: true },
+    });
+    const out = new Map<string, string>();
+    for (const r of rows) {
+      const sub = ((r.value ?? {}) as { subscription?: { tier?: string; endsAt?: string | null; status?: string } }).subscription;
+      const tier = String(sub?.tier ?? '').toUpperCase();
+      if (!PAID_TIERS.has(tier)) continue;
+      if (sub?.status && !['ACTIVE', 'PAID'].includes(String(sub.status).toUpperCase())) continue;
+      if (sub?.endsAt && new Date(sub.endsAt).getTime() < now.getTime()) continue;
+      const listingId = listingByVendor.get(r.key.slice('vendor_sub:'.length));
+      if (listingId) out.set(listingId, tier);
+    }
+    return out;
+  } catch (err) {
+    logger.warn({ err }, 'reco: could not load paid vendor plans');
+    return null;
+  }
+}
+
 export interface Snapshot {
   version: number;
   at: Date | null;
@@ -35,6 +72,8 @@ export interface Snapshot {
   views30d: Map<string, number>;
   saves: Map<string, number>;
   p24Reviews: Map<string, { avg: number; n: number }>;
+  /** listingId -> active paid vendor plan tier (SILVER/GOLD/DIAMOND). */
+  paidPlans: Map<string, string>;
 }
 
 const EMPTY: Snapshot = {
@@ -47,6 +86,7 @@ const EMPTY: Snapshot = {
   views30d: new Map(),
   saves: new Map(),
   p24Reviews: new Map(),
+  paidPlans: new Map(),
 };
 
 let snap: Snapshot = EMPTY;
@@ -98,7 +138,7 @@ async function load(): Promise<Snapshot> {
         // CLAIMED is an approved state too (see shared/vendor-status.ts); the
         // old ACTIVE-only filter never boosted a vendor who came in by claim.
         where: { status: { in: [...APPROVED_VENDOR_STATUSES] }, listingId: { not: null }, claimedAt: { not: null } },
-        select: { listingId: true },
+        select: { id: true, listingId: true },
         take: 100000,
       })
       .catch(() => null),
@@ -172,6 +212,7 @@ async function load(): Promise<Snapshot> {
     views30d: views ?? snap.views30d,
     saves: saves ?? snap.saves,
     p24Reviews: reviews ?? snap.p24Reviews,
+    paidPlans: (await loadPaidPlans(claimedRows, now)) ?? snap.paidPlans,
   };
   snap = next;
   return next;

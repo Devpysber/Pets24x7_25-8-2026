@@ -14,6 +14,7 @@ export const REASON_CODES = [
   'TOP_RATED',
   'HIGHLY_REVIEWED',
   'OWNER_MANAGED',
+  'PREMIUM_PARTNER',
   'NEW_IN_CITY',
   'SAME_CATEGORY',
   'SAME_AREA',
@@ -56,7 +57,11 @@ export function toReason(c: Component): Reason {
  * become the secondary chips. `fallback` is used when nothing qualifies.
  */
 export function pickReasons(components: Component[], fallback: Reason): { reason: Reason; reasons: string[] } {
-  const ranked = components.filter((c) => c.sayable && c.value > 0).sort((a, b) => b.value - a.value);
+  // A paid-plan boost is always the headline reason when present, so a
+  // listing lifted by a subscription is never presented as a purely organic pick.
+  const ranked = components
+    .filter((c) => c.sayable && c.value > 0)
+    .sort((a, b) => Number(b.code === 'PREMIUM_PARTNER') - Number(a.code === 'PREMIUM_PARTNER') || b.value - a.value);
   const reason = ranked[0] ? toReason(ranked[0]) : fallback;
   const texts = [reason.text];
   for (const c of ranked.slice(ranked[0] ? 1 : 0)) {
@@ -76,6 +81,7 @@ export const text = {
   topRated: (rating: number) => `${rating.toFixed(1)}★ on Google`,
   highlyReviewed: (n: number) => `${n} Google reviews`,
   ownerManaged: () => 'Owner-managed on Pets24x7',
+  premiumPartner: () => 'Pets24x7 premium partner',
   newInCity: (city: string) => `New in ${city}`,
   sameCategory: (category: string, city: string) => `Another ${category.toLowerCase()} in ${city}`,
   sameArea: (area: string) => `Also in ${area}`,

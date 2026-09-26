@@ -267,6 +267,12 @@ export function baseScore(l: ListingRecord, env: ScoreEnv, explain?: Component[]
     score += w.claimed;
     explain?.push({ code: 'OWNER_MANAGED', value: w.claimed, text: text.ownerManaged(), sayable: true });
   }
+  const paidTier = s.paidPlans?.get(l.id);
+  if (paidTier && w.paidPlan) {
+    const v = w.paidPlan * (paidTier === 'DIAMOND' || paidTier === 'PLATINUM' ? 1 : paidTier === 'GOLD' ? 0.75 : 0.5);
+    score += v;
+    explain?.push({ code: 'PREMIUM_PARTNER', value: v, text: text.premiumPartner(), sayable: true });
+  }
   if (l.phone) score += w.contactable;
   if (isRecentlyAdded(l.id)) {
     score += w.fresh;

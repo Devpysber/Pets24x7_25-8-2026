@@ -110,6 +110,26 @@ featuredPublicRouter.get(
       }
     }
 
+    // Photos for the cards: a claimed vendor's cover image, else the listing's
+    // own first photo (admin upload). Neither is in the in-memory index.
+    const photoOf = new Map<string, string>();
+    try {
+      const ids = rows.map((r) => r.listingId);
+      if (ids.length) {
+        const [vendors, listings] = await Promise.all([
+          prisma.vendor.findMany({ where: { listingId: { in: ids }, imageUrl: { not: null } }, select: { listingId: true, imageUrl: true } }),
+          prisma.listing.findMany({ where: { id: { in: ids } }, select: { id: true, photos: true } }),
+        ]);
+        for (const l of listings) {
+          const first = Array.isArray(l.photos) ? l.photos.find((x) => typeof x === 'string' && /^https?:\/\//.test(x)) : null;
+          if (typeof first === 'string') photoOf.set(l.id, first);
+        }
+        for (const v of vendors) if (v.listingId && v.imageUrl && /^https?:\/\//.test(v.imageUrl)) photoOf.set(v.listingId, v.imageUrl);
+      }
+    } catch {
+      // No photos: the page falls back to a category photo.
+    }
+
     const label = (await getRecoConfig()).sponsored.label;
     const cards = rows
       .map((r) => {
@@ -153,6 +173,8 @@ featuredPublicRouter.get(
           rating: shownRating(l),
           reviewCount: l.review_count,
           googleCid: null,
+          categorySlug: l.category_slug ?? null,
+          imageUrl: photoOf.get(l.id) ?? null,
           url: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
           endsAt: r.endsAt,
           featuredId: r.id as string,

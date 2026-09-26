@@ -514,7 +514,10 @@ def biz_card_html(b, badge=None):
     img = (own_photos(b) or [img_for(b, 0)])[0]
     amens = "".join(f'<span class="amenity">{e(a)}</span>' for a in amenities_for(b, 4))
     badge_html = ""
-    if badge == "top":
+    if b.get("premium"):
+        # Paid vendor plan: placed first in its city, and says so.
+        badge_html = '<span class="badge" style="background:#1D4ED8;">Premium partner</span>'
+    elif badge == "top":
         badge_html = '<span class="badge">Top Rated</span>'
     elif badge == "featured":
         badge_html = '<span class="badge" style="background:var(--warning);color:#1F2937;">Featured</span>'
@@ -970,6 +973,7 @@ def featured_script(country, city_slug, category_slug=None):
     placement covers the whole city while the reader is in one category — is
     drawn from what the API returns.
     """
+    FEAT_STOCK_JSON = json.dumps(dict(IMG_POOL, _default=DEFAULT_IMGS))
     cat = f", category: {js(category_slug)}" if category_slug else ""
     return f"""<script>
 (function(){{
@@ -987,14 +991,24 @@ def featured_script(country, city_slug, category_slug=None):
   // A score is shown only with a count behind it, as on the static pages.
   function rated(c){{ return Number(c.rating) > 0 && Number(c.reviewCount || c.review_count) >= 1; }}
 
+  // The card's photo: the business's own when it has one, else the same
+  // category stock photo the listing cards use.
+  var FEAT_STOCK = {FEAT_STOCK_JSON};
+  function featImg(c){{
+    if (c.imageUrl) return c.imageUrl;
+    var pool = FEAT_STOCK[c.categorySlug] || FEAT_STOCK._default;
+    var h = 5381, id = String(c.id || '');
+    for (var i = 0; i < id.length; i++) h = ((h << 5) + h + id.charCodeAt(i)) >>> 0;
+    return 'https://images.unsplash.com/' + pool[h % pool.length] + '?w=600&h=450&fit=crop&q=70';
+  }}
   function cardFor(c){{
     var loc = esc(c.city + (c.state ? ', ' + c.state : ''));
     var tel = '';  // contact details stay with Pets24x7
     var href = esc(withSrc(c.url));
     return '<article class="biz-card is-featured">' +
-      '<a class="biz-img feat-art" href="' + href + '">' +
+      '<a class="biz-img" href="' + href + '">' +
         '<span class="badge badge-featured badge-sponsored" aria-label="Sponsored listing">' + esc(labelOf(c)) + '</span>' +
-        '<span class="feat-emoji" aria-hidden="true">' + esc(c.categoryIcon || '🐾') + '</span>' +
+        '<img loading="lazy" src="' + esc(featImg(c)) + '" alt="' + esc(c.name) + '" onerror="this.style.display=\\'none\\'">' +
         '<span class="ct-chip">' + esc(c.categoryIcon || '📍') + ' ' + esc(c.category) + '</span>' +
       '</a>' +
       '<div class="biz-info">' +

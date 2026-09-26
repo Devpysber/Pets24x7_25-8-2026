@@ -31,7 +31,7 @@ import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.
 import { syncVendorToListingIndex } from '../vendors/dashboard.routes.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
-import { BadRequestError, HttpError, NotFoundError } from '../shared/errors.js';
+import { BadRequestError, ConflictError, HttpError, NotFoundError } from '../shared/errors.js';
 import {
   addAndPersistImportedListing,
   findListingByPhone,
@@ -1139,14 +1139,25 @@ adminApiRouter.delete(
     const existing = await prisma.listing.findUnique({ where: { id }, select: { id: true, name: true, city: true } });
     if (!existing) throw new NotFoundError('Listing not found');
 
-    // A claimed listing belongs to a business with an account. Removing it from
-    // under them would leave a dashboard pointing at nothing, so that has to be
-    // a deliberate vendor deletion instead.
-    const vendor = await prisma.vendor.findUnique({ where: { listingId: id }, select: { businessName: true } });
-    if (vendor) {
-      throw new BadRequestError(
-        `"${vendor.businessName}" has claimed this listing. Delete the vendor account first if you really mean to remove it.`,
+    // A claimed listing belongs to a business with an account. It can still be
+    // deleted, but only when the admin confirms it (?force=1): the vendor
+    // account is kept and detached from the listing, and any live Featured
+    // slot on it is cancelled, so no dashboard or paid strip points at nothing.
+    const vendor = await prisma.vendor.findUnique({ where: { listingId: id }, select: { id: true, businessName: true } });
+    const force = req.query.force === '1' || req.query.force === 'true';
+    if (vendor && !force) {
+      throw new ConflictError(
+        `"${vendor.businessName}" has claimed this listing. Deleting it keeps their account but removes the listing from the site.`,
       );
+    }
+    if (vendor) {
+      await prisma.$transaction([
+        prisma.vendor.update({ where: { id: vendor.id }, data: { listingId: null } }),
+        prisma.featuredListing.updateMany({
+          where: { listingId: id, status: { in: ['ACTIVE', 'PENDING_PAYMENT'] } },
+          data: { status: 'CANCELLED' },
+        }),
+      ]);
     }
 
     // Rows that point at the listing by id (listingId has no foreign key) go
@@ -1178,6 +1189,7 @@ adminApiRouter.delete(
         actorType: 'ADMIN', actorId: req.auth!.sub, action: 'listing.delete',
         meta: {
           listingId: id, name: existing.name, city: existing.city,
+          detachedVendorId: vendor?.id ?? null,
           reviewsRejected: pendingClosed.count, reviewsHidden: publishedHidden.count, activityRemoved: activityRemoved.count,
         },
         ipAddress: req.ip ?? null,
@@ -2192,9 +2204,13 @@ let parentRecommendedIds: string[] = [];
 // so a saved row cannot bring the old promise back.
 const LEGACY_FREE_TAGLINE = 'Verified Directory Listing & Direct Calls';
 function brokerTagline(plan: any): any {
-  return plan && plan.tagline === LEGACY_FREE_TAGLINE
-    ? { ...plan, tagline: 'Directory Listing & Enquiries via Pets24x7' }
-    : plan;
+  if (!plan) return plan;
+  let next = plan.tagline === LEGACY_FREE_TAGLINE ? { ...plan, tagline: 'Directory Listing & Enquiries via Pets24x7' } : plan;
+  // Business phone numbers are no longer shown, so no plan can sell a call button.
+  if (Array.isArray(next.perks) && next.perks.includes('Direct Call Button')) {
+    next = { ...next, perks: next.perks.map((p: string) => (p === 'Direct Call Button' ? 'Priority Enquiry Forwarding' : p)) };
+  }
+  return next;
 }
 
 function replaceContents<T>(target: T[], next: T[]): void {
@@ -2745,7 +2761,7 @@ export const defaultVendorSubPlans = [
     billingPeriod: 'MONTHLY',
     name: 'Vendor Silver Pro · Monthly',
     tagline: 'Verified Pro Badge + Unlimited Leads',
-    perks: ['Verified Pet Business Badge', 'UNLIMITED Customer Enquiries & Leads', 'WhatsApp Lead Routing', 'Direct Call Button', 'Priority Search Ranking'],
+    perks: ['Verified Pet Business Badge', 'UNLIMITED Customer Enquiries & Leads', 'WhatsApp Lead Routing', 'Priority Enquiry Forwarding', 'Priority Search Ranking'],
     leadLimit: 9999,
     badge: 'VERIFIED_PRO',
     priceRupees: 1499,

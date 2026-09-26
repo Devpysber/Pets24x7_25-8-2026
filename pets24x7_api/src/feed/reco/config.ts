@@ -32,6 +32,8 @@ const WeightsSchema = z.object({
   p24Reviews: weight,
   featuredOrganic: weight,
   seenPenalty: weight,
+  /** Active paid vendor plan (Silver/Gold/Diamond), scaled by tier. Disclosed on the card. */
+  paidPlan: weight,
 });
 
 export type RecoWeights = z.infer<typeof WeightsSchema>;
@@ -129,6 +131,10 @@ export const RECO_DEFAULTS: RecoConfig = {
     // the labelled sponsored slots (blend.ts).
     featuredOrganic: 0,
     seenPenalty: -40,
+    // A paid subscription ("Priority Search Ranking" / "Top Search Result
+    // Boost") lifts a business in organic lists. Unlike featuredOrganic this is
+    // shown to the reader: the card says "Pets24x7 premium partner".
+    paidPlan: 40,
   },
   sponsored: {
     enabled: true,

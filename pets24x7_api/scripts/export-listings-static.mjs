@@ -569,6 +569,7 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   if (whatsapp) rec.whatsapp = whatsapp;
   if (photos && photos.length) rec.photos = photos;
   if (vendor) rec.claimed = true;
+  if (vendor && PAID_PLAN_BY_VENDOR.get(vendor.id)) rec.premium = PAID_PLAN_BY_VENDOR.get(vendor.id);
   return { rec };
 }
 
@@ -582,8 +583,38 @@ function syntheticCount(cid) {
 
 // Within a city: rating desc, review count desc, name (build_data.py), then id
 // so equal rows cannot swap places between runs.
+// Businesses on a paid vendor plan (Silver/Gold/Diamond: "Priority Search
+// Ranking" / "Top Search Result Boost") come first in their city, highest tier
+// first; the pages label them "Premium partner". Then rating, reviews, name.
+const TIER_RANK = { DIAMOND: 3, PLATINUM: 3, GOLD: 2, SILVER: 1 };
 const byRank = (a, b) =>
+  (TIER_RANK[b.premium] || 0) - (TIER_RANK[a.premium] || 0) ||
   (b.rating || 0) - (a.rating || 0) || b.review_count - a.review_count || cmp(a.name, b.name) || cmp(a.id, b.id);
+
+/** vendorId -> active paid plan tier, from the `vendor_sub:<vendorId>` settings rows. */
+async function readPaidPlans(prisma, vendorIds) {
+  const out = new Map();
+  if (!vendorIds.length) return out;
+  try {
+    const rows = await prisma.setting.findMany({
+      where: { key: { in: vendorIds.map((id) => `vendor_sub:${id}`) } },
+      select: { key: true, value: true },
+    });
+    const now = Date.now();
+    for (const r of rows) {
+      const sub = (r.value || {}).subscription || {};
+      const tier = String(sub.tier || '').toUpperCase();
+      if (!TIER_RANK[tier]) continue;
+      if (sub.status && !['ACTIVE', 'PAID'].includes(String(sub.status).toUpperCase())) continue;
+      if (sub.endsAt && new Date(sub.endsAt).getTime() < now) continue;
+      out.set(r.key.slice('vendor_sub:'.length), tier);
+    }
+  } catch {
+    // No plans readable: nobody is boosted this run.
+  }
+  return out;
+}
+let PAID_PLAN_BY_VENDOR = new Map();
 
 function buildOutput(records) {
   const byCity = new Map();
@@ -687,6 +718,7 @@ async function main() {
     let withPhotos, imageCols;
     ({ rows, withPhotos, hidden } = await readListings(prisma, opts));
     ({ vendors, imageCols } = await readVendors(prisma, new Set(rows.map((r) => r.id))));
+    PAID_PLAN_BY_VENDOR = await readPaidPlans(prisma, [...vendors.values()].map((v) => v.id).filter(Boolean));
     // Refused before any photo is decoded or written.
     const publishable = rows.filter((r) => !skipReason(r)).map((r) => r.id);
     if (!publishable.length && !opts.allowEmpty) {
