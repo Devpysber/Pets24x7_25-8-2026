@@ -476,6 +476,19 @@ function skipReason(row) {
  */
 const PHONE_IN_TEXT = /(?:\+?\d[\s().-]?){8,}\d/g;
 
+// ---- Not a pet business: identical copy of src/listings/pet-filter.ts ----
+const PET_WORDS = /(pets?\b|vet(?!eran)|veterinar|animal|dogs?\b|doggie|doggy|cats?\b|kitty|kitten|canine|k-?9|feline|paws?|pup|bark|woof|wag|mutt|hound|kennel|groom|fetch|furr?y?\b|fur\b|whisker|purr|meow|tail|birds?\b|avian|parrot|aquari|fish|reptile|exotic|zoo|livestock|cattle|poultry|equine|horse|rescue|sanctuary|shelter|spca|humane|dvm|petco|petsmart|critter|bunny|rabbit)/i;
+const NOT_PET_BUSINESS = /\b(patholog\w*|sonograph\w*|maternity|gyna?ec\w*|obstetric\w*|ivf|infertility|nursing home|diabet\w*|health cent(?:re|er)|multi-?speciality|paediatric\w*|pediatric\w*|physician|urolog\w*|cardiolog\w*|orthopa?edic\w*|pregnancy|uphc|primary health|endocrinolog\w*|laparoscop\w*|dermatolog\w*|neurolog\w*|oncolog\w*|polyclinic|poly clinic|urgent care|minuteclinic|physiotherap\w*|physical therap\w*|chiropract\w*|labcorp|quest diagnostics|dentist\w*|dental clinic|orthodont\w*|cryo\w*|counsel\w*|psychiatr\w*|psycholog\w*|lpc|lcsw|ayurved\w*|sexolog\w*|migraine|depression|panchakarma|homeopath\w*|homoeopath\w*|colon|weight ?loss|slimming|swasthya|b\.?\s?a\.?\s?m\.?\s?s|m\.?b\.?b\.?s|piles|fistula|lasik|eye ?care|eye clinic|skin clinic|hair clinic|cosmetic|invisible grill|net dealer|pest control|termite|mosquito)\b/i;
+const CAB_FIRM = /\b(taxi|cabs?|car rentals?|limo\w*|black car|chauffeur\w*|trucker|airport)\b/i;
+function isNotPetBusiness(name, categorySlug) {
+  const n = String(name || '').normalize('NFKC');
+  if (PET_WORDS.test(n)) return false;
+  const cat = String(categorySlug || '').toLowerCase();
+  if (cat === 'vaccination-centers') return true;
+  if (cat === 'pet-taxi-transport' && CAB_FIRM.test(n)) return true;
+  return NOT_PET_BUSINESS.test(n);
+}
+
 function scrubContacts(text) {
   if (!text) return text;
   return String(text)
@@ -499,8 +512,12 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   // An id built from a scraped name can carry the business's phone
   // ("…-groomer-99233-91199-40275669"); publishing it would publish the number.
   if (/(^|[^0-9])(?:[6-9][0-9]{4}-?[0-9]{5}|[0-9]{3}-[0-9]{3}-[0-9]{4})([^0-9]|$)/.test(id)) return { skip: 'phone_in_id' };
-  // Some scraped names carry the business's phone number ("… groomer) 99233 91199").
-  const name = str(row.name).replace(PHONE_IN_TEXT, '').replace(/[\s,|:-]+$/, '').replace(/\s{2,}/g, ' ').trim() || str(row.name);
+  // A scraped non-pet business (human clinic, pest control, cab firm) is not
+  // published unless its owner claimed it. Same rule as src/listings/pet-filter.ts.
+  if (str(row.claimStatus) !== 'CLAIMED' && isNotPetBusiness(row.name, row.categorySlug)) return { skip: 'not_pet_business' };
+  // Some scraped names carry the business's phone number ("… groomer) 99233 91199");
+  // styled Unicode ("𝐃𝐫. 𝐘𝐨𝐠𝐞𝐬𝐡") is folded to plain letters.
+  const name = str(row.name).normalize('NFKC').replace(PHONE_IN_TEXT, '').replace(/[\s,|:-]+$/, '').replace(/\s{2,}/g, ' ').trim() || str(row.name);
   const country = str(row.country).toUpperCase();
   const city = str(row.city).replace(/\s+/g, ' ');
   const citySlug = slugify(row.citySlug || row.city);

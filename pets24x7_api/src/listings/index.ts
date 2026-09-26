@@ -5,7 +5,8 @@
 // The JSON files under ../pets24x7_new/data are now only a fallback for a fresh
 // database: if the table is empty at boot they are loaded and then written to
 // MySQL, so a new environment comes up with the full directory.
-
+
+import { isNotPetBusiness, plainText } from './pet-filter.js';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { prisma } from '../db.js';
@@ -145,7 +146,7 @@ function fromRow(row: {
 }): ListingRecord {
   return {
     id: row.id,
-    name: row.name,
+    name: plainText(row.name),
     category: row.category,
     category_slug: row.categorySlug,
     ...(row.categoryIcon ? { category_icon: row.categoryIcon } : {}),
@@ -164,7 +165,10 @@ function fromRow(row: {
     claimStatus: row.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
     // An id carrying the business's phone ("…-groomer-99233-91199-…") would
     // publish the number in its URL; it is kept out of every public route.
-    ...(row.hidden || PHONE_IN_ID.test(String(row.id)) ? { hidden: true } : {}),
+    // Likewise a scraped non-pet business (human clinic, pest control, cab firm)
+    // unless its owner has claimed it (see pet-filter.ts).
+    ...(row.hidden || PHONE_IN_ID.test(String(row.id)) ||
+      (row.claimStatus !== 'CLAIMED' && isNotPetBusiness(row.name, row.categorySlug)) ? { hidden: true } : {}),
   };
 }
 

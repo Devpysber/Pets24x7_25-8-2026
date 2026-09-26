@@ -490,3 +490,8 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 .feat-emoji{font-size:54px;line-height:1;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12))}
 .featured-strip{margin-bottom:22px}
 .biz-img.feat-art::after{display:none}
+/* Grid cards must shrink on the narrowest phones: 300px minimum inside the
+   featured strip's padding overflowed a 320px screen by 7px. */
+.biz-list,.featured-strip .biz-list{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+.biz-card{min-width:0}
+@media (max-width:700px){.biz-list,.featured-strip .biz-list{grid-template-columns:minmax(0,1fr)}}
