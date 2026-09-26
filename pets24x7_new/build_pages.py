@@ -1238,7 +1238,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 <link rel="canonical" href="{canonical}" />
 {robots_meta(thin)}
 {prev_link}{next_link}
-<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 {social_meta(title, desc, canonical, image_alt=f"Pet services in {full_city} on Pets24x7")}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1355,7 +1356,8 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 <meta name="description" content="{ea(desc)}" />
 <link rel="canonical" href="{canonical}" />
 {robots_meta(thin)}
-<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 {social_meta(title, desc, canonical, image_alt=f"{category_name} in {full_city} on Pets24x7")}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1616,7 +1618,8 @@ def render_listing(biz, all_in_city, all_cats):
 <title>{e(title)}</title>
 <meta name="description" content="{ea(desc)}" />
 <link rel="canonical" href="{canonical}" />
-<link rel="icon" type="image/png" href="/pets24x7_logo.png" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 {social_meta(f"{biz['name']} — {biz['category']} in {full_city}", desc, canonical, img_main,
              image_alt=f"{biz['name']}, {biz['category']} in {full_city}", og_type="business.business",
              extra=[("business:contact_data:street_address", biz.get("address") or city),
