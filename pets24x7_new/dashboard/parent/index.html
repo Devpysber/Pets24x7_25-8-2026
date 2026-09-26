@@ -1608,15 +1608,15 @@
 
     var TIER_META = {
       BRONZE: { icon: '🥉', badgeBg: '#F1F5F9', badgeColor: '#475569', highlight: false },
-      SILVER: { icon: '🥈', badgeBg: '#DBEAFE', badgeColor: '#1E40AF', highlight: true, label: '⭐ MOST POPULAR' },
-      GOLD:   { icon: '🥇', badgeBg: '#FEF3C7', badgeColor: '#92400E', highlight: false, label: '👑 BEST VALUE' }
+      SILVER: { icon: '🥈', badgeBg: '#DBEAFE', badgeColor: '#1E40AF', highlight: true, label: 'Recommended' },
+      GOLD:   { icon: '🥇', badgeBg: '#FEF3C7', badgeColor: '#92400E', highlight: false }
     };
 
     var plansCardsHtml = filteredPlans.map(function(p) {
       var meta = TIER_META[p.tier] || TIER_META.BRONZE;
       var periodLabel = cycle === 'ANNUAL' ? '/year' : '/month';
       var isCurrentPlan = m.active && m.planId === p.id;
-      var perksList = Array.isArray(p.perks) ? p.perks : ['Verified vendor discounts', 'Pet Health Passport', 'WhatsApp Support'];
+      var perksList = Array.isArray(p.perks) ? p.perks : ['Help finding providers on WhatsApp', 'Pet profiles in your dashboard'];
 
       return `
         <div class="card" style="position: relative; display: flex; flex-direction: column; justify-content: space-between; border: ${meta.highlight ? '2px solid var(--primary)' : '1px solid var(--border)'}; padding: 24px; border-radius: var(--radius-md); background: #ffffff; box-shadow: ${meta.highlight ? 'var(--shadow-dropdown)' : 'var(--shadow-card)'};">
@@ -1626,7 +1626,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
               <span style="font-size: 32px;">${meta.icon}</span>
               <span style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px;">
-                ${p.discountPercent || 0}% OFF
+                ${p.discountPercent > 0 ? p.discountPercent + '% OFF' : esc(String(p.tier || '').charAt(0) + String(p.tier || '').slice(1).toLowerCase())}
               </span>
             </div>
 
@@ -1691,8 +1691,8 @@
       <div style="background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 100%); border-radius: var(--radius-md); padding: clamp(20px, 4vw, 28px); color: #ffffff; margin-bottom: 28px; box-shadow: var(--shadow-card);">
         <div style="max-width: 680px;">
           <span style="background: rgba(255,255,255,0.2); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 10px; border-radius: 99px;">Pets24x7 Club</span>
-          <h2 style="font-size: clamp(20px, 2vw + 12px, 24px); font-weight: 800; margin: 10px 0 6px; color: #ffffff;">Unlock Exclusive Member Savings & VIP Pet Care</h2>
-          <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">${maxDisc ? 'Save up to ' + maxDisc + '% on' : 'Save on'} vet consultations, pet grooming, boarding, and enjoy 24/7 WhatsApp veterinary support for your pets.</p>
+          <h2 style="font-size: clamp(20px, 2vw + 12px, 24px); font-weight: 800; margin: 10px 0 6px; color: #ffffff;">Pet care, sorted for you</h2>
+          <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it${maxDisc ? ', with up to ' + maxDisc + '% off at partner businesses' : ''}.</p>
         </div>
       </div>
 
@@ -1716,23 +1716,23 @@
         <div class="benefits-grid">
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">🏥</div>
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Instant Booking Discounts</h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">${maxDisc ? 'Get up to ' + maxDisc + '% off' : 'Member pricing'} when booking partner vet clinics, groomers, and pet resorts.</p>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">We find the right provider</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Tell us what you need and where. We shortlist businesses near you so you don't have to call around.</p>
           </div>
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">📱</div>
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">24/7 Vet Line via WhatsApp</h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Connect with experienced veterinary specialists anytime for quick guidance and advice.</p>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">We book it for you</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">On Silver and Gold we check availability and prices, book the slot and confirm it with you.</p>
           </div>
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">📋</div>
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Pet Health Passports</h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Store digital vaccination certificates, medical records, and diet logs for all your pets.</p>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Your pets in one place</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Keep each pet's profile and vaccination date in your dashboard, so we know what they need.</p>
           </div>
           <div>
             <div style="font-size: 26px; margin-bottom: 8px;">🎟️</div>
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">VIP Community Events</h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Free or discounted passes to pet socialization meets, workshops, and adoption drives.</p>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">No lock-in</h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Cancel from your dashboard at any time. Your plan stays active until the end of the period you paid for.</p>
           </div>
         </div>
       </div>

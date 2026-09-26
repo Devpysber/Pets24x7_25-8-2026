@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { NotFoundError } from '../shared/errors.js';
-import { findPublicListingsByPhone, getPublicListingById, searchListingsPage, indexStats, recentListings, publicListing, shownRating } from './index.js';
+import { findPublicListingsByPhone, getPublicListingById, searchListingsPage, indexStats, recentListings, publicListing, publicName, shownRating } from './index.js';
 import { parsePhotos } from './photos.js';
 import { normalizePhone } from '../shared/phone.js';
 import { prisma } from '../db.js';
@@ -124,13 +124,13 @@ listingsRouter.get(
         if (!l) return null;
         return {
           id: l.id,
-          name: l.name,
+          name: publicName(l.name),
           category: l.category,
           categoryIcon: l.category_icon ?? null,
           city: l.city,
           state: l.state ?? null,
-          address: l.address ?? null,
-          phone: l.phone ?? null,
+          address: null,
+          phone: null,
           rating: shownRating(l),
           reviewCount: l.review_count,
           contacts: g._count._all,
@@ -307,10 +307,10 @@ listingsRouter.get(
         openingHours: claimed?.openingHours || detail?.openingHours || null,
         servicesList: claimed?.servicesList || detail?.services || null,
         locality: detail?.locality ?? null,
-        website: claimed?.website ?? r.website ?? null,
-        // A claimed vendor's own WhatsApp/phone — the enquiry CTA prefers this
-        // over the platform's own number once the listing is verified.
-        whatsapp: claimed?.whatsapp ?? null,
+        // Contact details stay with the platform (see publicListing): every
+        // enquiry, claimed listing or not, goes through Pets24x7.
+        website: null,
+        whatsapp: null,
         claimed: !!claimed,
       },
     });

@@ -19,7 +19,7 @@ import { newMerchantTxnId } from '../payments/checkout.js';
 import { startCheckout } from '../payments/checkout.js';
 import { closeUnpaidCheckout, reconcilePayment } from '../payments/membership.routes.js';
 import { getFeaturedOptions, featuredOptionFor } from '../payments/pricing.js';
-import { getListingById, shownRating } from '../listings/index.js';
+import { getListingById, publicName, shownRating } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { featuredCreatedEmail } from '../mail/action-templates.js';
@@ -125,7 +125,7 @@ featuredPublicRouter.get(
             city: r.city ?? v.city ?? '',
             state: null,
             address: null,
-            phone: v.phone,
+            phone: null,
             rating: 0,
             reviewCount: 0,
             googleCid: null,
@@ -142,16 +142,17 @@ featuredPublicRouter.get(
         }
         return {
           id: l.id,
-          name: l.name,
+          name: publicName(l.name),
           category: l.category,
           categoryIcon: l.category_icon ?? null,
           city: l.city,
           state: l.state ?? null,
-          address: l.address ?? null,
-          phone: l.phone ?? null,
+          // Contact details stay with the platform (see listings publicListing).
+          address: null,
+          phone: null,
           rating: shownRating(l),
           reviewCount: l.review_count,
-          googleCid: l.google_cid ?? null,
+          googleCid: null,
           url: `/${String(l.country || 'IN').toLowerCase()}/${l.city_slug}/${l.id}/`,
           endsAt: r.endsAt,
           featuredId: r.id as string,

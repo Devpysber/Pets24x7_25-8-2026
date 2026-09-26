@@ -12,7 +12,7 @@ import { revocationCutoff } from '../auth/actor.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
-import { addAndPersistImportedListing, findListingByPhone, getListingById, publicListing, type ListingRecord } from '../listings/index.js';
+import { addAndPersistImportedListing, findListingByPhone, getListingById, ownerListing, type ListingRecord } from '../listings/index.js';
 import bcrypt from 'bcrypt';
 import { notifyIf } from '../mail/notify.js';
 import {
@@ -165,7 +165,7 @@ vendorDashboardRouter.get(
         claimedAt: v.claimedAt,
         approvedAt: v.approvedAt,
       },
-      listing: listing ? publicListing(listing) : { id: v.listingId ?? 'unclaimed', name: v.businessName, city: v.city, category: v.category, rating: null, review_count: 0 },
+      listing: listing ? ownerListing(listing) : { id: v.listingId ?? 'unclaimed', name: v.businessName, city: v.city, category: v.category, rating: null, review_count: 0 },
       completion: { percent: completion.percent, checklist: completion.checklist },
       reviews: reviewAgg,
       enquiries: enquiryAgg,

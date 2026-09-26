@@ -59,10 +59,28 @@ export function shownRating(l: { rating?: number | string | null; review_count?:
   return rating > 0 && (Number(l.review_count) || 0) >= 1 ? rating : 0;
 }
 
-/** A listing as the public API serves it: the record with shownRating applied. */
-export function publicListing<T extends ListingRecord>(l: T): T {
+/** A listing with shownRating applied, contact details intact (owner / internal use). */
+export function ownerListing<T extends ListingRecord>(l: T): T {
   const { hidden: _hidden, ...rest } = l;
   return { ...rest, rating: shownRating(l) } as T;
+}
+
+/**
+ * A listing as the public API serves it. Pets24x7 works as the broker between
+ * pet parents and businesses: enquiries go through the platform, so a
+ * business's phone, website, street address and Google Maps ids are never
+ * served to the public (they would let a visitor bypass the platform). City,
+ * PIN, category, name and rating stay. Claim, admin and matching code read the
+ * in-memory record directly and keep every field.
+ */
+export function publicListing<T extends ListingRecord>(l: T): T {
+  return { ...ownerListing(l), name: publicName(l.name), address: '', phone: '', website: '', google_cid: '', gmb_link: '' } as T;
+}
+
+/** A listing name with any phone number in it removed ("… groomer) 99233 91199"). */
+export function publicName(name: string): string {
+  const out = String(name || '').replace(/(?:\+?\d[\s().-]?){8,}\d/g, '').replace(/[\s,|:-]+$/, '').replace(/\s{2,}/g, ' ').trim();
+  return out || String(name || '');
 }
 
 /** Columns the in-memory index is built from: never photos or the long text. */

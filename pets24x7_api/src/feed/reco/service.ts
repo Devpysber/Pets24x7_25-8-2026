@@ -10,7 +10,7 @@
 
 import { prisma } from '../../db.js';
 import type { ListingRecord } from '../../listings/index.js';
-import { getListingById, indexStats, shownRating } from '../../listings/index.js';
+import { getListingById, indexStats, publicName, shownRating } from '../../listings/index.js';
 import { genKey, invalidateAllResults, recoCache } from './cache.js';
 import { getRecoConfig, weightsFor, type RecoConfig } from './config.js';
 import { cityListings, findCity, indexVersion, isRecentlyAdded, neighbourCities, topCitiesForCountry } from './city-index.js';
@@ -118,7 +118,7 @@ export function toItem(b: BlendItem, pos: number, surface: Surface, snap: Snapsh
   const l = b.listing;
   return {
     id: l.id,
-    name: l.name,
+    name: publicName(l.name),
     category: l.category,
     category_slug: l.category_slug,
     category_icon: l.category_icon ?? null,
@@ -126,13 +126,14 @@ export function toItem(b: BlendItem, pos: number, surface: Surface, snap: Snapsh
     city_slug: l.city_slug,
     state: l.state ?? null,
     country: String(l.country),
-    address: l.address ?? null,
-    phone: l.phone ?? null,
+    // Contact details are never served publicly (see listings publicListing).
+    address: null,
+    phone: null,
     rating: shownRating(l),
     review_count: Number(l.review_count) || 0,
     claimed: snap.approvedClaimed.has(l.id) || l.claimStatus === 'CLAIMED',
     url: `${listingPath(l)}?src=reco_${surface}`,
-    website: websiteWithUtm(l.website, surface),
+    website: null,
     score: round1(b.score),
     pos,
     sponsored: b.sponsored,

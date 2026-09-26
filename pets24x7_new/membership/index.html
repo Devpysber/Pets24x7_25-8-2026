@@ -4,18 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
-<title>Pets24x7 Membership — vet consults, vendor deals, priority support</title>
-<meta name="description" content="Join Pets24x7 Membership. Vendor deals, free vet consults, priority WhatsApp support. Bronze · Silver · Gold." />
+<title>Pets24x7 Membership — your pet-care concierge</title>
+<meta name="description" content="Pets24x7 Membership: we find, check and book vets, groomers and boarding for you on WhatsApp. Bronze, Silver and Gold plans." />
 <link rel="canonical" href="https://pets24x7.com/membership/" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Pets24x7" />
-<meta property="og:title" content="Pets24x7 Membership — vet consults, vendor deals, priority support" />
-<meta property="og:description" content="Vendor deals, free vet consults and priority WhatsApp support for pet parents. Bronze, Silver and Gold plans." />
+<meta property="og:title" content="Pets24x7 Membership — your pet-care concierge" />
+<meta property="og:description" content="We find, check and book vets, groomers and boarding for you on WhatsApp. Bronze, Silver and Gold plans." />
 <meta property="og:url" content="https://pets24x7.com/membership/" />
 <meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Pets24x7 Membership — vet consults, vendor deals, priority support" />
-<meta name="twitter:description" content="Vendor deals, free vet consults and priority WhatsApp support for pet parents. Bronze, Silver and Gold plans." />
+<meta name="twitter:title" content="Pets24x7 Membership — your pet-care concierge" />
+<meta name="twitter:description" content="We find, check and book vets, groomers and boarding for you on WhatsApp. Bronze, Silver and Gold plans." />
 <meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -117,8 +117,8 @@
 </header>
 
 <section class="hero">
-  <h1>Save on every vet visit, groom and boarding.</h1>
-  <p>Join Pets24x7 Membership. Vendor deals across 29,000+ businesses, free vet consults, and priority WhatsApp support.</p>
+  <h1>Pet care, sorted for you.</h1>
+  <p>Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.</p>
   <div class="toggle">
     <button id="tMonthly" class="on" type="button" aria-pressed="true">Monthly</button>
     <button id="tAnnual" type="button" aria-pressed="false">Annual <span class="save">save 2 months</span></button>
@@ -140,11 +140,11 @@
     <details><summary>Can I cancel anytime?</summary>
       <p>Yes. Your access stays active until the end of the billing period you paid for. We don&rsquo;t auto-renew unless you opt in explicitly.</p>
     </details>
-    <details><summary>How do I redeem the vendor deals?</summary>
-      <p>Show your member badge on your Pets24x7 dashboard at the vendor. The vendor applies the discount at checkout — no codes to remember.</p>
+    <details><summary>How does the concierge work?</summary>
+      <p>Message us on WhatsApp from the number on your account with what you need, where and when. We shortlist businesses near you, check availability and, on Silver and Gold, book it and confirm with you.</p>
     </details>
     <details><summary>Do you offer refunds?</summary>
-      <p>Within 7 days of purchase if you haven&rsquo;t redeemed any benefit, message us on WhatsApp at +91 99300 90487.</p>
+      <p>Within 7 days of purchase if you haven&rsquo;t used the concierge yet, message us on WhatsApp at +91 99300 90487.</p>
     </details>
   </section>
 </div>
@@ -212,7 +212,7 @@
 
       return '<article class="plan ' + t + (isCurrent ? ' current' : '') + '">' +
         (isCurrent ? '<span class="badge" style="background:linear-gradient(135deg,#34D399,#10B981)">✓ Current plan</span>'
-                   : (isPopular ? '<span class="badge">★ Most popular</span>' : '')) +
+                   : (isPopular ? '<span class="badge">Recommended</span>' : '')) +
         '<div class="tier ' + t + '">' + esc(p.tier) + '</div>' +
         '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">' + esc(p.name) + '</h3>' +
         (p.tagline ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">' + esc(p.tagline) + '</p>' : '') +

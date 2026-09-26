@@ -520,11 +520,10 @@ def biz_card_html(b, badge=None):
         badge_html = '<span class="badge" style="background:var(--warning);color:#1F2937;">Featured</span>'
 
     google_box = ""
-    if b.get("google_cid") and has_rating(b):
+    if has_rating(b):
         google_box = (f'<span class="google-badge"><span class="gscore">{b["rating"]:.1f}/5</span>'
                       f'{google_logo_html()}'
-                      f'<a href="https://www.google.com/maps?cid={ea(b["google_cid"])}" '
-                      f'target="_blank" rel="noopener">{b["review_count"]} reviews</a></span>')
+                      f'<span>{b["review_count"]} reviews</span></span>')
 
     phone_html = ""
     if b.get("phone"):
@@ -554,7 +553,7 @@ def biz_card_html(b, badge=None):
   <div class="biz-action">
     {phone_html}
     <a class="open-btn" href="{listing_url(b)}">View Details</a>
-    <a class="wa-btn" href="{ea(wa_link_for(b))}" target="_blank" rel="noopener">
+    <a class="wa-btn" href="{ea(wa_link_for(b))}" target="_blank" rel="noopener" aria-label="Enquire about {ea(b["name"])} on WhatsApp">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
       WhatsApp →
     </a>
@@ -608,7 +607,7 @@ RECO_LISTING_JS = r'''/* Recommendations on a listing page: "Top-rated similar" 
     // A score is shown only with a count behind it, as on the static pages.
     var rating = rc >= 1 ? (Number(it.rating) || 0) : 0;
     var why = sp ? '' : ((it.reason && it.reason.text) || '');
-    var web = sp && it.website ? outUrl(it.website, surface) : '';
+    var web = '';  // business websites are not linked (Pets24x7 brokers enquiries)
     var reason = sp ? 'SPONSORED' : ((it.reason && it.reason.code) || '');
     return '<article class="reco-card' + (sp ? ' is-sponsored' : '') + '"' +
         ' data-rid="' + resc(rid) + '" data-lid="' + resc(it.id) + '" data-pos="' + (Number(it.pos) || pos) + '"' +
@@ -958,8 +957,8 @@ def featured_script(country, city_slug, category_slug=None):
   function rated(c){{ return Number(c.rating) > 0 && Number(c.reviewCount || c.review_count) >= 1; }}
 
   function cardFor(c){{
-    var loc = esc(c.address || (c.city + (c.state ? ', ' + c.state : '')));
-    var tel = c.phone ? String(c.phone).replace(/\\s+/g,'') : '';
+    var loc = esc(c.city + (c.state ? ', ' + c.state : ''));
+    var tel = '';  // contact details stay with Pets24x7
     var href = esc(withSrc(c.url));
     return '<article class="biz-card is-featured">' +
       '<a class="biz-img" href="' + href + '">' +
@@ -1089,9 +1088,9 @@ LIVE_MERGE_JS = r'''(function(){
   function url(b){ return '/' + String(b.country || C.country).toLowerCase() + '/' + encodeURIComponent(b.city_slug || C.city) + '/' + encodeURIComponent(b.id) + '/'; }
   function card(b){
     var rc = Number(b.review_count) || 0, rating = rc >= 1 ? (Number(b.rating) || 0) : 0;
-    var tel = b.phone ? String(b.phone).replace(/\s+/g, '') : '';
+    var tel = '';  // contact details stay with Pets24x7
     var photo = (Array.isArray(b.photos) ? b.photos : []).filter(function(u){ return /^(https?:\/\/|\/(?!\/))/i.test(String(u || '')); })[0];
-    var where = b.address || ((b.locality ? b.locality + ', ' : '') + (b.city || '') + (b.state ? ', ' + b.state : ''));
+    var where = (b.locality ? b.locality + ', ' : '') + (b.city || '') + (b.state ? ', ' + b.state : '');
     var href = esc(url(b));
     return '<article class="biz-card is-new" data-lid="' + esc(b.id) + '">' +
       '<a class="biz-img" href="' + href + '"><span class="badge">New</span>' +
@@ -1230,7 +1229,7 @@ def seo_copy_city(city, country_n, total, categories):
     return f"""<section class="seo-copy">
   <h2>Pet services in {e(city)}, {e(country_n)}</h2>
   <p>Pets24x7 lists {total:,} pet service businesses across {e(city)} — including {cats_txt} and more. Every listing links to its public Google Business profile, so you can check a provider for your dog, cat, bird or exotic pet before you call.</p>
-  <p>Use the category chips above to narrow down by what you need today — an emergency vet, a weekend groomer, a daycare slot, or a relocation specialist. Tap any listing to see the full address, phone, its Google Maps profile, reviews left on Pets24x7, and a one-tap WhatsApp enquiry button.</p>
+  <p>Use the category chips above to narrow down by what you need today — an emergency vet, a weekend groomer, a daycare slot, or a relocation specialist. Tap any listing to see what it offers, its Google rating, reviews left on Pets24x7, and send an enquiry — Pets24x7 checks availability and gets back to you on WhatsApp.</p>
   <h3>How Pets24x7 verifies {e(city)} listings</h3>
   <ul>
     <li>Every business has a public Google Business profile.</li>
@@ -1246,7 +1245,7 @@ def seo_copy_category(category, city, country_n, total):
     return f"""<section class="seo-copy">
   <h2>{e(category)} in {e(city)}, {e(country_n)}</h2>
   <p>Browse {total} {e(category.lower())} business{"es" if total != 1 else ""} in {e(city)}. {e(blurb)}</p>
-  <p>Tap any listing to view the full address, contact details, its Google Maps profile, reviews left on Pets24x7 and a one-tap WhatsApp enquiry button. No booking fees. No platform commission. You talk to the business directly.</p>
+  <p>Tap any listing to see what it offers, its Google rating and reviews left on Pets24x7, then send an enquiry. Pets24x7 checks availability and pricing for you and replies on WhatsApp. No booking fee for pet parents.</p>
 </section>"""
 
 def related_cities_html(country, current_slug, all_cities, limit=12):
@@ -1290,7 +1289,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
             f"Pet services in {city} (page {page} of {total_pages}) | Pets24x7",
         )
     desc = (f"Browse {len(items):,} pet service businesses in {full_city} on Pets24x7 — "
-            f"vets, groomers, boarders, walkers, trainers and more. Direct WhatsApp enquiries, zero booking fees.")
+            f"vets, groomers, boarders, walkers, trainers and more. Enquire on WhatsApp, no booking fee.")
 
     canonical = SITE + city_url(country, city_slug, page)
     prev_link = f'<link rel="prev" href="{SITE}{city_url(country, city_slug, page - 1)}" />' if page > 1 else ""
@@ -1345,7 +1344,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 <section class="city-hero"><div class="container">
   <nav class="bc" aria-label="Breadcrumb">{bc_html}</nav>
   <h1>Pet services in {e(full_city)}{f' · page {page}' if page > 1 else ''}</h1>
-  <p class="sub">{len(items):,} businesses · from Google Business profiles · WhatsApp them direct</p>
+  <p class="sub">{len(items):,} businesses · from Google Business profiles · enquire on WhatsApp</p>
 </div></section>
 
 {cat_chips_html(country, city_slug, categories)}
@@ -1424,7 +1423,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
         f"{short_category(category_name)} in {city} | Pets24x7",
     )
     desc = (f"Find {len(items)} {category_name.lower()} provider{'s' if len(items) != 1 else ''} in {full_city}. "
-            f"Google-listed businesses. Direct WhatsApp enquiries. Zero booking fees.")
+            f"Google-listed businesses. Enquire on WhatsApp, no booking fee.")
 
     canonical = SITE + category_url(country, city_slug, category_slug)
     cards = "".join(
@@ -1470,7 +1469,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 <section class="city-hero"><div class="container">
   <nav class="bc" aria-label="Breadcrumb">{bc_html}</nav>
   <h1>{e(category_name)} in {e(full_city)}</h1>
-  <p class="sub">{len(items)} provider{'s' if len(items) != 1 else ''} · from Google Business profiles · WhatsApp them direct</p>
+  <p class="sub">{len(items)} provider{'s' if len(items) != 1 else ''} · from Google Business profiles · enquire on WhatsApp</p>
 </div></section>
 
 {cat_chips_html(country, city_slug, all_cats, active_cat=category_slug)}
@@ -1554,7 +1553,7 @@ def render_listing(biz, all_in_city, all_cats):
     )
     desc = (f"{biz['name']} is {a_an(biz['category'])} {biz['category'].lower()} in {full_city}. "
             + (f"Rated {biz['rating']:.1f}/5 on Google from {biz['review_count']} reviews. " if has_rating(biz) else "")
-            + "WhatsApp them direct via Pets24x7 — no booking fees.")
+            + "Enquire via Pets24x7 on WhatsApp — no booking fee.")
 
     canonical = SITE + listing_url(biz)
     photos = own_photos(biz)
@@ -1634,27 +1633,17 @@ def render_listing(biz, all_in_city, all_cats):
 
     # Google reviews block (only if CID exists)
     reviews_section = ""
-    if biz.get("google_cid") and has_rating(biz):
+    if has_rating(biz):
         reviews_section = f"""<section>
-  <h2>Guest reviews</h2>
+  <h2>Google rating</h2>
   <div class="greviews-head">
     <div class="greviews-score">{biz["rating"]:.1f}<small>/5</small></div>
     <div class="glogo-big">
       {google_logo_html()}<br>
-      <a href="https://www.google.com/maps?cid={ea(biz['google_cid'])}" target="_blank" rel="noopener">View {biz["review_count"]} ratings →</a>
+      <span>{biz["review_count"]} public reviews</span>
     </div>
   </div>
-  <p style="margin:6px 0 0;">{e(biz['name'])} holds a <strong>{biz['rating']:.1f} / 5</strong> average on Google from <strong>{biz['review_count']}</strong> public review{"" if biz["review_count"] == 1 else "s"}. Open them on Google to read the reviews themselves.</p>
-  <a href="https://www.google.com/maps?cid={ea(biz['google_cid'])}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;background:#EFF6FF;color:var(--primary);border:1px solid #BFDBFE;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;">Open in Google Maps ↗</a>
-  <iframe class="gmap-embed" loading="lazy" src="https://www.google.com/maps?cid={ea(biz['google_cid'])}&output=embed" allowfullscreen title="Map of {ea(biz['name'])}"></iframe>
-</section>"""
-    elif biz.get("google_cid"):
-        # No rating we can stand behind: the Google profile and map still are.
-        reviews_section = f"""<section>
-  <h2>On Google Maps</h2>
-  <p style="margin:6px 0 0;">Read {e(biz['name'])}'s reviews and photos on its Google Business profile.</p>
-  <a href="https://www.google.com/maps?cid={ea(biz['google_cid'])}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;background:#EFF6FF;color:var(--primary);border:1px solid #BFDBFE;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;">Open in Google Maps ↗</a>
-  <iframe class="gmap-embed" loading="lazy" src="https://www.google.com/maps?cid={ea(biz['google_cid'])}&output=embed" allowfullscreen title="Map of {ea(biz['name'])}"></iframe>
+  <p style="margin:6px 0 0;">{e(biz['name'])} holds a <strong>{biz['rating']:.1f} / 5</strong> average on Google from <strong>{biz['review_count']}</strong> public reviews. Send an enquiry and Pets24x7 will check availability and pricing for you.</p>
 </section>"""
 
     # Reviews people leave here, and the form to leave one. Rendered empty and
@@ -1726,12 +1715,11 @@ def render_listing(biz, all_in_city, all_cats):
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 {social_meta(f"{biz['name']} — {biz['category']} in {full_city}", desc, canonical, img_main,
              image_alt=f"{biz['name']}, {biz['category']} in {full_city}", og_type="business.business",
-             extra=[("business:contact_data:street_address", biz.get("address") or city),
+             extra=[("business:contact_data:street_address", city),
                     ("business:contact_data:locality", city),
                     ("business:contact_data:region", state),
                     ("business:contact_data:postal_code", biz.get("pincode")),
-                    ("business:contact_data:country_name", country_n),
-                    ("business:contact_data:phone_number", biz.get("phone"))])}
+                    ("business:contact_data:country_name", country_n)])}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -1805,7 +1793,7 @@ def render_listing(biz, all_in_city, all_cats):
           <div class="info-block"><strong>City</strong><span>{e(full_city)}</span></div>
           {f'<div class="info-block"><strong>Area</strong><span>{e(locality)}</span></div>' if locality else ""}
           <div class="info-block"><strong>{'PIN code' if country == 'IN' else 'ZIP code'}</strong><span>{e(biz.get("pincode") or "—")}</span></div>
-          <div class="info-block"><strong>Google rating</strong><span>{f'★ {biz["rating"]:.1f} / 5 · {biz["review_count"]} reviews' if has_rating(biz) else ('See it on Google Maps' if biz.get("google_cid") else 'Not rated yet')}</span></div>
+          <div class="info-block"><strong>Google rating</strong><span>{f'★ {biz["rating"]:.1f} / 5 · {biz["review_count"]} reviews' if has_rating(biz) else 'Not rated yet'}</span></div>
           {f'<div class="info-block"><strong>Phone</strong><span><a href="tel:{ea(biz_phone_clean)}">{e(biz["phone"])}</a></span></div>' if biz.get("phone") else ""}
           {f'<div class="info-block"><strong>Website</strong><span><a href="{ea(site_url)}" target="_blank" rel="noopener nofollow">Visit site ↗</a></span></div>' if site_url else ""}
         </div>
@@ -1814,7 +1802,7 @@ def render_listing(biz, all_in_city, all_cats):
       <section>
         <h2>Good to know</h2>
         <ul class="policy-list">
-          <li><span>Booking</span><span>Direct via WhatsApp / phone — no platform fee</span></li>
+          <li><span>Booking</span><span>Through Pets24x7 on WhatsApp or the form — free to enquire</span></li>
           <li><span>Source</span><span>{'Managed by the business owner' if biz.get("claimed") else 'Public Google Business profile'}</span></li>
           <li><span>Cancellation</span><span>Set directly by the business when you confirm</span></li>
           <li><span>Payment</span><span>Direct to business — UPI / card / cash as they accept</span></li>
@@ -1855,8 +1843,8 @@ def render_listing(biz, all_in_city, all_cats):
         </form>
         <ul class="trust-points">
           <li>{'Owner-managed listing' if biz.get("claimed") else 'Listed from its Google Business profile'}</li>
-          <li>Direct contact — no booking fees</li>
-          <li>The reply comes straight to your WhatsApp</li>
+          <li>No booking fee for pet parents</li>
+          <li>Pets24x7 replies on WhatsApp with availability</li>
           <li>Free to enquire · No commitment</li>
         </ul>
       </div>
@@ -2129,7 +2117,24 @@ def clean_items(items):
                 continue
             seen.add(cid)
         out.append(b)
+    for b in out:
+        strip_contacts(b)
     return out
+
+
+# Pets24x7 brokers every enquiry: a business's phone, website, email,
+# WhatsApp, street address and Google Maps ids never reach a public page (the
+# export leaves them out too; this covers older data files). Every template
+# below renders those blocks only when the field is set, so blanking them
+# here removes them everywhere at once.
+CONTACT_KEYS = ("address", "phone", "website", "email", "whatsapp", "google_cid", "gmb_link")
+
+
+def strip_contacts(b):
+    for k in CONTACT_KEYS:
+        if b.get(k):
+            b[k] = ""
+    return b
 
 def sitemap_group(path):
     """Child sitemap a URL belongs to: one per country, the rest 'static'."""

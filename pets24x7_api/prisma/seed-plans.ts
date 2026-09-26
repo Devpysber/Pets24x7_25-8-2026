@@ -3,6 +3,10 @@
 
 import { prisma } from '../src/db.js';
 
+// Every perk is something the Pets24x7 team delivers itself. The old list
+// promised partner discounts ("up to 30% off at 500+ vendors"), free vet
+// consults and a 24x7 vet helpline, none of which existed; discountPercent
+// stays 0 until real partner deals are signed.
 const PLANS = [
   // ---- BRONZE ----
   {
@@ -10,15 +14,15 @@ const PLANS = [
     tier: 'BRONZE' as const,
     billingPeriod: 'MONTHLY' as const,
     name: 'Bronze · Monthly',
-    tagline: 'Member-only deals + priority WhatsApp support',
+    tagline: 'Priority help finding the right pet service',
     perks: [
-      'Up to 10% off at 500+ verified vendors',
-      'Priority WhatsApp support within 1 hour',
-      'Save up to 5 pet profiles',
+      'Tell us what you need on WhatsApp; we shortlist providers near you',
+      'Your enquiries handled ahead of non-members',
+      'Pet profiles and vaccination dates in your dashboard',
       'Cancel anytime',
     ],
     priceMinor: 9900,       // ₹99
-    discountPercent: 10,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 10,
@@ -31,11 +35,10 @@ const PLANS = [
     tagline: '2 months free vs monthly',
     perks: [
       'Everything in Bronze Monthly',
-      '₹198 saved vs monthly (2 free months)',
-      'First-look on new vendor partner deals',
+      '₹198 saved vs paying monthly',
     ],
     priceMinor: 99000,      // ₹990
-    discountPercent: 10,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 20,
@@ -47,16 +50,15 @@ const PLANS = [
     tier: 'SILVER' as const,
     billingPeriod: 'MONTHLY' as const,
     name: 'Silver · Monthly',
-    tagline: '1 free vet consult + 20% off treatments',
+    tagline: 'A pet-care concierge on WhatsApp',
     perks: [
       'Everything in Bronze',
-      'Up to 20% off vet treatments',
-      '1 free virtual vet consult per month',
-      'Free pet vaccination reminder via WhatsApp',
-      'Member-only event entry',
+      'We check availability and prices for you',
+      'We book the appointment and confirm it with you',
+      'Follow-up after the visit if anything goes wrong',
     ],
     priceMinor: 24900,      // ₹249
-    discountPercent: 20,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 30,
@@ -66,14 +68,13 @@ const PLANS = [
     tier: 'SILVER' as const,
     billingPeriod: 'ANNUAL' as const,
     name: 'Silver · Annual',
-    tagline: 'Most popular · 2 months free',
+    tagline: '2 months free vs monthly',
     perks: [
       'Everything in Silver Monthly',
-      '12 free virtual vet consults / year',
-      'Free Pets24x7 swag pack',
+      '₹498 saved vs paying monthly',
     ],
     priceMinor: 249000,     // ₹2,490
-    discountPercent: 20,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 40,
@@ -85,16 +86,15 @@ const PLANS = [
     tier: 'GOLD' as const,
     billingPeriod: 'MONTHLY' as const,
     name: 'Gold · Monthly',
-    tagline: 'Emergency pet care + concierge support',
+    tagline: 'Priority concierge for busy pet parents',
     perks: [
       'Everything in Silver',
-      'Up to 30% off vet treatments',
-      'Unlimited virtual vet consults',
-      '24x7 emergency vet helpline',
-      'Free home pet pickup-and-drop for vet visits (1/mo)',
+      'Same-day priority for urgent requests',
+      'We coordinate vet, grooming and boarding visits end to end',
+      'One named Pets24x7 contact for all your requests',
     ],
     priceMinor: 49900,      // ₹499
-    discountPercent: 30,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 30,
     sortOrder: 50,
@@ -104,15 +104,13 @@ const PLANS = [
     tier: 'GOLD' as const,
     billingPeriod: 'ANNUAL' as const,
     name: 'Gold · Annual',
-    tagline: 'Premium · best value · 2 months free',
+    tagline: '2 months free vs monthly',
     perks: [
       'Everything in Gold Monthly',
-      '12 free pet taxi rides / year',
-      'Dedicated WhatsApp pet-care advisor',
-      'Free annual vet check-up',
+      '₹998 saved vs paying monthly',
     ],
     priceMinor: 499000,     // ₹4,990
-    discountPercent: 30,
+    discountPercent: 0,
     currency: 'INR',
     durationDays: 365,
     sortOrder: 60,

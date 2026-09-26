@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
 <title id="pageTitle">Pet Service Listing | Pets24x7.com</title>
-<meta name="description" id="pageDesc" content="Pet business listing with its Google Maps profile. Direct WhatsApp enquiries. Zero booking fees on Pets24x7.com." />
+<meta name="description" id="pageDesc" content="Pet business listing on Pets24x7.com. Enquire on WhatsApp — no booking fee for pet parents." />
 <!-- No static canonical: this template serves every /in/ and /us/ URL that has
      no pre-built page, and a fixed href pointed all of them at the home page.
      The clean path is set here at once; the script below refines it. -->
@@ -363,7 +363,7 @@
     var rc = Number(it.review_count) || 0;
     var rating = rc >= 1 ? (Number(it.rating) || 0) : 0;  // no count, no score
     var why = sp ? '' : ((it.reason && it.reason.text) || '');
-    var web = sp && it.website ? outUrl(it.website, surface) : '';
+    var web = '';  // business websites are not linked (Pets24x7 brokers enquiries)
     var reason = sp ? 'SPONSORED' : ((it.reason && it.reason.code) || '');
     return '<article class="reco-card' + (sp ? ' is-sponsored' : '') + '"' +
         ' data-rid="' + resc(rid) + '" data-lid="' + resc(it.id) + '" data-pos="' + (Number(it.pos) || pos) + '"' +
@@ -525,13 +525,11 @@
   // Claimed & verified vendors get enquiries routed straight to their own
   // WhatsApp — Pets24x7's own number is the fallback for unclaimed listings,
   // where it doubles as a lead-tracking + vendor-acquisition channel.
+  // Every enquiry goes to Pets24x7, claimed listing or not; the business gets
+  // the lead through its dashboard.
   function whatsappBest(b) {
-    var direct = b && b.claimed && String((b.whatsapp || b.phone || '')).replace(/[^0-9]/g, '');
-    var msg = direct
-      ? "Hi! I found your business '" + b.name + "' on Pets24x7. Please share availability, services and pricing."
-      : "Hi Pets24x7! I'm interested in '" + b.name + "' (" + b.category + ", " + b.city + "). Please share availability, services and pricing.";
-    var num = (direct && direct.length >= 10) ? direct : '919930090487';
-    return 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_page&utm_campaign=enquiry';
+    var msg = "Hi Pets24x7! I'm interested in '" + b.name + "' (" + b.category + ", " + b.city + "). Please share availability, services and pricing.";
+    return 'https://wa.me/919930090487?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_page&utm_campaign=enquiry';
   }
 
   // ---- Load ----
@@ -843,6 +841,10 @@
 
   function render() {
     normalizeDetail(biz);
+    // Pets24x7 brokers every enquiry: a business's own contact details never
+    // show on the page, whatever the data source still carries. Every block
+    // below renders only when its field is set.
+    ['address', 'phone', 'website', 'email', 'whatsapp', 'google_cid', 'gmb_link'].forEach(function (k) { if (biz[k]) biz[k] = ''; });
     // A CID that went through a spreadsheet ("6.47E+18") makes every Maps link
     // and the embedded map on this page dead; show the address map instead.
     if (biz.google_cid && !/^\d+$/.test(String(biz.google_cid))) { biz.google_cid = ''; biz.gmb_link = ''; }
@@ -987,7 +989,7 @@
               <ul class="amenity-grid" style="list-style:none;">\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No platform booking fees</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Direct WhatsApp with the business</li>\
-                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Google Maps profile linked, not curated</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Google rating shown where one exists</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Listings come from public Google Business profiles</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Enquiry confirmation by email</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Help from Pets24x7 on WhatsApp</li>\
@@ -1029,8 +1031,8 @@
               </form>\
               <ul class="trust-points">\
                 <li>' + (biz.claimed ? 'Owner-managed listing' : 'Listed from its Google Business profile') + '</li>\
-                <li>Direct contact — no booking fees</li>\
-                <li>The reply comes straight to your WhatsApp</li>\
+                <li>No booking fee for pet parents</li>\
+                <li>Pets24x7 replies on WhatsApp with availability</li>\
                 <li>Free to enquire · No commitment</li>\
               </ul>\
             </div>\
@@ -1217,9 +1219,7 @@
       petType: pet, preferredDate: date, notes: notes, source: 'listing_page'
     });
 
-    var directNum = biz.claimed && String((biz.whatsapp || biz.phone || '')).replace(/[^0-9]/g, '');
-    var waNum = (directNum && directNum.length >= 10) ? directNum : '919930090487';
-    var url = 'https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_form&utm_campaign=enquiry';
+    var url = 'https://wa.me/919930090487?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_form&utm_campaign=enquiry';
     window.open(url, '_blank');
     try { if (window.trackEvent) window.trackEvent('generate_lead', { listing_id: biz.id, category: biz.category, city: biz.city, source: 'listing_form' }); } catch (e) {}
     if (window.toast) toast(email ? 'Enquiry sent — a confirmation is on its way to ' + email + '.' : 'Enquiry sent — continue the chat on WhatsApp.', 'ok');

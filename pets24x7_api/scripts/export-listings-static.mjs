@@ -470,6 +470,25 @@ function skipReason(row) {
 }
 
 /**
+ * Free text written by a business (about, services) often carries its own
+ * phone number, website or email. Those are removed before the text is
+ * published, for the same reason the contact columns are not.
+ */
+const PHONE_IN_TEXT = /(?:\+?\d[\s().-]?){8,}\d/g;
+
+function scrubContacts(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '')
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, '')
+    .replace(/\b[\w-]+\.(?:com|in|net|org|co|io|biz|info|app|pet|vet)(?:\/\S*)?\b/gi, '')
+    .replace(/(?:\+?\d[\s().-]?){8,}\d/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
  * One DB row (+ claimed vendor, + its resolved photo URLs) -> the static
  * record, or a skip reason.
  */
@@ -477,7 +496,8 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   const skip = skipReason(row);
   if (skip) return { skip };
   const id = str(row.id);
-  const name = str(row.name);
+  // Some scraped names carry the business's phone number ("… groomer) 99233 91199").
+  const name = str(row.name).replace(PHONE_IN_TEXT, '').replace(/[\s,|:-]+$/, '').replace(/\s{2,}/g, ' ').trim() || str(row.name);
   const country = str(row.country).toUpperCase();
   const city = str(row.city).replace(/\s+/g, ' ');
   const citySlug = slugify(row.citySlug || row.city);
@@ -506,15 +526,18 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
     city_slug: citySlug,
     state: str(row.state),
     country,
-    address: str(row.address),
-    phone: str(row.phone).replace(/\s+/g, ' '),
-    website: str(row.website),
+    // Contact details are not published: data/*.json and pets-data.js are
+    // public files, and Pets24x7 brokers every enquiry (see the API's
+    // publicListing). The keys stay, empty, so the record shape is unchanged.
+    address: '',
+    phone: '',
+    website: '',
     pincode: str(row.pincode),
     // build_data.py writes unknown as null; the table stores it as 0.
     rating: rating > 0 ? rating : null,
     review_count: reviewCount,
-    google_cid: cid,
-    gmb_link: cleanGmbLink(row.gmbLink, cid),
+    google_cid: '',
+    gmb_link: '',
     active: 'yes',
   };
 
@@ -523,7 +546,7 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   // columns are the directory's copy underneath.
   const v = vendor || {};
   const locality = cleanText(v.locality || row.locality, 160);
-  const description = cleanText(v.about || row.description, 5000);
+  const description = scrubContacts(cleanText(v.about || row.description, 5000));
   const hours = parseHours(str(v.openingHours) ? v.openingHours : row.openingHours);
   const vServices = parseServices(v.servicesList);
   const services = vServices.length ? vServices : parseServices(row.services);
@@ -534,13 +557,12 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   // unclaimed listing's enquiries to the platform's own number and never
   // read it, and GET /api/listings/:id does not serve it, so a number an
   // admin entered on an unclaimed row was published for nothing.
-  const whatsapp = vendor ? cleanWhatsapp(v.whatsapp || row.whatsapp) : '';
-  if (vendor && str(v.website)) rec.website = str(v.website);
+  const whatsapp = '';
 
   if (locality) rec.locality = locality;
   if (description) rec.description = description;
   if (hours) rec.opening_hours = hours;
-  if (services.length) rec.services = services;
+  if (services.length) rec.services = services.map(scrubContacts).filter(Boolean);
   if (whatsapp) rec.whatsapp = whatsapp;
   if (photos && photos.length) rec.photos = photos;
   if (vendor) rec.claimed = true;
