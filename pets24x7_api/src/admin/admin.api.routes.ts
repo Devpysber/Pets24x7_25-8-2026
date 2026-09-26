@@ -1472,15 +1472,45 @@ adminApiRouter.get(
       prisma.enquiry.findMany({ where, orderBy: { createdAt: 'desc' }, skip: pg.skip, take: pg.take }),
       prisma.enquiry.count({ where }),
     ]);
+    // Pets24x7 brokers every enquiry, so the admin needs the business's own
+    // contact next to the customer's: the listing's phone, and a claimed
+    // vendor's WhatsApp/phone when there is one.
+    const listingIds = [...new Set(enquiries.map((e) => e.listingId).filter((x): x is string => !!x))];
+    const vendors = listingIds.length
+      ? await prisma.vendor.findMany({
+          where: { listingId: { in: listingIds } },
+          select: { listingId: true, businessName: true, phone: true, whatsapp: true, email: true, status: true },
+        })
+      : [];
+    const vendorByListing = new Map(vendors.map((v) => [v.listingId as string, v]));
     res.json({
       ok: true,
       total,
       page: pg.page,
       perPage: pg.perPage,
-      enquiries: enquiries.map((e) => ({
+      enquiries: enquiries.map((e) => {
+        const l = e.listingId ? getListingById(e.listingId) : undefined;
+        const v = e.listingId ? vendorByListing.get(e.listingId) : undefined;
+        return {
         id: e.id,
         parent: e.name,
         phone: e.phone,
+        email: e.email ?? null,
+        country: e.country ?? l?.country ?? null,
+        petType: e.petType ?? null,
+        preferredDate: e.preferredDate ?? null,
+        listingId: e.listingId ?? null,
+        business: e.listingId
+          ? {
+              phone: v?.phone || l?.phone || null,
+              whatsapp: v?.whatsapp || null,
+              email: v?.email || null,
+              claimed: !!v,
+              vendorStatus: v?.status ?? null,
+              address: l?.address || null,
+              url: l ? `/${String(l.country || 'in').toLowerCase()}/${l.city_slug}/${l.id}/` : null,
+            }
+          : null,
         vendor: e.listingName ?? '—',
         service: e.category ?? 'General enquiry',
         city: e.city ?? '—',
@@ -1488,7 +1518,8 @@ adminApiRouter.get(
         status: e.status,
         notes: e.notes,
         date: e.createdAt,
-      })),
+        };
+      }),
     });
   }),
 );

@@ -1,0 +1,17 @@
+/* Shared photo panel for the sign-in pages (parent, vendor).
+   Desktop only: the page's own form is shifted right and a full-height photo
+   panel sits on the left. Phones keep the plain form. */
+.auth-art{display:none}
+@media (min-width:1000px){
+  body.has-auth-art{padding-left:44vw}
+  .auth-art{display:flex;flex-direction:column;justify-content:space-between;position:fixed;inset:0 auto 0 0;width:44vw;
+    padding:40px 48px;color:#fff;background-size:cover;background-position:center;z-index:5}
+  .auth-art::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,27,77,.25) 0%,rgba(11,27,77,.35) 45%,rgba(11,27,77,.88) 100%)}
+  .auth-art>*{position:relative}
+  .auth-art .aa-logo{display:inline-flex;background:#fff;border-radius:12px;padding:8px 12px;align-self:flex-start}
+  .auth-art .aa-logo img{height:30px;width:auto;display:block}
+  .auth-art h2{font-family:Inter,sans-serif;font-size:30px;font-weight:800;letter-spacing:-.8px;line-height:1.15;margin:0 0 10px;max-width:440px}
+  .auth-art p{font-family:Inter,sans-serif;font-size:15px;line-height:1.6;color:rgba(255,255,255,.88);margin:0;max-width:440px}
+  .auth-art .aa-foot{font-family:Inter,sans-serif;font-size:12.5px;color:rgba(255,255,255,.7);margin-top:22px}
+  body.has-auth-art header.top .brand{visibility:hidden}
+}

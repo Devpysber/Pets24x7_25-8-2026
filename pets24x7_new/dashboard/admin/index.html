@@ -8184,11 +8184,25 @@
     document.getElementById('enqModalTitle').textContent = e.parent || 'Enquiry';
     var phone = (e.phone || '').replace(/[^0-9+]/g, '');
     document.getElementById('enqModalBody').innerHTML =
-      '<div>Pet parent: <strong>' + escH(e.parent || '—') + '</strong></div>' +
-      '<div>Phone: <strong>' + escH(e.phone || '—') + '</strong></div>' +
-      '<div>Business: <strong>' + escH(e.vendor || '—') + '</strong></div>' +
-      '<div>Service: <strong>' + escH(e.service || '—') + '</strong></div>' +
+      '<div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Customer</div>' +
+      '<div>Name: <strong>' + escH(e.parent || '—') + '</strong></div>' +
+      '<div>WhatsApp / phone: <strong>' + escH(e.phone || '—') + '</strong></div>' +
+      (e.email ? '<div>Email: <strong>' + escH(e.email) + '</strong></div>' : '') +
+      (e.petType ? '<div>Pet: <strong>' + escH(e.petType) + '</strong></div>' : '') +
+      (e.preferredDate ? '<div>Preferred date: <strong>' + dstr(e.preferredDate) + '</strong></div>' : '') +
+      '<div>Service: <strong>' + escH(e.service || '—') + '</strong> · ' + escH(e.city || '') + '</div>' +
       '<div>Received: <strong>' + dstr(e.date) + '</strong></div>' +
+      '<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">' +
+        '<div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Business (private — for brokering)</div>' +
+        '<div>Business: <strong>' + escH(e.vendor || '—') + '</strong>' +
+          (e.business ? ' <span class="status-tag ' + (e.business.claimed ? 'active' : '') + '">' + (e.business.claimed ? 'Claimed' : 'Unclaimed') + '</span>' : '') + '</div>' +
+        (e.business && e.business.phone ? '<div>Phone: <strong>' + escH(e.business.phone) + '</strong></div>' : '') +
+        (e.business && e.business.whatsapp ? '<div>WhatsApp: <strong>' + escH(e.business.whatsapp) + '</strong></div>' : '') +
+        (e.business && e.business.email ? '<div>Email: <strong>' + escH(e.business.email) + '</strong></div>' : '') +
+        (e.business && e.business.address ? '<div>Address: ' + escH(e.business.address) + '</div>' : '') +
+        (e.business && e.business.url ? '<div><a href="' + escH(e.business.url) + '" target="_blank" rel="noopener">Open listing ↗</a></div>' : '') +
+        (!e.business ? '<div style="color:var(--text-muted)">General enquiry — no business chosen. Find one for the customer.</div>' : '') +
+      '</div>' +
       '<div style="margin-top:6px;">Status: <span class="status-tag ' + tagCls(e.status) + '">' + escH(e.status || 'NEW') + '</span></div>' +
       '<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">' +
         '<div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Message</div>' +
@@ -8205,8 +8219,21 @@
       return '<button class="btn btn-sm' + (m[0] === 'ARCHIVED' ? ' btn-outline' : '') + '" onclick="adminSetEnquiry(' + index + ',\'' + m[0] + '\')">' + m[1] + '</button>';
     }).join(' ') +
       (phone.length >= 10
-        ? ' <a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://wa.me/' + encodeURIComponent(phone.replace(/^\+/, '')) + '">Message on WhatsApp</a>'
-        : '');
+        ? ' <a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://wa.me/' + encodeURIComponent(phone.replace(/^\+/, '')) + '">WhatsApp customer</a>'
+        : '') +
+      (function () {
+        var b = e.business;
+        var bn = b ? String(b.whatsapp || b.phone || '').replace(/[^0-9]/g, '') : '';
+        if (bn.length < 10) return '';
+        // An Indian 10-digit number without the country code gets +91.
+        if (bn.length === 10) bn = (String(e.country || 'IN').toUpperCase() === 'US' ? '1' : '91') + bn;
+        var msg = 'Hi ' + (e.vendor || '') + ', this is Pets24x7. A pet parent is asking about ' + (e.service || 'your service') +
+          (e.petType ? ' for their ' + String(e.petType).toLowerCase() : '') +
+          (e.preferredDate ? ' on ' + dstr(e.preferredDate) : '') + '.\n\n' +
+          (e.notes ? 'They need: ' + e.notes + '\n\n' : '') +
+          'Can you confirm availability and price?';
+        return ' <a class="btn btn-sm" style="background:#25D366;color:#fff;" target="_blank" rel="noopener" href="https://wa.me/' + bn + '?text=' + encodeURIComponent(msg) + '">WhatsApp business</a>';
+      })();
     document.getElementById('enquiryDetailModal').classList.add('show');
   };
 

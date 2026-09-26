@@ -31,18 +31,19 @@
   /* Split layout: brand panel left, sign-in right. Stacks on phones. */
   .shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
   .brandside{position:relative;overflow:hidden;color:#fff;padding:40px 56px;display:flex;flex-direction:column;
-    background:radial-gradient(1200px 600px at -10% -20%,#3B82F6 0%,rgba(59,130,246,0) 55%),linear-gradient(150deg,#1E40AF 0%,#1D4ED8 45%,#0B1B4D 100%)}
-  .brandside::after{content:'';position:absolute;right:-120px;bottom:-120px;width:420px;height:420px;border-radius:50%;
-    background:radial-gradient(circle,rgba(255,255,255,.12),rgba(255,255,255,0) 70%);pointer-events:none}
+    background:#0B1B4D url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400&q=70&auto=format&fit=crop') center/cover no-repeat}
+  .brandside::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(11,27,77,.30) 0%,rgba(11,27,77,.40) 40%,rgba(11,27,77,.92) 100%)}
+  .brandside>*{position:relative;z-index:1}
   .logo-chip{display:inline-flex;align-items:center;background:#fff;border-radius:14px;padding:8px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);align-self:flex-start}
   .logo-chip img{height:34px;width:auto;display:block}
-  .pitch{margin:auto 0;max-width:470px;position:relative;z-index:1;padding:48px 0}
+  .pitch{margin:auto 0 0;max-width:470px;position:relative;z-index:1;padding:48px 0 28px}
   .pitch .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:6px 12px;border-radius:999px;margin-bottom:18px}
   .pitch h2{font-size:clamp(28px,3vw,38px);font-weight:800;letter-spacing:-1px;line-height:1.12;margin-bottom:14px}
   .pitch p{font-size:15.5px;line-height:1.6;color:rgba(255,255,255,.86);margin-bottom:26px}
   .perks{list-style:none;display:grid;gap:14px}
-  .perks li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.92)}
-  .perks .tick{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800}
+  .perks li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.9)}
+  .perks .tick{width:18px;height:18px;flex-shrink:0;margin-top:2px;color:#86EFAC}
   .perks strong{color:#fff;font-weight:700}
   .trustbar{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:rgba(255,255,255,.75);position:relative;z-index:1}
   .trustbar b{display:block;font-size:20px;color:#fff;font-weight:800;letter-spacing:-.4px}
@@ -60,13 +61,13 @@
   .choice{display:flex;align-items:center;gap:16px;width:100%;min-height:64px;border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;
     background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
   .choice:hover{transform:translateY(-2px);border-color:#93C5FD;box-shadow:0 14px 30px rgba(37,99,235,.14)}
-  .choice .ic{width:50px;height:50px;flex-shrink:0;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)}
-  .choice.biz .ic{background:linear-gradient(135deg,#ECFDF5,#D1FAE5)}
+  .choice .ic{width:46px;height:46px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#EFF6FF;color:var(--primary)}
+  .choice.biz .ic{background:#F0FDF4;color:#15803D}
   .choice .txt{flex:1;min-width:0}
   .choice strong{display:block;font-size:16px;font-weight:700;letter-spacing:-0.2px}
   .choice span{display:block;font-size:13px;color:var(--text-muted);margin-top:3px;line-height:1.45}
-  .choice .go{width:34px;height:34px;border-radius:50%;background:#EFF6FF;color:var(--primary);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .16s ease,background .16s ease}
-  .choice:hover .go{transform:translateX(3px);background:var(--primary);color:#fff}
+  .choice .go{color:#94A3B8;display:flex;flex-shrink:0;transition:transform .16s ease,color .16s ease}
+  .choice:hover .go{transform:translateX(3px);color:var(--primary)}
 
   .methods{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
   .methods span{font-size:12px;font-weight:600;color:#334155;background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 11px}
@@ -77,7 +78,7 @@
   .notice a{color:inherit;text-decoration:underline}
   .divider{height:1px;background:var(--border);margin:6px 0 18px}
   .foot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .foot a{display:block;border:1px dashed #CBD5E1;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.4;background:#fff}
+  .foot a{display:block;border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.4;background:#fff}
   .foot a b{display:block;color:var(--primary);font-size:13.5px}
   .foot a:hover{border-color:var(--primary);background:#F8FBFF}
   .legal{font-size:12px;color:#94A3B8;text-align:center;margin-top:18px}
@@ -106,13 +107,12 @@
   <aside class="brandside" aria-label="About Pets24x7">
     <a href="/" class="logo-chip"><img src="/pets24x7_logo.png" alt="Pets24x7" /></a>
     <div class="pitch">
-      <span class="kicker">India &amp; USA</span>
       <h2>Everything for your pet, and for your pet business, in one place.</h2>
       <p>Pet parents find vets, groomers and boarding near them. Businesses get enquiries from pet parents, sent to their WhatsApp.</p>
       <ul class="perks">
-        <li><span class="tick">✓</span><span><strong>Pet parents:</strong> your pets, enquiries, saved businesses and membership in one dashboard.</span></li>
-        <li><span class="tick">✓</span><span><strong>Business owners:</strong> manage your listing, services and photos, and see every customer enquiry.</span></li>
-        <li><span class="tick">✓</span><span><strong>Help when you need it:</strong> the Pets24x7 team is on WhatsApp.</span></li>
+        <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span><strong>Pet parents:</strong> your pets, enquiries, saved businesses and membership in one dashboard.</span></li>
+        <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span><strong>Business owners:</strong> manage your listing, services and photos, and see every customer enquiry.</span></li>
+        <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span><strong>Help when you need it:</strong> the Pets24x7 team is on WhatsApp.</span></li>
       </ul>
     </div>
     <div class="trustbar">
@@ -126,39 +126,35 @@
     <a class="toplink" href="/">← Back to Pets24x7.com</a>
     <main>
       <div class="card">
-        <div class="eyebrow">Welcome back</div>
-        <h1>Sign in to Pets24x7</h1>
-        <p class="sub">Choose your account type to continue.</p>
+        <h1>Sign in</h1>
+        <p class="sub">Choose the account you want to sign in to.</p>
 
         <div class="notice" id="verifyNotice" hidden></div>
 
         <a class="choice" href="/parent-login/">
-          <span class="ic">🐕</span>
+          <span class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>
           <span class="txt">
             <strong>I&rsquo;m a pet parent</strong>
             <span>Your pets, enquiries, saved businesses and membership.</span>
           </span>
-          <span class="go" aria-hidden="true">→</span>
+          <span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </a>
 
         <a class="choice biz" href="/vendor-login/">
-          <span class="ic">🏪</span>
+          <span class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg></span>
           <span class="txt">
             <strong>I run a pet business</strong>
             <span>Your listing, customer enquiries and subscription.</span>
           </span>
-          <span class="go" aria-hidden="true">→</span>
+          <span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </a>
 
-        <div class="methods" aria-label="Ways to sign in">
-          <span>✉️ Emailed code</span><span>🔑 Password</span><span>G Google</span>
-        </div>
-        <div class="hint"><span>🔒</span><span>We never ask for your password over email or WhatsApp.</span></div>
+        <p class="hint">Sign in with an emailed code, your password or Google. We never ask for your password over email or WhatsApp.</p>
 
         <div class="divider"></div>
         <div class="foot">
-          <a href="/register-business/"><b>Register your business →</b>New to Pets24x7? List it free.</a>
-          <a href="/find-my-listing/"><b>Claim your listing →</b>Already on Pets24x7? Take it over.</a>
+          <a href="/register-business/"><b>Register a business</b>New to Pets24x7? Listing is free.</a>
+          <a href="/find-my-listing/"><b>Claim a listing</b>Your business is already on Pets24x7.</a>
         </div>
         <p class="legal">By continuing you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
       </div>
