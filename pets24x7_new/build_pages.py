@@ -553,9 +553,9 @@ def biz_card_html(b, badge=None):
   <div class="biz-action">
     {phone_html}
     <a class="open-btn" href="{listing_url(b)}">View Details</a>
-    <a class="wa-btn" href="{ea(wa_link_for(b))}" target="_blank" rel="noopener" aria-label="Enquire about {ea(b["name"])} on WhatsApp">
+    <a class="wa-btn" href="{listing_url(b)}#enquiryForm" aria-label="Enquire about {ea(b["name"])}">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-      WhatsApp →
+      Enquire →
     </a>
     {f'<a class="map-link" href="https://www.google.com/maps?cid={ea(b["google_cid"])}" target="_blank" rel="noopener">View on Google Maps ↗</a>' if b.get("google_cid") else ""}
   </div>
@@ -1818,14 +1818,10 @@ def render_listing(biz, all_in_city, all_cats):
         <span class="cat-tag">{e(biz.get("category_icon") or "📍")} {e(biz["category"])}</span>
         <h3>Enquire about {e(biz["name"])}</h3>
         <div class="price-tax">{f'★ {biz["rating"]:.1f} / 5 · {biz["review_count"]} Google reviews · ' if has_rating(biz) else ''}{e(full_city)}</div>
-        <a href="{ea(wa_link_for(biz))}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--whatsapp);color:#fff;padding:13px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin:14px 0;box-shadow:0 6px 16px rgba(37,211,102,0.25);">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px;"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-          Quick WhatsApp Enquiry →
-        </a>
-        <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:16px;">— or fill the form below —</div>
+<p class="enq-lead" style="margin:12px 0 16px;font-size:13.5px;color:var(--text-muted);line-height:1.5;">Share your WhatsApp number and what you need. Pets24x7 checks availability and pricing with {e(biz["name"])} and replies to you on WhatsApp.</p>
         <form id="bookForm" onsubmit="return submitEnquiry(event)" novalidate>
           <div class="form-row"><div class="form-field form-field-full"><label for="fName">Your full name *</label><input type="text" id="fName" autocomplete="name" required placeholder="e.g. Priya Sharma"></div></div>
-          <div class="form-row"><div class="form-field form-field-full"><label for="fPhone">WhatsApp / Phone *</label><input type="tel" id="fPhone" autocomplete="tel" inputmode="tel" required pattern="[0-9 +-]{{10,15}}" placeholder="e.g. +91 98765 43210"></div></div>
+          <div class="form-row"><div class="form-field form-field-full"><label for="fPhone">Your WhatsApp number *</label><input type="tel" id="fPhone" autocomplete="tel" inputmode="tel" required pattern="[0-9 +-]{{10,16}}" placeholder="{'e.g. +1 214 555 0123' if country == 'US' else 'e.g. +91 98765 43210'}" aria-describedby="fPhoneHint"><small id="fPhoneHint" style="display:block;margin-top:4px;font-size:12px;color:var(--text-muted);">We reply on this number with availability and pricing.</small></div></div>
           <div class="form-row"><div class="form-field form-field-full"><label for="fEmail">Email <span style="font-weight:400;opacity:.7">(for your confirmation)</span></label><input type="email" id="fEmail" placeholder="you@example.com" autocomplete="email"></div></div>
           <div class="form-row">
             <div class="form-field"><label for="fPetType">Pet type</label>
@@ -2027,7 +2023,7 @@ def render_listing(biz, all_in_city, all_cats):
     var err=document.getElementById('formError');
     err.style.color='';
     if(!name||name.length<2){{ err.textContent='Please enter your full name.'; err.classList.add('show'); return false; }}
-    if(!phone||phone.replace(/[^0-9]/g,'').length<10){{ err.textContent='Please enter a valid phone / WhatsApp number.'; err.classList.add('show'); return false; }}
+    if(!phone||phone.replace(/[^0-9]/g,'').length<10){{ err.textContent='Please enter your WhatsApp number, with the country code.'; err.classList.add('show'); return false; }}
     if(!notes){{ err.textContent='Please describe what you need.'; err.classList.add('show'); return false; }}
     if(email && !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)){{ err.textContent='That email address does not look right.'; err.classList.add('show'); return false; }}
     err.classList.remove('show');
@@ -2037,7 +2033,7 @@ def render_listing(biz, all_in_city, all_cats):
       "*City:* " + biz.city + (biz.state ? ", " + biz.state : "") + "\\n" +
       "*Listing ID:* " + biz.id + "\\n\\n" +
       "*Customer:* " + name + "\\n" +
-      "*Phone / WhatsApp:* " + phone + "\\n" +
+      "*Customer WhatsApp:* " + phone + "\\n" +
       "*Pet type:* " + pet + "\\n" +
       (date ? "*Preferred date:* " + date + "\\n" : "") +
       "\\n*What they need:* " + notes + "\\n" +
