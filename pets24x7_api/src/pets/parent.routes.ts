@@ -29,6 +29,7 @@ import {
   petUpdatedEmail,
   profileUpdatedEmail,
 } from '../mail/action-templates.js';
+import { isRecommendable } from '../feed/reco/city-index.js';
 
 export const parentDashboardRouter = Router();
 
@@ -54,7 +55,7 @@ async function sendFirstPetRecommendations(
 
   // Only this city's listings can be picked, so only their featured/claimed
   // flags are looked up — not every featured slot and claimed vendor on file.
-  const candidates = listingsInCity(city, country);
+  const candidates = listingsInCity(city, country).filter(isRecommendable);
   if (!candidates.length) return;
   const candidateIds = candidates.map((l) => l.id);
   const [featuredRows, claimedRows] = await Promise.all([

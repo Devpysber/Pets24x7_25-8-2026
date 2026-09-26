@@ -54,6 +54,7 @@ import {
   vaccinationDueEmail,
   winbackEmail,
 } from '../mail/lifecycle-templates.js';
+import { isRecommendable } from '../feed/reco/city-index.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -182,7 +183,7 @@ class SweepContext {
     const key = `${country}|${city.toLowerCase().trim()}`;
     let pool = this.pools.get(key);
     if (!pool) {
-      pool = listingsInCity(city, country);
+      pool = listingsInCity(city, country).filter(isRecommendable);
       this.pools.set(key, pool);
     }
     return pool;

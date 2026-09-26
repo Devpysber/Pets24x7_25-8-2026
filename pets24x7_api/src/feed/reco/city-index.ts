@@ -45,6 +45,24 @@ export function indexVersion(): number {
   return version;
 }
 
+// The scraped directory files human healthcare under pet categories: the
+// Vaccination Centers category is mostly CVS MinuteClinics, VA clinics and
+// maternity hospitals, and Emergency / Dental / Therapy carry multispeciality,
+// paediatric and orthopaedic practices. Listing pages still show them (that is
+// a data clean-up), but a recommendation must never send a pet parent there.
+// Vaccination Centers need positive pet evidence in the name; other categories
+// only drop names that are unmistakably human medicine and say nothing of pets.
+const PET_WORDS = /(pets?\b|\bvet(?!eran)|vets\b|veterinar|animal|\bdogs?\b|\bcats?\b|canine|feline|\bpaws?\b|\bbirds?\b|avian|livestock|cattle|poultry|pupp|kitten|petco|petsmart|spca|humane)/i;
+const HUMAN_MEDICINE = /\b(patholog\w*|sonograph\w*|maternity|gyna?ec\w*|obstetric\w*|ivf|infertility|nursing home|diabet\w*|health cent(?:re|er)|multi-?speciality|paediatric\w*|pediatric\w*|physician|urolog\w*|cardiolog\w*|orthopa?edic\w*|pregnancy|uphc|primary health|endocrinolog\w*|laparoscop\w*|dermatolog\w*|neurolog\w*|oncolog\w*|polyclinic|urgent care|minuteclinic)\b/i;
+
+export function isRecommendable(l: ListingRecord): boolean {
+  const name = l.name || '';
+  if (PET_WORDS.test(name)) return true;
+  const cat = (l.category_slug || slugify(l.category)).toLowerCase();
+  if (cat === 'vaccination-centers') return false;
+  return !HUMAN_MEDICINE.test(name);
+}
+
 function bucketFor(city: string, country: string): Bucket {
   indexVersion();
   const key = `${country.toUpperCase()}|${city.toLowerCase().trim()}`;
@@ -54,7 +72,7 @@ function bucketFor(city: string, country: string): Bucket {
     buckets.set(key, b);
     return b;
   }
-  b = { listings: listingsInCity(city, country), byCategory: null };
+  b = { listings: listingsInCity(city, country).filter(isRecommendable), byCategory: null };
   buckets.set(key, b);
   while (buckets.size > MAX_CITIES) {
     const oldest = buckets.keys().next().value;
