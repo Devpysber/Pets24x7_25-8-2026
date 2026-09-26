@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#2563EB" />
 <title id="pageTitle">Pet Services in your city | Pets24x7.com</title>
-<meta name="description" id="pageDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Google Maps profiles. Direct WhatsApp enquiries." />
+<meta name="description" id="pageDesc" content="Browse veterinary clinics, groomers, boarders, walkers and pet trainers. Google Maps profiles. Direct WhatsApp enquiries." />
 <!-- No static canonical: this template serves every /in/ and /us/ URL that has
      no pre-built page, and a fixed href pointed all of them at the home page.
      The clean path is set here at once; the script below refines it. -->
@@ -18,12 +18,12 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Pets24x7" />
 <meta property="og:title" id="ogTitle" content="Pet Services in your city | Pets24x7.com" />
-<meta property="og:description" id="ogDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
+<meta property="og:description" id="ogDesc" content="Browse veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
 <meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
 <meta property="og:image:alt" content="Pets24x7" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" id="twTitle" content="Pet Services in your city | Pets24x7.com" />
-<meta name="twitter:description" id="twDesc" content="Browse verified veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
+<meta name="twitter:description" id="twDesc" content="Browse veterinary clinics, groomers, boarders, walkers and pet trainers. Direct WhatsApp enquiries." />
 <meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -625,7 +625,7 @@
     document.getElementById('bcCity').textContent = realCity;
     document.getElementById('bcCountry').innerHTML = '<a href="/">' + (country === 'IN' ? 'India' : 'USA') + '</a>';
     document.title = 'Pet Services in ' + realCity + stateLabel + ' | Pets24x7.com';
-    var metaDesc = 'Browse ' + allBiz.length + '+ verified pet businesses in ' + realCity + stateLabel +
+    var metaDesc = 'Browse ' + allBiz.length + '+ pet businesses in ' + realCity + stateLabel +
       ' — vets, groomers, boarders, walkers and trainers. WhatsApp them direct.';
     document.getElementById('pageDesc').setAttribute('content', metaDesc);
     setMeta('ogTitle', document.title); setMeta('twTitle', document.title);
@@ -674,7 +674,7 @@
   // Category chips + the count in the hero, from allBiz. Re-run after a live
   // merge changes the set; the checked category survives the rebuild.
   function buildCatChips(selected) {
-    document.getElementById('hCount').textContent = allBiz.length + ' verified businesses · Google Maps profiles · WhatsApp them direct';
+    document.getElementById('hCount').textContent = allBiz.length + ' businesses · Google Maps profiles · WhatsApp them direct';
     var cats = {};
     var slugs = {};
     allBiz.forEach(function(b){
