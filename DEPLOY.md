@@ -218,7 +218,7 @@ server {
     listen 80;
     server_name api.pets24x7.com;
 
-    client_max_body_size 2m;
+    client_max_body_size 11m;
 
     location / {
         proxy_pass         http://127.0.0.1:4000;

@@ -10,7 +10,7 @@
 
 import type { MailInput } from './mailer.js';
 import { unsubscribeUrl } from './optout.js';
-import { BRAND_TEXT, Button, Note, Text, esc, h, page, parentDash, rotate, siteUrl, vendorDash, who, type VendorView } from './components.js';
+import { BRAND_TEXT, Button, MAIL_TZ, Note, Text, esc, h, page, parentDash, rotate, siteUrl, vendorDash, who, type VendorView } from './components.js';
 import type { VendorPromoContext } from './promo-templates.js';
 
 export interface RecoDigestItem {
@@ -50,7 +50,21 @@ function endsLabel(v: Date | string | null | undefined): string {
   if (!v) return '';
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return '';
-  return `Ends ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+  // In the mail timezone, as day() does: the server runs in UTC, so a deal
+  // ending late evening IST read as the day before.
+  return `Ends ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: MAIL_TZ })}`;
+}
+
+/**
+ * The "why" line under a digest item. A TOP_RATED reason is "4.9★ on Google",
+ * which only repeats the rating printed on the line above it, so the next
+ * reason is used instead, or none (as recommendationsEmail already does).
+ */
+function whyLine(it: RecoDigestItem): string {
+  if (it.sponsored) return '';
+  const first = it.reason?.text || (it.reasons ?? [])[0] || '';
+  if (it.reason?.code !== 'TOP_RATED' || !it.rating) return first;
+  return (it.reasons ?? []).find((t) => t && t !== it.reason!.text) ?? '';
 }
 
 /** Digest-only opt-out: the global unsubscribe link, scoped to this mail. */
@@ -94,7 +108,7 @@ export function recoDigestEmail(
     .map((it) => {
       const stars = it.rating ? `★ ${Number(it.rating).toFixed(1)}` : '';
       const reviews = it.reviewCount ? ` · ${it.reviewCount} Google reviews` : '';
-      const why = it.sponsored ? '' : it.reason?.text || (it.reasons ?? [])[0] || '';
+      const why = whyLine(it);
       const title = it.url
         ? `<a href="${esc(it.url)}" style="color:#111827;text-decoration:none">${esc(it.name)}</a>`
         : esc(it.name);
@@ -169,7 +183,7 @@ export function recoDigestEmail(
         .map(
           (it) =>
             `- ${it.name} (${it.category})${it.sponsored ? ` [${it.label || 'Sponsored'}]` : ''}${it.rating ? ` — ${Number(it.rating).toFixed(1)}★` : ''}` +
-            (!it.sponsored && (it.reason?.text || (it.reasons ?? [])[0]) ? `\n  why: ${it.reason?.text || (it.reasons ?? [])[0]}` : '') +
+            (whyLine(it) ? `\n  why: ${whyLine(it)}` : '') +
             (it.url ? `\n  ${it.url}` : ''),
         )
         .join('\n') +

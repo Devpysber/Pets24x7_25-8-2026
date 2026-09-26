@@ -16,6 +16,12 @@ const envBool = (fallback: boolean) =>
       return ['1', 'true', 'yes', 'on'].includes(s);
     });
 
+// .env.example ships optional credentials as KEY="" and says to leave them
+// blank (Razorpay in development, SMTP when there is no relay). min(1) turned
+// that blank into a refusal to boot; blank means "not configured" instead.
+const optionalSecret = () =>
+  z.string().optional().transform((v) => (v && v.trim() ? v.trim() : undefined));
+
 const Env = z.object({
   // Fails closed. 'development' switches on the OTP bypasses in the parent and
   // vendor sign-in routes and mounts /dev, which mints admin cookies with no
@@ -68,9 +74,9 @@ const Env = z.object({
   // Server-to-server callback (must be reachable by PhonePe — production hostname).
 
   // ---- Razorpay Payment Gateway (preferred when configured) ----
-  RAZORPAY_KEY_ID: z.string().min(1).optional(),
-  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  RAZORPAY_KEY_ID: optionalSecret(),
+  RAZORPAY_KEY_SECRET: optionalSecret(),
+  RAZORPAY_WEBHOOK_SECRET: optionalSecret(),
 
   // ---- Invoices (read by payments/invoice.ts) ----
   // Set to issue GST "Tax invoice"s; blank renders a plain invoice.
@@ -84,10 +90,10 @@ const Env = z.object({
   // Not an email address: Gmail uses one, but Resend's SMTP user is the literal
   // string 'resend' and SES uses an IAM SMTP key. Requiring email format here
   // made the API refuse to boot on any provider that authenticates properly.
-  SMTP_USER: z.string().min(1).optional(),
+  SMTP_USER: optionalSecret(),
   // Provider password or API key. Gmail app passwords are printed with spaces;
   // those are stripped at load time below.
-  SMTP_PASS: z.string().min(1).optional(),
+  SMTP_PASS: optionalSecret(),
   // Must be an address on a domain you control and have signed with DKIM —
   // sending as a free consumer mailbox lands transactional mail in spam.
   MAIL_FROM: z.string().default('Pets24x7 <pets24x7.com@gmail.com>'),

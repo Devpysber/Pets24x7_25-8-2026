@@ -82,11 +82,11 @@
 
   <!-- Failure -->
   <section id="sFail" hidden>
-    <div class="icon fail">✗</div>
-    <h1>Payment didn&rsquo;t complete</h1>
+    <div class="icon fail" id="failIcon">✗</div>
+    <h1 id="failTitle">Payment didn&rsquo;t complete</h1>
     <p id="failMsg">The payment was not completed. You haven&rsquo;t been charged.</p>
     <div class="actions">
-      <a href="/membership/" class="btn btn-primary">Try again →</a>
+      <a href="/membership/" class="btn btn-primary" id="retryBtn">Try again →</a>
       <a href="/dashboard/parent/" class="btn">Back to dashboard</a>
     </div>
     <p class="small">Need help? <a href="https://wa.me/919930090487">WhatsApp us</a></p>
@@ -115,6 +115,15 @@
     if (cur === 'INR') return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0});
     try { return n.toLocaleString('en-US', {style:'currency', currency:cur, maximumFractionDigits: n % 1 ? 2 : 0}); }
     catch (e) { return cur + ' ' + n.toFixed(2); }
+  }
+  // The status could not be read (signed out, not found, network): the payment
+  // may well have gone through, so neither say it failed nor offer to pay again.
+  function showUnconfirmed(title) {
+    show('sFail');
+    document.getElementById('failTitle').textContent = title;
+    var ic = document.getElementById('failIcon');
+    ic.className = 'icon'; ic.textContent = 'ℹ️';
+    document.getElementById('retryBtn').hidden = true;
   }
   function show(id) {
     ['sLoad','sOk','sFail','sPending'].forEach(function(x){ document.getElementById(x).hidden = (x !== id); });
@@ -145,7 +154,7 @@
 
   var txn = qs('txn');
   if (!txn) {
-    show('sFail');
+    showUnconfirmed('We couldn’t confirm your payment');
     document.getElementById('failMsg').textContent = 'Missing transaction reference. If you completed payment, check your dashboard.';
   } else {
     poll(0);
@@ -191,20 +200,20 @@
       // payment itself is safe — the gateway webhook and the dashboard both
       // settle it — so ask them to sign in and send them back here after.
       if (status === 401 || status === 403) {
-        show('sFail');
+        showUnconfirmed('Sign in to see your payment');
         document.getElementById('failMsg').innerHTML =
           'Please <a href="/parent-login/?next=' + encodeURIComponent(location.pathname + location.search) +
           '">sign in</a> to see this payment. If you completed it, your membership activates automatically.';
         return;
       }
       if (status === 404) {
-        show('sFail');
+        showUnconfirmed('We couldn’t confirm your payment');
         document.getElementById('failMsg').textContent = 'We could not find this payment on your account. If you completed it, check your dashboard or WhatsApp us with the reference ' + txn + '.';
         return;
       }
       // Network blip or server error: retry a couple of times, then bail.
       if (tries < 5) { setTimeout(function(){ poll(tries + 1); }, 2000); return; }
-      show('sFail');
+      showUnconfirmed('We couldn’t confirm your payment');
       document.getElementById('failMsg').textContent = 'Could not confirm payment automatically. Open your dashboard to check.';
     });
   }

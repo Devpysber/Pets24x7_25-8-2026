@@ -51,12 +51,50 @@ If you didn't try to sign in, ignore this email.
   };
 }
 
+/**
+ * Reader-facing names for the profile columns the update routes report as
+ * changed. Those routes pass the raw keys, which read as "businessName,
+ * imageUrl" in a mail. Wording follows the dashboard form labels.
+ */
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Name',
+  phone: 'Phone',
+  email: 'Email',
+  city: 'City',
+  country: 'Country',
+  digestFrequency: 'Recommendation emails',
+  businessName: 'Business name',
+  category: 'Category',
+  locality: 'Locality',
+  address: 'Address',
+  pincode: 'PIN / ZIP code',
+  website: 'Website',
+  whatsapp: 'WhatsApp number',
+  about: 'About',
+  openingHours: 'Opening hours',
+  servicesList: 'Services',
+  imageUrl: 'Photo',
+  galleryImages: 'Photos',
+};
+
+/** "Business name, Photo" from ['businessName', 'imageUrl']; unknown keys are de-camel-cased. */
+function changedFields(changed: string[]): string {
+  return changed
+    .map((k) => {
+      if (FIELD_LABELS[k]) return FIELD_LABELS[k];
+      const words = k.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    })
+    .join(', ');
+}
+
 // The sign-in alert was removed: it fired on every ordinary sign-in, so it
 // trained people to ignore mail from us and buried the notices that matter.
 // The events worth telling someone about — a password change, an email change,
 // a claim — each have their own template above and below.
 export function profileUpdatedEmail(to: string, name: string, changed: string[]): MailInput {
   name = who(name);
+  const what = changedFields(changed);
   return {
     tag: 'profile_updated',
     to,
@@ -67,12 +105,12 @@ export function profileUpdatedEmail(to: string, name: string, changed: string[])
       heading: `Hi ${name}`,
       intro: 'Your profile details were just changed.',
       blocks: [
-        InfoBox([['Updated', changed.length ? changed.join(', ') : 'Profile details']]),
+        InfoBox([['Updated', what || 'Profile details']]),
         Note("If you didn't make this change, reply to this email straight away."),
         Button('Review my profile', parentDash('account')),
       ],
     }),
-    text: `Hi ${name},\n\nYour Pets24x7 profile was updated (${changed.join(', ') || 'profile details'}).\n\nIf this wasn't you, reply to this email.\n`,
+    text: `Hi ${name},\n\nYour Pets24x7 profile was updated (${what || 'profile details'}).\n\nIf this wasn't you, reply to this email.\n\nReview your profile: ${parentDash('account')}\n`,
   };
 }
 
@@ -89,12 +127,21 @@ export function formatPetAge(years: number | null, months: number | null): strin
   return parts.length ? parts.join(' ') : '—';
 }
 
+/** "Small mammal" from the PetSpecies enum value SMALL_MAMMAL; free text passes through. */
+function formatSpecies(species: string): string {
+  const s = String(species ?? '').trim();
+  if (!/^[A-Z_]+$/.test(s)) return s;
+  const words = s.replace(/_+/g, ' ').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 export function petAddedEmail(
   to: string,
   name: string,
   pet: { name: string; species: string; breed: string | null; ageYears: number | null; ageMonths?: number | null },
 ): MailInput {
   name = who(name);
+  const species = formatSpecies(pet.species);
   return {
     tag: 'pet_added',
     to,
@@ -107,14 +154,14 @@ export function petAddedEmail(
       blocks: [
         InfoBox([
           ['Name', pet.name],
-          ['Species', pet.species],
+          ['Species', species],
           ['Breed', pet.breed || '—'],
           ['Age', formatPetAge(pet.ageYears, pet.ageMonths ?? null)],
         ]),
         Button('View my pets', parentDash('pets')),
       ],
     }),
-    text: `Hi ${name},\n\n${pet.name} (${pet.species}${pet.breed ? `, ${pet.breed}` : ''}) was added to your Pets24x7 profile.\n\nDashboard: ${parentDash('pets')}\n`,
+    text: `Hi ${name},\n\n${pet.name} (${species}${pet.breed ? `, ${pet.breed}` : ''}) was added to your Pets24x7 profile.\n\nDashboard: ${parentDash('pets')}\n`,
   };
 }
 
@@ -517,8 +564,13 @@ export function vendorWelcomeEmail(to: string, businessName: string, listingName
   };
 }
 
-export function vendorProfileUpdatedEmail(to: string, businessName: string, changed: string[]): MailInput {
+/**
+ * `pending`: the account is not approved yet, so the edit is saved but kept off
+ * the public listing until approval (see syncVendorToListingIndex).
+ */
+export function vendorProfileUpdatedEmail(to: string, businessName: string, changed: string[], pending = false): MailInput {
   businessName = who(businessName, 'there');
+  const what = changedFields(changed);
   return {
     tag: 'vendor_profile_updated',
     to,
@@ -527,14 +579,18 @@ export function vendorProfileUpdatedEmail(to: string, businessName: string, chan
       eyebrow: 'Vendor',
       banner: ['Profile updated', 'success'],
       heading: 'Profile updated',
-      intro: h`The public profile for <strong>${businessName}</strong> was just changed. It's live on your listing now.`,
+      intro: pending
+        ? h`The profile for <strong>${businessName}</strong> was just changed. It goes live on your listing once your account is approved.`
+        : h`The public profile for <strong>${businessName}</strong> was just changed. It's live on your listing now.`,
       blocks: [
-        InfoBox([['Updated', changed.length ? changed.join(', ') : 'Business details']]),
+        InfoBox([['Updated', what || 'Business details']]),
         Button('View my listing', vendorDash('listing')),
       ],
-      preheader: `${changed.length ? changed.join(', ') : 'Your profile'} just changed and is live.`,
+      preheader: pending
+        ? `${what || 'Your profile'} just changed. It goes live once you are approved.`
+        : `${what || 'Your profile'} just changed and is live.`,
     }),
-    text: `Hi ${businessName},\n\nYour Pets24x7 profile was updated (${changed.join(', ') || 'business details'}) and is live on your listing.\n\nDashboard: ${vendorDash('listing')}\n`,
+    text: `Hi ${businessName},\n\nYour Pets24x7 profile was updated (${what || 'business details'}) ${pending ? 'and goes live on your listing once your account is approved' : 'and is live on your listing'}.\n\nDashboard: ${vendorDash('listing')}\n`,
   };
 }
 
@@ -689,9 +745,11 @@ export function serviceModeratedEmail(
       ],
       preheader: hidden ? `${serviceName} was hidden while we check it.` : `${serviceName} is visible again.`,
     }),
-    text: hidden
-      ? `Hi ${businessName},\n\nOur team hid "${serviceName}" on your listing while we check it. Reply to this email if that looks wrong.\n`
-      : `Hi ${businessName},\n\n"${serviceName}" is visible on your listing again.\n`,
+    text:
+      (hidden
+        ? `Hi ${businessName},\n\nOur team hid "${serviceName}" on your listing while we check it. Reply to this email if that looks wrong.\n`
+        : `Hi ${businessName},\n\n"${serviceName}" is visible on your listing again.\n`) +
+      `\nManage services: ${vendorDash('services')}\n`,
   };
 }
 
@@ -1300,7 +1358,7 @@ export function importFinishedEmail(
       ],
       preheader: `${job.created} created · ${job.updated} updated · ${job.failed} failed`,
     }),
-    text: `Hi ${name},\n\n${job.target} import finished.\nFile: ${job.fileName || 'pasted data'}\nRows: ${job.totalRows}\nCreated: ${job.created}\nUpdated: ${job.updated}\nSkipped: ${job.skipped}\nFailed: ${job.failed}\n`,
+    text: `Hi ${name},\n\n${job.target} import finished.\nFile: ${job.fileName || 'pasted data'}\nRows: ${job.totalRows}\nCreated: ${job.created}\nUpdated: ${job.updated}\nSkipped: ${job.skipped}\nFailed: ${job.failed}\n\nAdmin: ${adminDash('import')}\n`,
   };
 }
 

@@ -545,10 +545,19 @@
     }
   }
 
-  function notFound() {
+  function notFound(err) {
     // No listing, so nothing to enquire about: drop the phone booking bar.
     var mb = document.getElementById('mobileBar'); if (mb) mb.style.display = 'none';
     document.title = 'Listing not available | Pets24x7';
+    // The host answers 200 for every /in/<city>/<id>/ (this template is the
+    // fallback), so a hidden, removed or mistyped listing is a soft 404: keep
+    // it out of the index. Only when the API said so — a network error or 5xx
+    // must not noindex a live listing.
+    if (!err || /^(api 404|no listing)$/.test(String(err.message || ''))) {
+      var rb = document.createElement('meta');
+      rb.name = 'robots'; rb.content = 'noindex,follow';
+      document.head.appendChild(rb);
+    }
     content.innerHTML = '<div class="container"><div class="not-found"><h2>This listing isn\'t available right now</h2><p>It may have moved, been delisted, or the link is incorrect.</p>' +
       '<div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">' +
       '<a href="/' + country.toLowerCase() + '/' + encodeURIComponent(citySlug || 'mumbai') + '/" style="background:#2563EB;color:#fff;padding:12px 22px;border-radius:8px;font-weight:700;">← Browse listings in this city</a>' +

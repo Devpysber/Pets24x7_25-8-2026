@@ -244,7 +244,7 @@ async function pickMessage(p: Parent, ctx: SweepContext): Promise<Choice | null>
     const dueDay = dayNumber(pet.lastVaccinatedAt) + VACCINE_INTERVAL_DAYS;
     if (VACCINE_NUDGE_DAYS.includes(dueDay - ctx.today)) {
       const dueAt = new Date(pet.lastVaccinatedAt.getTime() + VACCINE_INTERVAL_DAYS * DAY);
-      return { mail: vaccinationDueEmail(email, p.name, pet.name, 'Annual booster', dueAt), digest: false };
+      return { mail: vaccinationDueEmail(email, p.name, pet.name, 'annual booster', dueAt), digest: false };
     }
   }
 

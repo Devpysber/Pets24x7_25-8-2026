@@ -13,6 +13,7 @@
 
 import type { MailInput } from './mailer.js';
 import { retryUrlFor } from './action-templates.js';
+import { campaignGoalLabel } from '../payments/pricing.js';
 import { Button, InfoBox, Note, Quote, Text, adminDash, day, dayTime, esc, h, money, page, parentDash, siteUrl, vendorDash, who } from './components.js';
 
 const PARENT_DASH = () => parentDash();
@@ -396,23 +397,30 @@ export function vaccinationDueEmail(
   dueAt: Date,
 ): MailInput {
   name = who(name);
+  // The sweep also sends this two and six weeks after the due date; those must
+  // not say "due soon ... before it lapses" about a date already gone.
+  const overdue = dueAt.getTime() + 24 * 3600 * 1000 <= Date.now();
   return {
     tag: 'vaccination_due',
     kind: 'marketing',
     to,
-    subject: `${petName}'s ${vaccine} is due`,
+    subject: overdue ? `${petName}'s ${vaccine} is overdue` : `${petName}'s ${vaccine} is due`,
     html: page({
       eyebrow: 'Reminder',
-      banner: ['Due soon', 'warning'],
-      heading: `${petName} is due for a ${vaccine}`,
-      intro: h`Hi ${name} — ${petName}'s ${vaccine} is due on ${day(dueAt)}. Book a vet near you before it lapses.`,
+      banner: overdue ? ['Overdue', 'danger'] : ['Due soon', 'warning'],
+      heading: overdue ? `${petName}'s ${vaccine} is overdue` : `${petName}'s ${vaccine} is due`,
+      intro: overdue
+        ? h`Hi ${name} — ${petName}'s ${vaccine} was due on ${day(dueAt)}. Book a vet near you to catch up.`
+        : h`Hi ${name} — ${petName}'s ${vaccine} is due on ${day(dueAt)}. Book a vet near you before it lapses.`,
       blocks: [
         Button('Find a vet nearby', siteUrl()),
         Note('Already done? Update the date on your dashboard and we will stop reminding you.'),
       ],
-      preheader: `${vaccine} due ${day(dueAt)}.`,
+      preheader: overdue ? `${petName}'s ${vaccine} was due ${day(dueAt)}.` : `${petName}'s ${vaccine} is due ${day(dueAt)}.`,
     }),
-    text: `Hi ${name},\n\n${petName}'s ${vaccine} is due on ${day(dueAt)}. Find a vet: ${siteUrl()}\n`,
+    text: overdue
+      ? `Hi ${name},\n\n${petName}'s ${vaccine} was due on ${day(dueAt)}. Find a vet: ${siteUrl()}\n`
+      : `Hi ${name},\n\n${petName}'s ${vaccine} is due on ${day(dueAt)}. Find a vet: ${siteUrl()}\n`,
   };
 }
 
@@ -652,14 +660,18 @@ export function vendorEnquiryUnansweredEmail(
       eyebrow: 'Enquiries',
       banner: ['Needs a reply', 'warning'],
       heading: count === 1 ? 'One enquiry is waiting' : `${count} enquiries are waiting`,
-      intro: h`Hi ${businessName} — ${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply. The oldest came in on ${day(oldestAt)}.`,
+      intro: count === 1
+        ? h`Hi ${businessName} — an enquiry on your listing has had no reply. It came in on ${day(oldestAt)}.`
+        : h`Hi ${businessName} — ${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply. The oldest came in on ${day(oldestAt)}.`,
       blocks: [
         Button('Reply now', vendorDash('enquiries')),
         Note('Pet parents usually book the first business that answers. A one-line reply is enough.'),
       ],
       preheader: `${plural(count, 'enquiry', 'enquiries')} waiting for a reply.`,
     }),
-    text: `Hi ${businessName},\n\n${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply — oldest ${day(oldestAt)}.\nReply: ${vendorDash('enquiries')}\n`,
+    text: count === 1
+      ? `Hi ${businessName},\n\nAn enquiry on your listing has had no reply — it came in on ${day(oldestAt)}.\nReply: ${vendorDash('enquiries')}\n`
+      : `Hi ${businessName},\n\n${plural(count, 'enquiry', 'enquiries')} on your listing have had no reply — oldest ${day(oldestAt)}.\nReply: ${vendorDash('enquiries')}\n`,
   };
 }
 
@@ -746,6 +758,8 @@ export function campaignEndingEmail(
   daysLeft: number,
 ): MailInput {
   businessName = who(businessName, 'there');
+  // Callers pass the CampaignGoal enum value (WHATSAPP_ENQUIRIES), not a label.
+  goal = campaignGoalLabel(goal);
   return {
     tag: 'campaign_ending',
     to,
@@ -770,6 +784,7 @@ export function campaignReportEmail(
 ): MailInput {
   const cpe = stats.enquiries > 0 ? money(Math.round(stats.spendMinor / stats.enquiries), stats.currency) : '—';
   businessName = who(businessName, 'there');
+  goal = campaignGoalLabel(goal);
   return {
     tag: 'campaign_report',
     to,
@@ -790,7 +805,7 @@ export function campaignReportEmail(
       ],
       preheader: `${stats.enquiries} enquiries for ${money(stats.spendMinor, stats.currency)}.`,
     }),
-    text: `Hi ${businessName},\n\n${goal} campaign results:\nImpressions: ${stats.impressions}\nClicks: ${stats.clicks}\nEnquiries: ${stats.enquiries}\nSpend: ${money(stats.spendMinor, stats.currency)}\nCost per enquiry: ${cpe}\n`,
+    text: `Hi ${businessName},\n\n${goal} campaign results:\nImpressions: ${stats.impressions}\nClicks: ${stats.clicks}\nEnquiries: ${stats.enquiries}\nSpend: ${money(stats.spendMinor, stats.currency)}\nCost per enquiry: ${cpe}\n\nRun it again: ${vendorDash('grow')}\n`,
   };
 }
 
@@ -804,11 +819,11 @@ export function vendorPhotosUpdatedEmail(to: string, businessName: string, count
       eyebrow: 'Listing',
       banner: ['Photos live', 'success'],
       heading: 'Your photos are up',
-      intro: h`Hi ${businessName} — ${plural(count, 'photo')} now show on your listing. Listings with photos get noticeably more enquiries.`,
+      intro: h`Hi ${businessName} — ${plural(count, 'photo')} now ${count === 1 ? 'shows' : 'show'} on your listing. Listings with photos get noticeably more enquiries.`,
       blocks: [Button('View my listing', vendorDash('listing'))],
-      preheader: `${plural(count, 'photo')} are live on your listing.`,
+      preheader: `${plural(count, 'photo')} ${count === 1 ? 'is' : 'are'} live on your listing.`,
     }),
-    text: `Hi ${businessName},\n\n${plural(count, 'photo')} are live on your listing: ${vendorDash('listing')}\n`,
+    text: `Hi ${businessName},\n\n${plural(count, 'photo')} ${count === 1 ? 'is' : 'are'} live on your listing: ${vendorDash('listing')}\n`,
   };
 }
 
@@ -991,7 +1006,7 @@ export function adminDailySummaryEmail(
       ],
       preheader: `${stats.signups} signups · ${money(stats.revenueMinor, stats.currency)} revenue.`,
     }),
-    text: `Hi ${adminName},\n\n${day(stats.date)}\nSignups: ${stats.signups}\nClaims: ${stats.claims}\nEnquiries: ${stats.enquiries}\nPayments: ${stats.payments}\nRevenue: ${money(stats.revenueMinor, stats.currency)}\nPending claims: ${stats.pendingClaims}\n`,
+    text: `Hi ${adminName},\n\n${day(stats.date)}\nSignups: ${stats.signups}\nClaims: ${stats.claims}\nEnquiries: ${stats.enquiries}\nPayments: ${stats.payments}\nRevenue: ${money(stats.revenueMinor, stats.currency)}\nPending claims: ${stats.pendingClaims}\n\nAdmin: ${ADMIN_DASH()}\n`,
   };
 }
 
@@ -1021,7 +1036,7 @@ export function adminPaymentAlertEmail(
       ],
       preheader: `${detail.merchantTxnId} needs attention.`,
     }),
-    text: `Hi ${adminName},\n\nPayment ${detail.merchantTxnId} (${money(detail.amountMinor, detail.currency)}, ${detail.who}) needs attention: ${detail.reason}\n`,
+    text: `Hi ${adminName},\n\nPayment ${detail.merchantTxnId} (${money(detail.amountMinor, detail.currency)}, ${detail.who}) needs attention: ${detail.reason}\n\nPayments: ${adminDash('payments')}\n`,
   };
 }
 

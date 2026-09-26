@@ -427,7 +427,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     category: 'Vendor',
     label: 'Campaign awaiting payment',
     description: 'Campaign reserved at checkout, payment not yet cleared.',
-    sample: { businessName: BIZ, campaign: { goal: 'LEADS', durationDays: 30, priceMinor: 299900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_4' },
+    sample: { businessName: BIZ, campaign: { goal: 'WHATSAPP_ENQUIRIES', durationDays: 30, priceMinor: 299900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_4' },
     build: (to, d) => T.campaignCreatedEmail(to, d.businessName, d.campaign, d.merchantTxnId),
   },
   {
@@ -436,7 +436,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     category: 'Vendor',
     label: 'Campaign paid, in review',
     description: 'Payment cleared; awaiting admin approval.',
-    sample: { businessName: BIZ, campaign: { goal: 'LEADS', durationDays: 30, priceMinor: 299900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_4' },
+    sample: { businessName: BIZ, campaign: { goal: 'WHATSAPP_ENQUIRIES', durationDays: 30, priceMinor: 299900, currency: 'INR' }, merchantTxnId: 'P24_SAMPLE_4' },
     build: (to, d) => T.campaignSubmittedEmail(to, d.businessName, d.campaign, d.merchantTxnId, invoiceUrl(d.merchantTxnId)),
   },
   {
@@ -445,7 +445,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     category: 'Vendor',
     label: 'Campaign live',
     description: 'Admin approved the campaign; the clock has started.',
-    sample: { businessName: BIZ, campaign: { goal: 'LEADS', durationDays: 30 } },
+    sample: { businessName: BIZ, campaign: { goal: 'WHATSAPP_ENQUIRIES', durationDays: 30 } },
     build: (to, d) => T.campaignApprovedEmail(to, d.businessName, d.campaign, soon()),
   },
   {
@@ -454,7 +454,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     category: 'Vendor',
     label: 'Campaign cancelled',
     description: 'Campaign stopped before or during its run.',
-    sample: { businessName: BIZ, goal: 'LEADS' },
+    sample: { businessName: BIZ, goal: 'WHATSAPP_ENQUIRIES' },
     build: (to, d) => T.campaignCancelledEmail(to, d.businessName, d.goal),
   },
   {
@@ -463,7 +463,7 @@ export const MAIL_CATALOG: CatalogEntry[] = [
     category: 'Vendor',
     label: 'Campaign finished',
     description: 'Campaign ran its full term.',
-    sample: { businessName: BIZ, goal: 'LEADS' },
+    sample: { businessName: BIZ, goal: 'WHATSAPP_ENQUIRIES' },
     build: (to, d) => T.campaignCompletedEmail(to, d.businessName, d.goal),
   },
   {

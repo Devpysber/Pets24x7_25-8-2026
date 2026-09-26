@@ -60,6 +60,9 @@ import { devRouter } from './dev/dev.routes.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+// Every response otherwise names the framework (X-Powered-By: Express), and
+// nginx passes it through.
+app.disable('x-powered-by');
 
 // ---- Trust proxy (nginx, and Cloudflare in front of it in production) ----
 // Hop count comes from TRUST_PROXY; see env.ts for why it matters.

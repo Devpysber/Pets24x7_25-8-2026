@@ -103,6 +103,9 @@ try {
     if (!r.name || !r.city || !p10) { skipped.push([r.name, 'missing name/city/phone']); continue; }
     if (listingPhones.has(p10)) { skipped.push([r.name, 'phone already on a listing']); continue; }
     if (vendorPhones.has(p10)) { skipped.push([r.name, 'phone already on a business account (vendor)']); continue; }
+    // `phones` also holds every row accepted above, so a number repeated in the
+    // file (one business listed under two categories) is inserted once.
+    if (phones.has(p10)) { skipped.push([r.name, 'phone repeated in this file']); continue; }
     if (names.has(nameKey)) { skipped.push([r.name, 'same name already in this city']); continue; }
     const category = CATEGORY_ICONS[r.category] ? r.category : 'Veterinary Clinics';
     let id = `${citySlug}-${slug(r.name).slice(0, 60)}-${p10.slice(-8)}`.replace(/-+/g, '-');

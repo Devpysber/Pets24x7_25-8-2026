@@ -49,6 +49,14 @@
             ? ((issue.path && issue.path.length ? issue.path.join('.') + ': ' : '') + issue.message)
             : '';
           var code = data && data.error && data.error !== 'bad_json' ? data.error : '';
+          // A server fault (500 { error: 'internal_error', requestId }, or a
+          // proxy 502/503/504) has no message either. Its bare code reached the
+          // screen as "Could not load …: internal_error" / "HTTP 502"; say what
+          // it means instead, keeping the request id so it can be looked up.
+          if (r.status >= 500 && !(data && data.message) && !issueMsg) {
+            code = 'Something went wrong on our side. Please try again in a moment.' +
+              (data && data.requestId ? ' (ref ' + data.requestId + ')' : '');
+          }
           var err = new Error((data && data.message) || issueMsg || code || ('HTTP ' + r.status));
           err.status = r.status;
           err.data = data;

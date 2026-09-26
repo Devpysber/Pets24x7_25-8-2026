@@ -12,12 +12,13 @@
 // impressions (surface email_digest) against its rid.
 
 import { prisma } from '../../db.js';
+import { mailSite } from '../../mail/components.js';
 import type { MailInput } from '../../mail/mailer.js';
 import { recoDigestEmail } from '../../mail/reco-templates.js';
 import { getRecoConfig, type RecoConfig } from './config.js';
 import { EMAIL_RID_TTL_SEC, lookupRid, recordServerImpressions, registerRid, type RidEntry } from './events.js';
 import { forParent, parentFeed, type RecoItem } from './service.js';
-import { DAY_MS, isoWeek, siteBase, viewerKeyFor } from './util.js';
+import { DAY_MS, isoWeek, viewerKeyFor } from './util.js';
 
 export type DigestFrequency = 'DAILY' | 'WEEKLY' | 'OFF';
 
@@ -123,7 +124,7 @@ export async function buildRecoDigest(p: {
   const local = localPicks(res);
   if (local.length < config.digest.minItems || res.fallback === 'default_city') return null;
 
-  const site = siteBase();
+  const site = mailSite();
   const items = local.slice(0, config.digest.items);
   // Identical to the last digest (same places, any order): not worth a mail.
   const lastSet = new Set(lastBatch);

@@ -5,9 +5,10 @@ Pets24x7 — local dev server that emulates the Hostinger .htaccess rewrites.
 /in/mumbai/ 404 because the pre-rendered pages (pets24x7_new/in/, /us/)
 are gitignored and built by build_pages.py at deploy time.
 
-This server maps the clean URLs onto the fallback templates
-(city.html / listing.html / review/*) exactly like the .htaccess rules,
-injecting <base href="/"> so their relative asset paths still resolve.
+This server serves a pre-rendered page when one exists, and otherwise maps
+the clean URLs onto the fallback templates (city.html / listing.html /
+review/*) exactly like the .htaccess rules, injecting <base href="/"> so
+their relative asset paths still resolve.
 
 Run:  python serve.py           (defaults to port 8000)
       python serve.py 8080
@@ -191,6 +192,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Location", hit[1])
             self.end_headers()
             return
+
+        # A page build_pages.py pre-rendered wins, as on the host (the
+        # .htaccess / nginx fallbacks only apply when no such file exists):
+        # the templates stand in for cities and listings added since the build.
+        if hit and os.path.isfile(os.path.join(self.translate_path(clean), "index.html")):
+            hit = None
 
         if hit:
             template, qs = hit

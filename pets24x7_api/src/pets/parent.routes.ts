@@ -12,6 +12,7 @@ import { makeLimiter } from '../shared/rate-limit.js';
 import { NotFoundError, ForbiddenError, BadRequestError, HttpError } from '../shared/errors.js';
 import { sendVerificationEmail } from '../auth/email-verification.js';
 import { notifyIf } from '../mail/notify.js';
+import { mailSite } from '../mail/components.js';
 import { getListingById, listingsInCity, shownRating } from '../listings/index.js';
 import { normalizePhone } from '../shared/phone.js';
 import { recommend } from '../feed/recommend.js';
@@ -98,10 +99,32 @@ async function sendFirstPetRecommendations(
         rating: shownRating(p.listing),
         reviewCount: p.listing.review_count,
         reasons: p.reasons,
-        url: `${env.PUBLIC_SITE_URL}/${String(p.listing.country).toLowerCase()}/${p.listing.city_slug}/${p.listing.id}/`,
+        url: `${mailSite()}/${String(p.listing.country).toLowerCase()}/${p.listing.city_slug}/${p.listing.id}/`,
       })),
     ),
   );
+
+  // This is a marketing mail, so it counts against the same cadence as the
+  // engagement digest: stamp it the way jobs/engagement.ts does, or the next
+  // sweep sends a second set of picks (often the same places) the same day.
+  let previous: string[] = [];
+  try {
+    const arr = JSON.parse(parent?.recentPromoIds ?? '[]');
+    if (Array.isArray(arr)) previous = arr.filter((x): x is string => typeof x === 'string');
+  } catch {
+    // Unreadable history: start a fresh one.
+  }
+  const now = new Date();
+  await prisma.petParent
+    .update({
+      where: { id: parentId },
+      data: {
+        lastMarketingAt: now,
+        lastDigestAt: now,
+        recentPromoIds: JSON.stringify([...picks.map((p) => p.listing.id), ...previous].slice(0, 30)),
+      },
+    })
+    .catch(() => {});
 }
 
 /** Address + display name for the action mails below; null when unknown. */
@@ -128,7 +151,7 @@ parentDashboardRouter.get(
       const [p, pt, e, m, sv] = await Promise.all([
         prisma.petParent.findUnique({
           where: { id: parentId },
-          select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true },
+          select: { id: true, name: true, phone: true, email: true, city: true, country: true, emailVerified: true, emailVerifiedAt: true, digestFrequency: true },
         }),
         prisma.pet.findMany({ where: { ownerId: parentId }, orderBy: { createdAt: 'desc' } }),
         prisma.enquiry.findMany({
@@ -262,7 +285,7 @@ parentDashboardRouter.patch(
     const body = ProfileBody.parse(req.body);
     const current = await prisma.petParent.findUnique({
       where: { id: req.auth!.sub },
-      select: { email: true, phone: true, country: true, city: true, name: true },
+      select: { email: true, phone: true, country: true, city: true, name: true, digestFrequency: true },
     });
 
     const data: Record<string, unknown> = {};

@@ -4,7 +4,7 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { sendText } from './cloud-api.js';
+import { sendText, whatsappConfigured } from './cloud-api.js';
 import { normalizePhone } from '../shared/phone.js';
 
 export async function logWaMessage(entry: {
@@ -56,6 +56,13 @@ export async function logWaMessage(entry: {
 // the last 24h (WA service window); otherwise Meta rejects it — we swallow that.
 export async function notify(rawPhone: string, text: string): Promise<void> {
   const phone = normalizePhone(rawPhone);
+  // Every other sender (OTP, review requests) checks this first. Without it,
+  // placeholder credentials sent each enquiry and vendor status change to Meta
+  // for a guaranteed 401 and filled the admin WhatsApp log with failed rows.
+  if (!whatsappConfigured()) {
+    logger.debug({ phone }, 'notify: WhatsApp not configured, nudge not sent');
+    return;
+  }
   try {
     const { messageId } = await sendText(phone, text);
     await logWaMessage({ waMessageId: messageId, direction: 'OUTBOUND', toNumber: phone, type: 'text', status: 'sent', body: text });

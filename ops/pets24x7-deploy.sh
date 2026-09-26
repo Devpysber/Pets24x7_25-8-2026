@@ -122,7 +122,9 @@ if grep -q '^pets24x7_api/' <<<"$CHANGED"; then
   # verification links, receipts and invoices while still answering 200. Catch a
   # missing credential here, where the running service is untouched, rather than
   # at the restart, where it would leave the site down.
-  if ! grep -qE '^SMTP_USER=.+' "$APP/.env" || ! grep -qE '^SMTP_PASS=.+' "$APP/.env"; then
+  # A value, not just the key: SMTP_PASS="" (the .env.example style) passed
+  # '.+' on its quotes and the API then refused to start anyway.
+  if ! grep -qE "^SMTP_USER=[\"']?[^\"'[:space:]]" "$APP/.env" || ! grep -qE "^SMTP_PASS=[\"']?[^\"'[:space:]]" "$APP/.env"; then
     echo "FAILED: SMTP_USER / SMTP_PASS are missing from $APP/.env"
     echo "        The API will not start in production without them. Nothing was changed."
     exit 1

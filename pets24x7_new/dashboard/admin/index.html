@@ -5196,7 +5196,10 @@
         (b.city && b.city.toLowerCase().includes(search)) ||
         (b.planName && b.planName.toLowerCase().includes(search));
       var matchesGoal = goal === 'ALL' || (b.goal && b.goal.toUpperCase() === goal.toUpperCase());
-      var matchesStatus = status === 'ALL' || (b.status && b.status.toUpperCase() === status.toUpperCase());
+      // A featured slot that has run its course is EXPIRED ("Ended"). The
+      // Completed tile counts it, so the Completed filter lists it too.
+      var st = (b.status || '').toUpperCase();
+      var matchesStatus = status === 'ALL' || st === status.toUpperCase() || (status === 'COMPLETED' && st === 'EXPIRED');
       return matchesSearch && matchesGoal && matchesStatus;
     });
 
@@ -5216,6 +5219,14 @@
     var cls = { PAID: 'tag-active', REFUNDED: 'tag-suspended', COMPLIMENTARY: 'tag-unclaimed', UNPAID: 'tag-pending' }[b.purchaseKind] || 'tag-unclaimed';
     return '<span class="status-tag ' + cls + '">' + escH(b.purchaseLabel || b.paymentStatus || '—') + '</span>';
   }
+  // The goal as the Goal filter names it, rather than the API code
+  // (WHATSAPP_ENQUIRIES), so the table and the filter use the same words.
+  function gbGoalLabel(goal) {
+    var sel = document.getElementById('growBuyerGoalFilter');
+    var code = String(goal || '').replace(/[^A-Z0-9_]/gi, '');
+    var opt = sel && code ? sel.querySelector('option[value="' + code + '"]') : null;
+    return opt ? opt.textContent : String(goal || '');
+  }
 
   function growBuyerRenderTable() {
     var tbody = document.getElementById('growBuyersTableBody');
@@ -5231,7 +5242,7 @@
 
       return '<tr>' +
         '<td><div style="font-weight:700;">' + escH(b.businessName) + '</div><div style="font-size:11.5px;color:var(--text-muted);">' + escH(b.ownerName || b.phone || 'Vendor') + ' • ' + escH(b.city || '') + '</div></td>' +
-        '<td><div style="font-weight:700;color:var(--primary);">' + escH(b.planName) + '</div><div style="font-size:11.5px;color:var(--text-muted);">' + escH(b.goal) + ' (' + (b.durationDays || b.duration || 30) + 'd)</div></td>' +
+        '<td><div style="font-weight:700;color:var(--primary);">' + escH(b.planName) + '</div><div style="font-size:11.5px;color:var(--text-muted);">' + escH(gbGoalLabel(b.goal)) + ' (' + (b.durationDays || b.duration || 30) + 'd)</div></td>' +
         '<td style="font-size:12px;">' + targetStr + '</td>' +
         '<td><div style="font-weight:700;">' + inr(gbPaid(b)) + '</div>' +
           (b.priceRupees != null && gbPaid(b) !== b.priceRupees ? '<div style="font-size:11.5px;color:var(--text-muted);">Plan price ' + inr(b.priceRupees) + '</div>' : '') + '</td>' +
@@ -5572,7 +5583,7 @@
     
     var bodyHtml =
       '<div style="font-weight:800; font-size:16px; color:var(--primary); margin-bottom:8px;">' + escH(b.planName) + '</div>' +
-      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; background:#FFFFFF; padding:12px; border-radius:8px; border:1px solid var(--border);">' +
+      '<div class="rsp-cols-2" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; background:#FFFFFF; padding:12px; border-radius:8px; border:1px solid var(--border);">' +
         '<div>Vendor Business: <strong>' + escH(b.businessName) + '</strong></div>' +
         '<div>Owner / Contact: <strong>' + escH(b.ownerName || '—') + '</strong></div>' +
         '<div>City: <strong>' + escH(b.city || '—') + '</strong></div>' +
@@ -7799,6 +7810,10 @@
             ' · ' + (l.reviewCount || 0) + ' Google reviews</span>' : '') +
           (l.photoCount ? '<span class="dir-card-meta">' + l.photoCount + ' own photo' +
             (l.photoCount === 1 ? '' : 's') + '</span>' : '') +
+          // Photos added here under Photos (the public page uses them while
+          // the business has none of its own).
+          (l.listingPhotoCount ? '<span class="dir-card-meta">' + l.listingPhotoCount + ' listing photo' +
+            (l.listingPhotoCount === 1 ? '' : 's') + '</span>' : '') +
         '</span>' +
       '</div>';
     }).join('');
@@ -9363,6 +9378,10 @@
     else loadView('dash');
   }).catch(function(err) {
     toast('Could not verify your admin session: ' + fmtErr(err), 'error');
+    // The toast fades; without this the page sat on a dashboard of dashes
+    // with nothing to say why. Loading the dashboard leaves its own error and
+    // Retry in place while the API is down (and a 401 still goes to sign-in).
+    loadView('dash');
   });
 </script>
 

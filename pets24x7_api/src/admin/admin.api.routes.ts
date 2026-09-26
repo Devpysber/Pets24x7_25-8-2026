@@ -28,6 +28,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
 import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.js';
+import { syncVendorToListingIndex } from '../vendors/dashboard.routes.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, HttpError, NotFoundError } from '../shared/errors.js';
@@ -527,6 +528,14 @@ adminApiRouter.post(
     if (status === 'SUSPENDED' || status === 'REJECTED') data.sessionsRevokedAt = new Date();
 
     const v = await prisma.vendor.update({ where: { id }, data });
+    // A PENDING claim's profile edits were kept off the public listing (see
+    // syncVendorToListingIndex). Push them now, or the listing keeps showing
+    // the pre-edit details after we tell the vendor it is "approved and live".
+    if (status === 'ACTIVE' && status !== existing.status) {
+      await syncVendorToListingIndex(v).catch((err) =>
+        req.log.warn({ err, vendorId: id }, 'listing index sync failed after vendor approval'),
+      );
+    }
     await prisma.auditLog.create({
       data: {
         actorType: 'ADMIN',

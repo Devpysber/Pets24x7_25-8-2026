@@ -1065,7 +1065,8 @@
       bar.style.cssText = 'background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;border-radius:10px;padding:12px 16px;font-weight:600;margin-bottom:20px;';
       main.insertBefore(bar, main.firstChild);
     }
-    bar.textContent = 'Could not load your dashboard: ' + msg + '. Retrying…';
+    // Messages already end in a full stop ("… try again."); do not add a second.
+    bar.textContent = 'Could not load your dashboard: ' + String(msg).replace(/\.\s*$/, '') + '. Retrying…';
     setTimeout(loadData, 4000);
   }
 

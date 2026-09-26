@@ -309,7 +309,7 @@ vendorReviewsRouter.patch(
     const review = await prisma.review.findUnique({ where: { id: req.params.id ?? '' } });
     if (!review) throw new NotFoundError('Review not found');
     const vendor = await prisma.vendor
-      .findUnique({ where: { id: req.auth!.sub }, select: { email: true, businessName: true, listingId: true } })
+      .findUnique({ where: { id: req.auth!.sub }, select: { email: true, businessName: true, listingId: true, status: true } })
       .catch(() => null);
     // Own it by vendor id, or by the claimed listing for a review written
     // before the claim (vendorId still null — never someone else's).
@@ -317,6 +317,12 @@ vendorReviewsRouter.patch(
       review.vendorId === req.auth!.sub ||
       (review.vendorId === null && !!vendor?.listingId && review.listingId === vendor.listingId);
     if (!ownsIt) throw new ForbiddenError();
+    // A reply is published on the listing page as the business. A PENDING
+    // claim has not shown it is the business (only typed the listing's public
+    // number), so it waits for approval like leads and spending do.
+    if (!isVendorApproved(vendor?.status)) {
+      throw new ForbiddenError('Your vendor account must be approved before you can reply to reviews');
+    }
     const updated = await prisma.review.update({
       where: { id: review.id },
       // Adopt a pre-claim review on first reply, so moderation mails and the

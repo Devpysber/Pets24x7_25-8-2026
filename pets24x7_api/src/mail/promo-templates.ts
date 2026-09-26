@@ -116,7 +116,7 @@ export function vendorOpenEnquiriesEmail(to: string, ctx: VendorPromoContext, op
       ],
       preheader: `${openCount} unanswered enquir${openCount === 1 ? 'y' : 'ies'} on your listing.`,
     }),
-    text: `${openCount} unanswered enquiries on Pets24x7.\n\nOpen them: ${url}\n`,
+    text: `${openCount} unanswered enquir${openCount === 1 ? 'y' : 'ies'} on Pets24x7.\n\nOpen ${openCount === 1 ? 'it' : 'them'}: ${url}\n`,
   };
 }
 
@@ -132,7 +132,7 @@ export function vendorCollectReviewsEmail(to: string, ctx: VendorPromoContext): 
     to,
     kind: 'marketing',
     subject: has
-      ? `Add to the ${ctx.reviewCount} reviews on ${ctx.businessName}`
+      ? `Add to the ${ctx.reviewCount} review${ctx.reviewCount === 1 ? '' : 's'} on ${ctx.businessName}`
       : `${ctx.businessName} has no reviews yet`,
     html: page({
       eyebrow: 'Reviews',

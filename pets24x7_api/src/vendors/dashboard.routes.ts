@@ -28,6 +28,10 @@ import { vendorReviewScope } from '../reviews/vendor.routes.js';
 import { profileCompletion } from './profile-completion.js';
 import type { Prisma, Vendor } from '@prisma/client';
 
+// The forms send '' for an empty field while the database holds null; treat
+// both as "no value" so a first save does not report untouched fields.
+const orNull = (x: unknown) => (x === '' || x === undefined ? null : x);
+
 export const vendorDashboardRouter = Router();
 
 vendorDashboardRouter.use(requireAuth('vendor'));
@@ -225,10 +229,10 @@ vendorDashboardRouter.patch(
     // mail "your profile was updated" listing every field on it.
     const before = (current ?? {}) as Record<string, unknown>;
     const changed = Object.keys(data).filter(
-      (k) => k !== 'emailVerified' && k !== 'emailVerifiedAt' && (before[k] ?? null) !== (data[k] ?? null),
+      (k) => k !== 'emailVerified' && k !== 'emailVerifiedAt' && orNull(before[k]) !== orNull(data[k]),
     );
     if (changed.length > 0) {
-      notifyIf(v.email, (to) => vendorProfileUpdatedEmail(to, v.businessName, changed));
+      notifyIf(v.email, (to) => vendorProfileUpdatedEmail(to, v.businessName, changed, !isVendorApproved(v.status)));
     }
     // Name and category are shown on the public listing, which reads the
     // listing index — /my-business already pushed there, this route did not.
@@ -286,9 +290,15 @@ vendorDashboardRouter.patch(
   '/enquiries/:id',
   asyncHandler(async (req, res) => {
     const { status } = EnqStatusBody.parse(req.body);
-    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub }, select: { listingId: true, businessName: true } });
+    const v = await prisma.vendor.findUnique({ where: { id: req.auth!.sub }, select: { listingId: true, businessName: true, status: true } });
     const enq = await prisma.enquiry.findUnique({ where: { id: req.params.id ?? '' } });
     if (!enq) throw new NotFoundError('Enquiry not found');
+    // Same gate as the list above: a pending account sees that leads exist but
+    // cannot act on them — a status change mails the parent that the business
+    // answered.
+    if (!isVendorApproved(v?.status)) {
+      throw new ForbiddenError('Your vendor account must be approved before you can manage enquiries');
+    }
     // Same rule as the list above (see enquiryScope).
     const ownsIt =
       !!v?.listingId &&
@@ -510,10 +520,10 @@ vendorDashboardRouter.patch(
       }
     }
     const changed = Object.keys(data).filter(
-      (k) => k !== 'galleryImages' && (before[k] ?? null) !== (data[k] ?? null),
+      (k) => k !== 'galleryImages' && orNull(before[k]) !== orNull(data[k]),
     );
     if (changed.length > 0) {
-      notifyIf(updated.email, (to) => vendorProfileUpdatedEmail(to, updated.businessName, changed));
+      notifyIf(updated.email, (to) => vendorProfileUpdatedEmail(to, updated.businessName, changed, !isVendorApproved(updated.status)));
     }
 
     res.json({
@@ -524,10 +534,15 @@ vendorDashboardRouter.patch(
   }),
 );
 
-/** Mirrors a vendor row into the public listing index so the site shows it. */
-async function syncVendorToListingIndex(v: {
+/**
+ * Mirrors a vendor row into the public listing index so the site shows it.
+ * Also called by the admin approval route, so edits made while PENDING go live
+ * as soon as the account is approved.
+ */
+export async function syncVendorToListingIndex(v: {
   listingId: string | null;
   id: string;
+  status: string;
   businessName: string;
   category: string | null;
   city: string | null;
@@ -537,6 +552,11 @@ async function syncVendorToListingIndex(v: {
   website: string | null;
   pincode: string | null;
 }): Promise<void> {
+  // A PENDING claim has only typed the listing's public number (no WhatsApp
+  // code), so it may keep editing its own account but must not rewrite the
+  // public listing: it could put its own phone on another business's page.
+  // Its edits reach the listing when an admin approves it (admin.api.routes.ts).
+  if (!isVendorApproved(v.status)) return;
   const listingId = v.listingId || v.id;
   const existing = getListingById(listingId);
   const category = v.category || existing?.category || 'Pet Service';

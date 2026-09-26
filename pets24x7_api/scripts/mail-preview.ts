@@ -101,9 +101,13 @@ function lint(html: string, text: string, subject: string, marketing: boolean): 
 
 for (const entry of MAIL_CATALOG) {
   i += 1;
+  // Classified the way the admin console sends it (admin/mail.routes.ts): the
+  // free-form 'custom' mail carries no kind of its own and goes out as
+  // marketing, with the unsubscribe line this render must show too.
+  const kind = entry.kind ?? 'marketing';
   let mail;
   try {
-    mail = withTracking({ ...entry.build(to, entry.sample as Record<string, any>) });
+    mail = withTracking({ ...entry.build(to, entry.sample as Record<string, any>), kind });
     const unsub = mail.kind === 'marketing' ? unsubscribeUrl(to) : null;
     mail = { ...mail, html: withUnsubscribeFooter(mail.html, unsub), text: withUnsubscribeText(mail.text, unsub) };
   } catch (err: any) {
@@ -124,7 +128,7 @@ for (const entry of MAIL_CATALOG) {
 
   if (send) {
     // Built again from the catalogue: sendMail adds the unsubscribe line itself.
-    const ok = await sendMail({ ...withTracking(entry.build(to, entry.sample as Record<string, any>)), subject: `[preview] ${mail.subject}` });
+    const ok = await sendMail({ ...withTracking({ ...entry.build(to, entry.sample as Record<string, any>), kind }), subject: `[preview] ${mail.subject}` });
     if (!ok) failed += 1;
     console.log(ok ? 'sent   ' : 'FAILED ', entry.id, '-', mail.subject);
   } else {

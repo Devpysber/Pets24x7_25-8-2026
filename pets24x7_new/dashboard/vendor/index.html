@@ -1164,7 +1164,7 @@
   <div class="modal-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:17px; font-weight:800;" id="csModalTitle">Campaign Setup</h3>
-      <button type="button" class="modal-close" onclick="closeModal(\'campaignSetupModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('campaignSetupModal')" aria-label="Close">✕</button>
     </div>
 
     <!-- 3-Step Progress Indicator -->
@@ -1290,7 +1290,7 @@
   <div class="modal-panel" style="max-width:680px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h3 style="font-size:16px; font-weight:700;">Edit Business Information</h3>
-      <button type="button" class="modal-close" onclick="closeModal(\'editBizModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('editBizModal')" aria-label="Close">✕</button>
     </div>
     <form id="editBizForm">
       <div class="grid-2">
@@ -1336,7 +1336,7 @@
   <div class="modal-panel" style="max-width:520px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h3 style="font-size:16px; font-weight:700;">Add a Service</h3>
-      <button type="button" class="modal-close" onclick="closeModal(\'addServiceModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('addServiceModal')" aria-label="Close">✕</button>
     </div>
     <form id="addServiceForm">
       <div class="form-group"><label for="sName">Service Name</label><input type="text" class="form-control" id="sName" maxlength="120" required placeholder="e.g. Full Grooming" /></div>
@@ -1357,7 +1357,7 @@
   <div class="modal-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:16px; font-weight:700;">Enquiry Details</h3>
-      <button type="button" class="modal-close" onclick="closeModal(\'enquiryModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('enquiryModal')" aria-label="Close">✕</button>
     </div>
     <div id="enquiryModalBody"></div>
   </div>
@@ -1367,7 +1367,7 @@
   <div class="modal-panel" style="max-width:840px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h3 style="font-size:16px; font-weight:700;">Listing Preview</h3>
-      <button type="button" class="modal-close" onclick="closeModal(\'previewModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('previewModal')" aria-label="Close">✕</button>
     </div>
     <iframe id="previewIframe" src="about:blank" style="width:100%; height:580px; border:1px solid var(--border); border-radius:var(--radius-sm);"></iframe>
     <p id="previewNote" style="font-size:12.5px; color:var(--text-muted); margin-top:8px;"></p>
@@ -1442,7 +1442,7 @@
         <h3 style="font-size:18px; font-weight:800; margin:0;">Tax Invoice &amp; Payment Receipt</h3>
         <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Pets24x7 Business Solutions Pvt Ltd</p>
       </div>
-      <button type="button" class="modal-close" onclick="closeModal(\'vendorReceiptModal\')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('vendorReceiptModal')" aria-label="Close">✕</button>
     </div>
 
     <div id="vReceiptModalBody"></div>
@@ -2480,7 +2480,8 @@
     var body = document.getElementById('fullEnquiriesTableBody');
     if (!body) return;
     if (!list.length) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">No enquiries match this filter.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">' +
+        (state.enquiries.length ? 'No enquiries match this filter.' : 'No enquiries yet. Customer requests from your Pets24x7 listing will appear here.') + '</td></tr>';
       return;
     }
 
@@ -2522,16 +2523,24 @@
     var listEl = document.getElementById('reviewsList');
     if (!listEl) return;
     if (!state.reviews.length) {
-      listEl.innerHTML = '<p style="color:var(--text-muted); padding:16px 0;">No reviews collected yet. Use “Request Reviews on WhatsApp” to invite recent customers.</p>';
+      // A failed load is not "no reviews": saying so would tell a vendor with
+      // reviews that they have none.
+      listEl.innerHTML = state.reviewsLoadErr
+        ? '<p style="color:var(--danger); padding:16px 0;">Could not load your reviews (' + esc(state.reviewsLoadErr) + '). ' +
+          '<button class="btn btn-sm" onclick="loadReviews()">Retry</button></p>'
+        : '<p style="color:var(--text-muted); padding:16px 0;">No reviews collected yet. Use “Request Reviews on WhatsApp” to invite recent customers.</p>';
       return;
     }
     listEl.innerHTML = state.reviews.map(function(r) {
       var replyBlock = r.vendorReply
         ? '<div style="margin-top:8px;padding:8px 10px;background:#F1F5F9;border-radius:6px;font-size:12.5px;"><strong>Your reply:</strong> ' + esc(r.vendorReply) + '</div>'
         : '';
-      var replyBtn = r.id
-        ? '<button class="btn btn-sm" onclick="replyToReview(\'' + r.id + '\')">' + (r.vendorReply ? 'Edit reply' : 'Reply') + '</button>'
-        : '';
+      // A reply is published as the business, so the API refuses it until the
+      // account is approved: say so instead of offering a button that fails.
+      var replyBtn = !r.id ? ''
+        : awaitingApproval()
+          ? '<span>Reply available after approval</span>'
+          : '<button class="btn btn-sm" onclick="replyToReview(\'' + r.id + '\')">' + (r.vendorReply ? 'Edit reply' : 'Reply') + '</button>';
       return `
         <div class="review-item">
           <div class="review-meta">
@@ -2547,6 +2556,15 @@
         </div>
       `;
     }).join('');
+  }
+
+  // The API only lets an approved account (ACTIVE, or CLAIMED through the
+  // claim flow) reply to reviews or act on enquiries (isVendorApproved). An
+  // unknown status (summary not loaded yet) keeps the actions; the API still
+  // has the final say.
+  function awaitingApproval() {
+    var s = state.vendor && state.vendor.status;
+    return !!s && s !== 'ACTIVE' && s !== 'CLAIMED';
   }
 
   // Only a published review is live; a pending one is still in moderation and
@@ -2570,9 +2588,10 @@
     return api.vendorReviewsCollected().then(function(r) {
       state.reviews = (r.reviews || []).map(mapReview);
       state.reviewsLoaded = true;
+      state.reviewsLoadErr = null;
       renderReviews();
-    }).catch(function() {
-      if (!state.reviewsLoaded) renderReviews();
+    }).catch(function(err) {
+      if (!state.reviewsLoaded) { state.reviewsLoadErr = fmtErr(err); renderReviews(); }
     });
   }
 
@@ -2625,6 +2644,19 @@
       b.addEventListener('click', function() { var a = CHECKLIST_ACTIONS[b.getAttribute('data-step')]; if (a) a[1](); });
     });
     card.hidden = pct >= 100;
+  }
+
+  // The completion checklist and the "Your profile is N% complete" card are
+  // fetched once in load(). After an edit that changes the score (a service,
+  // the business details, a photo) fetch both again, or the dashboard keeps
+  // quoting the old figure and ticking nothing off until a reload.
+  var completionTimer = null;
+  function refreshCompletion() {
+    clearTimeout(completionTimer);
+    completionTimer = setTimeout(function() {
+      api.vendorDashboard().then(function(d) { renderChecklist(d.completion); }).catch(function() {});
+      loadRecoVendor();
+    }, 300);
   }
 
   function replyToReview(id) {
@@ -2863,7 +2895,8 @@
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${digits.length >= 10 ? '<a href="https://wa.me/' + digits + '?text=' + encodeURIComponent(waMsg) + '" target="_blank" class="btn btn-wa btn-sm" style="width:100%;">Respond on WhatsApp</a>' : ''}
         ${cleanPhone ? '<a href="tel:' + esc(cleanPhone) + '" class="btn btn-sm" style="width:100%; justify-content:center;">Call customer</a>' : ''}
-        <div style="display:flex; gap:8px; margin-top:4px; flex-wrap:wrap;">
+        ${awaitingApproval() ? '<p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Status updates are available after your account is approved.</p>' : ''}
+        <div style="display:${awaitingApproval() ? 'none' : 'flex'}; gap:8px; margin-top:4px; flex-wrap:wrap;">
           ${e.status !== 'responded' ? '<button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'RESPONDED\', this)">Mark responded</button>' : ''}
           ${e.status !== 'completed' ? '<button class="btn btn-sm btn-primary" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'COMPLETED\', this)">Mark completed</button>' : ''}
           ${e.status !== 'archived' ? '<button class="btn btn-sm" style="flex:1; min-width:120px; color:var(--text-muted);" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'ARCHIVED\', this)">Archive</button>' : '<button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'NEW\', this)">Restore to New</button>'}
@@ -2910,7 +2943,7 @@
       danger: true
     }).then(function (ok) {
       if (!ok) return;
-      api.vendorServiceDelete(id).then(function () { toast('Service removed', 'ok'); return loadServices(); })
+      api.vendorServiceDelete(id).then(function () { toast('Service removed', 'ok'); refreshCompletion(); return loadServices(); })
         .catch(function(err){ toast('Could not remove: ' + fmtErr(err), 'error'); });
     });
   }
@@ -2924,8 +2957,10 @@
       fields: [
         { name: 'name', label: 'Service name', value: s.name, required: true },
         // uiForm has no step option and a number input defaults to step=1,
-        // which would block saving a $12.50 price — so cents currencies use text.
-        { name: 'price', label: 'Price (' + currencySymbol(s.currency) + ')', type: currencySymbol(s.currency) === '$' ? 'text' : 'number', value: s.price, required: true },
+        // which rejects any price with paise/cents (₹799.50, $12.50). A stored
+        // price like that made the dialog refuse every save — even a rename —
+        // so the price is text, checked by the regex below.
+        { name: 'price', label: 'Price (' + currencySymbol(s.currency) + ')', type: 'text', value: s.price, required: true },
         { name: 'duration', label: 'Duration', value: s.duration || '30 mins', placeholder: '45 mins' },
         { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: s.description || '' }
       ]
@@ -2958,6 +2993,7 @@
     var sb = form.querySelector('button[type="submit"]');
     if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
     api.vendorServiceCreate({ name: name, priceMinor: Math.round(price * 100), durationLabel: duration, description: desc || undefined }).then(function() {
+      refreshCompletion();
       return loadServices();
     }).then(function() {
       closeModal('addServiceModal');
@@ -3005,8 +3041,11 @@
     if (sb) { sb.disabled = true; sb.textContent = 'Saving…'; }
     api.vendorUpdateMyBusiness(payload).then(function(r) {
       applyVendor(r.business || payload);
+      refreshCompletion();
       closeModal('editBizModal');
-      toast('Business details saved — your public listing is updated.', 'ok');
+      toast(awaitingApproval()
+        ? 'Saved. Changes go live on your listing once your account is approved.'
+        : 'Business details saved — your public listing is updated.', 'ok');
     }).catch(function(err) {
       toast('Could not save business details: ' + fmtErr(err), 'error');
     }).finally(function() {
@@ -3216,6 +3255,7 @@
         return api.vendorPatch({ imageUrl: dataUrl }).then(function(r) {
           state.vendor.imageUrl = (r.vendor && r.vendor.imageUrl) || dataUrl;
           renderVendorImage();
+          refreshCompletion();
           msg.style.color = 'var(--success)'; msg.textContent = 'Saved ✓';
           setTimeout(function(){ msg.textContent = ''; }, 2500);
         });
@@ -3240,6 +3280,7 @@
     api.vendorPatch({ imageUrl: '' }).then(function() {
       state.vendor.imageUrl = '';
       renderVendorImage();
+      refreshCompletion();
       msg.textContent = '';
     }).catch(function(err) {
       msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err);
@@ -3278,6 +3319,7 @@
     return api.vendorUpdateMyBusiness({ galleryImages: list }).then(function(r) {
       state.vendor.galleryImages = (r.business && r.business.galleryImages) || list;
       renderVendorGallery();
+      refreshCompletion();
       if (msg) { msg.style.color = 'var(--success)'; msg.textContent = msgText; setTimeout(function(){ msg.textContent = ''; }, 2500); }
     }).catch(function(err) {
       if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(err); }
@@ -3925,7 +3967,12 @@
   }).catch(function(err) {
     if (err && (err.status === 401 || err.status === 403)) { location.href = '/vendor-login/'; return; }
     return requireRole('vendor', '/vendor-login/').then(function(ok) { if (ok) load(); })
-      .catch(function(e) { toast('Could not reach Pets24x7: ' + fmtErr(e), 'error'); });
+      .catch(function(e) {
+        toast('Could not reach Pets24x7: ' + fmtErr(e), 'error');
+        // The toast fades and the dashboard stayed blank. load() gives each
+        // section its own "Could not load … / Retry" (and a 401 goes to sign-in).
+        load();
+      });
   });
 </script>
 
