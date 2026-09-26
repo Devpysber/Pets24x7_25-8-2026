@@ -496,6 +496,9 @@ function toRecord(row, vendor, photos, stats, trustCounts) {
   const skip = skipReason(row);
   if (skip) return { skip };
   const id = str(row.id);
+  // An id built from a scraped name can carry the business's phone
+  // ("…-groomer-99233-91199-40275669"); publishing it would publish the number.
+  if (/(^|[^0-9])(?:[6-9][0-9]{4}-?[0-9]{5}|[0-9]{3}-[0-9]{3}-[0-9]{4})([^0-9]|$)/.test(id)) return { skip: 'phone_in_id' };
   // Some scraped names carry the business's phone number ("… groomer) 99233 91199").
   const name = str(row.name).replace(PHONE_IN_TEXT, '').replace(/[\s,|:-]+$/, '').replace(/\s{2,}/g, ' ').trim() || str(row.name);
   const country = str(row.country).toUpperCase();

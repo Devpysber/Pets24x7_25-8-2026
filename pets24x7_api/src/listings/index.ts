@@ -83,6 +83,8 @@ export function publicName(name: string): string {
   return out || String(name || '');
 }
 
+const PHONE_IN_ID = /(^|[^0-9])(?:[6-9][0-9]{4}-?[0-9]{5}|[0-9]{3}-[0-9]{3}-[0-9]{4})([^0-9]|$)/;
+
 /** Columns the in-memory index is built from: never photos or the long text. */
 const INDEX_SELECT = {
   id: true, name: true, category: true, categorySlug: true, categoryIcon: true,
@@ -160,7 +162,9 @@ function fromRow(row: {
     ...(cleanCid(row.googleCid) ? { google_cid: cleanCid(row.googleCid) } : {}),
     ...(cleanGmbLink(row.gmbLink) ? { gmb_link: cleanGmbLink(row.gmbLink) } : {}),
     claimStatus: row.claimStatus === 'CLAIMED' ? 'CLAIMED' : 'UNCLAIMED',
-    ...(row.hidden ? { hidden: true } : {}),
+    // An id carrying the business's phone ("…-groomer-99233-91199-…") would
+    // publish the number in its URL; it is kept out of every public route.
+    ...(row.hidden || PHONE_IN_ID.test(String(row.id)) ? { hidden: true } : {}),
   };
 }
 

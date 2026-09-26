@@ -1576,14 +1576,11 @@
               <div style="font-size: 11px; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Active Membership</div>
               <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">⭐ ${esc(m.plan || 'Membership')}</h2>
               ${m.tier ? '<p style="color: var(--text-muted); margin-bottom: 8px;">Tier Level: <strong>' + esc(m.tier) + '</strong>' + (m.discountPercent > 0 ? ' (' + m.discountPercent + '% discount applied on service bookings)' : '') + '</p>' : ''}
-              <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 4px;">${m.autoRenew ? 'Renews on' : 'Expires on'}: <strong>${fmtDate(m.renewsAt)}</strong></p>
-              <p style="color: var(--text-muted); font-size: 13.5px;">Auto-renew: <strong>${m.autoRenew ? 'On' : 'Off'}</strong></p>
-              ${m.cancelledAt ? '<div style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;margin-top:12px;">Auto-renew cancelled. Your benefits remain active until ' + fmtDate(m.renewsAt) + '.</div>' : ''}
+              <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 4px;">Active until: <strong>${fmtDate(m.renewsAt)}</strong></p>
+              <p style="color: var(--text-muted); font-size: 13.5px;">Plans don&rsquo;t renew by themselves. We&rsquo;ll remind you 7, 3 and 1 day before it ends.</p>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              ${m.cancelledAt
-                ? '<button class="btn" style="color:var(--success); border-color:var(--success);" onclick="resumeMembership(this)">Resume auto-renew</button>'
-                : (m.autoRenew ? '<button class="btn" style="color:var(--danger); border-color:var(--danger);" onclick="cancelMembership(this)">Cancel auto-renew</button>' : '')}
+              <a class="btn" href="/membership/" style="color:var(--success); border-color:var(--success);">Renew or change plan</a>
             </div>
           </div>
         </div>

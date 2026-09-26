@@ -213,6 +213,22 @@ async function reloadVendorSubscription(vendorId: string): Promise<void> {
   if (Array.isArray(v.invoices)) vendorInvoicesStore.set(vendorId, v.invoices);
 }
 
+// With several API instances, a plan bought or changed through one of them is
+// only in that instance's cache. Reads re-check the saved row at most this
+// often per vendor, so every instance shows the current plan within seconds.
+const SUB_RECHECK_MS = 15_000;
+const subCheckedAt = new Map<string, number>();
+
+async function refreshVendorSubscription(vendorId: string): Promise<void> {
+  const last = subCheckedAt.get(vendorId) ?? 0;
+  if (Date.now() - last < SUB_RECHECK_MS) return;
+  subCheckedAt.set(vendorId, Date.now());
+  if (subCheckedAt.size > 50_000) subCheckedAt.clear();
+  await reloadVendorSubscription(vendorId).catch((err) =>
+    logger.warn({ err, vendorId }, 'vendor subscriptions: re-check failed; serving cached plan'),
+  );
+}
+
 function saveInBackground(vendorId: string): void {
   saveVendorSubscription(vendorId).catch((err) =>
     logger.error({ err, vendorId }, 'vendor subscriptions: could not save subscription'),
@@ -603,6 +619,7 @@ vendorSubscriptionsRouter.get(
   asyncHandler(async (req, res) => {
     const vendorId = req.auth!.sub;
     await loadVendorSubscriptions();
+    await refreshVendorSubscription(vendorId);
     const activeSub = currentVendorSubscription(vendorId);
     const invoices = getVendorInvoices(vendorId);
 
