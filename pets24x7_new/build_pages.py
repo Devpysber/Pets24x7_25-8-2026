@@ -992,21 +992,24 @@ def featured_script(country, city_slug, category_slug=None):
     var tel = '';  // contact details stay with Pets24x7
     var href = esc(withSrc(c.url));
     return '<article class="biz-card is-featured">' +
-      '<a class="biz-img" href="' + href + '">' +
+      '<a class="biz-img feat-art" href="' + href + '">' +
         '<span class="badge badge-featured badge-sponsored" aria-label="Sponsored listing">' + esc(labelOf(c)) + '</span>' +
+        '<span class="feat-emoji" aria-hidden="true">' + esc(c.categoryIcon || '🐾') + '</span>' +
         '<span class="ct-chip">' + esc(c.categoryIcon || '📍') + ' ' + esc(c.category) + '</span>' +
       '</a>' +
       '<div class="biz-info">' +
         '<h3><a href="' + href + '">' + esc(c.name) + '</a></h3>' +
         '<div class="biz-loc">' + loc + '</div>' +
+        '<div class="biz-cat">' + esc(c.categoryIcon || '🐾') + ' ' + esc(c.category) + '</div>' +
         '<div class="biz-rating">' + (rated(c) ? '<span class="rating-pill">\u2605 ' + Number(c.rating).toFixed(1) + '</span>' : '') +
           (rated(c) ? '<span class="google-badge"><span class="gscore">' +
             Number(c.rating || 0).toFixed(1) + '/5</span> ' + c.reviewCount + ' reviews</span>' : '') +
         '</div>' +
+        '<div class="biz-trust">✓ Free to enquire on WhatsApp</div>' +
       '</div>' +
       '<div class="biz-action">' +
-        (tel ? '<div class="biz-phone">📞 <a href="tel:' + esc(tel) + '">' + esc(c.phone) + '</a></div>' : '') +
-        '<a class="open-btn" href="' + href + '">View Details</a>' +
+        '<a class="wa-btn" href="' + esc(c.url) + '#enquiryForm">Enquire now</a>' +
+        '<a class="open-btn" href="' + href + '">View details</a>' +
       '</div>' +
     '</article>';
   }}
@@ -1259,14 +1262,15 @@ def seo_copy_city(city, country_n, total, categories):
     cats_txt = ", ".join(c["name"].lower() for c in categories[:6])
     return f"""<section class="seo-copy">
   <h2>Pet services in {e(city)}, {e(country_n)}</h2>
-  <p>Pets24x7 lists {total:,} pet service businesses across {e(city)} — including {cats_txt} and more. Every listing links to its public Google Business profile, so you can check a provider for your dog, cat, bird or exotic pet before you call.</p>
+  <p>Pets24x7 lists {total:,} pet service businesses across {e(city)} — including {cats_txt} and more. Each listing comes from the business&rsquo;s public Google Business profile and shows its Google rating where one exists, so you can compare providers for your dog, cat, bird or exotic pet before you enquire.</p>
   <p>Use the category chips above to narrow down by what you need today — an emergency vet, a weekend groomer, a daycare slot, or a relocation specialist. Tap any listing to see what it offers, its Google rating, reviews left on Pets24x7, and send an enquiry — Pets24x7 checks availability and gets back to you on WhatsApp.</p>
-  <h3>How Pets24x7 verifies {e(city)} listings</h3>
+  <h3>How Pets24x7 lists businesses in {e(city)}</h3>
   <ul>
     <li>Every business has a public Google Business profile.</li>
     <li>A Google rating is shown only where we hold both the score and its review count — we never fill one in.</li>
     <li>Listings are categorised by service type, so a "vet" search doesn't surface a groomer.</li>
     <li>Featured placements (where shown) are paid promotions and are always labelled as such; the list below them is ranked on its own.</li>
+    <li>Enquiries go through Pets24x7: we check availability and pricing and reply to you on WhatsApp.</li>
     <li>If you spot an inaccuracy or want to claim your listing, message us on WhatsApp.</li>
   </ul>
 </section>"""

@@ -484,3 +484,9 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 /* Tablets: menu and phone number wrapped onto two lines between 700 and 1080px */
 .hdr-nav a,.call-link{white-space:nowrap}
 @media (max-width:1080px){.call-link{display:none}}
+
+/* Featured card art: category icon on a warm panel (no stock photo on the strip) */
+.biz-img.feat-art{background:linear-gradient(135deg,#FEF3C7,#FDE68A);display:flex;align-items:center;justify-content:center}
+.feat-emoji{font-size:54px;line-height:1;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12))}
+.featured-strip{margin-bottom:22px}
+.biz-img.feat-art::after{display:none}

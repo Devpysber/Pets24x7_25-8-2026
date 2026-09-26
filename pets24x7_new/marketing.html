@@ -41,7 +41,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "How is Pets24x7 different from a regular SEO agency?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like 'vets near me', 'dog grooming in [city]', '24x7 emergency animal hospital' — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like 'vets near me', 'dog grooming in [city]', '24x7 emergency animal hospital' — across 2,100+ cities. We also give your business a Pets24x7 directory page on day one, showing your Google rating and sending you enquiries before any paid work begins." } },
     { "@type": "Question", "name": "Do you work with single-location pet businesses?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. Single-location vets, groomers, boarders and walkers are exactly who our Starter plan is built for. Multi-location chains get the Pro plan with branch-level dashboards." } },
     { "@type": "Question", "name": "How quickly can I see results?",
@@ -477,14 +477,14 @@
           <div class="story-logo">1</div>
           <div class="story-name">Claim &amp; verify<span>Same day · no paperwork</span></div>
         </div>
-        <blockquote>We match your WhatsApp number against the Google listing, so only the real owner can claim it. Your listing keeps its live Google rating and review count.</blockquote>
+        <blockquote>We match your phone number against the Google listing, so only the real owner can claim it. Your listing keeps its live Google rating and review count.</blockquote>
       </div>
       <div class="story">
         <div class="story-head">
           <div class="story-logo">2</div>
           <div class="story-name">Get found<span>City + category pages</span></div>
         </div>
-        <blockquote>Your business appears on the Pets24x7 page for your city and every category you serve, with your services, photos and contact details — built to rank for local pet searches.</blockquote>
+        <blockquote>Your business appears on the Pets24x7 page for your city and every category you serve, with your services and photos — built to rank for local pet searches. Pet parents enquire through Pets24x7 and we pass every enquiry to you.</blockquote>
       </div>
       <div class="story">
         <div class="story-head">
@@ -606,7 +606,7 @@
       <div class="about-stats">
         <div class="as"><strong>29,000+</strong><span>Listings in the Directory</span></div>
         <div class="as"><strong>2,100+</strong><span>Cities Covered</span></div>
-        <div class="as"><strong>16</strong><span>Service Categories</span></div>
+        <div class="as"><strong>18</strong><span>Service Categories</span></div>
         <div class="as"><strong>0%</strong><span>Commission on Enquiries</span></div>
       </div>
     </div>
@@ -663,7 +663,7 @@
     <div class="faq-list">
       <details class="faq-item" open>
         <summary>How is Pets24x7 different from a regular SEO agency?</summary>
-        <div class="faq-answer">Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like "vets near me", "dog grooming in [city]", "24x7 emergency animal hospital" — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins.</div>
+        <div class="faq-answer">Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like "vets near me", "dog grooming in [city]", "24x7 emergency animal hospital" — across 2,100+ cities. We also give your business a Pets24x7 directory page on day one, showing your Google rating and sending you enquiries before any paid work begins.</div>
       </details>
       <details class="faq-item">
         <summary>Do you work with single-location pet businesses?</summary>
@@ -1027,8 +1027,8 @@
       }
       if (labels) {
         labels.innerHTML = cities.map(function (c) {
-          return '<span style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
-            esc(String(c.name || '').slice(0, 6)) + '</span>';
+          return '<span style="flex:1;min-width:0;text-align:center;line-height:1.2;overflow-wrap:anywhere;">' +
+            esc(String(c.name || '')) + '</span>';
         }).join('');
       }
       var more = Math.max(0, (d.cities || 0) - cities.length);
