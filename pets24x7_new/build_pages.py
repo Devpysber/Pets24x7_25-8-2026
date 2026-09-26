@@ -543,21 +543,22 @@ def biz_card_html(b, badge=None):
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
       {e(b.get("address") or (area_label(b) + (", " + b["state"] if b.get("state") else "")))}
     </div>
+    <div class="biz-cat">{e(b.get("category_icon") or "🐾")} {e(b["category"])}</div>
     <div class="biz-rating">
       {f'<span class="rating-pill">★ {b["rating"]:.1f}</span>' if has_rating(b) else ''}
-      {'<span class="rating-pill" style="background:#DCFCE7;color:#166534;">✓ Owner-managed</span>' if b.get("claimed") else ''}
+      {'<span class="rating-pill owner-pill">✓ Owner-managed</span>' if b.get("claimed") else ''}
       {google_box}
     </div>
     {f'<div class="amenities">{amens}</div>' if amens else ''}
+    <div class="biz-trust">✓ Free to enquire on WhatsApp</div>
   </div>
   <div class="biz-action">
     {phone_html}
-    <a class="open-btn" href="{listing_url(b)}">View Details</a>
     <a class="wa-btn" href="{listing_url(b)}#enquiryForm" aria-label="Enquire about {ea(b["name"])}">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-      Enquire →
+      Enquire now
     </a>
-    {f'<a class="map-link" href="https://www.google.com/maps?cid={ea(b["google_cid"])}" target="_blank" rel="noopener">View on Google Maps ↗</a>' if b.get("google_cid") else ""}
+    <a class="open-btn" href="{listing_url(b)}">View details</a>
   </div>
 </article>"""
 
@@ -888,12 +889,13 @@ def find_for_me_html(city, category=None):
     """Concierge box: the visitor tells Pets24x7 what they need, Pets24x7 finds it."""
     from urllib.parse import quote
     need = category.lower() if category else "a pet service"
+    who = f"{category.lower()} providers" if category else "pet service providers"
     msg = f"Hi Pets24x7! I need {need} in {city}. Can you find one for me?"
     href = f"https://wa.me/{WA_NUMBER}?text={quote(msg)}&utm_source=website&utm_medium=find_for_me&utm_campaign=concierge"
     return f"""<section class="find-for-me" aria-label="Let Pets24x7 find it for you">
     <div>
       <strong>Not sure which one to pick?</strong>
-      <p>Tell us what your pet needs and when. We check availability and prices with {e(need)} providers in {e(city)} and send you the best options on WhatsApp — free.</p>
+      <p>Tell us what your pet needs and when. We check availability and prices with {e(who)} in {e(city)} and send you the best options on WhatsApp — free.</p>
     </div>
     <a class="ffm-btn" href="{ea(href)}" target="_blank" rel="noopener">Find one for me on WhatsApp</a>
   </section>"""

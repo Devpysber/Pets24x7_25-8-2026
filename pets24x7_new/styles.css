@@ -442,3 +442,45 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 .find-for-me p{margin:0;font-size:14px;color:#166534;line-height:1.5}
 .ffm-btn{background:var(--whatsapp);color:#fff!important;font-weight:700;font-size:14px;padding:11px 18px;border-radius:10px;white-space:nowrap}
 @media (max-width:600px){.ffm-btn{flex:1 1 100%;text-align:center;white-space:normal}}
+
+/* ---- Listing cards v2: card grid on tablet/desktop, compact rows on phones ---- */
+.biz-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.biz-card{display:flex;flex-direction:column;border-radius:16px;border:1px solid #E7EAF0;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.biz-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(16,24,40,.10);border-color:#C7D7FE}
+.biz-img{aspect-ratio:16/10;min-height:0}
+.biz-img img{transition:transform .35s ease}
+.biz-card:hover .biz-img img{transform:scale(1.04)}
+.biz-img::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.28));pointer-events:none;z-index:1}
+.biz-info{padding:16px 18px 6px;flex:1}
+.biz-info h3{font-size:17px;margin-bottom:6px}
+.biz-cat{font-size:12.5px;font-weight:600;color:var(--primary);margin-bottom:6px}
+.biz-loc{margin-bottom:8px}
+.biz-rating{margin-bottom:8px}
+.biz-rating:empty{display:none}
+.owner-pill{background:#DCFCE7!important;color:#166534!important}
+.biz-trust{margin-top:auto;padding-top:8px;font-size:12px;color:#15803D;font-weight:600}
+.biz-action{border-left:none;border-top:1px solid #F0F2F6;background:#fff;flex-direction:row;align-items:center;gap:10px;padding:12px 18px 16px}
+.biz-action .wa-btn{flex:1 1 auto;width:auto}
+.biz-action .open-btn{flex:0 0 auto;width:auto;background:transparent;color:var(--primary)!important;border:1px solid #BFDBFE}
+.biz-action .open-btn:hover{background:var(--primary-light)}
+.featured-strip .biz-list{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+@media (max-width:700px){
+  .biz-list{grid-template-columns:1fr;gap:12px}
+  .biz-card{display:grid;grid-template-columns:112px minmax(0,1fr)}
+  .biz-card:hover{transform:none}
+  .biz-img{aspect-ratio:auto;min-height:118px;grid-row:1}
+  .biz-img::after{display:none}
+  .biz-img .ct-chip{display:none}
+  .biz-info{padding:12px 14px 4px}
+  .biz-info h3{font-size:15.5px;margin-bottom:3px}
+  .biz-cat{font-size:12px;margin-bottom:3px}
+  .biz-trust{font-size:11.5px;padding-top:4px}
+  .biz-action{grid-column:1/-1;padding:10px 12px 12px}
+  .biz-action .open-btn{padding:10px 12px}
+}
+/* Cards v2 polish: category line only where the photo chip is hidden (phones) */
+.biz-cat{display:none}
+@media (max-width:700px){.biz-cat{display:block}}
+/* Tablets: menu and phone number wrapped onto two lines between 700 and 1080px */
+.hdr-nav a,.call-link{white-space:nowrap}
+@media (max-width:1080px){.call-link{display:none}}
