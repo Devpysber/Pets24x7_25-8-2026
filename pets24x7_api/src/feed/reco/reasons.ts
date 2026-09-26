@@ -77,8 +77,8 @@ export const text = {
   highlyReviewed: (n: number) => `${n} Google reviews`,
   ownerManaged: () => 'Owner-managed on Pets24x7',
   newInCity: (city: string) => `New in ${city}`,
-  sameCategory: (category: string, city: string) => `Another top ${category.toLowerCase()} in ${city}`,
+  sameCategory: (category: string, city: string) => `Another ${category.toLowerCase()} in ${city}`,
   sameArea: (area: string) => `Also in ${area}`,
   nearCity: (city: string) => `Near ${city}`,
-  cityFallback: (city: string) => `Popular in ${city}`,
+  cityFallback: (city: string) => `Also in ${city}`,
 };

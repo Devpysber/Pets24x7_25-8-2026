@@ -101,43 +101,61 @@ IMG_POOL = {
 }
 DEFAULT_IMGS = ["photo-1583337130417-3346a1be7dee","photo-1477884213360-7e9d7dcc1e48","photo-1444212477490-ca407925329e","photo-1552053831-71594a27632d","photo-1507146426996-ef05306b995a"]
 
-# Category-specific amenity pools (mirror the JS in listing.html for consistency).
-AMENITY_POOLS = {
-    "veterinary-clinics":              ["Walk-in welcome","Surgery on site","In-house pharmacy","Cat-friendly waiting","Dog-friendly waiting","Card payments","Senior pet care","Vaccination","X-ray","Blood work"],
-    "emergency-animal-hospital":       ["24x7 emergency","In-house ICU","Walk-in","Critical care","Surgery on site","Card payments","Ambulance","Oxygen support","Post-op recovery","Anaesthesia"],
-    "pet-grooming-spa":                ["De-shedding","Nail clipping","Anti-tick bath","Breed-specific cut","Hair colouring","Pickup & drop","Pet-safe products","AC waiting area","By appointment","First-time discount"],
-    "pet-boarding-daycare":            ["CCTV monitored","AC kennels","Outdoor play yard","Veg & non-veg meals","Daycare slots","Vet on call","Photo updates","Long-stay discount","Pickup & drop","Vaccinated pets only"],
-    "pet-walking":                     ["Daily slots","Group / solo walks","GPS tracked","Insured walkers","Pickup from home","Bath included","Weekend slots","Multi-pet rate","Same walker every day"],
-    "pet-training-obedience-behavior": ["Puppy classes","Group sessions","Home training","Aggression management","Service-dog prep","Trick training","Free demo","Certified trainer"],
-    "pet-sitting-in-home-care":        ["Overnight stays","Hourly visits","Pet feeding","Plant watering","Medication management","Insured sitters","Photo updates","Senior pet care"],
-    "pet-dental-care":                 ["Scaling","Polishing","Extraction","Anaesthesia option","Dental X-ray","Vet certified","Pre-anaesthetic bloodwork","Aftercare kit"],
-    "mobile-vet-services":             ["Home visits","Vaccination at home","Sample collection","Senior pet care","Anxious-pet friendly","By appointment","Wellness check","Microchipping"],
-    "vaccination-centers":             ["Anti-rabies","DHPPi","Tricat","Travel certificates","Walk-in","Stocked vaccines","Booster reminders","Microchipping"],
-    "pet-relocation-services":         ["IATA-approved crates","Domestic transport","International transport","Customs paperwork","Door-to-door","Health certificates"],
-    "pet-taxi-transport":              ["AC vehicles","Crate provided","Door-to-door","Same-day booking","City + airport runs","Multiple pets"],
-    "pet-physiotherapy-rehab":         ["Hydrotherapy","Post-surgery care","Senior pet rehab","Laser therapy","Joint care","Vet certified"],
-    "veterinary-labs-diagnostics":     ["Blood work","Sample pickup","Same-day reports","Pathology","Microbiology","Imaging support"],
-    "specialty-vets-exotics-avian-reptiles": ["Exotic species","Avian care","Reptile care","Small mammal care","Boarding for exotics","Specialist referral"],
-    "pet-therapy-services":            ["Certified therapy animals","School visits","Hospital visits","Senior home visits","Children sessions"],
+# What a pet parent should ask before booking, per category. These replace the
+# old per-listing "amenities" ("AC kennels", "Insured walkers", "Certified
+# therapy animals"), which were drawn from a pool by a hash of the listing id
+# and stated as facts about businesses we know nothing of. A checklist is true
+# for every listing and more useful to the reader.
+CATEGORY_ASK = {
+    "veterinary-clinics":              ["Consultation fee and timings", "Walk-in or appointment only", "Vaccinations and deworming available", "Emergency contact after hours", "Which species they treat"],
+    "emergency-animal-hospital":       ["Open 24 hours, or on-call after hours", "Emergency consultation fee", "ICU and surgery on site", "What to bring for an urgent visit", "Directions and parking"],
+    "pet-grooming-spa":                ["Price for your breed and coat", "Products used on sensitive skin", "Pickup and drop available", "Time taken per session", "Vaccination proof required"],
+    "pet-boarding-daycare":            ["Daily rate and minimum stay", "Supervision overnight", "Feeding: their food or yours", "Vaccination records required", "Can you visit before booking"],
+    "pet-walking":                     ["Walk length and price", "Solo or group walks", "Same walker each time", "Pickup from home", "What happens if it rains"],
+    "pet-training-obedience-behavior": ["Home sessions or at their centre", "Number of sessions in a course", "Methods they use", "Puppy or adult dog programmes", "Follow-up support"],
+    "pet-sitting-in-home-care":        ["Visits per day or overnight stay", "Rate per visit or per night", "Medication handling", "Photo or video updates", "References from other owners"],
+    "pet-dental-care":                 ["Check-up and cleaning cost", "Is anaesthesia needed", "Pre-procedure blood tests", "Aftercare at home", "Follow-up visit included"],
+    "mobile-vet-services":             ["Areas they cover", "Home-visit fee", "Vaccinations at home", "Sample collection for tests", "How soon they can come"],
+    "vaccination-centers":             ["Which vaccines are in stock", "Vaccination card or certificate", "Booster reminders", "Walk-in or appointment", "Fee per vaccine"],
+    "pet-relocation-services":         ["Domestic or international", "Paperwork they handle", "Crate provided or needed", "Total cost with fees", "Timeline to plan for"],
+    "pet-taxi-transport":              ["AC vehicle", "Crate provided", "Fare for your route", "Airport and inter-city trips", "Can you ride along"],
+    "pet-physiotherapy-rehab":         ["Therapies they offer", "Vet referral needed", "Sessions in a plan", "Cost per session", "Home exercises given"],
+    "veterinary-labs-diagnostics":     ["Tests available", "Home sample collection", "Report turnaround time", "Vet referral needed", "Price list"],
+    "specialty-vets-exotics-avian-reptiles": ["Which species they treat", "Consultation fee", "Emergency care for exotics", "Boarding for exotic pets", "Diet and housing advice"],
+    "pet-therapy-services":            ["Type of therapy offered", "Sessions at home or at a centre", "Who the sessions are for", "Cost per session", "Trainer qualifications"],
+    "pet-store":                       ["Brands they stock", "Home delivery", "Prescription diets", "Return policy", "Grooming or vet on site"],
+    "pet-adoption":                    ["Animals currently available", "Adoption process and fee", "Home check required", "Vaccination and sterilisation status", "Support after adoption"],
 }
+DEFAULT_ASK = ["Prices and timings", "Services they offer", "Booking or walk-in", "Payment options", "Location and directions"]
+
+
+def a_an(word):
+    return "an" if str(word or "").strip()[:1].lower() in "aeiou" else "a"
+
+
+def ask_list(biz):
+    return CATEGORY_ASK.get(biz.get("category_slug"), DEFAULT_ASK)
+
 
 CATEGORY_BLURB = {
-    "veterinary-clinics":              "A trusted local veterinary practice offering general consultations, vaccinations and routine care for dogs, cats and small pets.",
-    "emergency-animal-hospital":       "An emergency-capable animal hospital handling urgent cases, ICU support and post-operative care.",
-    "vaccination-centers":             "A vaccination centre stocking core and lifestyle vaccines for puppies, kittens and adult pets — including travel certificates on request.",
-    "mobile-vet-services":             "A mobile vet bringing routine consults, vaccinations and sample collection to your home — ideal for anxious or senior pets.",
-    "specialty-vets-exotics-avian-reptiles": "A specialty practice that handles exotic species — birds, reptiles, rabbits and small mammals — beyond the typical dog/cat clinic.",
-    "pet-dental-care":                 "A pet dental care provider offering cleaning, scaling, polishing and extractions under safe anaesthesia protocols.",
-    "pet-physiotherapy-rehab":         "A pet physiotherapy and rehab centre with hydrotherapy, laser and joint care for post-surgical and senior pets.",
-    "pet-grooming-spa":                "A grooming and spa that handles breed-specific cuts, de-shedding, nail clips and anti-tick baths with pet-safe products.",
-    "pet-boarding-daycare":            "A boarding and daycare facility with supervised play, CCTV, and structured feeding for short trips and long stays.",
-    "pet-walking":                     "A professional pet-walking service running daily group and solo walks across the neighbourhood, with optional pickup and drop.",
-    "pet-training-obedience-behavior": "A pet trainer running puppy classes, obedience programs and behaviour-modification sessions — at the studio or at home.",
-    "pet-sitting-in-home-care":        "An in-home pet sitter who feeds, walks and watches your pet while you travel — with photo updates and medication management.",
-    "pet-relocation-services":         "A pet relocation specialist handling domestic and international transport, IATA-approved crates and the full paperwork chain.",
-    "pet-taxi-transport":              "A pet taxi running AC-equipped trips for vet visits, grooming pickups, airport runs and inter-city moves.",
-    "veterinary-labs-diagnostics":     "A veterinary diagnostic lab handling blood work, imaging support and home sample collection for partner clinics.",
-    "pet-therapy-services":            "A pet-assisted therapy service supporting hospitals, schools and individual clients with certified therapy animals.",
+    "veterinary-clinics":              "Veterinary clinics handle check-ups, vaccinations, illness and minor procedures for dogs, cats and other pets.",
+    "emergency-animal-hospital":       "Emergency animal hospitals take urgent cases such as injuries, poisoning or sudden illness, often outside normal clinic hours.",
+    "vaccination-centers":             "Vaccination centres give core and booster vaccines to puppies, kittens and adult pets, and can issue vaccination records.",
+    "mobile-vet-services":             "Mobile vets visit you at home for check-ups, vaccinations and sample collection, which helps with anxious or elderly pets.",
+    "specialty-vets-exotics-avian-reptiles": "Specialty vets see pets beyond dogs and cats, such as birds, reptiles, rabbits and small mammals.",
+    "pet-dental-care":                 "Pet dental care covers check-ups, cleaning, scaling and extractions to keep your pet's teeth and gums healthy.",
+    "pet-physiotherapy-rehab":         "Pet physiotherapy helps pets recover after surgery or injury and supports older pets with joint problems.",
+    "pet-grooming-spa":                "Groomers bathe, trim and care for your pet's coat, nails and ears, with cuts suited to the breed.",
+    "pet-boarding-daycare":            "Boarding and daycare look after your pet while you are at work or away, for a day or a longer stay.",
+    "pet-walking":                     "Dog walkers take your dog out for regular exercise, alone or in small groups, while you are busy.",
+    "pet-training-obedience-behavior": "Trainers teach puppies and adult dogs basic obedience and help with problems like pulling, barking or aggression.",
+    "pet-sitting-in-home-care":        "Pet sitters feed, walk and look after your pet in your own home while you travel.",
+    "pet-relocation-services":         "Pet relocation services move pets between cities or countries and help with travel paperwork.",
+    "pet-taxi-transport":              "Pet taxis drive you and your pet to the vet, groomer, airport or a new home.",
+    "veterinary-labs-diagnostics":     "Veterinary labs run blood tests and other diagnostics that vets use to find out what is wrong.",
+    "pet-therapy-services":            "Pet therapy services use trained animals to support people in hospitals, schools and care homes.",
+    "pet-store":                       "Pet stores sell food, treats, toys, accessories and supplies for your pet.",
+    "pet-adoption":                    "Adoption centres and rescues find new homes for dogs, cats and other animals.",
 }
 
 # Schema.org maps (LocalBusiness subtypes that Google understands).
@@ -219,14 +237,8 @@ def img_for(biz, idx=0, w=600, h=450):
     return f"https://images.unsplash.com/{pic}?w={w}&h={h}&fit=crop&q=70"
 
 def amenities_for(biz, n=10):
-    seed = seed_of(biz.get("id", ""))
-    pool = AMENITY_POOLS.get(biz.get("category_slug"), ["Verified listing","Google rated","Direct contact","Local provider"])
-    out, picked = [], set()
-    for i in range(n):
-        a = pool[(seed + i * 3) % len(pool)]
-        if a not in picked:
-            out.append(a); picked.add(a)
-    return out
+    """Services the business itself listed (vendor or admin). Nothing is made up."""
+    return services_of(biz)[:n]
 
 # The old version of this drew ten "recent customer ratings" from a hash of the
 # listing id. They looked like real ratings and were not: no customer gave them.
@@ -443,7 +455,7 @@ def listing_jsonld(biz):
         "url": SITE + listing_url(biz),
         "image": abs_url(own_photos(biz)[0]) if own_photos(biz) else img_for(biz, 0, 1200, 800),
         "description": (text_of(biz, "description", 300) or
-                        (f'{biz["name"]} is a verified {biz["category"].lower()} in '
+                        (f'{biz["name"]} is {a_an(biz["category"])} {biz["category"].lower()} in '
                          f'{biz["city"]}{", " + biz["state"] if biz.get("state") else ""}.'
                          + (f' Rated {biz["rating"]}/5 on Google from {biz["review_count"]} reviews.' if has_rating(biz) else ''))),
         # Empty strings are dropped: "postalCode": "" is an invalid value to a
@@ -533,10 +545,11 @@ def biz_card_html(b, badge=None):
       {e(b.get("address") or (area_label(b) + (", " + b["state"] if b.get("state") else "")))}
     </div>
     <div class="biz-rating">
-      {f'<span class="rating-pill">★ {b["rating"]:.1f}</span>' if has_rating(b) else '<span class="rating-pill" style="opacity:.7">New</span>'}
+      {f'<span class="rating-pill">★ {b["rating"]:.1f}</span>' if has_rating(b) else ''}
+      {'<span class="rating-pill" style="background:#DCFCE7;color:#166534;">✓ Owner-managed</span>' if b.get("claimed") else ''}
       {google_box}
     </div>
-    <div class="amenities">{amens}</div>
+    {f'<div class="amenities">{amens}</div>' if amens else ''}
   </div>
   <div class="biz-action">
     {phone_html}
@@ -747,7 +760,7 @@ def reco_click_helper_script():
 def reco_rail_html():
     """Category page: 'Top rated in {city}' across the other services."""
     return ('<section class="reco-section" id="recoCityRail" hidden aria-labelledby="recoCityRailH">'
-            '<h2 id="recoCityRailH">Top rated in this city</h2>'
+            '<h2 id="recoCityRailH">More pet services in this city</h2>'
             '<p class="reco-sub" id="recoCityRailSub"></p>'
             '<div class="reco-row" id="recoCityRailList"></div>'
             '</section>')
@@ -784,8 +797,8 @@ def reco_rail_script(country, city_slug, city_name, category_slug):
       var items = ((d && d.items) || []).filter(function(it){{ return it && it.category_slug !== CAT && !it.sponsored; }}).slice(0, 6);
       if (!items.length) return;
       var rid = d.rid || '';
-      document.getElementById('recoCityRailH').textContent = 'Top rated in ' + (d.city || CITY);
-      document.getElementById('recoCityRailSub').textContent = 'Other pet services people in ' + (d.city || CITY) + ' rate highly';
+      document.getElementById('recoCityRailH').textContent = 'More pet services in ' + (d.city || CITY);
+      document.getElementById('recoCityRailSub').textContent = 'Vets, groomers, boarding and more in ' + (d.city || CITY);
       box.innerHTML = items.map(function(it, i){{
         var rc = Number(it.review_count) || 0, rating = rc >= 1 ? (Number(it.rating) || 0) : 0;
         var why = (it.reason && it.reason.text) || '';
@@ -863,6 +876,50 @@ def popular_script(city_name, category_name=None):
     .catch(function(){{}});
 }})();
 </script>"""
+
+
+def wa_link_featured(name, city, category=None):
+    """Owner asking about paid placement: goes to the Pets24x7 sales WhatsApp."""
+    what = f"{name} ({category}, {city})" if category else f"{name} in {city}"
+    msg = f"Hi Pets24x7! I'd like to know about Featured placement for {what}."
+    from urllib.parse import quote
+    return f"https://wa.me/{WA_NUMBER}?text={quote(msg)}&utm_source=website&utm_medium=owner_cta&utm_campaign=featured"
+
+
+def owner_card_html(biz, city):
+    """Listing sidebar: claim for unclaimed listings, featured upsell for all."""
+    from urllib.parse import urlencode
+    feat = wa_link_featured(biz["name"], city, biz.get("category"))
+    if biz.get("claimed"):
+        return f"""<div class="owner-card">
+        <strong>✓ Managed by the business</strong>
+        <p>The details on this page are kept up to date by {e(biz["name"])}.</p>
+        <p class="owner-small">Is this your business? <a href="/vendor-login/">Sign in to your dashboard</a> · <a href="{ea(feat)}" target="_blank" rel="noopener">Get featured in {e(city)}</a></p>
+      </div>"""
+    claim = "/find-my-listing/?" + urlencode({"q": biz["name"], "city": city})
+    return f"""<div class="owner-card">
+        <strong>Own {e(biz["name"])}?</strong>
+        <p>Claim this listing free. Add your photos, services and opening hours, and get customer enquiries straight to your WhatsApp.</p>
+        <a class="owner-btn" href="{ea(claim)}">Claim this listing, free</a>
+        <p class="owner-small">Want more customers? <a href="{ea(feat)}" target="_blank" rel="noopener">Featured placement</a> puts you at the top of {e(city)} pages.</p>
+      </div>"""
+
+
+def business_cta_html(city, category=None):
+    """City and category pages: invite owners to list or get featured."""
+    what = f"{category.lower()} business" if category else "pet business"
+    feat = wa_link_featured("my business", city, category)
+    return f"""<section class="biz-cta" aria-label="For businesses">
+    <div>
+      <strong>Run a {e(what)} in {e(city)}?</strong>
+      <p>List it free and get enquiries from pet parents on WhatsApp. Featured businesses are shown at the top of this page.</p>
+    </div>
+    <div class="biz-cta-actions">
+      <a class="biz-cta-primary" href="/register-business/">List your business free</a>
+      <a class="biz-cta-secondary" href="/find-my-listing/">Already listed? Claim it</a>
+      <a class="biz-cta-link" href="{ea(feat)}" target="_blank" rel="noopener">Ask about Featured →</a>
+    </div>
+  </section>"""
 
 
 def featured_strip_html():
@@ -1172,7 +1229,7 @@ def seo_copy_city(city, country_n, total, categories):
     cats_txt = ", ".join(c["name"].lower() for c in categories[:6])
     return f"""<section class="seo-copy">
   <h2>Pet services in {e(city)}, {e(country_n)}</h2>
-  <p>Pets24x7 lists {total:,} verified pet service businesses across {e(city)} — including {cats_txt} and more. Every listing links to its public Google Business profile, so you can check a provider for your dog, cat, bird or exotic pet before you call.</p>
+  <p>Pets24x7 lists {total:,} pet service businesses across {e(city)} — including {cats_txt} and more. Every listing links to its public Google Business profile, so you can check a provider for your dog, cat, bird or exotic pet before you call.</p>
   <p>Use the category chips above to narrow down by what you need today — an emergency vet, a weekend groomer, a daycare slot, or a relocation specialist. Tap any listing to see the full address, phone, its Google Maps profile, reviews left on Pets24x7, and a one-tap WhatsApp enquiry button.</p>
   <h3>How Pets24x7 verifies {e(city)} listings</h3>
   <ul>
@@ -1188,7 +1245,7 @@ def seo_copy_category(category, city, country_n, total):
     blurb = CATEGORY_BLURB.get(slugify(category), "")
     return f"""<section class="seo-copy">
   <h2>{e(category)} in {e(city)}, {e(country_n)}</h2>
-  <p>Browse {total} verified {e(category.lower())} business{"es" if total != 1 else ""} in {e(city)}. {e(blurb)}</p>
+  <p>Browse {total} {e(category.lower())} business{"es" if total != 1 else ""} in {e(city)}. {e(blurb)}</p>
   <p>Tap any listing to view the full address, contact details, its Google Maps profile, reviews left on Pets24x7 and a one-tap WhatsApp enquiry button. No booking fees. No platform commission. You talk to the business directly.</p>
 </section>"""
 
@@ -1220,9 +1277,9 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
     page_items = items[(page - 1) * page_size : page * page_size]
 
     n = len(items)
-    providers = f"{n:,} verified provider{'s' if n != 1 else ''}"
+    providers = f"{n:,} listed"
     title = fit_title(
-        *([f"Pet services in {full_city} — {n:,} verified vets, groomers, boarders | Pets24x7"] if n > 1 else []),
+        *([f"Pet services in {full_city} — {n:,} vets, groomers & more | Pets24x7"] if n > 1 else []),
         f"Pet services in {full_city} — {providers} | Pets24x7",
         f"Pet services in {city} — {providers} | Pets24x7",
         f"Pet services in {city} | Pets24x7",
@@ -1232,7 +1289,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
             f"Pet services in {full_city} (page {page} of {total_pages}) | Pets24x7",
             f"Pet services in {city} (page {page} of {total_pages}) | Pets24x7",
         )
-    desc = (f"Browse {len(items):,} verified pet service businesses in {full_city} on Pets24x7 — "
+    desc = (f"Browse {len(items):,} pet service businesses in {full_city} on Pets24x7 — "
             f"vets, groomers, boarders, walkers, trainers and more. Direct WhatsApp enquiries, zero booking fees.")
 
     canonical = SITE + city_url(country, city_slug, page)
@@ -1288,7 +1345,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 <section class="city-hero"><div class="container">
   <nav class="bc" aria-label="Breadcrumb">{bc_html}</nav>
   <h1>Pet services in {e(full_city)}{f' · page {page}' if page > 1 else ''}</h1>
-  <p class="sub">{len(items):,} verified businesses · Google-listed · WhatsApp them direct</p>
+  <p class="sub">{len(items):,} businesses · from Google Business profiles · WhatsApp them direct</p>
 </div></section>
 
 {cat_chips_html(country, city_slug, categories)}
@@ -1301,6 +1358,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
   {popular_strip_html()}
   <div class="biz-list">{cards}</div>
   {pagination_html(country, city_slug, page, total_pages)}
+  {business_cta_html(city)}
   {seo_copy_city(full_city, country_n, len(items), categories)}
   {related_cities_html(country, city_slug, all_cities)}
 </div></main>
@@ -1358,14 +1416,14 @@ def render_category(country, city_slug, city, category_name, category_slug, item
     state = next((b["state"] for b in items if b.get("state")), "")
     full_city = f"{city}{', ' + state if (country == 'US' and state) else ''}"
 
-    providers = f"{len(items)} verified provider{'s' if len(items) != 1 else ''}"
+    providers = f"{len(items)} listed"
     title = fit_title(
         f"{category_name} in {full_city} — {providers} | Pets24x7",
         f"{short_category(category_name)} in {full_city} — {providers} | Pets24x7",
         f"{short_category(category_name)} in {city} — {providers} | Pets24x7",
         f"{short_category(category_name)} in {city} | Pets24x7",
     )
-    desc = (f"Find {len(items)} verified {category_name.lower()} provider{'s' if len(items) != 1 else ''} in {full_city}. "
+    desc = (f"Find {len(items)} {category_name.lower()} provider{'s' if len(items) != 1 else ''} in {full_city}. "
             f"Google-listed businesses. Direct WhatsApp enquiries. Zero booking fees.")
 
     canonical = SITE + category_url(country, city_slug, category_slug)
@@ -1412,7 +1470,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 <section class="city-hero"><div class="container">
   <nav class="bc" aria-label="Breadcrumb">{bc_html}</nav>
   <h1>{e(category_name)} in {e(full_city)}</h1>
-  <p class="sub">{len(items)} verified provider{'s' if len(items) != 1 else ''} · Google-listed · WhatsApp them direct</p>
+  <p class="sub">{len(items)} provider{'s' if len(items) != 1 else ''} · from Google Business profiles · WhatsApp them direct</p>
 </div></section>
 
 {cat_chips_html(country, city_slug, all_cats, active_cat=category_slug)}
@@ -1424,6 +1482,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
   {featured_strip_html()}
   {popular_strip_html()}
   <div class="biz-list">{cards}</div>
+  {business_cta_html(city, category_name)}
   {reco_rail_html()}
   {seo_copy_category(category_name, full_city, country_n, len(items))}
   {related_cities_html(country, city_slug, all_cities)}
@@ -1493,7 +1552,7 @@ def render_listing(biz, all_in_city, all_cats):
         f"{biz['name']} | Pets24x7",
         f"{biz['name']}",
     )
-    desc = (f"{biz['name']} is a verified {biz['category']} in {full_city}. "
+    desc = (f"{biz['name']} is {a_an(biz['category'])} {biz['category'].lower()} in {full_city}. "
             + (f"Rated {biz['rating']:.1f}/5 on Google from {biz['review_count']} reviews. " if has_rating(biz) else "")
             + "WhatsApp them direct via Pets24x7 — no booking fees.")
 
@@ -1513,11 +1572,9 @@ def render_listing(biz, all_in_city, all_cats):
         gallery_html = (f'<img class="g0" src="{ea(slots[0][0])}" alt="{ea(slots[0][1])}" loading="eager">'
                         + "".join(f'\n    <img src="{ea(u)}" alt="{ea(a)}" loading="lazy">' for u, a in slots[1:]))
     else:
-        gallery_html = f"""<img class="g0" src="{ea(imgs[0])}" alt="{ea(biz['name'])} main view" loading="eager">
-    <img src="{ea(imgs[1])}" alt="Facility view" loading="lazy">
-    <img src="{ea(imgs[2])}" alt="Service area" loading="lazy">
-    <img src="{ea(imgs[3])}" alt="Pet care in action" loading="lazy">
-    <img src="{ea(imgs[4])}" alt="Happy pets" loading="lazy">"""
+        illus = f"Illustrative {biz['category'].lower()} photo"
+        gallery_html = (f'<img class="g0" src="{ea(imgs[0])}" alt="{ea(illus)}" loading="eager">'
+                        + "".join(f'\n    <img src="{ea(imgs[i])}" alt="{ea(illus)}" loading="lazy">' for i in range(1, 5)))
 
     bc_items = [
         ("Home", "/"),
@@ -1548,9 +1605,10 @@ def render_listing(biz, all_in_city, all_cats):
     email = biz.get("email") if re.match(r"^[^@\s<>\"']+@[^@\s<>\"']+\.[a-z]{2,}$", str(biz.get("email") or ""), re.I) else ""
 
     # What the business says about itself replaces the generic category blurb.
-    about_html = (f"<p>{e(biz['name'])} is a Google-verified {e(biz['category'].lower())} located in {e(address)}.</p>"
+    about_html = (f"<p>{e(biz['name'])} is {a_an(biz['category'])} {e(biz['category'].lower())} in {e(address)}.</p>"
                   + paras_html(description)) if description else \
-                 f"<p>{e(biz['name'])} is a Google-verified {e(biz['category'].lower())} located in {e(address)}. {e(blurb)}</p>"
+                 (f"<p>{e(biz['name'])} is listed on Pets24x7 as {a_an(biz['category'])} {e(biz['category'].lower())} in {e(address)}, "
+                  f"from its public Google Business profile.</p><p>{e(blurb)}</p>")
     hours_line = ""
     if hours:
         lines = [l.strip() for l in hours.splitlines() if l.strip()]
@@ -1565,9 +1623,13 @@ def render_listing(biz, all_in_city, all_cats):
                                 f'<div class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>{e(x)}</span></div>'
                                 for x in services) + '</div>\n      </section>')
     else:
+        asks = "".join(
+            f'<div class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>{e(q)}</span></div>'
+            for q in ask_list(biz))
         services_section = f"""<section>
-        <h2>Services &amp; amenities</h2>
-        <div class="amenity-grid">{amens_html}</div>
+        <h2>Questions to ask before you book</h2>
+        <p style="margin:0 0 10px;color:var(--text-muted);font-size:13px;">{e(biz['name'])} hasn't listed its services on Pets24x7 yet. Ask about these when you message them.</p>
+        <div class="amenity-grid">{asks}</div>
       </section>"""
 
     # Google reviews block (only if CID exists)
@@ -1703,8 +1765,9 @@ def render_listing(biz, all_in_city, all_cats):
     </div>
   </div>
 
-  <div class="gallery">
+  <div class="gallery{'' if photos else ' is-stock'}">
     {gallery_html}
+    {'' if photos else '<span class="gallery-note">Illustrative photos · the business hasn&rsquo;t added its own yet</span>'}
   </div>
 
   <div class="pdp-layout">
@@ -1725,8 +1788,8 @@ def render_listing(biz, all_in_city, all_cats):
 {p24_reviews_section}
 
       <section class="reco-section" id="recoSimilar" hidden aria-labelledby="recoSimilarH">
-        <h2 id="recoSimilarH">Top-rated similar</h2>
-        <p class="reco-sub">More {e(biz["category"].lower())} in {e(full_city)} that pet parents rate highly</p>
+        <h2 id="recoSimilarH">More {e(biz["category"].lower())} in {e(city)}</h2>
+        <p class="reco-sub">Compare a few before you decide</p>
         <div class="reco-row" id="recoSimilarList"></div>
       </section>
       <section class="reco-section" id="recoNearby" hidden aria-labelledby="recoNearbyH">
@@ -1752,7 +1815,7 @@ def render_listing(biz, all_in_city, all_cats):
         <h2>Good to know</h2>
         <ul class="policy-list">
           <li><span>Booking</span><span>Direct via WhatsApp / phone — no platform fee</span></li>
-          <li><span>Verification</span><span>Google-listed, with public reviews</span></li>
+          <li><span>Source</span><span>{'Managed by the business owner' if biz.get("claimed") else 'Public Google Business profile'}</span></li>
           <li><span>Cancellation</span><span>Set directly by the business when you confirm</span></li>
           <li><span>Payment</span><span>Direct to business — UPI / card / cash as they accept</span></li>
           <li><span>Pet policy</span><span>Confirm species, breed &amp; vaccination needs before visiting</span></li>
@@ -1791,12 +1854,13 @@ def render_listing(biz, all_in_city, all_cats):
           <a href="tel:+{WA_NUMBER}" class="secondary-call">📞 Or call +91 99300 90487</a>
         </form>
         <ul class="trust-points">
-          <li>Verified Google-listed business</li>
+          <li>{'Owner-managed listing' if biz.get("claimed") else 'Listed from its Google Business profile'}</li>
           <li>Direct contact — no booking fees</li>
-          <li>We respond on WhatsApp within 5 minutes</li>
+          <li>The reply comes straight to your WhatsApp</li>
           <li>Free to enquire · No commitment</li>
         </ul>
       </div>
+      {owner_card_html(biz, city)}
     </aside>
   </div>
 </div>

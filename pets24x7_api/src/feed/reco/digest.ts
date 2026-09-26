@@ -100,7 +100,7 @@ export async function buildRecoDigest(p: {
   // deeper than a digest), so any city with fewer listings than a page came
   // back 'expanded_country' even when every one of the first five was local,
   // and those parents never got a digest at all.
-  // CITY_FALLBACK is also the generic "Popular in <city>" reason the engine
+  // CITY_FALLBACK is also the generic "Also in <city>" reason the engine
   // gives a local listing with nothing more specific to say (no reviews, no
   // taps yet), so the code alone does not mean "another city": only a
   // CITY_FALLBACK item from a different city is a top-up.

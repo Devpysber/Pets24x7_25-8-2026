@@ -484,6 +484,21 @@
   function seedOf(s){ return (s||'').split('').reduce(function(a,c){return a + c.charCodeAt(0);}, 0); }
 
   // Factual one-liner only — no fabricated service/facility claims.
+  // Claim / featured box for owners; same copy as the pre-built pages.
+  function ownerCardHtml(b) {
+    var box = 'margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:14px;padding:18px;';
+    var feat = 'https://wa.me/919930090487?text=' + encodeURIComponent("Hi Pets24x7! I'd like to know about Featured placement for " + b.name + ' (' + (b.category || 'pet service') + ', ' + b.city + ').');
+    if (b.claimed) {
+      return '<div style="' + box + '"><strong style="display:block;font-size:15px;margin-bottom:6px;">✓ Managed by the business</strong>' +
+        '<p style="font-size:13.5px;color:#4B5563;margin:0;">Is this your business? <a href="/vendor-login/">Sign in</a> · <a href="' + escapeAttr(feat) + '" target="_blank" rel="noopener">Get featured</a></p></div>';
+    }
+    var claim = '/find-my-listing/?q=' + encodeURIComponent(b.name) + '&city=' + encodeURIComponent(b.city || '');
+    return '<div style="' + box + '"><strong style="display:block;font-size:15px;margin-bottom:6px;">Own ' + esc(b.name) + '?</strong>' +
+      '<p style="font-size:13.5px;color:#4B5563;margin:0 0 12px;line-height:1.5;">Claim this listing free. Add your photos, services and opening hours, and get customer enquiries straight to your WhatsApp.</p>' +
+      '<a href="' + escapeAttr(claim) + '" style="display:block;text-align:center;background:var(--primary);color:#fff;font-weight:700;font-size:14px;padding:11px 14px;border-radius:10px;">Claim this listing, free</a>' +
+      '<p style="font-size:12.5px;color:#4B5563;margin:12px 0 0;">Want more customers? <a href="' + escapeAttr(feat) + '" target="_blank" rel="noopener">Featured placement</a> puts you at the top of ' + esc(b.city || 'your city') + ' pages.</p></div>';
+  }
+
   function summaryFor(b) {
     var where = b.address ? b.address : (b.city + (b.state ? ', ' + b.state : ''));
     return esc(b.name) + ' is a Google-listed ' + esc(String(b.category || 'pet service').toLowerCase()) + ' at ' + esc(where) + '. ' +
@@ -643,11 +658,16 @@
       extra[2] || imgFor(b, 3, 1000, 320)
     ];
     var cls = ['g-main', '', '', 'g-wide'];
+    // Which slots hold the business's own photos; the rest are category stock
+    // photos and are captioned as illustrations, never as this business.
+    var own = [!!(b && b.imageUrl), !!extra[0], !!extra[1], !!extra[2]];
+    var illus = 'Illustrative ' + String((b && b.category) || 'pet care').toLowerCase() + ' photo';
     var figs = imgs.map(function(src, i) {
+      var cap = own[i] ? GALLERY_CAPS[i] : 'Illustrative photo';
       return '<figure class="' + cls[i] + '">' +
-        '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(b.name) + ' — ' + GALLERY_CAPS[i] + '" ' +
+        '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(own[i] ? b.name + ' — ' + GALLERY_CAPS[i] : illus) + '" ' +
         (i === 0 ? 'loading="eager"' : 'loading="lazy"') + '>' +
-        '<figcaption>' + GALLERY_CAPS[i] + '</figcaption>' +
+        '<figcaption>' + cap + '</figcaption>' +
         '</figure>';
     }).join('');
     return '<div class="gallery">' + figs + '</div>';
@@ -932,8 +952,8 @@
               <a href="https://www.google.com/maps?cid=' + cidQ + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;background:#EFF6FF;color:var(--primary);border:1px solid #BFDBFE;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;">Open in Google Maps ↗</a>\
             </section>' : '') + '\
             <section class="reco-section" id="recoSimilar" hidden aria-labelledby="recoSimilarH">\
-              <h2 id="recoSimilarH">Top-rated similar</h2>\
-              <p class="reco-sub">More ' + esc(biz.category.toLowerCase()) + ' in ' + esc(biz.city) + ' that pet parents rate highly</p>\
+              <h2 id="recoSimilarH">More ' + esc(biz.category.toLowerCase()) + ' in ' + esc(biz.city) + '</h2>\
+              <p class="reco-sub">Compare a few before you decide</p>\
               <div class="reco-row" id="recoSimilarList"></div>\
             </section>\
             <section class="reco-section" id="recoNearby" hidden aria-labelledby="recoNearbyH">\
@@ -968,9 +988,9 @@
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No platform booking fees</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Direct WhatsApp with the business</li>\
                 <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Google Maps profile linked, not curated</li>\
-                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Verified business listings only</li>\
-                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Instant enquiry confirmation</li>\
-                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Local 24x7 WhatsApp support</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Listings come from public Google Business profiles</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Enquiry confirmation by email</li>\
+                <li class="amenity-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Help from Pets24x7 on WhatsApp</li>\
               </ul>\
             </section>\
           </div>\
@@ -1008,12 +1028,13 @@
                 ' + (biz.phone ? '<a href="tel:' + escapeAttr(String(biz.phone).replace(/\s+/g,"")) + '" class="secondary-call">📞 Or call ' + esc(biz.phone) + '</a>' : '<a href="tel:+919930090487" class="secondary-call">📞 Or call Pets24x7 +91 99300 90487</a>') + '\
               </form>\
               <ul class="trust-points">\
-                <li>Verified Google-listed business</li>\
+                <li>' + (biz.claimed ? 'Owner-managed listing' : 'Listed from its Google Business profile') + '</li>\
                 <li>Direct contact — no booking fees</li>\
-                <li>We respond on WhatsApp within 5 minutes</li>\
+                <li>The reply comes straight to your WhatsApp</li>\
                 <li>Free to enquire · No commitment</li>\
               </ul>\
             </div>\
+            ' + ownerCardHtml(biz) + '\
           </aside>\
         </div>\
         <div class="container" id="p24Reviews" style="margin-top:8px;"></div>\

@@ -14,12 +14,12 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Pets24x7" />
 <meta property="og:title" content="Marketing Services for Pet Businesses — Pets24x7.com" />
-<meta property="og:description" content="Your growth partner: SEO, paid ads, reviews and lead capture for vets, groomers, boarders and pet trainers. Trusted by 100+ pet businesses." />
+<meta property="og:description" content="Your growth partner: SEO, paid ads, reviews and lead capture for vets, groomers, boarders and pet trainers." />
 <meta property="og:url" content="https://pets24x7.com/marketing.html" />
 <meta property="og:image" content="https://pets24x7.com/og-image.jpg" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Marketing Services for Pet Businesses — Pets24x7.com" />
-<meta name="twitter:description" content="Your growth partner: SEO, paid ads, reviews and lead capture for vets, groomers, boarders and pet trainers. Trusted by 100+ pet businesses." />
+<meta name="twitter:description" content="Your growth partner: SEO, paid ads, reviews and lead capture for vets, groomers, boarders and pet trainers." />
 <meta name="twitter:image" content="https://pets24x7.com/og-image.jpg" />
 
 <script type="application/ld+json">
@@ -41,11 +41,11 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "How is Pets24x7 different from a regular SEO agency?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Pets24x7 is purpose-built for pet businesses. We rank specifically for pet-intent searches like 'vets near me', 'dog grooming in [city]', '24x7 emergency animal hospital' — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like 'vets near me', 'dog grooming in [city]', '24x7 emergency animal hospital' — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins." } },
     { "@type": "Question", "name": "Do you work with single-location pet businesses?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most of our clients are single-location vets, groomers, boarders and walkers. Our Starter plan is built for them. Multi-location chains get the Pro plan with branch-level dashboards." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Single-location vets, groomers, boarders and walkers are exactly who our Starter plan is built for. Multi-location chains get the Pro plan with branch-level dashboards." } },
     { "@type": "Question", "name": "How quickly can I see results?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Listings on Pets24x7 go live within 24-48 hours and start receiving WhatsApp enquiries from week 1. Paid ads typically deliver first leads within 3-7 days. SEO is a 60-90 day game — but we report progress every week." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Your Pets24x7 listing can receive enquiries as soon as it is live. Paid ads can start bringing enquiries within days of launch. SEO takes longer, usually a few months, and we report progress along the way." } }
   ]
 }
 </script>
@@ -270,7 +270,12 @@
   @media (max-width: 768px) {
     section { padding: 56px 0; }
     .m-hero { padding: 56px 0 72px; }
-    .m-hero .container { grid-template-columns: 1fr; gap: 32px; }
+    /* minmax(0,…) + min-width:0: a bare 1fr column grows to its widest
+       child's min-content (the stats card), which pushed the whole hero
+       2px past a 320px screen and clipped the text on the right. */
+    .m-hero .container { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .m-hero .container > * { min-width: 0; }
+    .hv-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     /* Headline first on phones; the stats card used to push it below the fold. */
     .hero-visual { order: 1; max-width: 380px; margin: 0 auto; width: 100%; }
     .about-block { grid-template-columns: 1fr; gap: 28px; }
@@ -385,12 +390,12 @@
       <div class="why-card">
         <div class="why-icon">🎯</div>
         <h3>Pet-Niche Specialists</h3>
-        <p>We rank for "vets near me", "dog groomer in [city]", "24x7 pet hospital" — not generic local SEO templates.</p>
+        <p>We focus on searches like "vets near me", "dog groomer in [city]" and "24x7 pet hospital" — not generic local SEO templates.</p>
       </div>
       <div class="why-card">
         <div class="why-icon">⭐</div>
         <h3>Reviews That Convert</h3>
-        <p>Active Google review collection + a structured response playbook so your ratings climb every month.</p>
+        <p>Regular review requests to your happy customers, plus a clear way to reply to every review — good or bad.</p>
       </div>
       <div class="why-card">
         <div class="why-icon">📲</div>
@@ -433,7 +438,7 @@
       <div class="svc-card">
         <div class="svc-icon">⭐</div>
         <h3>Reputation &amp; Review Management</h3>
-        <p>Active review collection + branded response templates for every Google review (good or bad). Watch your rating climb.</p>
+        <p>Regular review requests to happy customers and ready-to-use replies for every Google review, good or bad.</p>
         <button class="svc-link" data-form-trigger data-service="Reputation &amp; Review Management" data-source="svc_rep">Learn More →</button>
       </div>
       <div class="svc-card">
@@ -462,7 +467,7 @@
 <section id="success">
   <div class="container">
     <div class="section-head">
-      <span class="section-eyebrow">Client Success Stories</span>
+      <span class="section-eyebrow">Your Listing</span>
       <h2>How a Pets24x7 listing works</h2>
       <p>What you get, start to finish — no commission, no lock-in.</p>
     </div>
@@ -490,7 +495,7 @@
       </div>
     </div>
     <div class="section-cta">
-      <button class="btn btn-primary" data-form-trigger data-service="Success Stories — Want Same Results" data-source="success_section">Get Results Like These →</button>
+      <button class="btn btn-primary" data-form-trigger data-service="Listing — Get Started" data-source="success_section">Set Up My Listing →</button>
     </div>
   </div>
 </section>
@@ -511,12 +516,12 @@
       <div class="how-step">
         <div class="num">2</div>
         <h3>We Build &amp; Optimise</h3>
-        <p>Within 48 hours we publish your Pets24x7 listing, fix your Google Business Profile and launch your first SEO content.</p>
+        <p>We publish your Pets24x7 listing, tidy up your Google Business Profile and agree the first things to work on.</p>
       </div>
       <div class="how-step">
         <div class="num">3</div>
-        <h3>Grow Predictably</h3>
-        <p>Weekly dashboards, monthly reviews, and a roadmap to take you from #5 in your city to #1 in 6 months.</p>
+        <h3>Grow Step by Step</h3>
+        <p>Regular reports on enquiries, reviews and visibility, and a clear plan for what to improve next.</p>
       </div>
     </div>
     <div class="section-cta">
@@ -552,9 +557,9 @@
         <button class="btn btn-outline" data-form-trigger data-service="Starter Plan — Quote Request" data-source="plan_starter">Get Quote on WhatsApp</button>
       </div>
       <div class="plan featured">
-        <span class="plan-flag">★ Most Popular</span>
+        <span class="plan-flag">Recommended</span>
         <div class="plan-name">Pro</div>
-        <div class="plan-tag">Custom Quote<span>For growing pet businesses ready to dominate their city</span></div>
+        <div class="plan-tag">Custom Quote<span>For growing pet businesses ready to reach more pet parents</span></div>
         <ul class="plan-features">
           <li><span class="ico">✓</span> Everything in Starter</li>
           <li><span class="ico">✓</span> Local SEO content (4 posts/mo)</li>
@@ -594,15 +599,15 @@
       <div>
         <span class="section-eyebrow">About Us</span>
         <h2>We're More Than a Marketing Company — We're a Pet Business's Growth Partner</h2>
-        <p>Pets24x7 was founded with one goal: to simplify growth for pet businesses in a noisy digital landscape. With a team that has worked with 100+ vets, groomers, boarders and trainers, we know what gets pet parents to walk through your door.</p>
+        <p>Pets24x7 was founded with one goal: to make growth simpler for pet businesses in a noisy digital world. We focus only on vets, groomers, boarders, walkers and trainers, so everything we do is built around how pet parents search and choose.</p>
         <p>From boutique grooming salons to 24x7 emergency animal hospitals, our approach is the same — listen first, optimise ruthlessly, and report transparently.</p>
         <button class="btn btn-primary" data-form-trigger data-service="About Us — Talk to Founder" data-source="about_section" style="margin-top:8px;">Talk to the Founder</button>
       </div>
       <div class="about-stats">
-        <div class="as"><strong>100+</strong><span>Pet Businesses</span></div>
+        <div class="as"><strong>29,000+</strong><span>Listings in the Directory</span></div>
         <div class="as"><strong>2,100+</strong><span>Cities Covered</span></div>
         <div class="as"><strong>16</strong><span>Service Categories</span></div>
-        <div class="as"><strong>24/7</strong><span>WhatsApp Support</span></div>
+        <div class="as"><strong>0%</strong><span>Commission on Enquiries</span></div>
       </div>
     </div>
   </div>
@@ -614,14 +619,14 @@
     <div class="section-head">
       <span class="section-eyebrow">Insights</span>
       <h2>Playbooks for Pet Business Owners</h2>
-      <p>Tactics, case studies, and growth essays from the Pets24x7 team.</p>
+      <p>Practical guides for pet business owners, coming soon from the Pets24x7 team.</p>
     </div>
     <div class="blog-grid">
       <div class="blog-card" data-form-trigger data-service="Blog — 5 Ways to Grow Vet Bookings" data-source="blog_1">
         <div class="blog-img"><span class="soon">COMING SOON</span>🩺</div>
         <div class="blog-body">
           <span class="blog-cat">For Vets</span>
-          <h3>5 Ways to Double Your Vet Clinic Bookings</h3>
+          <h3>5 Ways to Get More Vet Clinic Bookings</h3>
           <p>The playbook every solo vet should run — including the GBP fixes that take 30 minutes and move the needle.</p>
         </div>
       </div>
@@ -629,8 +634,8 @@
         <div class="blog-img b2"><span class="soon">COMING SOON</span>🛁</div>
         <div class="blog-body">
           <span class="blog-cat">For Groomers</span>
-          <h3>How a 4.9★ Rating Beats Any Discount</h3>
-          <p>Reviews compound. The 4-week framework we use to take groomers from 4.3 to 4.8 — without buying fake reviews.</p>
+          <h3>Why Your Google Rating Matters More Than Discounts</h3>
+          <p>Reviews add up. A simple routine for asking happy customers for reviews — without ever buying fake ones.</p>
         </div>
       </div>
       <div class="blog-card" data-form-trigger data-service="Blog — Boarding Ads" data-source="blog_3">
@@ -658,19 +663,19 @@
     <div class="faq-list">
       <details class="faq-item" open>
         <summary>How is Pets24x7 different from a regular SEO agency?</summary>
-        <div class="faq-answer">Pets24x7 is purpose-built for pet businesses. We rank specifically for pet-intent searches like "vets near me", "dog grooming in [city]", "24x7 emergency animal hospital" — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins.</div>
+        <div class="faq-answer">Pets24x7 is purpose-built for pet businesses. We focus on pet-intent searches like "vets near me", "dog grooming in [city]", "24x7 emergency animal hospital" — across 2,100+ cities. We also give your listing a Pets24x7 directory page on day one, so you get a backlink + visible Google ratings before any paid work begins.</div>
       </details>
       <details class="faq-item">
         <summary>Do you work with single-location pet businesses?</summary>
-        <div class="faq-answer">Yes. Most of our clients are single-location vets, groomers, boarders and walkers. Our Starter plan is built for them. Multi-location chains get the Chain plan with branch-level dashboards.</div>
+        <div class="faq-answer">Yes. Single-location vets, groomers, boarders and walkers are exactly who our Starter plan is built for. Multi-location chains get the Chain plan with branch-level dashboards.</div>
       </details>
       <details class="faq-item">
         <summary>How quickly can I see results?</summary>
-        <div class="faq-answer">Listings on Pets24x7 go live within 24-48 hours and start receiving WhatsApp enquiries from week 1. Paid ads typically deliver first leads within 3-7 days. SEO is a 60-90 day game — but we report progress every week.</div>
+        <div class="faq-answer">Your Pets24x7 listing can receive enquiries as soon as it is live. Paid ads can start bringing enquiries within days of launch. SEO takes longer, usually a few months, and we report progress along the way.</div>
       </details>
       <details class="faq-item">
         <summary>Are there any contracts or lock-in periods?</summary>
-        <div class="faq-answer">No long-term contracts. We work on rolling monthly engagements — if we're not delivering value, you walk. 89% of our clients renew quarter-on-quarter.</div>
+        <div class="faq-answer">No long-term contracts. We work on rolling monthly engagements — if we're not delivering value, you can stop.</div>
       </details>
       <details class="faq-item">
         <summary>Do you handle Google Ads spend or do I pay Google directly?</summary>
@@ -684,12 +689,12 @@
 <section class="final-cta">
   <div class="container">
     <h2>Ready to Grow Your Pet Business?</h2>
-    <p>Join 100+ vets, groomers, boarders, walkers and trainers using Pets24x7 to win their city.</p>
+    <p>Get your pet business in front of pet parents searching in your city.</p>
     <button class="btn btn-whatsapp" data-form-trigger data-service="Final CTA — Get Started" data-source="final_cta">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
       Talk to a Pets24x7 Expert
     </button>
-    <p style="font-size:13px;margin-top:18px;color:rgba(255,255,255,0.7);">No spam. No cold calls. Just WhatsApp. We respond within 5 minutes.</p>
+    <p style="font-size:13px;margin-top:18px;color:rgba(255,255,255,0.7);">No spam. No cold calls. Just WhatsApp. We reply as soon as we can.</p>
   </div>
 </section>
 

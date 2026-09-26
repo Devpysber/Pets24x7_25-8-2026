@@ -410,3 +410,23 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
   .pagination a,.pagination span.cur,.pagination span.dot{padding:8px 10px}
   .pagination span.dot{min-width:24px;padding:0}
 }
+
+/* Owner and business calls to action (listing sidebar, city/category pages) */
+.owner-card{margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:14px;padding:18px}
+.owner-card strong{display:block;font-size:15px;color:#1F2937;margin-bottom:6px}
+.owner-card p{font-size:13.5px;color:#4B5563;margin:0 0 12px;line-height:1.5}
+.owner-card .owner-small{font-size:12.5px;margin:12px 0 0}
+.owner-btn{display:block;text-align:center;background:var(--primary);color:#fff!important;font-weight:700;font-size:14px;padding:11px 14px;border-radius:10px}
+.owner-btn:hover{background:var(--primary-dark)}
+.biz-cta{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:28px 0;padding:22px 24px;border-radius:16px;background:linear-gradient(135deg,#EFF6FF,#FEF3C7);border:1px solid #DBEAFE}
+.biz-cta>div:first-child{flex:1 1 320px;min-width:0}
+.biz-cta strong{display:block;font-size:18px;color:#1F2937;margin-bottom:4px}
+.biz-cta p{margin:0;font-size:14px;color:#4B5563;line-height:1.5}
+.biz-cta-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.biz-cta-primary{background:var(--primary);color:#fff!important;font-weight:700;font-size:14px;padding:11px 18px;border-radius:10px}
+.biz-cta-secondary{background:#fff;color:var(--primary)!important;font-weight:700;font-size:14px;padding:10px 16px;border-radius:10px;border:1px solid #BFDBFE}
+.biz-cta-link{font-weight:600;font-size:14px}
+@media (max-width:600px){.biz-cta{padding:18px 16px}.biz-cta-actions{width:100%}.biz-cta-primary,.biz-cta-secondary{flex:1 1 100%;text-align:center}}
+
+.gallery.is-stock{position:relative}
+.gallery-note{position:absolute;left:10px;bottom:10px;z-index:2;background:rgba(17,24,39,.72);color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;pointer-events:none;max-width:calc(100% - 20px)}
