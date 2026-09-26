@@ -23,124 +23,148 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 <style>
-  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --text:#0F172A; --text-muted:#64748B; --border:#E2E8F0; }
+  :root { --primary:#2563EB; --primary-dark:#1D4ED8; --navy:#0B1B4D; --text:#0F172A; --text-muted:#64748B; --border:#E2E8F0; --green:#16A34A; }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;
-    display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;
-    background:#fff;position:relative;overflow-x:hidden;
-  }
-  /* A white page with one faint tint at the top, so the card still reads as a
-     card without the page going dark. */
-  body::before{
-    content:'';position:fixed;inset:0 0 auto 0;height:320px;z-index:0;pointer-events:none;
-    background:linear-gradient(180deg,#F5F8FF 0%,rgba(255,255,255,0) 100%);
-  }
-
+  body{font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;background:#F8FAFC}
   a{color:inherit;text-decoration:none}
-  .top{padding:22px 20px;max-width:1180px;margin:0 auto;width:100%;position:relative;z-index:1}
-  .brand{display:inline-flex;align-items:center;gap:11px}
-  .brand-logo{height:38px;width:auto;max-width:min(200px,46vw);border-radius:0;object-fit:contain;display:block}
-  .brand-name{font-weight:800;font-size:20px;color:var(--primary);letter-spacing:-0.5px}
-  .brand-name .tld{color:var(--text)}
 
-  main{flex:1;display:flex;align-items:center;justify-content:center;padding:20px 20px 56px;position:relative;z-index:1}
-  .card{
-    background:#fff;max-width:470px;width:100%;
-    border:1px solid var(--border);border-radius:22px;padding:40px 34px 32px;
-    box-shadow:0 18px 44px rgba(15,23,42,.10);
-    animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
-  }
+  /* Split layout: brand panel left, sign-in right. Stacks on phones. */
+  .shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+  .brandside{position:relative;overflow:hidden;color:#fff;padding:40px 56px;display:flex;flex-direction:column;
+    background:radial-gradient(1200px 600px at -10% -20%,#3B82F6 0%,rgba(59,130,246,0) 55%),linear-gradient(150deg,#1E40AF 0%,#1D4ED8 45%,#0B1B4D 100%)}
+  .brandside::after{content:'';position:absolute;right:-120px;bottom:-120px;width:420px;height:420px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.12),rgba(255,255,255,0) 70%);pointer-events:none}
+  .logo-chip{display:inline-flex;align-items:center;background:#fff;border-radius:14px;padding:8px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);align-self:flex-start}
+  .logo-chip img{height:34px;width:auto;display:block}
+  .pitch{margin:auto 0;max-width:470px;position:relative;z-index:1;padding:48px 0}
+  .pitch .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:6px 12px;border-radius:999px;margin-bottom:18px}
+  .pitch h2{font-size:clamp(28px,3vw,38px);font-weight:800;letter-spacing:-1px;line-height:1.12;margin-bottom:14px}
+  .pitch p{font-size:15.5px;line-height:1.6;color:rgba(255,255,255,.86);margin-bottom:26px}
+  .perks{list-style:none;display:grid;gap:14px}
+  .perks li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.92)}
+  .perks .tick{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800}
+  .perks strong{color:#fff;font-weight:700}
+  .trustbar{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:rgba(255,255,255,.75);position:relative;z-index:1}
+  .trustbar b{display:block;font-size:20px;color:#fff;font-weight:800;letter-spacing:-.4px}
+
+  .formside{display:flex;flex-direction:column;padding:28px 24px}
+  .formside .toplink{align-self:flex-end;font-size:13.5px;color:var(--text-muted);font-weight:600}
+  .formside .toplink:hover{color:var(--primary)}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 0}
+  .card{width:100%;max-width:440px;animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .eyebrow{font-size:12px;font-weight:800;color:var(--primary);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:30px;font-weight:800;letter-spacing:-0.8px;margin-bottom:8px;line-height:1.15}
+  p.sub{color:var(--text-muted);font-size:14.5px;line-height:1.6;margin-bottom:26px}
 
-  .eyebrow{font-size:11.5px;font-weight:800;color:var(--primary);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px}
-  h1{font-size:27px;font-weight:800;letter-spacing:-0.7px;margin-bottom:8px;line-height:1.2}
-  p.sub{color:var(--text-muted);font-size:14.5px;line-height:1.55;margin-bottom:26px}
-
-  .choice{
-    display:flex;align-items:center;gap:16px;width:100%;
-    border:1px solid var(--border);border-radius:15px;padding:17px 18px;margin-bottom:12px;
-    background:#fff;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
-  }
-  .choice:hover{transform:translateY(-2px);border-color:#BFDBFE;box-shadow:0 12px 26px rgba(37,99,235,.14)}
-  .choice .ic{
-    width:46px;height:46px;flex-shrink:0;border-radius:13px;display:flex;align-items:center;justify-content:center;
-    font-size:23px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
-  }
+  .choice{display:flex;align-items:center;gap:16px;width:100%;min-height:64px;border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;
+    background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+  .choice:hover{transform:translateY(-2px);border-color:#93C5FD;box-shadow:0 14px 30px rgba(37,99,235,.14)}
+  .choice .ic{width:50px;height:50px;flex-shrink:0;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)}
   .choice.biz .ic{background:linear-gradient(135deg,#ECFDF5,#D1FAE5)}
   .choice .txt{flex:1;min-width:0}
-  .choice strong{display:block;font-size:15.5px;font-weight:700;letter-spacing:-0.2px}
+  .choice strong{display:block;font-size:16px;font-weight:700;letter-spacing:-0.2px}
   .choice span{display:block;font-size:13px;color:var(--text-muted);margin-top:3px;line-height:1.45}
-  .choice .go{color:var(--primary);font-weight:800;font-size:18px;flex-shrink:0;transition:transform .16s ease}
-  .choice:hover .go{transform:translateX(3px)}
+  .choice .go{width:34px;height:34px;border-radius:50%;background:#EFF6FF;color:var(--primary);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .16s ease,background .16s ease}
+  .choice:hover .go{transform:translateX(3px);background:var(--primary);color:#fff}
 
-  .hint{
-    display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-muted);
-    background:#F8FAFC;border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin:20px 0 18px;line-height:1.45;
-  }
-  .notice{font-size:13.5px;line-height:1.5;border-radius:12px;padding:12px 14px;margin:0 0 20px;font-weight:600}
+  .methods{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+  .methods span{font-size:12px;font-weight:600;color:#334155;background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 11px}
+  .hint{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-muted);margin:16px 0 22px;line-height:1.45}
+  .notice{font-size:13.5px;line-height:1.5;border-radius:12px;padding:12px 14px;margin:0 0 20px;font-weight:600;overflow-wrap:anywhere}
   .notice.warn{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
   .notice.info{background:#EFF6FF;color:#1E3A8A;border:1px solid #BFDBFE}
   .notice a{color:inherit;text-decoration:underline}
-  .foot{font-size:13.5px;color:var(--text-muted);text-align:center;line-height:1.7}
-  .foot a{color:var(--primary);font-weight:700}
-  .foot a:hover{text-decoration:underline}
-  .back{display:block;text-align:center;margin-top:22px;font-size:13px;color:var(--text-muted);position:relative;z-index:1}
-  .back:hover{color:var(--primary)}
-  @media (max-width:430px){ main{padding:12px 16px 40px} .card{padding:28px 20px 24px;border-radius:18px} h1{font-size:22px} .choice{padding:14px} .choice .ic{width:42px;height:42px;font-size:21px} }
+  .divider{height:1px;background:var(--border);margin:6px 0 18px}
+  .foot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .foot a{display:block;border:1px dashed #CBD5E1;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.4;background:#fff}
+  .foot a b{display:block;color:var(--primary);font-size:13.5px}
+  .foot a:hover{border-color:var(--primary);background:#F8FBFF}
+  .legal{font-size:12px;color:#94A3B8;text-align:center;margin-top:18px}
+  .legal a{text-decoration:underline}
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .brandside{padding:22px 20px 26px}
+    .pitch{padding:22px 0 0;margin:0}
+    .pitch h2{font-size:24px}
+    .pitch p{margin-bottom:0;font-size:14.5px}
+    .perks,.trustbar,.pitch .kicker{display:none}
+    .formside{padding:8px 16px 28px}
+    .formside .toplink{display:none}
+    main{padding:18px 0}
+    h1{font-size:24px}
+  }
+  @media (max-width:420px){ .foot{grid-template-columns:1fr} .choice{padding:14px} .choice .ic{width:44px;height:44px;font-size:21px} }
   button:focus-visible,a:focus-visible{outline:3px solid rgba(37,99,235,0.45);outline-offset:2px}
   @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
-  .choice{min-height:64px}
-  .notice{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <a href="/" class="brand">
-    <img class="brand-logo" src="/pets24x7_logo.png" alt="Pets24x7" />
-  </a>
-</header>
-
-<main>
-  <div class="card">
-    <div class="eyebrow">Welcome back</div>
-    <h1>Sign in to Pets24x7</h1>
-    <p class="sub">Choose your account type. Both sign in the same way — a code we email you, your password, or Google.</p>
-
-    <div class="notice" id="verifyNotice" hidden></div>
-
-    <a class="choice" href="/parent-login/">
-      <span class="ic">🐕</span>
-      <span class="txt">
-        <strong>Pet parent</strong>
-        <span>Your pets, enquiries, saved businesses and membership.</span>
-      </span>
-      <span class="go">→</span>
-    </a>
-
-    <a class="choice biz" href="/vendor-login/">
-      <span class="ic">🏪</span>
-      <span class="txt">
-        <strong>Business owner</strong>
-        <span>Your listing, customer enquiries and subscription.</span>
-      </span>
-      <span class="go">→</span>
-    </a>
-
-    <div class="hint">
-      <span>🔒</span>
-      <span>We never ask for your password over email or WhatsApp.</span>
+<div class="shell">
+  <aside class="brandside" aria-label="About Pets24x7">
+    <a href="/" class="logo-chip"><img src="/pets24x7_logo.png" alt="Pets24x7" /></a>
+    <div class="pitch">
+      <span class="kicker">India &amp; USA</span>
+      <h2>Everything for your pet, and for your pet business, in one place.</h2>
+      <p>Pet parents find vets, groomers and boarding near them. Businesses get enquiries from pet parents, sent to their WhatsApp.</p>
+      <ul class="perks">
+        <li><span class="tick">✓</span><span><strong>Pet parents:</strong> your pets, enquiries, saved businesses and membership in one dashboard.</span></li>
+        <li><span class="tick">✓</span><span><strong>Business owners:</strong> manage your listing, services and photos, and see every customer enquiry.</span></li>
+        <li><span class="tick">✓</span><span><strong>Help when you need it:</strong> the Pets24x7 team is on WhatsApp.</span></li>
+      </ul>
     </div>
+    <div class="trustbar">
+      <div><b data-stat="listings">29,000+</b>pet businesses listed</div>
+      <div><b data-stat="cities">2,100+</b>cities</div>
+      <div><b>0%</b>booking fee for pet parents</div>
+    </div>
+  </aside>
 
-    <p class="foot">
-      New business? <a href="/register-business/">Register your business</a><br/>
-      Already listed? <a href="/find-my-listing/">Claim your listing</a>
-    </p>
+  <div class="formside">
+    <a class="toplink" href="/">← Back to Pets24x7.com</a>
+    <main>
+      <div class="card">
+        <div class="eyebrow">Welcome back</div>
+        <h1>Sign in to Pets24x7</h1>
+        <p class="sub">Choose your account type to continue.</p>
+
+        <div class="notice" id="verifyNotice" hidden></div>
+
+        <a class="choice" href="/parent-login/">
+          <span class="ic">🐕</span>
+          <span class="txt">
+            <strong>I&rsquo;m a pet parent</strong>
+            <span>Your pets, enquiries, saved businesses and membership.</span>
+          </span>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+
+        <a class="choice biz" href="/vendor-login/">
+          <span class="ic">🏪</span>
+          <span class="txt">
+            <strong>I run a pet business</strong>
+            <span>Your listing, customer enquiries and subscription.</span>
+          </span>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+
+        <div class="methods" aria-label="Ways to sign in">
+          <span>✉️ Emailed code</span><span>🔑 Password</span><span>G Google</span>
+        </div>
+        <div class="hint"><span>🔒</span><span>We never ask for your password over email or WhatsApp.</span></div>
+
+        <div class="divider"></div>
+        <div class="foot">
+          <a href="/register-business/"><b>Register your business →</b>New to Pets24x7? List it free.</a>
+          <a href="/find-my-listing/"><b>Claim your listing →</b>Already on Pets24x7? Take it over.</a>
+        </div>
+        <p class="legal">By continuing you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
+      </div>
+    </main>
   </div>
-</main>
-
-<a class="back" href="/">← Back to Pets24x7.com</a>
+</div>
 
 <script src="/config.js"></script>
 <script src="/analytics.js"></script>
