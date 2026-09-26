@@ -54,6 +54,7 @@ import { startEngagementJob } from './jobs/engagement.js';
 import { startVendorEngagementJob } from './jobs/vendor-engagement.js';
 import { startAdminDigestJob } from './jobs/admin-digest.js';
 import { mailEnabled, verifyMailTransport } from './mail/mailer.js';
+import { refreshDefaultPlanCopy } from './payments/default-plans.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
 
@@ -301,6 +302,9 @@ async function ensureSeedAdmin(): Promise<void> {
   // Admin-saved plan prices must be live before the first checkout quote;
   // otherwise the first requests after boot are priced from the defaults.
   await loadPersistedPlanStores().catch(() => {});
+  // Old default plan wording (partner discounts, free vet consults) is replaced
+  // on boot, so a server that never re-ran seed:plans still shows honest plans.
+  void refreshDefaultPlanCopy().catch((err) => logger.warn({ err }, 'plan copy refresh failed'));
   warmKv();                   // opens the Redis connection early when REDIS_URL is set
   // Scheduled sweeps. Each run takes a cluster-wide lease first (shared/job-lock.ts),
   // so several instances never duplicate a sweep; RUN_JOBS=false keeps a

@@ -2156,6 +2156,16 @@ export const RESERVED_SETTING_PREFIXES = ['plans:', 'admin_email_set:', 'vendor_
 /** Plan ids flagged "recommended" for DB membership plans (the table has no column for it). */
 let parentRecommendedIds: string[] = [];
 
+// A catalogue saved before the broker model still promises "Direct Calls" on
+// the free vendor plan; enquiries now go through Pets24x7. Rewritten on load
+// so a saved row cannot bring the old promise back.
+const LEGACY_FREE_TAGLINE = 'Verified Directory Listing & Direct Calls';
+function brokerTagline(plan: any): any {
+  return plan && plan.tagline === LEGACY_FREE_TAGLINE
+    ? { ...plan, tagline: 'Directory Listing & Enquiries via Pets24x7' }
+    : plan;
+}
+
 function replaceContents<T>(target: T[], next: T[]): void {
   target.splice(0, target.length, ...next);
 }
@@ -2198,7 +2208,7 @@ export function loadPersistedPlanStores(): Promise<void> {
         }
         if (!arr.length) continue;
         if (r.key === PLAN_STORE_KEYS.grow) replaceContents(memoryGrowPlans, arr);
-        else if (r.key === PLAN_STORE_KEYS.vendor) replaceContents(memoryVendorSubPlans as any[], arr);
+        else if (r.key === PLAN_STORE_KEYS.vendor) replaceContents(memoryVendorSubPlans as any[], arr.map(brokerTagline));
         else if (r.key === PLAN_STORE_KEYS.parent) replaceContents(memoryParentSubPlans as any[], arr);
       }
     })().catch((err) => {
