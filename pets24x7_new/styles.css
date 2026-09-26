@@ -430,3 +430,15 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 
 .gallery.is-stock{position:relative}
 .gallery-note{position:absolute;left:10px;bottom:10px;z-index:2;background:rgba(17,24,39,.72);color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;pointer-events:none;max-width:calc(100% - 20px)}
+
+/* Growth: share row, "find one for me" concierge box */
+.share-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.share-wa,.share-copy{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.share-wa{background:#DCFCE7;color:#166534!important;border:1px solid #BBF7D0}
+.share-copy{background:#fff;color:var(--text);border:1px solid var(--border)}
+.find-for-me{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:28px 0 0;padding:20px 22px;border-radius:16px;background:#F0FDF4;border:1px solid #BBF7D0}
+.find-for-me>div{flex:1 1 320px;min-width:0}
+.find-for-me strong{display:block;font-size:17px;color:#14532D;margin-bottom:4px}
+.find-for-me p{margin:0;font-size:14px;color:#166534;line-height:1.5}
+.ffm-btn{background:var(--whatsapp);color:#fff!important;font-weight:700;font-size:14px;padding:11px 18px;border-radius:10px;white-space:nowrap}
+@media (max-width:600px){.ffm-btn{flex:1 1 100%;text-align:center;white-space:normal}}

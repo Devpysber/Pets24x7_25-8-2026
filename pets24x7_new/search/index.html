@@ -332,7 +332,9 @@
       count.textContent = '';
       empty.hidden = false;
       empty.innerHTML = 'No listings matched that search.<br/><br/>' +
-        'Try a different spelling, a broader service type, or <a href="/#destinations">browse a city</a>.';
+        'Try a different spelling, a broader service type, or <a href="/#destinations">browse a city</a>.<br/><br/>' +
+        '<a href="https://wa.me/919930090487?text=' + encodeURIComponent('Hi Pets24x7! I am looking for: ' + (document.title || 'a pet service') + '. Can you find one for me?') +
+        '&utm_source=website&utm_medium=search_empty&utm_campaign=concierge" target="_blank" rel="noopener" style="display:inline-block;background:#25D366;color:#fff;font-weight:700;padding:11px 18px;border-radius:10px;">Ask Pets24x7 to find it on WhatsApp</a>';
       return;
     }
     count.textContent = list.length + (list.length === 60 ? '+' : '') + ' businesses found';

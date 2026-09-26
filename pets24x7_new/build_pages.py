@@ -877,6 +877,35 @@ def popular_script(city_name, category_name=None):
 </script>"""
 
 
+def wa_share_link(text, url, medium):
+    """A visitor sharing a page with a friend on WhatsApp (any number, their choice)."""
+    from urllib.parse import quote
+    tagged = f"{url}?utm_source=whatsapp&utm_medium=share&utm_campaign={medium}"
+    return f"https://wa.me/?text={quote(text + ' ' + tagged)}"
+
+
+def find_for_me_html(city, category=None):
+    """Concierge box: the visitor tells Pets24x7 what they need, Pets24x7 finds it."""
+    from urllib.parse import quote
+    need = category.lower() if category else "a pet service"
+    msg = f"Hi Pets24x7! I need {need} in {city}. Can you find one for me?"
+    href = f"https://wa.me/{WA_NUMBER}?text={quote(msg)}&utm_source=website&utm_medium=find_for_me&utm_campaign=concierge"
+    return f"""<section class="find-for-me" aria-label="Let Pets24x7 find it for you">
+    <div>
+      <strong>Not sure which one to pick?</strong>
+      <p>Tell us what your pet needs and when. We check availability and prices with {e(need)} providers in {e(city)} and send you the best options on WhatsApp — free.</p>
+    </div>
+    <a class="ffm-btn" href="{ea(href)}" target="_blank" rel="noopener">Find one for me on WhatsApp</a>
+  </section>"""
+
+
+def share_row_html(text, url, medium):
+    return f"""<div class="share-row">
+    <a class="share-wa" href="{ea(wa_share_link(text, url, medium))}" target="_blank" rel="noopener">Share on WhatsApp</a>
+    <button type="button" class="share-copy" onclick="(function(b){{var u=location.href.split('#')[0];if(navigator.share){{navigator.share({{title:document.title,url:u}}).catch(function(){{}});return;}}try{{navigator.clipboard.writeText(u);b.textContent='✓ Link copied';setTimeout(function(){{b.textContent='Copy link';}},1800);}}catch(e){{}}}})(this)">Copy link</button>
+  </div>"""
+
+
 def wa_link_featured(name, city, category=None):
     """Owner asking about paid placement: goes to the Pets24x7 sales WhatsApp."""
     what = f"{name} ({category}, {city})" if category else f"{name} in {city}"
@@ -1357,6 +1386,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
   {popular_strip_html()}
   <div class="biz-list">{cards}</div>
   {pagination_html(country, city_slug, page, total_pages)}
+  {find_for_me_html(city)}
+  {share_row_html(f"Pet services in {city} on Pets24x7:", SITE + city_url(country, city_slug), "city")}
   {business_cta_html(city)}
   {seo_copy_city(full_city, country_n, len(items), categories)}
   {related_cities_html(country, city_slug, all_cities)}
@@ -1481,6 +1512,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
   {featured_strip_html()}
   {popular_strip_html()}
   <div class="biz-list">{cards}</div>
+  {find_for_me_html(city, category_name)}
   {business_cta_html(city, category_name)}
   {reco_rail_html()}
   {seo_copy_category(category_name, full_city, country_n, len(items))}
@@ -1750,6 +1782,7 @@ def render_listing(biz, all_in_city, all_cats):
         <span>{e(biz.get("category_icon") or "📍")} {e(biz["category"])}</span>
         <span>📍 {e((locality + ", ") if locality and locality.lower() != city.lower() else "")}{e(full_city)}{f" · {e(biz['pincode'])}" if biz.get("pincode") else ""}</span>
       </div>
+      {share_row_html(f"{biz['name']} ({biz['category']}, {city}) on Pets24x7:", canonical, "listing")}
     </div>
   </div>
 
@@ -2050,7 +2083,9 @@ def render_listing(biz, all_in_city, all_cats):
     var url = 'https://wa.me/{WA_NUMBER}?text=' + encodeURIComponent(msg) + '&utm_source=website&utm_medium=listing_form&utm_campaign=enquiry';
     window.open(url, '_blank');
     err.style.color = '#047857';
-    err.textContent = email ? 'Enquiry sent — a confirmation is on its way to ' + email + '.' : 'Enquiry sent — continue the chat on WhatsApp.';
+    err.innerHTML = (email ? 'Enquiry sent — a confirmation is on its way to ' + String(email).replace(/[<>&"']/g, '') + '.' : 'Enquiry sent — continue the chat on WhatsApp.') +
+      '<br><span style="color:var(--text-muted);font-weight:500;">Want us to book it for you next time? <a href="/membership/?utm_source=listing&utm_medium=post_enquiry">See membership</a> · ' +
+      '<a href="https://wa.me/?text=' + encodeURIComponent('Found a ' + biz.category.toLowerCase() + ' on Pets24x7: ' + location.href.split('#')[0].split('?')[0] + '?utm_source=whatsapp&utm_medium=share&utm_campaign=post_enquiry') + '" target="_blank" rel="noopener">Share with a friend</a></span>';
     err.classList.add('show');
     return false;
   }}
@@ -2088,6 +2123,9 @@ def load_index():
         sys.exit("[fatal] PETS_INDEX in pets-data.js is not a list")
     return index
 
+PHONE_IN_ID = re.compile(r"(^|[^0-9])(?:[6-9][0-9]{4}-?[0-9]{5}|[0-9]{3}-[0-9]{3}-[0-9]{4})([^0-9]|$)")
+
+
 def clean_items(items):
     """Guard against data files written before build_data.py checked CIDs.
 
@@ -2103,6 +2141,10 @@ def clean_items(items):
         # Hidden in the admin panel: no page, no card, no sitemap entry. The
         # export already leaves these out; this covers hand-edited data.
         if is_hidden(b):
+            continue
+        # An id built from a scraped name can carry the business's phone
+        # ("…-groomer-99233-91199-40275669"); its URL would publish the number.
+        if PHONE_IN_ID.search(str(b.get("id") or "")):
             continue
         cid = str(b.get("google_cid") or "")
         if cid and not cid.isdigit():

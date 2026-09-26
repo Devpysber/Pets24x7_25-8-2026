@@ -227,7 +227,7 @@ listingsRouter.get(
         city: m.city,
         state: m.state ?? '',
         country: m.country,
-        address: m.address ?? '',
+        address: '',  // contact details stay with Pets24x7 (see publicListing)
         rating: shownRating(m),
         review_count: m.review_count,
         url: `/${(m.country || 'in').toLowerCase()}/${m.city_slug}/${m.id}/`,
