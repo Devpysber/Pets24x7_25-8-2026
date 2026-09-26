@@ -133,7 +133,7 @@ vendorClaimRegistrationRouter.post(
         name: item.name,
         category: item.category || 'Pet Service',
         city: item.city || 'India',
-        address: item.address || '',
+        address: '',  // public route: street address stays private (broker model)
         phoneMasked: maskPhone(item.phone),
         claimed: isClaimed,
       });
@@ -148,7 +148,7 @@ vendorClaimRegistrationRouter.post(
         name: v.businessName,
         category: v.category || 'Pet Service',
         city: v.city || 'India',
-        address: v.address || '',
+        address: '',  // public route: street address stays private (broker model)
         phoneMasked: maskPhone(v.phone),
         claimed: isClaimed,
       });

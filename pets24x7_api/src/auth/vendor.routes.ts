@@ -291,7 +291,7 @@ vendorAuthRouter.post(
         city: m.city,
         state: m.state ?? '',
         country: m.country,
-        address: m.address ?? '',
+        address: '',  // public route: street address stays private (broker model)
         rating: shownRating(m),
         review_count: m.review_count,
         url: `/${(m.country || 'in').toLowerCase()}/${m.city_slug || 'mumbai'}/${m.id}/`,
