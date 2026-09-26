@@ -55,6 +55,7 @@ import {
   winbackEmail,
 } from '../mail/lifecycle-templates.js';
 import { isRecommendable } from '../feed/reco/city-index.js';
+import { mailSite } from '../mail/components.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -367,7 +368,7 @@ async function pickMessage(p: Parent, ctx: SweepContext): Promise<Choice | null>
       })
       .catch(() => []);
     if (added.length >= 2) {
-      const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+      const site = mailSite();
       return {
         mail: parentNewNearbyEmail(
           email,
@@ -495,7 +496,7 @@ async function recommendationsFor(
   // A thin list is not worth an email.
   if (picks.length < 3) return null;
 
-  const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+  const site = mailSite();
   return {
     // Remembered with the send stamp, so the next one differs.
     recentPromoIds: nextPromoIds(previous, picks.map((r) => r.listing.id)),
@@ -538,7 +539,7 @@ const US_DISPLAY_TZ = 'America/New_York';
 
 /** Public city page, as built by pets24x7_new/build_pages.py. */
 function cityPageUrl(country: string | null | undefined, citySlug: string): string {
-  const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+  const site = mailSite();
   return `${site}/${(country || 'IN').toLowerCase() === 'us' ? 'us' : 'in'}/${citySlug}/`;
 }
 
@@ -550,7 +551,7 @@ function dealUrl(
 ): string {
   const listing = deal.listingId ? getListingById(deal.listingId) : undefined;
   if (listing) {
-    const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+    const site = mailSite();
     return `${site}/${String(listing.country).toLowerCase()}/${listing.city_slug}/${listing.id}/`;
   }
   return cityPageUrl(deal.country ?? parentCountry, citySlug);

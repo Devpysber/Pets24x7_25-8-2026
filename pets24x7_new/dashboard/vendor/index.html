@@ -3780,7 +3780,10 @@
     set('mEnqNew', unhandled + ' new / unhandled');
     set('mServices', state.serviceCount != null ? state.serviceCount : (state.services.length || 0));
     set('mReviews', ra.published != null ? ra.published : 0);
-    set('mReviewAvg', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' average') : 'No reviews yet');
+    // Without the summary there is no way to know the vendor has no reviews;
+    // saying so told vendors with reviews that they had none.
+    var noReviews = state.summaryFailed ? 'Could not load — refresh to retry' : 'No reviews yet';
+    set('mReviewAvg', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' average') : noReviews);
     set('mInvitesSent', iv.sent != null ? iv.sent : 0);
     set('mInvitesDone', (iv.completed || 0) + ' completed');
     // Performance view
@@ -3794,9 +3797,9 @@
     set('revAvg', ra.average != null ? ra.average.toFixed(1) : '—');
     var stars = document.getElementById('revStars');
     if (stars) stars.textContent = ra.average != null ? '★'.repeat(Math.round(ra.average)) + '☆'.repeat(5 - Math.round(ra.average)) : '';
-    set('revCount', ra.published ? (ra.published + ' verified customer review' + (ra.published === 1 ? '' : 's')) : 'No reviews yet');
+    set('revCount', ra.published ? (ra.published + ' verified customer review' + (ra.published === 1 ? '' : 's')) : (state.reviewsLoaded ? 'No reviews yet' : noReviews));
     // Dash overview rating line
-    set('dashRatingLine', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' (' + (ra.published || 0) + ' review' + ((ra.published || 0) === 1 ? '' : 's') + ')') : 'No reviews yet');
+    set('dashRatingLine', ra.average != null ? ('⭐ ' + ra.average.toFixed(1) + ' (' + (ra.published || 0) + ' review' + ((ra.published || 0) === 1 ? '' : 's') + ')') : noReviews);
   }
 
   function retryServices() {
@@ -3852,6 +3855,9 @@
     }).catch(function(err){
       if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
       if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
+      state.summaryFailed = true;
+      renderMetrics();
+      toast('Could not load your dashboard summary: ' + fmtErr(err), 'error');
       renderReviews();
       loadRecoVendor();
     });

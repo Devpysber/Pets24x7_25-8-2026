@@ -36,6 +36,17 @@ export interface VendorPromoContext {
   reviewCount?: number | null;
 }
 
+// Nudges that repeat (reviews, placement, profile gaps) went out with the same
+// subject every time, which reads as a bot and trains the inbox to skip it.
+// The wording rotates by calendar week, so a given week is stable (a resend
+// or preview matches) while consecutive sends differ.
+function weekly<T>(variants: T[], salt = ''): T {
+  const week = Math.floor(Date.now() / (7 * 86_400_000));
+  let h = week;
+  for (let k = 0; k < salt.length; k++) h = (h * 31 + salt.charCodeAt(k)) >>> 0;
+  return variants[h % variants.length]!;
+}
+
 // ---------------------------------------------------------------------------
 // "Your listing is live" — the one every vendor gets first.
 // ---------------------------------------------------------------------------
@@ -79,7 +90,11 @@ export function vendorProfileGapsEmail(to: string, ctx: VendorPromoContext, miss
     campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
-    subject: `${missing.length} thing${missing.length === 1 ? '' : 's'} missing from your Pets24x7 listing`,
+    subject: weekly([
+      `${missing.length} thing${missing.length === 1 ? '' : 's'} missing from your Pets24x7 listing`,
+      `Finish ${ctx.businessName}'s listing — ${missing.length} step${missing.length === 1 ? '' : 's'} left`,
+      `Pet owners can't see everything about ${ctx.businessName} yet`,
+    ], ctx.businessName),
     html: page({
       eyebrow: 'Your listing',
       heading: 'Finish your listing',
@@ -132,8 +147,16 @@ export function vendorCollectReviewsEmail(to: string, ctx: VendorPromoContext): 
     to,
     kind: 'marketing',
     subject: has
-      ? `Add to the ${ctx.reviewCount} review${ctx.reviewCount === 1 ? '' : 's'} on ${ctx.businessName}`
-      : `${ctx.businessName} has no reviews yet`,
+      ? weekly([
+          `Add to the ${ctx.reviewCount} review${ctx.reviewCount === 1 ? '' : 's'} on ${ctx.businessName}`,
+          `A fresh review keeps ${ctx.businessName} ahead`,
+          `Who was your happiest customer this week?`,
+        ], ctx.businessName)
+      : weekly([
+          `${ctx.businessName} has no reviews yet`,
+          `Get the first review for ${ctx.businessName}`,
+          `One review changes how pet owners see ${ctx.businessName}`,
+        ], ctx.businessName),
     html: page({
       eyebrow: 'Reviews',
       heading: has ? 'Keep the reviews coming' : 'Your first review matters most',
@@ -161,7 +184,11 @@ export function vendorVisibilityEmail(to: string, ctx: VendorPromoContext, cityL
     campaign: 'vendor_engagement',
     to,
     kind: 'marketing',
-    subject: `Get ${ctx.businessName} seen first in ${where}`,
+    subject: weekly([
+      `Get ${ctx.businessName} seen first in ${where}`,
+      `Put ${ctx.businessName} at the top in ${where}`,
+      `Pet owners in ${where} rarely scroll past the first few`,
+    ], ctx.businessName),
     html: page({
       eyebrow: 'Grow',
       heading: `You are one of ${cityListings > 0 ? cityListings : 'many'} in ${where}`,

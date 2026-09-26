@@ -3235,6 +3235,15 @@
      /api/listings/:id read the database, so they follow at once; the pre-built
      city and listing pages change at the next Publish or the nightly run. */
 
+  // Same wording as api-client.js req() for a server fault: a 500
+  // { error: 'internal_error' } or a proxy 502/503/504 carries no message, and
+  // its bare code used to reach the admin as the toast text.
+  function serverFault(r, d) {
+    if (r.status < 500) return '';
+    return 'Something went wrong on our side. Please try again in a moment.' +
+      (d && d.requestId ? ' (ref ' + d.requestId + ')' : '');
+  }
+
   // api-client.js has no PUT helper. Same error shape as its req(): the
   // server's message, else the first validation issue, else the code.
   function apiPut(path, body) {
@@ -3249,7 +3258,7 @@
       return r.json().catch(function () { return { ok: false }; }).then(function (d) {
         if (!r.ok) {
           var issue = d && d.issues && d.issues[0];
-          var e = new Error((d && d.message) || (issue && issue.message) || (d && d.error) || ('HTTP ' + r.status));
+          var e = new Error((d && d.message) || (issue && issue.message) || serverFault(r, d) || (d && d.error) || ('HTTP ' + r.status));
           e.status = r.status;
           e.data = d;
           throw e;
@@ -8676,7 +8685,7 @@
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok) {
-          var e = new Error((d && d.message) || (d && d.error) || ('HTTP ' + r.status));
+          var e = new Error((d && d.message) || serverFault(r, d) || (d && d.error) || ('HTTP ' + r.status));
           e.status = r.status; e.data = d;
           throw e;
         }

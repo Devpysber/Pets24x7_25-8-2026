@@ -83,7 +83,23 @@ unsubscribeRouter.get(
   '/email/unsubscribe',
   limiter,
   asyncHandler(async (req, res) => {
-    const { email, token, scope, qs } = params(req as never);
+    // A browser opened this from an email: a broken or truncated link gets a
+    // page that says so, not the API's JSON error.
+    let p: ReturnType<typeof params>;
+    try {
+      p = params(req as never);
+    } catch (err) {
+      if (!(err instanceof BadRequestError)) throw err;
+      res.status(400).type('html').send(
+        page(
+          'Link not valid',
+          `<h1>This unsubscribe link is not valid</h1>
+           <p>It may have been cut short when it was copied. Open the link straight from the email, or use the unsubscribe link at the bottom of a newer Pets24x7 email.</p>`,
+        ),
+      );
+      return;
+    }
+    const { email, token, scope, qs } = p;
     const all = `e=${encodeURIComponent(email)}&t=${encodeURIComponent(token)}`;
     res.type('html').send(
       scope === 'digest'

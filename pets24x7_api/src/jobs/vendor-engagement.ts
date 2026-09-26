@@ -45,6 +45,7 @@ import {
   vendorVisibilityEmail,
   type VendorPromoContext,
 } from '../mail/promo-templates.js';
+import { mailSite } from '../mail/components.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -100,7 +101,7 @@ interface VendorRow {
 function listingUrlFor(v: VendorRow): string | null {
   if (!v.listingId) return null;
   const listing = getListingById(v.listingId);
-  const site = env.PUBLIC_SITE_URL.replace(/\/+$/, '');
+  const site = mailSite();
   if (!listing) return `${site}/dashboard/vendor/`;
   return `${site}/${String(listing.country).toLowerCase()}/${listing.city_slug}/${listing.id}/`;
 }

@@ -45,21 +45,31 @@ export function indexVersion(): number {
   return version;
 }
 
-// The scraped directory files human healthcare under pet categories: the
+// The scraped directory files human businesses under pet categories: the
 // Vaccination Centers category is mostly CVS MinuteClinics, VA clinics and
-// maternity hospitals, and Emergency / Dental / Therapy carry multispeciality,
-// paediatric and orthopaedic practices. Listing pages still show them (that is
-// a data clean-up), but a recommendation must never send a pet parent there.
-// Vaccination Centers need positive pet evidence in the name; other categories
-// only drop names that are unmistakably human medicine and say nothing of pets.
-const PET_WORDS = /(pets?\b|\bvet(?!eran)|vets\b|veterinar|animal|\bdogs?\b|\bcats?\b|canine|feline|\bpaws?\b|\bbirds?\b|avian|livestock|cattle|poultry|pupp|kitten|petco|petsmart|spca|humane)/i;
-const HUMAN_MEDICINE = /\b(patholog\w*|sonograph\w*|maternity|gyna?ec\w*|obstetric\w*|ivf|infertility|nursing home|diabet\w*|health cent(?:re|er)|multi-?speciality|paediatric\w*|pediatric\w*|physician|urolog\w*|cardiolog\w*|orthopa?edic\w*|pregnancy|uphc|primary health|endocrinolog\w*|laparoscop\w*|dermatolog\w*|neurolog\w*|oncolog\w*|polyclinic|urgent care|minuteclinic)\b/i;
+// maternity hospitals; Physiotherapy, Therapy, Dental and Labs are half human
+// physio, counselling, dentistry and Quest/Labcorp; Pet Taxi carries city cab
+// firms. scripts/hide-non-pet-listings.mjs hides the unmistakable ones from
+// the site (keep its word lists in step with these). A recommendation is held
+// to a higher bar: in the categories dominated by human businesses a pick
+// needs a pet word in its name; elsewhere only obvious human medicine drops.
+const PET_WORDS = /(pets?\b|vet(?!eran)|veterinar|animal|dogs?\b|doggie|doggy|cats?\b|kitty|kitten|canine|k-?9|feline|paws?|pup|bark|woof|wag|mutt|hound|kennel|groom|fetch|furr?y?\b|fur\b|whisker|purr|meow|tail|birds?\b|avian|parrot|aquari|fish|reptile|exotic|zoo|livestock|cattle|poultry|equine|horse|rescue|sanctuary|shelter|spca|humane|dvm|petco|petsmart|critter|bunny|rabbit)/i;
+const HUMAN_MEDICINE = /\b(patholog\w*|sonograph\w*|maternity|gyna?ec\w*|obstetric\w*|ivf|infertility|nursing home|diabet\w*|health cent(?:re|er)|multi-?speciality|paediatric\w*|pediatric\w*|physician|urolog\w*|cardiolog\w*|orthopa?edic\w*|pregnancy|uphc|primary health|endocrinolog\w*|laparoscop\w*|dermatolog\w*|neurolog\w*|oncolog\w*|polyclinic|urgent care|minuteclinic|physiotherap\w*|physical therap\w*|chiropract\w*|labcorp|quest diagnostics|dentist\w*|dental clinic|orthodont\w*|cryo\w*|counsel\w*|psychiatr\w*|psycholog\w*|lpc|lcsw)\b/i;
+const PET_WORD_REQUIRED = new Set([
+  'vaccination-centers',
+  'pet-physiotherapy-rehab',
+  'pet-therapy-services',
+  'pet-taxi-transport',
+  'veterinary-labs-diagnostics',
+  'pet-dental-care',
+  'pet-relocation-services',
+]);
 
 export function isRecommendable(l: ListingRecord): boolean {
   const name = l.name || '';
   if (PET_WORDS.test(name)) return true;
   const cat = (l.category_slug || slugify(l.category)).toLowerCase();
-  if (cat === 'vaccination-centers') return false;
+  if (PET_WORD_REQUIRED.has(cat)) return false;
   return !HUMAN_MEDICINE.test(name);
 }
 
