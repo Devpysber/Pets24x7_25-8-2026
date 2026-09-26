@@ -1262,6 +1262,9 @@
             <button class="btn" style="width: 100%; color: var(--danger); border-color: #FCA5A5; background: #FEF2F2;" onclick="handleLogout()">
               <span>🚪</span> <span>Log Out of Account</span>
             </button>
+            <button class="btn" style="width: 100%; margin-top: 8px; justify-content: center;" onclick="handleLogoutAll(this)">
+              <span>Sign out of all devices</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1310,17 +1313,6 @@
     }).finally(function() {
       sel.disabled = false;
     });
-  }
-
-  function cleanWebsite(w) {
-    if (!w || typeof w !== 'string') return null;
-    w = w.trim();
-    if (!/^https?:\/\//i.test(w)) return null;
-    try {
-      var u = new URL(w), h = u.hostname.toLowerCase();
-      if (/(^|\.)google\.(com|co\.[a-z]+)$/.test(h) || h === 'business.google.com' || u.pathname.indexOf('/aclk') === 0) return null;
-      return u.href;
-    } catch (e) { return null; }
   }
 
   function renderSaved() {
@@ -1583,7 +1575,7 @@
             <div>
               <div style="font-size: 11px; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Active Membership</div>
               <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">⭐ ${esc(m.plan || 'Membership')}</h2>
-              ${m.tier ? '<p style="color: var(--text-muted); margin-bottom: 8px;">Tier Level: <strong>' + esc(m.tier) + '</strong> (' + (m.discountPercent || 0) + '% discount applied on service bookings)</p>' : ''}
+              ${m.tier ? '<p style="color: var(--text-muted); margin-bottom: 8px;">Tier Level: <strong>' + esc(m.tier) + '</strong>' + (m.discountPercent > 0 ? ' (' + m.discountPercent + '% discount applied on service bookings)' : '') + '</p>' : ''}
               <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 4px;">${m.autoRenew ? 'Renews on' : 'Expires on'}: <strong>${fmtDate(m.renewsAt)}</strong></p>
               <p style="color: var(--text-muted); font-size: 13.5px;">Auto-renew: <strong>${m.autoRenew ? 'On' : 'Off'}</strong></p>
               ${m.cancelledAt ? '<div style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;margin-top:12px;">Auto-renew cancelled. Your benefits remain active until ' + fmtDate(m.renewsAt) + '.</div>' : ''}
@@ -1591,7 +1583,7 @@
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               ${m.cancelledAt
                 ? '<button class="btn" style="color:var(--success); border-color:var(--success);" onclick="resumeMembership(this)">Resume auto-renew</button>'
-                : '<button class="btn" style="color:var(--danger); border-color:var(--danger);" onclick="cancelMembership(this)">Cancel auto-renew</button>'}
+                : (m.autoRenew ? '<button class="btn" style="color:var(--danger); border-color:var(--danger);" onclick="cancelMembership(this)">Cancel auto-renew</button>' : '')}
             </div>
           </div>
         </div>
@@ -1937,7 +1929,7 @@
     }
     var maxDisc = maxMemberDiscount();
     return '<div class="member-benefit member-benefit-off" onclick="navigate(&quot;membership&quot;)" role="button" ' +
-           'title="See membership plans">🔓 ' + (maxDisc ? 'Members save up to ' + maxDisc + '%' : 'Members get exclusive savings') + ' — join →</div>';
+           'title="See membership plans">🔓 ' + (maxDisc ? 'Members save up to ' + maxDisc + '%' : 'Members get a WhatsApp pet-care concierge') + ' — join →</div>';
   }
 
   // Re-render whatever vendor grids are on screen (used after membership loads,
@@ -2060,22 +2052,6 @@
       if (window.recoTrack && typeof window.recoTrack.click === 'function') window.recoTrack.click(card);
       else recoTrackLocal.click(card);
     } catch (e) { /* tracking must never break the page */ }
-  }
-
-  // External vendor links opened from a recommendation carry UTM so the vendor
-  // can see Pets24x7 traffic in their own analytics. Internal links never do.
-  function withRecoUtm(url, src) {
-    if (!url || !src || src.indexOf('reco_') !== 0) return url;
-    try {
-      var u = new URL(url);
-      if (u.origin === location.origin) return url;
-      if (!u.searchParams.has('utm_source')) {
-        u.searchParams.set('utm_source', 'pets24x7');
-        u.searchParams.set('utm_medium', 'referral');
-        u.searchParams.set('utm_campaign', src);
-      }
-      return u.href;
-    } catch (e) { return url; }
   }
 
   function recoResetPaging() {
@@ -2262,7 +2238,7 @@
         '<div class="vendor-content">' +
           '<div>' +
             '<div class="vendor-name">' + esc(v.name) + '</div>' +
-            (v.address ? '<div class="vendor-address">📍 ' + esc(v.address) + '</div>' : '') +
+            ([v.city, v.state].filter(Boolean).length ? '<div class="vendor-address">📍 ' + esc([v.city, v.state].filter(Boolean).join(', ')) + '</div>' : '') +
             (chips ? '<div class="reason-row">' + chips + '</div>' : '') +
           '</div>' +
           memberBenefitHtml() +
@@ -2349,7 +2325,7 @@
       var reviewText = (typeof v.review_count === 'number' && v.review_count > 0)
         ? v.review_count + (v.review_count === 1 ? ' review' : ' reviews')
         : 'No reviews yet';
-      var loc = esc(v.address || [v.city, v.state].filter(Boolean).join(', ') || '');
+      var loc = esc([v.city, v.state].filter(Boolean).join(', '));
       var idAttr = jsArg(v.id);
       return `
         <div class="vendor-card">
@@ -2509,10 +2485,8 @@
     navigate('vendor-details');
     var seq = ++vendorSeq;
     // Where the parent came from (e.g. reco_parent_home) — attributes the
-    // listing view and taps, and adds UTM to the outbound website link.
+    // listing view and taps.
     state.vendorSrc = typeof src === 'string' ? src.slice(0, 40) : '';
-    var recoHit = state.vendorSrc ? (state.recommendations || []).find(function(x){ return x && x.id === vendorId; }) : null;
-    state.vendorSponsored = !!(recoHit && recoHit.sponsored);
 
     // Show what we already hold straight away, then upgrade from
     // GET /api/listings/:id — only that route merges the claimed owner's
@@ -2542,17 +2516,15 @@
 
   function renderVendorDetails(v) {
     var body = document.getElementById('vendorDetailsBody');
-    var locRaw = v.address || [v.city, v.state].filter(Boolean).join(', ') || '';
+    var locRaw = [v.city, v.state].filter(Boolean).join(', ');
     var loc = esc(locRaw);
     var idArg = jsArg(v.id);
     var hasRating = Number(v.rating) > 0;
     var rating = Number(v.rating) || 0;
-    var website = cleanWebsite(v.website);
-    // Opened from a recommendation: the outbound link gets UTM (display text
-    // stays clean) and a paid placement is marked rel="sponsored".
-    var websiteHref = website ? withRecoUtm(website, state.vendorSrc) : null;
-    var websiteRel = state.vendorSponsored ? 'sponsored noopener nofollow' : 'noopener nofollow';
-    var phone = v.phone ? String(v.phone).replace(/\s+/g, '') : '';
+    // Pets24x7 is the broker: a business's phone, website, street address and
+    // map are never shown to a parent (the API strips them too); every contact
+    // goes through an enquiry or Pets24x7's own WhatsApp.
+    var pwaMsg = encodeURIComponent('Hi Pets24x7, I found ' + String(v.name || 'a business') + ' (' + String(v.category || 'pet service') + (v.city ? ', ' + v.city : '') + ') on my dashboard and would like to know more.');
 
     // The public listing page shows a photo gallery, an about block, hours,
     // services and a map. This view used to show one photo and three lines,
@@ -2576,14 +2548,10 @@
     // Plain text; escaped once where it is rendered (it used to be escaped
     // twice, so "&" showed up as "&amp;").
     var about = v.about || (String(v.name || 'This business') + ' is a Google-listed ' + String(v.category || 'pet service').toLowerCase() +
-      (locRaw ? ' at ' + locRaw : '') + '. Pets24x7 shows verified public listing details only — confirm exact services, ' +
-      'availability and pricing with the business directly.');
+      (locRaw ? ' at ' + locRaw : '') + '. Pets24x7 shows public listing details only and confirms exact services, ' +
+      'availability and pricing for you when you enquire.');
 
     var services = (v.servicesList || '').split(/[,;\n]+/).map(function(x){ return x.trim(); }).filter(Boolean);
-    var mapQuery = v.address || [v.name, v.city, v.state, v.pincode].filter(Boolean).join(', ');
-    var mapSrc = v.google_cid
-      ? 'https://www.google.com/maps?cid=' + encodeURIComponent(v.google_cid) + '&output=embed'
-      : (mapQuery ? 'https://www.google.com/maps?q=' + encodeURIComponent(mapQuery) + '&output=embed' : '');
 
     body.innerHTML =
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">' +
@@ -2616,14 +2584,8 @@
             (v.openingHours
               ? '<div class="section-title" style="margin:18px 0 6px;">Opening hours</div><p style="font-size:13.5px; color:var(--text-main);">🕒 ' + esc(v.openingHours) + '</p>'
               : '') +
-            (loc ? '<div class="section-title" style="margin:18px 0 6px;">Address</div><p style="font-size:13.5px;">📍 ' + loc + '</p>' : '') +
-            (website ? '<p style="margin-top:8px; font-size:13.5px;">🌐 <a href="' + esc(websiteHref) + '" target="_blank" rel="' + websiteRel + '" onclick="logListingTap(' + idArg + ', \'website_click\')" style="font-weight:600;">' + esc(website.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a></p>' : '') +
+            (loc ? '<div class="section-title" style="margin:18px 0 6px;">Location</div><p style="font-size:13.5px;">📍 ' + loc + '</p>' : '') +
           '</div>' +
-          (mapSrc
-            ? '<div class="card" style="padding:0; overflow:hidden;">' +
-                '<iframe src="' + esc(mapSrc) + '" width="100%" height="280" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map"></iframe>' +
-              '</div>'
-            : '') +
           '<div id="vendorDetailsReviews"></div>' +
         '</div>' +
 
@@ -2637,9 +2599,7 @@
           '</div>' +
           '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(' + idArg + ')">Enquire / Book</button>' +
           '<button class="btn" id="vendorSaveBtn" data-id="' + esc(v.id) + '" style="width:100%; justify-content:center; margin-top:8px;" onclick="toggleSave(' + idArg + ', this)">' + saveButtonLabel(v.id) + '</button>' +
-          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="tel:' + esc(phone) + '" onclick="logListingTap(' + idArg + ', \'phone_click\')">📞 Call ' + esc(v.phone) + '</a>' : '') +
-          (phone ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/' + esc(phone.replace(/[^0-9]/g, '')) + '?text=' + encodeURIComponent("Hi! I found " + v.name + " on Pets24x7 and would like to know more.") + '" onclick="logListingTap(' + idArg + ', \'whatsapp_click\')">💬 WhatsApp enquiry</a>' : '') +
-          (website ? '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="' + websiteRel + '" href="' + esc(websiteHref) + '" onclick="logListingTap(' + idArg + ', \'website_click\')">🌐 Visit website</a>' : '') +
+          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/919930090487?text=' + pwaMsg + '" onclick="logListingTap(' + idArg + ', \'whatsapp_click\')">💬 Ask Pets24x7 on WhatsApp</a>' +
           '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + esc(publicListingUrl(v)) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
         '</div>' +
       '</div>';
@@ -3376,6 +3336,27 @@
   function handleLogout() {
     api.logout().finally(function() {
       location.href = '/';
+    });
+  }
+
+  // Revokes every session of this account, not just this browser's cookie
+  // (POST /api/me/logout-all), e.g. after signing in on a shared phone.
+  function handleLogoutAll(btn) {
+    uiConfirm({
+      title: 'Sign out of all devices?',
+      body: 'You will be signed out here and on every other phone or computer where you are signed in.',
+      confirmLabel: 'Sign out everywhere',
+      cancelLabel: 'Cancel',
+      danger: true
+    }).then(function(ok) {
+      if (!ok) return;
+      if (btn) btn.disabled = true;
+      api.post('/api/me/logout-all', {}).then(function() {
+        location.href = '/';
+      }).catch(function(err) {
+        if (btn) btn.disabled = false;
+        toast('Could not sign out everywhere: ' + fmtErr(err), 'error');
+      });
     });
   }
 

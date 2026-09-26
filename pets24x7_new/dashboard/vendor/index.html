@@ -739,7 +739,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Business Information</div>
-              <div class="card-subtitle">Public details shown to customers.</div>
+              <div class="card-subtitle">Your business details. Phone, website and street address stay private: customers enquire through Pets24x7 and we pass them to you.</div>
             </div>
             <button class="btn btn-sm btn-primary" onclick="openEditBizModal()">Edit Business Information</button>
           </div>
@@ -1071,6 +1071,11 @@
           <div class="form-group"><label for="fEmail">Contact Email</label><input type="email" class="form-control" id="fEmail" disabled /></div>
           <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 14px;">Your email identifies your account — contact support to change it.</div>
           <button class="btn btn-primary btn-sm" id="saveBtn">Save Settings</button>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:6px;">Sessions</div>
+          <div class="card-subtitle" style="margin-bottom:14px;">Signed in on a shared or lost device? Sign out everywhere, including this browser.</div>
+          <button class="btn btn-sm" id="logoutAllBtn" style="color:var(--danger);">Sign out of all devices</button>
         </div>
       </section>
 
@@ -3081,6 +3086,26 @@
   document.getElementById('logoutBtn').addEventListener('click', function(ev){
     ev.preventDefault();
     api.logout().finally(function(){ location.href = '/'; });
+  });
+
+  // Revokes every session of this account (POST /api/me/logout-all), not only
+  // this browser's cookie.
+  document.getElementById('logoutAllBtn').addEventListener('click', function(){
+    var btn = this;
+    uiConfirm({
+      title: 'Sign out of all devices?',
+      body: 'You will be signed out here and on every other phone or computer where this business account is signed in.',
+      confirmLabel: 'Sign out everywhere',
+      cancelLabel: 'Cancel',
+      danger: true
+    }).then(function(ok){
+      if (!ok) return;
+      btn.disabled = true;
+      api.post('/api/me/logout-all', {}).then(function(){ location.href = '/'; }).catch(function(err){
+        btn.disabled = false;
+        toast('Could not sign out everywhere: ' + fmtErr(err), 'error');
+      });
+    });
   });
 
   var SVC_LABEL = { WHATSAPP_ENQUIRIES: 'Get WhatsApp Enquiries', WEBSITE_LEADS: 'Get Website Leads', PROFILE_VISITS: 'Get Profile Visits' };

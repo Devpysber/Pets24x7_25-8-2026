@@ -67,6 +67,9 @@ adminExtraRouter.post(
   '/plans',
   asyncHandler(async (req, res) => {
     const b = PlanBody.parse(req.body);
+    // Say which SKU clashed; the unique-index error only names the index.
+    const taken = await prisma.membershipPlan.findUnique({ where: { sku: b.sku } });
+    if (taken) throw new ConflictError(`A plan with SKU "${b.sku}" already exists`);
     const plan = await prisma.membershipPlan.create({
       data: {
         sku: b.sku, tier: b.tier, billingPeriod: b.billingPeriod, name: b.name,

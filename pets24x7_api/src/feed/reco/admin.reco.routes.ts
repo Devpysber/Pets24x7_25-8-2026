@@ -49,12 +49,19 @@ adminRecoRouter.get(
   '/config',
   asyncHandler(async (_req, res) => {
     const meta = await getRecoConfigMeta();
+    // updatedBy is an admin id; the Settings page prints it after "by", so
+    // show who that is rather than a cuid.
+    const who = meta.updatedBy
+      ? await prisma.admin
+          .findUnique({ where: { id: meta.updatedBy }, select: { name: true, email: true } })
+          .catch(() => null)
+      : null;
     res.json({
       ok: true,
       config: meta.config,
       defaults: RECO_DEFAULTS,
       updatedAt: meta.updatedAt ? meta.updatedAt.toISOString() : null,
-      updatedBy: meta.updatedBy,
+      updatedBy: who ? (who.name || who.email) : meta.updatedBy,
     });
   }),
 );

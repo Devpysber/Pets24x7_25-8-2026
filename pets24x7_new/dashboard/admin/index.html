@@ -2808,7 +2808,7 @@
             </div>
             <div class="form-group">
               <label for="pspDiscount" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Discount (%)</label>
-              <input type="number" id="pspDiscount" class="form-control" min="0" max="90" value="20" placeholder="20" oninput="updatePspLivePreview()" />
+              <input type="number" id="pspDiscount" class="form-control" min="0" max="90" value="0" placeholder="0" oninput="updatePspLivePreview()" />
             </div>
           </div>
 
@@ -2817,20 +2817,20 @@
           
           <div class="form-group" style="margin-bottom:12px;">
             <label for="pspTagline" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Tagline / Subtitle</label>
-            <input type="text" id="pspTagline" class="form-control" placeholder="e.g. 12 free virtual vet consults/yr + swag pack" oninput="updatePspLivePreview()" />
+            <input type="text" id="pspTagline" class="form-control" placeholder="e.g. A pet-care concierge on WhatsApp" oninput="updatePspLivePreview()" />
           </div>
 
           <div class="form-group" style="margin-bottom:8px;">
             <label for="pspPerks" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Perks (One per line)</label>
-            <textarea id="pspPerks" class="form-control" rows="4" placeholder="Up to 20% off vet treatments&#10;12 free virtual vet consults/yr&#10;Free Pets24x7 swag pack" oninput="updatePspLivePreview()"></textarea>
+            <textarea id="pspPerks" class="form-control" rows="4" placeholder="We check availability and prices for you&#10;We book the appointment and confirm it with you&#10;Cancel anytime" oninput="updatePspLivePreview()"></textarea>
           </div>
 
           <!-- Quick Perks Helper Chips -->
           <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
-            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('Up to 20% off at verified vet clinics')">+ Vet Discounts</button>
-            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('Free virtual vet consults')">+ Vet Consults</button>
-            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('24x7 Priority WhatsApp Support')">+ 24x7 Support</button>
-            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('Free Annual Vet Checkup')">+ Free Checkup</button>
+            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('We shortlist providers near you on WhatsApp')">+ Shortlisting</button>
+            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('We book the appointment and confirm it with you')">+ Booking</button>
+            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('Your enquiries handled ahead of non-members')">+ Priority</button>
+            <button type="button" class="btn btn-sm btn-outline" style="font-size:11px; padding:2px 8px;" onclick="addPspPerkQuick('Same-day priority for urgent requests')">+ Same-day</button>
           </div>
 
           <!-- Options -->
@@ -5744,7 +5744,8 @@
         '<td><span class="status-tag" style="background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE;">' + escH(p.tier) + '</span></td>' +
         '<td>' + escH(p.billingPeriod || 'MONTHLY') + ' (' + (p.durationDays || 30) + 'd)</td>' +
         '<td style="font-weight:700;">' + inr(p.priceRupees || 0) + '</td>' +
-        '<td><span class="status-tag" style="background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;">' + (p.discountPercent || 0) + '% Off</span></td>' +
+        // 0 is the norm (concierge plans, no partner discount): a dash, not "0% Off".
+        '<td>' + (p.discountPercent ? '<span class="status-tag" style="background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;">' + p.discountPercent + '% Off</span>' : '<span style="color:var(--text-muted);">—</span>') + '</td>' +
         '<td>' + tag + '</td>' +
         '<td style="text-align:right;"><button class="btn btn-sm" onclick="openEditParentSubPlanModal(\'' + pJson + '\')">Edit Plan</button></td>' +
         '</tr>';
@@ -5825,7 +5826,7 @@
           '</div>' +
 
           '<div style="padding:16px;">' +
-            '<div style="font-size:12px; color:#475569; font-weight:500; min-height:34px; margin-bottom:12px;">' + escH(p.tagline || 'Exclusive pet parent discounts & benefits') + '</div>' +
+            '<div style="font-size:12px; color:#475569; font-weight:500; min-height:34px; margin-bottom:12px;">' + escH(p.tagline || 'Pet-care concierge on WhatsApp') + '</div>' +
             '<div style="margin-bottom:14px;">' +
               '<span style="font-size:26px; font-weight:800; color:#0F172A;">' + inr(p.priceRupees || 0) + '</span>' +
               '<span style="font-size:12px; color:#64748B; font-weight:600;"> / ' + (p.billingPeriod === 'ANNUAL' ? 'yr' : 'mo') + '</span>' +
@@ -5853,14 +5854,14 @@
     var period = document.getElementById('pspPeriod').value || 'MONTHLY';
     var price = parseFloat(document.getElementById('pspPrice').value) || 0;
     var discount = parseInt(document.getElementById('pspDiscount').value, 10) || 0;
-    var tagline = (document.getElementById('pspTagline').value || 'Exclusive pet parent discounts & vet benefits').trim();
+    var tagline = (document.getElementById('pspTagline').value || 'Pet-care concierge on WhatsApp').trim();
     var perksRaw = document.getElementById('pspPerks').value || '';
     var perks = perksRaw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
     var isRec = document.getElementById('pspRecommended').checked;
     var isActive = document.getElementById('pspActive').checked;
 
     if (!perks.length) {
-      perks = ['Up to 20% off at verified vet clinics', '1 free virtual vet consult/mo', 'Vaccination reminders'];
+      perks = ['We shortlist providers near you', 'We book the appointment and confirm it with you'];
     }
 
     var borderClr = '#3B82F6';
@@ -5948,7 +5949,8 @@
     document.getElementById('pspTier').value = p.tier || 'SILVER';
     document.getElementById('pspPeriod').value = p.billingPeriod || 'MONTHLY';
     document.getElementById('pspPrice').value = p.priceRupees != null ? p.priceRupees : '';
-    document.getElementById('pspDiscount').value = p.discountPercent != null ? p.discountPercent : 20;
+    // Plans carry no partner discount today, so a new plan starts at 0.
+    document.getElementById('pspDiscount').value = p.discountPercent != null ? p.discountPercent : 0;
     document.getElementById('pspTagline').value = p.tagline || '';
     document.getElementById('pspPerks').value = Array.isArray(p.perks) ? p.perks.join('\n') : (p.perks || '');
     document.getElementById('pspRecommended').checked = !!p.recommended;
