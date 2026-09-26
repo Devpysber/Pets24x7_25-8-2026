@@ -600,7 +600,7 @@
           document.head.appendChild(rb);
         }
         document.getElementById('bizList').removeAttribute('aria-busy');
-        document.getElementById('bizList').innerHTML = '<div class="empty"><h3>No listings yet for this city</h3><p>We don\'t have verified pet businesses in <em>' + esc(titleCase(citySlug.replace(/-/g, ' '))) + '</em> just yet — but new businesses are added every week.</p><p style="margin-top:14px;"><a href="/" style="color:var(--primary);font-weight:600;">← Browse all cities</a></p></div>';
+        document.getElementById('bizList').innerHTML = '<div class="empty"><h3>No listings yet for this city</h3><p>We don\'t have pet businesses listed in <em>' + esc(titleCase(citySlug.replace(/-/g, ' '))) + '</em> just yet — but new businesses are added every week.</p><p style="margin-top:14px;"><a href="/" style="color:var(--primary);font-weight:600;">← Browse all cities</a></p></div>';
         document.getElementById('resCount').textContent = '0';
         document.getElementById('hCount').textContent = 'No listings yet';
       });
