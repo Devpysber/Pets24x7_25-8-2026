@@ -18,6 +18,7 @@ import { BadRequestError } from '../shared/errors.js';
 import { whatsappProvider } from '../whatsapp/cloud-api.js';
 import { chatId, getInboxSettings, INBOX_DEFAULTS, phoneVariants, saveInboxSettings } from '../whatsapp/inbox.js';
 import { sendReply } from '../whatsapp/reply.js';
+import { linkStatus } from '../whatsapp/baileys.js';
 
 export const adminWaInboxRouter = Router();
 adminWaInboxRouter.use('/whatsapp', requireAuth('admin'));
@@ -32,7 +33,7 @@ function audit(req: any, action: string, meta: object) {
 
 /** Who a number belongs to on Pets24x7, when we know. */
 async function whoIs(phones: string[]): Promise<Map<string, string>> {
-  const all = phones.flatMap(phoneVariants);
+  const all = phones.filter((p) => !p.startsWith('lid:')).flatMap(phoneVariants);
   const out = new Map<string, string>();
   if (!all.length) return out;
   const [parents, vendors] = await Promise.all([
@@ -53,14 +54,14 @@ adminWaInboxRouter.get(
         where: NOT_STATUS,
         orderBy: { createdAt: 'desc' },
         take: 4000,
-        select: { direction: true, fromNumber: true, toNumber: true, body: true, createdAt: true, type: true },
+        select: { direction: true, fromNumber: true, toNumber: true, body: true, createdAt: true, type: true, status: true },
       }),
       prisma.waChat.findMany(),
       getInboxSettings(),
     ]);
     const meta = new Map(chats.map((c) => [c.phone, c]));
 
-    interface Row { phone: string; name: string | null; lastText: string | null; lastAt: Date; lastDirection: string; unread: number; mode: string | null; effectiveMode: string; messages: number }
+    interface Row { phone: string; name: string | null; lastText: string | null; lastAt: Date; lastDirection: string; lastStatus: string | null; unread: number; mode: string | null; effectiveMode: string; messages: number }
     const byPhone = new Map<string, Row>();
     for (const m of rows) {
       const id = chatId(m.direction === 'INBOUND' ? m.fromNumber : m.toNumber);
@@ -68,7 +69,7 @@ adminWaInboxRouter.get(
       let r = byPhone.get(id);
       if (!r) {
         const c = meta.get(id);
-        r = { phone: id, name: c?.name ?? null, lastText: m.body, lastAt: m.createdAt, lastDirection: m.direction, unread: 0, mode: c?.mode ?? null, effectiveMode: c?.mode ?? settings.defaultMode, messages: 0 };
+        r = { phone: id, name: c?.name ?? null, lastText: m.body, lastAt: m.createdAt, lastDirection: m.direction, lastStatus: m.status, unread: 0, mode: c?.mode ?? null, effectiveMode: c?.mode ?? settings.defaultMode, messages: 0 };
         byPhone.set(id, r);
       }
       r.messages++;
@@ -79,7 +80,15 @@ adminWaInboxRouter.get(
     const who = await whoIs(list.slice(0, 300).map((r) => r.phone));
     let out = list.map((r) => ({ ...r, who: who.get(r.phone) ?? null }));
     if (q) out = out.filter((r) => [r.phone, r.name, r.who, r.lastText].some((x) => String(x ?? '').toLowerCase().includes(q)));
-    res.json({ ok: true, chats: out.slice(0, 300), settings, provider: whatsappProvider(), unreadTotal: out.reduce((n, r) => n + r.unread, 0) });
+    const l = await linkStatus();
+    res.json({
+      ok: true,
+      chats: out.slice(0, 300),
+      settings,
+      provider: whatsappProvider(),
+      linked: { state: l.state, number: l.linkedNumber, usage: l.usage, limits: l.limits, error: l.error },
+      unreadTotal: out.reduce((n, r) => n + r.unread, 0),
+    });
   }),
 );
 
@@ -157,9 +166,10 @@ adminWaInboxRouter.put(
         defaultMode: z.enum(['auto', 'manual']),
         message: z.string().trim().min(1).max(1000),
         cooldownHours: z.coerce.number().int().min(1).max(168),
+        quickReplies: z.array(z.string().trim().min(1).max(500)).max(12).default([]),
       })
       .parse(req.body ?? {});
-    const saved = await saveInboxSettings(body, req.auth!.sub);
+    const saved = await saveInboxSettings(body as any, req.auth!.sub);
     await audit(req, 'whatsapp.inbox_settings', { autoReply: body.autoReply, defaultMode: body.defaultMode, cooldownHours: body.cooldownHours });
     res.json({ ok: true, settings: saved });
   }),

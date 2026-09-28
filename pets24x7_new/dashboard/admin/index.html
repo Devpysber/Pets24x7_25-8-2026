@@ -2488,76 +2488,161 @@
 
       <section id="view-whatsapp" class="view-pane">
         <style>
-          .wa-wrap { display:grid; grid-template-columns: 330px 1fr; gap:0; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; height: calc(100vh - 250px); min-height: 480px; }
-          .wa-list { border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; }
-          .wa-list-head { padding:10px; border-bottom:1px solid var(--border); }
+          #view-whatsapp { --wa-green:#16A34A; --wa-green-d:#15803D; --wa-bg:#EFEAE2; --wa-out:#D9FDD3; }
+          .wa-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px 16px; margin-bottom:14px; }
+          .wa-conn { display:flex; align-items:center; gap:10px; font-size:13.5px; min-width:0; }
+          .wa-dot { width:10px; height:10px; border-radius:50%; background:#94A3B8; flex:none; box-shadow:0 0 0 4px rgba(148,163,184,.18); }
+          .wa-dot.ok { background:var(--wa-green); box-shadow:0 0 0 4px rgba(22,163,74,.18); animation:waPulse 2s infinite; }
+          .wa-dot.warn { background:#F59E0B; box-shadow:0 0 0 4px rgba(245,158,11,.2); }
+          @keyframes waPulse { 50% { box-shadow:0 0 0 7px rgba(22,163,74,.06); } }
+          .wa-usage { font-size:12px; color:var(--text-muted); }
+          .wa-bar-btns { display:flex; gap:8px; flex-wrap:wrap; }
+          .wa-app { display:grid; grid-template-columns: 340px minmax(0,1fr) 280px; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; height:calc(100vh - 240px); min-height:520px; }
+          .wa-app.no-info { grid-template-columns: 340px minmax(0,1fr); }
+          .wa-app.no-info .wa-info { display:none; }
+          .wa-col { display:flex; flex-direction:column; min-height:0; min-width:0; }
+          .wa-list { border-right:1px solid var(--border); }
+          .wa-lhead { padding:12px; border-bottom:1px solid var(--border); display:grid; gap:10px; }
+          .wa-search { position:relative; }
+          .wa-search input { width:100%; padding:9px 12px 9px 34px; border:1px solid var(--border); border-radius:10px; background:#F8FAFC; font:inherit; font-size:13.5px; }
+          .wa-search svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#94A3B8; }
+          .wa-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+          .wa-tab { border:1px solid var(--border); background:#fff; border-radius:999px; padding:4px 11px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; }
+          .wa-tab.on { background:#DCFCE7; border-color:#86EFAC; color:#166534; }
+          .wa-tab b { font-weight:700; margin-left:3px; }
           .wa-items { overflow-y:auto; flex:1; }
-          .wa-item { display:flex; gap:10px; padding:11px 12px; border-bottom:1px solid #F1F5F9; cursor:pointer; align-items:flex-start; width:100%; text-align:left; background:#fff; border-left:3px solid transparent; }
+          .wa-item { display:flex; gap:11px; padding:12px 14px; width:100%; text-align:left; background:#fff; border:0; border-bottom:1px solid #F1F5F9; cursor:pointer; align-items:center; position:relative; }
           .wa-item:hover { background:#F8FAFC; }
-          .wa-item.on { background:#F0FDF4; border-left-color:#16A34A; }
-          .wa-av { flex:none; width:38px; height:38px; border-radius:50%; background:#DCFCE7; color:#166534; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
-          .wa-meta { flex:1; min-width:0; }
-          .wa-top { display:flex; justify-content:space-between; gap:6px; }
-          .wa-name { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-          .wa-time { font-size:11px; color:var(--text-muted); white-space:nowrap; }
-          .wa-last { font-size:12.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-          .wa-sub { display:flex; gap:6px; align-items:center; margin-top:3px; font-size:11px; color:var(--text-muted); }
-          .wa-unread { background:#16A34A; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:0 7px; min-width:18px; text-align:center; }
-          .wa-chip { border-radius:999px; padding:0 7px; font-weight:700; font-size:10.5px; }
-          .wa-chip.auto { background:#DBEAFE; color:#1E40AF; } .wa-chip.manual { background:#FEF3C7; color:#92400E; }
-          .wa-thread { display:flex; flex-direction:column; min-height:0; background:#EFEAE2; }
-          .wa-thead { background:#fff; padding:10px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
-          .wa-msgs { flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:6px; }
-          .wa-b { max-width:72%; padding:7px 10px 5px; border-radius:10px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.06); }
-          .wa-b.in { align-self:flex-start; background:#fff; border-top-left-radius:2px; }
-          .wa-b.out { align-self:flex-end; background:#D9FDD3; border-top-right-radius:2px; }
-          .wa-b .t { display:block; text-align:right; font-size:10.5px; color:#64748B; margin-top:2px; }
-          .wa-day { align-self:center; background:#fff; color:#475569; font-size:11px; padding:2px 10px; border-radius:8px; margin:6px 0; }
-          .wa-comp { background:#F0F2F5; padding:10px; display:flex; gap:8px; align-items:flex-end; }
-          .wa-comp textarea { flex:1; resize:none; min-height:42px; max-height:140px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font:inherit; font-size:14px; }
-          .wa-seg { display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-          .wa-seg button { padding:6px 12px; font-size:12.5px; font-weight:600; background:#fff; border:0; cursor:pointer; color:var(--text-muted); }
-          .wa-seg button.on { background:var(--primary); color:#fff; }
-          .wa-empty { margin:auto; text-align:center; color:#64748B; font-size:14px; padding:30px; }
+          .wa-item.on { background:#F0FDF4; }
+          .wa-item.on::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--wa-green); }
+          .wa-av { flex:none; width:42px; height:42px; border-radius:50%; color:#fff; font-weight:700; font-size:14.5px; display:flex; align-items:center; justify-content:center; letter-spacing:.3px; }
+          .wa-av.lg { width:72px; height:72px; font-size:24px; }
+          .wa-m { flex:1; min-width:0; }
+          .wa-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+          .wa-nm { font-weight:600; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .wa-item.unread .wa-nm { font-weight:800; }
+          .wa-tm { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+          .wa-item.unread .wa-tm { color:var(--wa-green); font-weight:700; }
+          .wa-pv { font-size:12.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+          .wa-item.unread .wa-pv { color:var(--text); }
+          .wa-ub { background:var(--wa-green); color:#fff; border-radius:999px; font-size:11px; font-weight:700; min-width:20px; height:20px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; }
+          .wa-mdot { font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px; }
+          .wa-mdot.auto { background:#DBEAFE; color:#1E40AF; } .wa-mdot.manual { background:#FEF3C7; color:#92400E; }
+          .wa-thread { background:var(--wa-bg); background-image: radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px); background-size: 18px 18px; }
+          .wa-th { background:#fff; padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; min-height:62px; }
+          .wa-th .wa-m { cursor:pointer; }
+          .wa-sub2 { font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .wa-icon-btn { width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); flex:none; }
+          .wa-icon-btn:hover { color:var(--text); background:#F8FAFC; }
+          .wa-msgs { flex:1; overflow-y:auto; padding:16px 6%; display:flex; flex-direction:column; gap:4px; }
+          .wa-b { position:relative; max-width:min(560px, 78%); padding:7px 10px 6px; border-radius:10px; font-size:14px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px .5px rgba(11,20,26,.13); margin-top:2px; }
+          .wa-b.in { align-self:flex-start; background:#fff; }
+          .wa-b.out { align-self:flex-end; background:var(--wa-out); }
+          .wa-b.first.in { border-top-left-radius:0; margin-top:8px; } .wa-b.first.out { border-top-right-radius:0; margin-top:8px; }
+          .wa-b.first.in::before { content:""; position:absolute; left:-7px; top:0; border:8px solid transparent; border-top-color:#fff; border-right-color:#fff; border-width:0 8px 8px 0; }
+          .wa-b.first.out::before { content:""; position:absolute; right:-7px; top:0; border-style:solid; border-color:var(--wa-out) transparent transparent var(--wa-out); border-width:0 0 8px 8px; border-top-color:transparent; border-left-color:var(--wa-out); }
+          .wa-b.pending { opacity:.65; }
+          .wa-b.failed { background:#FEE2E2; }
+          .wa-meta { float:right; margin:6px 0 -4px 12px; font-size:10.5px; color:#667781; white-space:nowrap; }
+          .wa-tag { display:inline-block; font-size:10px; font-weight:700; color:#475569; background:rgba(0,0,0,.06); border-radius:4px; padding:0 5px; margin-right:4px; text-transform:uppercase; letter-spacing:.3px; }
+          .wa-retry { border:0; background:none; color:#B91C1C; font-weight:700; font-size:11px; cursor:pointer; text-decoration:underline; padding:0 0 0 6px; }
+          .wa-day { align-self:center; background:#fff; color:#54656F; font-size:11.5px; padding:4px 12px; border-radius:8px; margin:10px 0 4px; box-shadow:0 1px .5px rgba(11,20,26,.1); }
+          .wa-note { align-self:center; background:#FFF8C5; color:#54656F; font-size:12px; padding:6px 12px; border-radius:8px; margin:6px 0; max-width:90%; text-align:center; }
+          .wa-foot { background:#F0F2F5; padding:8px 12px 10px; }
+          .wa-qr-row { display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; scrollbar-width:thin; }
+          .wa-qr { flex:none; border:1px solid #D1D5DB; background:#fff; border-radius:999px; padding:5px 12px; font-size:12px; cursor:pointer; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+          .wa-qr:hover { border-color:var(--wa-green); color:var(--wa-green-d); }
+          .wa-comp { display:flex; gap:8px; align-items:flex-end; }
+          .wa-comp textarea { flex:1; resize:none; min-height:44px; max-height:160px; border:0; border-radius:12px; padding:11px 14px; font:inherit; font-size:14px; background:#fff; outline:none; box-shadow:0 1px .5px rgba(11,20,26,.1); }
+          .wa-send { width:44px; height:44px; border-radius:50%; border:0; background:var(--wa-green); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex:none; }
+          .wa-send:disabled { background:#94A3B8; cursor:not-allowed; }
+          .wa-hint { font-size:11.5px; color:var(--text-muted); margin-top:6px; }
+          .wa-info { border-left:1px solid var(--border); overflow-y:auto; padding:20px 18px; background:#fff; }
+          .wa-info h4 { font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin:18px 0 8px; }
+          .wa-seg { display:grid; grid-template-columns:1fr; gap:6px; }
+          .wa-seg button { text-align:left; border:1px solid var(--border); background:#fff; border-radius:10px; padding:8px 11px; cursor:pointer; font-size:13px; }
+          .wa-seg button b { display:block; font-size:13px; }
+          .wa-seg button span { font-size:11.5px; color:var(--text-muted); }
+          .wa-seg button.on { border-color:var(--wa-green); background:#F0FDF4; box-shadow:inset 0 0 0 1px var(--wa-green); }
+          .wa-kv { display:grid; grid-template-columns:auto 1fr; gap:6px 10px; font-size:13px; }
+          .wa-kv span:nth-child(odd) { color:var(--text-muted); }
+          .wa-empty { margin:auto; text-align:center; color:#54656F; font-size:14px; padding:30px; max-width:420px; }
+          .wa-empty svg { color:#94A3B8; margin-bottom:10px; }
           .wa-back { display:none; }
+          .wa-drawer-back { position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:9000; display:none; }
+          .wa-drawer-back.show { display:block; }
+          .wa-drawer { position:fixed; top:0; right:0; bottom:0; width:min(520px, 100%); background:#fff; z-index:9001; transform:translateX(100%); transition:transform .25s ease; display:flex; flex-direction:column; box-shadow:-10px 0 40px rgba(0,0,0,.15); }
+          .wa-drawer.show { transform:none; }
+          .wa-drawer header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+          .wa-drawer .body { padding:18px 20px; overflow-y:auto; display:grid; gap:14px; }
+          .wa-switch { display:flex; gap:10px; align-items:center; font-weight:600; font-size:14px; }
+          .wa-preview { background:var(--wa-bg); border-radius:10px; padding:12px; }
+          .wa-preview .wa-b { max-width:100%; }
+          @media (max-width: 1280px) { .wa-app { grid-template-columns: 320px minmax(0,1fr); } .wa-info { display:none; } .wa-app.show-info .wa-info { display:block; position:absolute; } }
+          @media (max-width: 1280px) { .wa-app { position:relative; } .wa-app.show-info .wa-info { right:0; top:0; bottom:0; width:300px; box-shadow:-10px 0 30px rgba(0,0,0,.1); z-index:2; } }
           @media (max-width: 860px) {
-            .wa-wrap { grid-template-columns: 1fr; height: calc(100vh - 200px); }
-            .wa-wrap.open .wa-list { display:none; } .wa-wrap:not(.open) .wa-thread { display:none; }
+            .wa-app, .wa-app.no-info { grid-template-columns: 1fr; height:calc(100dvh - 230px); min-height:440px; }
+            .wa-usage { display:none; }
+            .wa-app.open .wa-list { display:none; } .wa-app:not(.open) .wa-thread { display:none; }
             .wa-back { display:inline-flex; }
-            .wa-b { max-width:86%; }
+            .wa-msgs { padding:12px 10px; }
+            .wa-b { max-width:88%; }
+            .wa-app.show-info .wa-info { width:100%; }
           }
         </style>
-        <div class="card" style="margin-bottom:14px; padding:14px 16px;">
-          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
-            <div id="waSender" style="font-size:13px;">Checking sender…</div>
-            <button class="btn btn-sm" type="button" onclick="document.getElementById('waAutoBox').open = !document.getElementById('waAutoBox').open">Automatic reply settings</button>
+
+        <div class="wa-bar">
+          <div class="wa-conn"><span class="wa-dot" id="waDot"></span><div style="min-width:0;"><div id="waConnText" style="font-weight:600;">Checking…</div><div class="wa-usage" id="waUsage"></div></div></div>
+          <div class="wa-bar-btns">
+            <button class="btn btn-sm" type="button" onclick="waNewChat()">＋ New chat</button>
+            <button class="btn btn-sm" type="button" onclick="waOpenDrawer()">⚙ Auto-reply &amp; quick replies</button>
           </div>
-          <details id="waAutoBox" style="margin-top:4px;">
-            <summary style="display:none;">Automatic reply</summary>
-            <div style="display:grid; gap:12px; margin-top:12px;">
-              <label style="display:flex; gap:8px; align-items:center; font-weight:600; font-size:13.5px;"><input type="checkbox" id="waAutoOn" /> Send an automatic reply when someone messages us</label>
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;" class="rsp-cols-2">
-                <div class="form-group"><label for="waDefMode">New chats are</label>
-                  <select id="waDefMode" class="form-control"><option value="auto">Automatic (auto-reply answers first)</option><option value="manual">Manual (only the team replies)</option></select></div>
-                <div class="form-group"><label for="waCool">Reply to the same person at most every (hours)</label><input id="waCool" type="number" min="1" max="168" class="form-control" /></div>
-              </div>
-              <div class="form-group"><label for="waAutoMsg">Automatic reply text <span style="font-weight:400; color:var(--text-muted);">({name} becomes their WhatsApp name)</span></label><textarea id="waAutoMsg" class="form-control" rows="3" maxlength="1000"></textarea></div>
-              <div><button class="btn btn-primary btn-sm" type="button" onclick="waSaveAuto()">Save automatic reply</button></div>
-            </div>
-          </details>
         </div>
-        <div class="wa-wrap" id="waWrap">
-          <div class="wa-list">
-            <div class="wa-list-head"><input id="waQ" type="search" class="form-control" placeholder="🔍 Search name, number, message…" oninput="waRenderList()" /></div>
-            <div class="wa-items" id="waItems"><div class="wa-empty">Loading…</div></div>
-          </div>
-          <div class="wa-thread">
-            <div class="wa-thead" id="waHead"><div style="color:var(--text-muted); font-size:13px;">Pick a chat</div></div>
-            <div class="wa-msgs" id="waMsgs"><div class="wa-empty">Select a chat on the left to read and reply.</div></div>
-            <div class="wa-comp" id="waComp" style="display:none;">
-              <textarea id="waText" rows="1" placeholder="Type a reply…" maxlength="2000" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();waSend();}"></textarea>
-              <button class="btn btn-primary" type="button" id="waSendBtn" onclick="waSend()">Send</button>
+
+        <div class="wa-app no-info" id="waApp">
+          <div class="wa-col wa-list">
+            <div class="wa-lhead">
+              <div class="wa-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="waQ" type="search" placeholder="Search name, number or message" oninput="waRenderList()" /></div>
+              <div class="wa-tabs" id="waTabs"></div>
             </div>
+            <div class="wa-items" id="waItems"><div class="wa-empty">Loading chats…</div></div>
+          </div>
+
+          <div class="wa-col wa-thread">
+            <div class="wa-th" id="waHead" style="display:none;"></div>
+            <div class="wa-msgs" id="waMsgs">
+              <div class="wa-empty"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg>
+                <div style="font-weight:700; font-size:16px; color:var(--text); margin-bottom:4px;">Pets24x7 WhatsApp</div>Pick a chat to read and reply. New messages appear here by themselves.</div>
+            </div>
+            <div class="wa-foot" id="waFoot" style="display:none;">
+              <div class="wa-qr-row" id="waQuick"></div>
+              <div class="wa-comp">
+                <textarea id="waText" rows="1" placeholder="Type a message" maxlength="2000" oninput="waGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();waSend();}"></textarea>
+                <button class="wa-send" type="button" id="waSendBtn" onclick="waSend()" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 21l19-9-19-9 2.3 7.5L14 12l-9.2 1.5z"/></svg></button>
+              </div>
+              <div class="wa-hint" id="waHint"></div>
+            </div>
+          </div>
+
+          <aside class="wa-info" id="waInfo"></aside>
+        </div>
+
+        <div class="wa-drawer-back" id="waDrawerBack" onclick="waCloseDrawer()"></div>
+        <div class="wa-drawer" id="waDrawer" role="dialog" aria-label="Auto-reply and quick replies">
+          <header><div><div style="font-weight:800; font-size:16px;">Auto-reply &amp; quick replies</div><div style="font-size:12.5px; color:var(--text-muted);">How the inbox answers when nobody is at the desk.</div></div><button class="wa-icon-btn" type="button" onclick="waCloseDrawer()" aria-label="Close">✕</button></header>
+          <div class="body">
+            <label class="wa-switch"><input type="checkbox" id="waAutoOn" /> Send an automatic reply to new messages</label>
+            <div class="form-group"><label for="waDefMode">New chats start as</label>
+              <select id="waDefMode" class="form-control"><option value="auto">Automatic: the auto-reply answers, then the team</option><option value="manual">Manual: only the team replies</option></select></div>
+            <div class="form-group"><label for="waCool">Send it to the same person at most once every</label>
+              <select id="waCool" class="form-control"><option value="4">4 hours</option><option value="12">12 hours</option><option value="24">24 hours</option><option value="72">3 days</option><option value="168">7 days</option></select></div>
+            <div class="form-group"><label for="waAutoMsg">Automatic reply <span style="font-weight:400; color:var(--text-muted);">· {name} becomes their first name</span></label>
+              <textarea id="waAutoMsg" class="form-control" rows="4" maxlength="1000" oninput="waPreview()"></textarea></div>
+            <div class="wa-preview"><div style="font-size:11px; font-weight:700; color:#54656F; margin-bottom:6px;">PREVIEW</div><div class="wa-b out first" id="waPrev"></div></div>
+            <div class="form-group"><label for="waQuickEdit">Quick replies <span style="font-weight:400; color:var(--text-muted);">· one per line, up to 12; tap one above the reply box to use it</span></label>
+              <textarea id="waQuickEdit" class="form-control" rows="9"></textarea></div>
+            <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">The auto-reply only answers someone who wrote first, never starts a chat, and never answers old messages imported from the phone. Chats set to Manual never get it.</div>
+            <div><button class="btn btn-primary" type="button" onclick="waSaveAuto()">Save</button></div>
           </div>
         </div>
       </section>
@@ -6939,136 +7024,274 @@
 
 
   // ---- WhatsApp inbox ----
-  var waChats = [], waOpen = null, waTimer = null, waLastSig = '';
-  function waAgo(d) {
-    var t = new Date(d), now = new Date();
-    if (t.toDateString() === now.toDateString()) return t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  var waChats = [], waOpen = null, waTimer = null, waLastSig = '', waFilter = 'all', waSettings = null, waProvider = null, waThread = null, waPending = [];
+  var WA_COLORS = ['#0EA5E9', '#8B5CF6', '#EC4899', '#F97316', '#14B8A6', '#6366F1', '#EF4444', '#84CC16', '#06B6D4', '#D946EF'];
+  function waColor(id) { var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return WA_COLORS[h % WA_COLORS.length]; }
+  function waName(c) { return c.name || (c.who ? c.who.replace(/^(Pet parent|Business) · /, '') : '') || waNum(c.phone); }
+  function waNum(p) { return /^lid:/.test(p) ? 'Hidden number' : p; }
+  function waInit(c) {
+    var n = c.name || (c.who ? c.who.replace(/^(Pet parent|Business) · /, '') : '');
+    if (!n) return '#';
+    var w = n.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/);
+    return ((w[0] || '')[0] || '#').toUpperCase() + ((w[1] || '')[0] || '').toUpperCase();
+  }
+  function waAv(c, lg) { return '<span class="wa-av' + (lg ? ' lg' : '') + '" style="background:' + waColor(c.phone) + '">' + escH(waInit(c)) + '</span>'; }
+  function waWhen(d) {
+    var t = new Date(d), now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+    if (t.toDateString() === now.toDateString()) return t.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    if (t.toDateString() === y.toDateString()) return 'Yesterday';
+    if (now - t < 6 * 864e5) return t.toLocaleDateString('en-IN', { weekday: 'short' });
     return t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   }
-  function waInitials(c) { var s = (c.name || c.who || '').replace(/^(Pet parent|Business) · /, '').trim(); return s ? s.split(/\s+/).slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase() : '#'; }
-  function waTitle(c) { return c.name || (c.who ? c.who.replace(/^(Pet parent|Business) · /, '') : '') || c.phone; }
+  function waDayLabel(d) {
+    var t = new Date(d), now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+    if (t.toDateString() === now.toDateString()) return 'Today';
+    if (t.toDateString() === y.toDateString()) return 'Yesterday';
+    return t.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: t.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+  }
+  window.waGrow = function(t) { t.style.height = 'auto'; t.style.height = Math.min(160, t.scrollHeight) + 'px'; };
+
+  function waRenderTabs() {
+    var n = { all: waChats.length, unread: 0, auto: 0, manual: 0 };
+    waChats.forEach(function(c) { if (c.unread) n.unread++; n[c.effectiveMode === 'manual' ? 'manual' : 'auto']++; });
+    document.getElementById('waTabs').innerHTML = [['all', 'All'], ['unread', 'Unread'], ['auto', 'Automatic'], ['manual', 'Manual']].map(function(t) {
+      return '<button type="button" class="wa-tab' + (waFilter === t[0] ? ' on' : '') + '" onclick="waSetFilter(\'' + t[0] + '\')">' + t[1] + '<b>' + n[t[0]] + '</b></button>';
+    }).join('');
+  }
+  window.waSetFilter = function(f) { waFilter = f; waRenderList(); };
   window.waRenderList = function() {
+    waRenderTabs();
     var q = ((document.getElementById('waQ') || {}).value || '').toLowerCase().trim();
-    var list = waChats.filter(function(c) { return !q || [c.phone, c.name, c.who, c.lastText].some(function(x) { return String(x || '').toLowerCase().indexOf(q) >= 0; }); });
+    var list = waChats.filter(function(c) {
+      if (waFilter === 'unread' && !c.unread) return false;
+      if (waFilter === 'auto' && c.effectiveMode === 'manual') return false;
+      if (waFilter === 'manual' && c.effectiveMode !== 'manual') return false;
+      return !q || [c.phone, c.name, c.who, c.lastText].some(function(x) { return String(x || '').toLowerCase().indexOf(q) >= 0; });
+    });
     var box = document.getElementById('waItems');
-    if (!list.length) { box.innerHTML = '<div class="wa-empty">' + (waChats.length ? 'No chat matches.' : 'No chats yet. Messages people send to your WhatsApp number appear here.') + '</div>'; return; }
+    if (!list.length) {
+      box.innerHTML = '<div class="wa-empty">' + (waChats.length ? 'No chats match.' : '<div style="font-weight:700; color:var(--text); margin-bottom:6px;">No chats yet</div>When someone messages your WhatsApp number it shows up here. Chats already on the phone come in when the number is linked.') + '</div>';
+      return;
+    }
     box.innerHTML = list.map(function(c) {
-      var mode = c.effectiveMode === 'manual' ? '<span class="wa-chip manual">Manual</span>' : '<span class="wa-chip auto">Auto</span>';
-      return '<button type="button" class="wa-item' + (waOpen === c.phone ? ' on' : '') + '" onclick="waOpenChat(\'' + escH(c.phone) + '\')">' +
-        '<span class="wa-av">' + escH(waInitials(c)) + '</span><span class="wa-meta">' +
-        '<span class="wa-top"><span class="wa-name">' + escH(waTitle(c)) + '</span><span class="wa-time">' + escH(waAgo(c.lastAt)) + '</span></span>' +
-        '<span class="wa-top"><span class="wa-last">' + (c.lastDirection === 'OUTBOUND' ? '✓ ' : '') + escH(c.lastText || '') + '</span>' + (c.unread ? '<span class="wa-unread">' + c.unread + '</span>' : '') + '</span>' +
-        '<span class="wa-sub">' + mode + '<span>' + escH(c.phone) + '</span>' + (c.who ? '<span>· ' + escH(c.who.split(' · ')[0]) + '</span>' : '') + '</span>' +
-        '</span></button>';
+      var tick = c.lastDirection !== 'OUTBOUND' ? '' : c.lastStatus === 'failed' ? '<span style="color:#DC2626; font-weight:700;">Not sent:</span> ' : '<span style="color:#53BDEB;">✓✓</span> ';
+      return '<button type="button" class="wa-item' + (waOpen === c.phone ? ' on' : '') + (c.unread ? ' unread' : '') + '" onclick="waOpenChat(\'' + escH(c.phone) + '\')">' + waAv(c) +
+        '<span class="wa-m"><span class="wa-row"><span class="wa-nm">' + escH(waName(c)) + '</span><span class="wa-tm">' + escH(waWhen(c.lastAt)) + '</span></span>' +
+        '<span class="wa-row"><span class="wa-pv">' + tick + escH(c.lastText || '') + '</span>' +
+        (c.unread ? '<span class="wa-ub">' + c.unread + '</span>' : '<span class="wa-mdot ' + (c.effectiveMode === 'manual' ? 'manual">Manual' : 'auto">Auto') + '</span>') + '</span></span></button>';
     }).join('');
   };
-  function waBadge(n) {
-    var b = document.getElementById('waNavBadge');
-    if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; }
+  function waBadge(n) { var b = document.getElementById('waNavBadge'); if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; } }
+  function waRenderConn(r) {
+    var l = r.linked || {}, dot = document.getElementById('waDot'), t = document.getElementById('waConnText'), u = document.getElementById('waUsage');
+    if (!dot) return;
+    if (r.provider === 'baileys' && l.state === 'open') {
+      dot.className = 'wa-dot ok';
+      t.textContent = 'Connected · ' + (l.number || 'linked number');
+      u.textContent = (l.usage ? l.usage.lastHour + ' of ' + l.limits.perHour + ' messages this hour · ' + l.usage.last24h + ' of ' + l.limits.perDay + ' today · ' : '') + 'Auto-reply ' + (r.settings.autoReply ? 'on' : 'off');
+    } else if (r.provider === 'meta') {
+      dot.className = 'wa-dot ok'; t.textContent = 'Sending with the Meta WhatsApp API'; u.textContent = 'Free replies allowed within 24 hours of their last message';
+    } else {
+      dot.className = 'wa-dot warn';
+      t.innerHTML = (l.state === 'connecting' ? 'Reconnecting to WhatsApp…' : l.state === 'qr' ? 'Waiting for the QR code to be scanned' : 'No WhatsApp number linked') +
+        ' · <a href="#" onclick="document.querySelector(\'[data-view=settings]\').click();return false;">Open Settings</a>';
+      u.textContent = l.error || 'Chats are shown, but replies cannot be sent until a number is connected.';
+    }
   }
   function waLoadList() {
     return api.adminWaChats().then(function(r) {
-      waChats = r.chats || [];
+      waChats = r.chats || []; waSettings = r.settings; waProvider = r.provider;
       waBadge(r.unreadTotal || 0);
-      var s = document.getElementById('waSender');
-      if (s) s.innerHTML = r.provider
-        ? '<span class="status-tag tag-active">Sending with: ' + (r.provider === 'baileys' ? 'linked number' : 'Meta API') + '</span> Automatic reply is <strong>' + (r.settings.autoReply ? 'on' : 'off') + '</strong>; new chats are <strong>' + (r.settings.defaultMode === 'manual' ? 'manual' : 'automatic') + '</strong>.'
-        : '<span class="status-tag tag-pending">No sender</span> Link a WhatsApp number in <a href="#" onclick="document.querySelector(\'[data-view=settings]\').click();return false;">Settings</a> to receive and answer chats here.';
+      waRenderConn(r);
       waRenderList();
+      waRenderQuick();
     });
   }
-  function waRenderThread(r, keepScroll) {
-    var c = r.chat, box = document.getElementById('waMsgs');
-    var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    var mode = c.mode || 'default';
-    document.getElementById('waHead').innerHTML =
-      '<div style="display:flex; gap:10px; align-items:center; min-width:0;"><button class="btn btn-sm wa-back" type="button" onclick="waCloseChat()">←</button><span class="wa-av">' + escH(waInitials(c)) + '</span>' +
-      '<div style="min-width:0;"><div style="font-weight:700;">' + escH(waTitle(c)) + '</div><div style="font-size:12px; color:var(--text-muted);">' + escH(c.phone) + (c.who ? ' · ' + escH(c.who) : '') + '</div></div></div>' +
-      '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><span style="font-size:12px; color:var(--text-muted);">Replies:</span><span class="wa-seg">' +
-      [['auto', 'Automatic'], ['manual', 'Manual'], ['default', 'Default']].map(function(o) {
-        var label = o[1];
-        return '<button type="button" class="' + (mode === o[0] ? 'on' : '') + '" title="' + (o[0] === 'auto' ? 'The auto-reply answers their next message, then you take over' : o[0] === 'manual' ? 'Only the team replies to this chat' : 'Follow the inbox default') + '" onclick="waSetMode(\'' + o[0] + '\')">' + label + '</button>';
-      }).join('') + '</span></div>';
-    var sig = r.messages.length + ':' + (r.messages.length ? r.messages[r.messages.length - 1].id : '');
-    if (keepScroll && sig === waLastSig) return;
+  function waRenderQuick() {
+    var box = document.getElementById('waQuick');
+    if (!box || !waSettings) return;
+    var q = waSettings.quickReplies || [];
+    box.innerHTML = q.map(function(x, i) { return '<button type="button" class="wa-qr" title="' + escH(x) + '" onclick="waUseQuick(' + i + ')">' + escH(x) + '</button>'; }).join('');
+    box.style.display = q.length ? 'flex' : 'none';
+  }
+  window.waUseQuick = function(i) {
+    var t = document.getElementById('waText'), x = (waSettings.quickReplies || [])[i] || '';
+    t.value = t.value ? t.value.replace(/\s*$/, ' ') + x : x; waGrow(t); t.focus();
+  };
+
+  function waRenderHead(c) {
+    var h = document.getElementById('waHead');
+    h.style.display = 'flex';
+    h.innerHTML = '<button class="wa-icon-btn wa-back" type="button" onclick="waCloseChat()" aria-label="Back">←</button>' + waAv(c) +
+      '<div class="wa-m" onclick="waToggleInfo()"><div class="wa-nm">' + escH(waName(c)) + '</div><div class="wa-sub2">' + escH(waNum(c.phone)) + (c.who ? ' · ' + escH(c.who) : '') + '</div></div>' +
+      '<span class="wa-mdot ' + (c.effectiveMode === 'manual' ? 'manual">Manual' : 'auto">Automatic') + '</span>' +
+      '<button class="wa-icon-btn" type="button" onclick="waToggleInfo()" aria-label="Chat details" title="Chat details"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>';
+  }
+  function waRenderInfo(c, msgs) {
+    var mode = c.mode || 'default', first = msgs.length ? msgs[0].createdAt : null;
+    var ins = msgs.filter(function(m) { return m.direction === 'INBOUND'; }).length;
+    var num = /^lid:/.test(c.phone) ? '' : c.phone.replace(/\D/g, '');
+    document.getElementById('waInfo').innerHTML =
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin:-6px -4px 8px;"><span style="font-weight:700; font-size:13px; color:var(--text-muted);">Chat details</span><button class="wa-icon-btn" type="button" onclick="waToggleInfo()" aria-label="Close details">✕</button></div>' +
+      '<div style="text-align:center;">' + waAv(c, true) + '<div style="font-weight:800; font-size:16px; margin-top:10px;">' + escH(waName(c)) + '</div>' +
+      '<div style="font-size:13px; color:var(--text-muted);">' + escH(waNum(c.phone)) + '</div>' + (c.who ? '<div style="font-size:12.5px; margin-top:4px;">' + escH(c.who) + '</div>' : '') + '</div>' +
+      '<h4>Who replies</h4><div class="wa-seg">' +
+      [['auto', 'Automatic', 'Auto-reply answers their next message, then you'], ['manual', 'Manual', 'Only your team replies'], ['default', 'Inbox default', 'Currently ' + (waSettings && waSettings.defaultMode === 'manual' ? 'manual' : 'automatic')]].map(function(o) {
+        return '<button type="button" class="' + (mode === o[0] ? 'on' : '') + '" onclick="waSetMode(\'' + o[0] + '\')"><b>' + o[1] + '</b><span>' + o[2] + '</span></button>';
+      }).join('') + '</div>' +
+      '<h4>Conversation</h4><div class="wa-kv"><span>Messages</span><span>' + msgs.length + ' (' + ins + ' from them)</span>' +
+      (first ? '<span>Since</span><span>' + escH(new Date(first).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) + '</span>' : '') +
+      (c.lastInboundAt ? '<span>Last from them</span><span>' + escH(waWhen(c.lastInboundAt)) + '</span>' : '') + '</div>' +
+      (num ? '<h4>Actions</h4><div style="display:grid; gap:8px;"><button class="btn btn-sm" type="button" onclick="navigator.clipboard.writeText(\'+' + num + '\').then(function(){toast(\'Number copied\')})">Copy number</button>' +
+        '<a class="btn btn-sm" href="tel:+' + num + '">Call</a></div>' : '');
+  }
+  window.waToggleInfo = function() {
+    var app = document.getElementById('waApp');
+    if (window.innerWidth > 1280) app.classList.toggle('no-info'); else app.classList.toggle('show-info');
+  };
+
+  function waBubbleHtml(m, prevDir) {
+    var t = m.type || '', tag = /auto$/.test(t) ? 'Auto-reply' : /otp$/.test(t) ? 'Code' : /^phone/.test(t) ? 'From phone' : /notice$/.test(t) ? 'Notice' : '';
+    var failed = m.status === 'failed', out = m.direction !== 'INBOUND';
+    var ticks = out ? (m.pending ? ' 🕓' : failed ? '' : ' <span style="color:#53BDEB;">✓✓</span>') : '';
+    return '<div class="wa-b ' + (out ? 'out' : 'in') + (prevDir !== m.direction ? ' first' : '') + (m.pending ? ' pending' : '') + (failed ? ' failed' : '') + '">' +
+      (tag ? '<span class="wa-tag">' + tag + '</span>' : '') + escH(m.body || '') +
+      '<span class="wa-meta">' + escH(new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })) + ticks +
+      (failed ? ' · not sent<button type="button" class="wa-retry" data-body="' + escH(m.body || '') + '" onclick="waRetry(this)">Retry</button>' : '') + '</span></div>';
+  }
+  function waRenderMsgs(force) {
+    var r = waThread, box = document.getElementById('waMsgs');
+    if (!r) return;
+    var all = r.messages.concat(waPending.filter(function(p) { return p.phone === r.chat.phone; }));
+    var sig = all.length + ':' + (all.length ? (all[all.length - 1].id || '') + all[all.length - 1].status : '');
+    if (!force && sig === waLastSig) return;
+    var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
     waLastSig = sig;
-    var day = '', html = '';
-    r.messages.forEach(function(m) {
+    var day = '', prev = '', html = '';
+    all.forEach(function(m) {
       var d = new Date(m.createdAt).toDateString();
-      if (d !== day) { day = d; html += '<div class="wa-day">' + escH(new Date(m.createdAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })) + '</div>'; }
-      var tag = /auto$/.test(m.type || '') ? 'auto-reply · ' : /otp$/.test(m.type || '') ? 'code · ' : /^phone/.test(m.type || '') ? 'from phone · ' : /notice$/.test(m.type || '') ? 'notice · ' : '';
-      var fail = m.status === 'failed' ? ' <span style="color:#DC2626;">not sent</span>' : '';
-      html += '<div class="wa-b ' + (m.direction === 'INBOUND' ? 'in' : 'out') + '">' + escH(m.body || '') +
-        '<span class="t">' + tag + escH(new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })) + (m.direction === 'OUTBOUND' ? ' ✓' : '') + fail + '</span></div>';
+      if (d !== day) { day = d; prev = ''; html += '<div class="wa-day">' + escH(waDayLabel(m.createdAt)) + '</div>'; }
+      html += waBubbleHtml(m, prev); prev = m.direction;
     });
-    box.innerHTML = html || '<div class="wa-empty">No messages yet.</div>';
-    if (!keepScroll || nearBottom) box.scrollTop = box.scrollHeight;
-    var comp = document.getElementById('waComp');
-    comp.style.display = 'flex';
-    var old = r.provider === 'meta' && (!c.lastInboundAt || Date.now() - new Date(c.lastInboundAt).getTime() > 24 * 3600 * 1000);
-    document.getElementById('waText').placeholder = !r.provider ? 'Link a WhatsApp number in Settings to reply' : old ? 'Meta allows free replies only within 24 hours of their last message' : 'Type a reply… (Enter sends, Shift+Enter for a new line)';
+    if (!all.length) html = '<div class="wa-note">No messages yet. Messaging someone who never wrote to you raises the chance WhatsApp restricts your number, so keep it to people who expect to hear from Pets24x7.</div>';
+    box.innerHTML = html;
+    if (force || nearBottom) box.scrollTop = box.scrollHeight;
+  }
+  function waRenderFoot(r) {
+    var c = r.chat, foot = document.getElementById('waFoot'), hint = document.getElementById('waHint'), btn = document.getElementById('waSendBtn'), ta = document.getElementById('waText');
+    foot.style.display = 'block';
+    var lid = /^lid:/.test(c.phone);
+    var metaOld = r.provider === 'meta' && (!c.lastInboundAt || Date.now() - new Date(c.lastInboundAt).getTime() > 864e5);
+    var can = !!r.provider && !(lid && r.provider !== 'baileys');
+    btn.disabled = !can; ta.disabled = !can;
+    ta.placeholder = can ? 'Type a message' : 'Replies are off';
+    hint.textContent = !r.provider ? 'Link a WhatsApp number in Settings to reply.' : metaOld ? 'Meta only delivers free text within 24 hours of their last message.' : 'Enter sends · Shift+Enter for a new line · ' + (c.effectiveMode === 'manual' ? 'Manual chat: no auto-reply' : 'Automatic chat: auto-reply answers when nobody has');
   }
   window.waOpenChat = function(phone, quiet) {
-    if (!quiet) { waOpen = phone; waLastSig = ''; document.getElementById('waWrap').classList.add('open'); waRenderList(); }
+    if (!quiet) {
+      waOpen = phone; waLastSig = ''; waThread = null;
+      document.getElementById('waApp').classList.add('open');
+      if (window.innerWidth > 1440 && !waThread) document.getElementById('waApp').classList.remove('no-info');
+      document.getElementById('waMsgs').innerHTML = '<div class="wa-empty">Loading…</div>';
+      waRenderList();
+    }
     return api.adminWaChat(phone).then(function(r) {
       if (waOpen !== phone) return;
-      waRenderThread(r, !!quiet);
+      waThread = r;
+      waRenderHead(r.chat); waRenderInfo(r.chat, r.messages); waRenderFoot(r); waRenderMsgs(!quiet);
+      if (!quiet) document.getElementById('waText').focus();
       var c = waChats.filter(function(x) { return x.phone === phone; })[0];
       if (c && c.unread) { c.unread = 0; waRenderList(); waBadge(waChats.reduce(function(n, x) { return n + (x.unread || 0); }, 0)); }
     }).catch(function(e) { toast(fmtErr(e), 'error'); });
   };
-  window.waCloseChat = function() { waOpen = null; document.getElementById('waWrap').classList.remove('open'); waRenderList(); };
+  window.waCloseChat = function() { waOpen = null; waThread = null; document.getElementById('waApp').classList.remove('open', 'show-info'); waRenderList(); };
+  function waDoSend(phone, text) {
+    var p = { phone: phone, direction: 'OUTBOUND', body: text, createdAt: new Date().toISOString(), pending: true, id: 'p' + Date.now() };
+    waPending.push(p); waRenderMsgs(true);
+    return api.adminWaSend(phone, text).then(function() {
+      waPending = waPending.filter(function(x) { return x !== p; });
+      return Promise.all([waOpenChat(phone, true), waLoadList()]);
+    }).catch(function(e) {
+      p.pending = false; p.status = 'failed'; waRenderMsgs(true);
+      toast(fmtErr(e), 'error');
+      setTimeout(function() { waPending = waPending.filter(function(x) { return x !== p; }); }, 15000);
+    });
+  }
   window.waSend = function() {
-    var ta = document.getElementById('waText'), text = ta.value.trim(), btn = document.getElementById('waSendBtn');
-    if (!text || !waOpen) return;
-    btn.disabled = true; btn.textContent = 'Sending…';
-    var phone = waOpen;
-    api.adminWaSend(phone, text).then(function() { ta.value = ''; return waOpenChat(phone, true); }).then(waLoadList)
-      .catch(function(e) { toast(fmtErr(e), 'error'); })
-      .then(function() { btn.disabled = false; btn.textContent = 'Send'; });
+    var ta = document.getElementById('waText'), text = ta.value.trim();
+    if (!text || !waOpen || document.getElementById('waSendBtn').disabled) return;
+    ta.value = ''; waGrow(ta);
+    waDoSend(waOpen, text);
   };
+  window.waRetry = function(el) { if (waOpen) waDoSend(waOpen, el.getAttribute('data-body') || ''); };
   window.waSetMode = function(mode) {
     if (!waOpen) return;
     var phone = waOpen;
     api.adminWaMode(phone, mode).then(function() {
-      toast(mode === 'manual' ? 'Manual: only the team replies to this chat' : mode === 'auto' ? 'Automatic: the auto-reply may answer this chat' : 'This chat follows the inbox default');
+      toast(mode === 'manual' ? 'Manual: only your team replies to this chat' : mode === 'auto' ? 'Automatic: the auto-reply may answer this chat' : 'This chat follows the inbox default');
       return Promise.all([waOpenChat(phone, true), waLoadList()]);
     }).catch(function(e) { toast(fmtErr(e), 'error'); });
   };
-  function waLoadAuto() {
-    return api.adminWaInboxSettings().then(function(r) {
+  window.waNewChat = function() {
+    uiPrompt({ title: 'New chat', body: 'WhatsApp number with country code. Only message people who expect to hear from Pets24x7.', label: 'WhatsApp number', type: 'tel', placeholder: '+91 98xxx xxxxx', confirmLabel: 'Open chat' }).then(function(v) {
+      if (!v) return;
+      var d = String(v).replace(/\D/g, '');
+      if (d.length === 10) d = '91' + d;
+      if (d.length < 11) { toast('Enter the number with its country code', 'error'); return; }
+      waOpenChat('+' + d).then(waLoadList);
+    });
+  };
+
+  window.waOpenDrawer = function() {
+    api.adminWaInboxSettings().then(function(r) {
       var s = r.settings;
       document.getElementById('waAutoOn').checked = !!s.autoReply;
       document.getElementById('waDefMode').value = s.defaultMode;
-      document.getElementById('waCool').value = s.cooldownHours;
+      var cool = document.getElementById('waCool');
+      if (![].some.call(cool.options, function(o) { return +o.value === +s.cooldownHours; })) cool.insertAdjacentHTML('beforeend', '<option value="' + s.cooldownHours + '">' + s.cooldownHours + ' hours</option>');
+      cool.value = String(s.cooldownHours);
       document.getElementById('waAutoMsg').value = s.message;
-    });
-  }
+      document.getElementById('waQuickEdit').value = (s.quickReplies || []).join('\n');
+      waPreview();
+      document.getElementById('waDrawerBack').classList.add('show');
+      document.getElementById('waDrawer').classList.add('show');
+    }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  window.waCloseDrawer = function() { document.getElementById('waDrawerBack').classList.remove('show'); document.getElementById('waDrawer').classList.remove('show'); };
+  window.waPreview = function() {
+    var m = document.getElementById('waAutoMsg').value || '';
+    document.getElementById('waPrev').innerHTML = escH(m.replace(/\{name\}/g, 'Riya')) + '<span class="wa-meta">' + new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) + '</span>';
+  };
   window.waSaveAuto = function() {
     var body = {
       autoReply: document.getElementById('waAutoOn').checked,
       defaultMode: document.getElementById('waDefMode').value,
       cooldownHours: parseInt(document.getElementById('waCool').value, 10) || 12,
       message: document.getElementById('waAutoMsg').value.trim(),
+      quickReplies: document.getElementById('waQuickEdit').value.split('\n').map(function(x) { return x.trim(); }).filter(Boolean).slice(0, 12),
     };
-    if (!body.message) { toast('Write the automatic reply text first', 'error'); return; }
-    api.adminWaInboxSettings(body).then(function() { toast('Automatic reply saved'); waLoadList(); }).catch(function(e) { toast(fmtErr(e), 'error'); });
+    if (!body.message) { toast('Write the automatic reply first', 'error'); return; }
+    api.adminWaInboxSettings(body).then(function() { toast('Saved'); waCloseDrawer(); waLoadList(); }).catch(function(e) { toast(fmtErr(e), 'error'); });
   };
   window.waInboxInit = function() {
     clearInterval(waTimer);
-    // New messages show up by themselves while this page is open.
     waTimer = setInterval(function() {
       var v = document.getElementById('view-whatsapp');
       if (!v || !v.classList.contains('active') || document.hidden) return;
       waLoadList();
       if (waOpen) waOpenChat(waOpen, true);
-    }, 6000);
-    return Promise.all([waLoadList(), waLoadAuto()]).catch(function(e) {
+    }, 5000);
+    return waLoadList().catch(function(e) {
       document.getElementById('waItems').innerHTML = '<div class="wa-empty" style="color:var(--danger);">' + escH(fmtErr(e)) + '</div>';
     });
   };
   // Unread count on the menu, even when another page is open.
   setTimeout(function() { if (api.adminWaChats) api.adminWaChats().then(function(r) { waBadge(r.unreadTotal || 0); }).catch(function() {}); }, 2500);
+  setInterval(function() {
+    var v = document.getElementById('view-whatsapp');
+    if (document.hidden || (v && v.classList.contains('active'))) return;
+    api.adminWaChats().then(function(r) { waBadge(r.unreadTotal || 0); }).catch(function() {});
+  }, 60000);
 
   // ---- Settings: WhatsApp claim codes ----
   var waPoll = null;

@@ -18,6 +18,8 @@ export interface InboxSettings {
   message: string;
   /** Hours before the same person can get the auto-reply again. */
   cooldownHours: number;
+  /** Canned answers the team can drop into a reply with one tap. */
+  quickReplies: string[];
 }
 
 const KEY = 'wa_inbox';
@@ -28,6 +30,12 @@ export const INBOX_DEFAULTS: InboxSettings = {
     'Hi {name}! Thanks for messaging Pets24x7 🐾 Our team will reply here shortly (9 am to 9 pm IST). ' +
     'Meanwhile you can find vets, groomers and boarding near you at https://pets24x7.com',
   cooldownHours: 12,
+  quickReplies: [
+    'Thanks for reaching out! Which city are you in, and what does your pet need?',
+    'We have shared your request with the business. They will contact you shortly.',
+    'You can find vets, groomers and boarding near you at https://pets24x7.com',
+    "Could you share your pet's breed and age so we can suggest the right service?",
+  ],
 };
 
 export async function getInboxSettings(): Promise<InboxSettings> {
@@ -44,14 +52,20 @@ export async function saveInboxSettings(next: InboxSettings, by: string): Promis
   return next;
 }
 
-/** Canonical chat id: + and digits. Meta sends bare digits, Baileys +digits. */
+/**
+ * Canonical chat id: "+<digits>" for a phone number (Meta sends bare digits,
+ * Baileys +digits), or "lid:<digits>" for a WhatsApp user whose number is hidden.
+ */
 export function chatId(raw: string | null | undefined): string | null {
-  const d = String(raw ?? '').replace(/\D/g, '');
+  const r = String(raw ?? '').trim();
+  if (/^lid:\d+$/.test(r)) return r;
+  const d = r.replace(/\D/g, '');
   return d.length >= 8 ? '+' + d : null;
 }
 
-/** All the spellings a number is stored under in the message log. */
+/** All the spellings a chat id is stored under in the message log. */
 export function phoneVariants(id: string): string[] {
+  if (id.startsWith('lid:')) return [id];
   const d = id.replace(/\D/g, '');
   return ['+' + d, d];
 }

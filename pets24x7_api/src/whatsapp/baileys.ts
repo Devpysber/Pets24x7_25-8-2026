@@ -63,7 +63,7 @@ export function baileysReady(): boolean {
 
 async function logRow(data: {
   waMessageId?: string | null; direction: 'INBOUND' | 'OUTBOUND'; fromNumber?: string | null; toNumber?: string | null;
-  type: string; status: string; body?: string | null; payload?: unknown;
+  type: string; status: string; body?: string | null; payload?: unknown; createdAt?: Date;
 }) {
   try {
     await prisma.waMessage.create({ data: { ...data, payload: (data.payload ?? undefined) as any } });
@@ -132,9 +132,26 @@ export function startBaileys(): Promise<void> {
     // and what the team types on the phone itself. New incoming messages may
     // get the auto-reply (see inbox.ts).
     s.ev.on('messages.upsert', ({ messages, type }) => {
-      if (type !== 'notify') return;
-      for (const m of messages) void onMessage(s, m);
+      // notify = new messages; append = ones sent from the phone or other devices
+      for (const m of messages) void onMessage(s, m, type === 'notify');
     });
+
+    // Right after linking WhatsApp sends recent chats once: import them so the
+    // inbox starts with the conversations already on the phone.
+    s.ev.on('messaging-history.set', ({ messages, contacts }) => {
+      void (async () => {
+        for (const c of contacts ?? []) await saveContactName(s, c.id, (c as any).name || c.notify || (c as any).verifiedName);
+        const since = Date.now() - HISTORY_DAYS * 86_400_000;
+        const recentMsgs = (messages ?? [])
+          .filter((m) => tsOf(m) >= since)
+          .sort((a, b) => tsOf(a) - tsOf(b))
+          .slice(-HISTORY_MAX);
+        for (const m of recentMsgs) await onMessage(s, m, false);
+        if (recentMsgs.length) logger.info({ n: recentMsgs.length }, 'baileys: chat history imported');
+      })();
+    });
+    s.ev.on('contacts.upsert', (list) => { for (const c of list) void saveContactName(s, c.id, (c as any).name || c.notify); });
+    s.ev.on('contacts.update', (list) => { for (const c of list) if (c.id) void saveContactName(s, c.id, (c as any).name || c.notify); });
   })().catch((err) => {
     starting = null; state = 'off';
     lastError = (err as Error).message;
@@ -151,34 +168,67 @@ function textOf(m: WAMessage): string | null {
       : inner.stickerMessage ? '[sticker]' : inner.locationMessage ? '[location]' : inner.contactMessage ? '[contact]' : null);
 }
 
-/** The person's phone number for a chat, even when WhatsApp hides it behind a LID. */
-async function phoneOf(s: WASocket, m: WAMessage): Promise<string | null> {
-  const jid = m.key.remoteJid ?? '';
-  const alt = (m.key as any).remoteJidAlt as string | undefined;
-  let pn: string | null = isPnUser(jid) ? jid : isPnUser(alt) ? alt! : null;
+const HISTORY_DAYS = 60;
+const HISTORY_MAX = 5000;
+
+function tsOf(m: WAMessage): number {
+  const t = Number((m.messageTimestamp as any)?.toNumber?.() ?? m.messageTimestamp ?? 0);
+  return t > 0 ? t * 1000 : Date.now();
+}
+
+/**
+ * The inbox key for a WhatsApp id: "+<digits>" for a phone number, or
+ * "lid:<digits>" when WhatsApp hides the number and we cannot map it back.
+ */
+async function keyForJid(s: WASocket, jid: string | null | undefined, alt?: string | null): Promise<string | null> {
+  if (!jid) return null;
+  let pn: string | null = isPnUser(jid) ? jid : isPnUser(alt ?? undefined) ? alt! : null;
   if (!pn && isLidUser(jid)) {
     try { pn = await (s as any).signalRepository?.lidMapping?.getPNForLID(jid); } catch { pn = null; }
   }
-  if (!pn) return null;
-  const d = pn.split('@')[0]?.split(':')[0] ?? '';
-  return /^\d{8,}$/.test(d) ? '+' + d : null;
+  if (pn) {
+    const d = pn.split('@')[0]?.split(':')[0] ?? '';
+    return /^\d{8,}$/.test(d) ? '+' + d : null;
+  }
+  if (isLidUser(jid)) {
+    const d = jid.split('@')[0]?.split(':')[0] ?? '';
+    return /^\d+$/.test(d) ? 'lid:' + d : null;
+  }
+  return null;
 }
 
-async function onMessage(s: WASocket, m: WAMessage): Promise<void> {
+async function saveContactName(s: WASocket, jid: string | undefined, name: string | null | undefined): Promise<void> {
+  if (!jid || !name || jid.endsWith('@g.us')) return;
+  const key = await keyForJid(s, jid);
+  if (!key || (me && key === '+' + me)) return;
+  await prisma.waChat.upsert({ where: { phone: key }, update: { name: name.slice(0, 120) }, create: { phone: key, name: name.slice(0, 120) } }).catch(() => {});
+}
+
+async function onMessage(s: WASocket, m: WAMessage, live: boolean): Promise<void> {
   try {
-    if (!m.message || m.key.remoteJid === 'status@broadcast' || m.key.remoteJid?.endsWith('@g.us')) return;
-    const phone = await phoneOf(s, m);
-    if (!phone) return;
+    const jid = m.key.remoteJid ?? '';
+    if (!m.message || jid === 'status@broadcast' || jid.endsWith('@g.us') || jid.endsWith('@newsletter') || jid.endsWith('@broadcast')) return;
+    const key = await keyForJid(s, jid, (m.key as any).remoteJidAlt);
+    if (!key || (me && key === '+' + me)) return;
     const text = textOf(m);
     if (!text) return; // protocol messages, reactions, receipts
+    const createdAt = new Date(tsOf(m));
     if (m.key.fromMe) {
       // Typed on the phone (messages this server sends are already logged under the same id).
-      await logRow({ waMessageId: m.key.id ?? null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: phone, type: 'phone:text', status: 'sent', body: text });
+      await logRow({ waMessageId: m.key.id ?? null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: key, type: 'phone:text', status: 'sent', body: text, createdAt });
       return;
     }
-    await logRow({ waMessageId: m.key.id ?? null, direction: 'INBOUND', fromNumber: phone, toNumber: me ? '+' + me : null, type: 'baileys:text', status: 'received', body: text });
+    await logRow({ waMessageId: m.key.id ?? null, direction: 'INBOUND', fromNumber: key, toNumber: me ? '+' + me : null, type: 'baileys:text', status: 'received', body: text, createdAt });
+    if (m.pushName) {
+      // Their WhatsApp name, unless the phone's address book already named them.
+      const chat = await prisma.waChat.findUnique({ where: { phone: key } }).catch(() => null);
+      if (!chat) await prisma.waChat.create({ data: { phone: key, name: m.pushName.slice(0, 120) } }).catch(() => {});
+      else if (!chat.name) await prisma.waChat.update({ where: { phone: key }, data: { name: m.pushName.slice(0, 120) } }).catch(() => {});
+    }
+    // Only a fresh message may get the auto-reply, never imported history.
+    if (!live || Date.now() - createdAt.getTime() > 10 * 60_000) return;
     const { handleInbound } = await import('./inbox.js');
-    await handleInbound(phone, m.pushName ?? null);
+    await handleInbound(key, m.pushName ?? null);
   } catch (err) {
     logger.debug({ err }, 'baileys: incoming message not handled');
   }
@@ -267,7 +317,8 @@ async function resolveJid(digits: string): Promise<string | null> {
  * the number is not on WhatsApp, or the link is down.
  */
 export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notice' | 'reply' | 'auto'): Promise<{ messageId: string }> {
-  const to = normalizePhone(rawPhone);
+  const isLid = rawPhone.startsWith('lid:');
+  const to = isLid ? rawPhone : normalizePhone(rawPhone);
   const digits = to.replace(/\D/g, '');
   const job = queue.then(async () => {
     if (!baileysReady()) throw new Error('The linked WhatsApp number is not connected.');
@@ -280,7 +331,7 @@ export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notic
     // Codes and notices are capped per person; replies in a conversation they started are not.
     if ((kind === 'otp' || kind === 'notice') && toHour >= env.WA_BAILEYS_PER_NUMBER_PER_HOUR) throw new WaLimitError('Too many messages to this number. Please try again later.');
 
-    const jid = await resolveJid(digits);
+    const jid = isLid ? digits + '@lid' : await resolveJid(digits);
     if (!jid) throw new Error('This number is not on WhatsApp.');
 
     // Keep a human pace between messages.
