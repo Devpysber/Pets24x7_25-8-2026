@@ -930,6 +930,8 @@ model WaChat {
   mode            String? // "auto" | "manual"; null follows the inbox default
   lastReadAt      DateTime?
   lastAutoReplyAt DateTime?
+  // A person on the team answered: the AI stays quiet in this chat until then.
+  aiPausedUntil   DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

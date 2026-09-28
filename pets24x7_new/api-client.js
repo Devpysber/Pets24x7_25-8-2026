@@ -125,6 +125,8 @@
     adminWaChat:        function (phone)                 { return req('GET',  '/api/admin/whatsapp/chats/' + encodeURIComponent(phone)); },
     adminWaSend:        function (phone, text)           { return req('POST', '/api/admin/whatsapp/chats/' + encodeURIComponent(phone) + '/send', { text: text }); },
     adminWaMode:        function (phone, mode)           { return req('POST', '/api/admin/whatsapp/chats/' + encodeURIComponent(phone) + '/mode', { mode: mode }); },
+    adminWaSuggest:     function (phone)                 { return req('POST', '/api/admin/whatsapp/chats/' + encodeURIComponent(phone) + '/suggest', {}); },
+    adminWaDelete:      function (phone)                 { return req('DELETE', '/api/admin/whatsapp/chats/' + encodeURIComponent(phone)); },
     adminWaInboxSettings: function (body)                { return body ? req('PUT', '/api/admin/whatsapp/inbox-settings', body) : req('GET', '/api/admin/whatsapp/inbox-settings'); },
     adminMailPreview:   function (templateId, data)      { return req('POST', '/api/admin/mail/preview', { templateId: templateId, data: data || {} }); },
     adminMailAudience:  function (audience)              { return req('POST', '/api/admin/mail/audience/count', { audience: audience }); },

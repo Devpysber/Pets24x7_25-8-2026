@@ -118,6 +118,7 @@ export function startBaileys(): Promise<void> {
           state = 'logged_out'; me = null; qr = null;
           lastError = 'The number was logged out. Link it again.';
           fs.rmSync(DIR, { recursive: true, force: true });
+          void purgeLinkedChats();
           logger.warn('baileys: logged out, session removed');
           return;
         }
@@ -150,6 +151,26 @@ export function startBaileys(): Promise<void> {
         if (recentMsgs.length) logger.info({ n: recentMsgs.length }, 'baileys: chat history imported');
       })();
     });
+    // Deleted on WhatsApp: a message deleted for everyone, or a whole chat
+    // deleted on the phone, goes from the inbox too.
+    s.ev.on('messages.update', (updates) => {
+      for (const u of updates) {
+        const revoked = (u.update as any)?.message === null || (u.update as any)?.messageStubType === 1;
+        if (revoked && u.key.id) void markDeleted(u.key.id);
+      }
+    });
+    s.ev.on('chats.delete', (ids) => {
+      void (async () => {
+        const { phoneVariants } = await import('./inbox.js');
+        for (const id of ids) {
+          const key = await keyForJid(s, id);
+          if (!key) continue;
+          const v = phoneVariants(key);
+          await prisma.waMessage.deleteMany({ where: { OR: [{ fromNumber: { in: v } }, { toNumber: { in: v } }] } }).catch(() => {});
+          await prisma.waChat.deleteMany({ where: { phone: key } }).catch(() => {});
+        }
+      })();
+    });
     s.ev.on('contacts.upsert', (list) => { for (const c of list) void saveContactName(s, c.id, (c as any).name || c.notify); });
     s.ev.on('contacts.update', (list) => { for (const c of list) if (c.id) void saveContactName(s, c.id, (c as any).name || c.notify); });
   })().catch((err) => {
@@ -169,6 +190,13 @@ function textOf(m: WAMessage): string | null {
 }
 
 const HISTORY_DAYS = 60;
+
+/** Ids of messages this server sent, so their echo is not mistaken for a person typing. */
+const sentByServer = new Set<string>();
+
+async function markDeleted(id: string): Promise<void> {
+  await prisma.waMessage.updateMany({ where: { waMessageId: id }, data: { body: 'This message was deleted', status: 'deleted' } }).catch(() => {});
+}
 const HISTORY_MAX = 5000;
 
 function tsOf(m: WAMessage): number {
@@ -207,6 +235,8 @@ async function saveContactName(s: WASocket, jid: string | undefined, name: strin
 async function onMessage(s: WASocket, m: WAMessage, live: boolean): Promise<void> {
   try {
     const jid = m.key.remoteJid ?? '';
+    const proto = (m.message as any)?.protocolMessage;
+    if (proto && proto.type === 0 && proto.key?.id) { await markDeleted(proto.key.id); return; } // "delete for everyone"
     if (!m.message || jid === 'status@broadcast' || jid.endsWith('@g.us') || jid.endsWith('@newsletter') || jid.endsWith('@broadcast')) return;
     const key = await keyForJid(s, jid, (m.key as any).remoteJidAlt);
     if (!key || (me && key === '+' + me)) return;
@@ -214,8 +244,17 @@ async function onMessage(s: WASocket, m: WAMessage, live: boolean): Promise<void
     if (!text) return; // protocol messages, reactions, receipts
     const createdAt = new Date(tsOf(m));
     if (m.key.fromMe) {
-      // Typed on the phone (messages this server sends are already logged under the same id).
-      await logRow({ waMessageId: m.key.id ?? null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: key, type: 'phone:text', status: 'sent', body: text, createdAt });
+      // Our own sends come back here as an echo, sometimes before the send
+      // returns; wait a moment so they are not mistaken for the phone.
+      const id = m.key.id ?? '';
+      const recentLive = live && Date.now() - createdAt.getTime() < 5 * 60_000;
+      const record = async () => {
+        if (sentByServer.has(id)) return;
+        await logRow({ waMessageId: id || null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: key, type: 'phone:text', status: 'sent', body: text, createdAt });
+        // Someone typed on the phone just now: a person is handling this chat.
+        if (recentLive) { const { pauseAi } = await import('./inbox.js'); await pauseAi(key); }
+      };
+      if (recentLive) setTimeout(() => { void record(); }, 4000); else await record();
       return;
     }
     await logRow({ waMessageId: m.key.id ?? null, direction: 'INBOUND', fromNumber: key, toNumber: me ? '+' + me : null, type: 'baileys:text', status: 'received', body: text, createdAt });
@@ -248,11 +287,66 @@ export function stopBaileys(): void {
 
 /** Log the linked device out on WhatsApp's side and forget the keys. */
 export async function unlinkBaileys(): Promise<void> {
+  // Cancelling a QR that was never scanned is not an unlink: keep the inbox.
+  const wasLinked = !!me || linkedBefore();
   stoppedByUs = true;
   try { await sock?.logout(); } catch { /* not connected */ }
   stopBaileys();
   fs.rmSync(DIR, { recursive: true, force: true });
   state = 'off'; me = null; lastError = null;
+  if (wasLinked) await purgeLinkedChats();
+}
+
+/** The saved session belongs to a number that finished linking. */
+function linkedBefore(): boolean {
+  try {
+    const creds = JSON.parse(fs.readFileSync(path.join(DIR, 'creds.json'), 'utf8'));
+    return !!creds?.me?.id;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The number is gone: its chats leave the inbox with it. Rows that only exist
+ * because of the linked number (and old notices that were never delivered)
+ * are removed; the linked-number usage caps start again from zero.
+ */
+export async function purgeLinkedChats(): Promise<void> {
+  try {
+    const gone = await prisma.waMessage.deleteMany({ where: { OR: [{ type: { startsWith: 'baileys' } }, { type: { startsWith: 'phone:' } }, { status: 'failed' }] } });
+    await prisma.waChat.deleteMany({});
+    logger.info({ messages: gone.count }, 'baileys: linked chats cleared');
+  } catch (err) {
+    logger.warn({ err }, 'baileys: could not clear chats');
+  }
+}
+
+/** WhatsApp id for an inbox key. */
+export function jidForKey(key: string): string {
+  return key.startsWith('lid:') ? key.slice(4) + '@lid' : key.replace(/\D/g, '') + '@s.whatsapp.net';
+}
+
+/**
+ * Delete a chat on the linked phone as well (best effort: WhatsApp needs the
+ * newest message's id and time to accept it).
+ */
+export async function deleteChatOnPhone(key: string): Promise<boolean> {
+  if (!sock || state !== 'open') return false;
+  const { phoneVariants } = await import('./inbox.js');
+  const last = await prisma.waMessage.findFirst({
+    where: { waMessageId: { not: null }, OR: [{ direction: 'INBOUND', fromNumber: { in: phoneVariants(key) } }, { direction: 'OUTBOUND', toNumber: { in: phoneVariants(key) } }] },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!last?.waMessageId) return false;
+  const jid = jidForKey(key);
+  try {
+    await sock.chatModify({ delete: true, lastMessages: [{ key: { remoteJid: jid, id: last.waMessageId, fromMe: last.direction === 'OUTBOUND' }, messageTimestamp: Math.floor(last.createdAt.getTime() / 1000) }] } as any, jid);
+    return true;
+  } catch (err) {
+    logger.warn({ err: String((err as Error)?.message ?? err) }, 'baileys: delete chat on phone failed');
+    return false;
+  }
 }
 
 /** Link with an 8-character code typed on the phone instead of scanning a QR. */
@@ -316,7 +410,7 @@ async function resolveJid(digits: string): Promise<string | null> {
  * with the WhatsApp message id once it is sent; rejects when a cap is hit,
  * the number is not on WhatsApp, or the link is down.
  */
-export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notice' | 'reply' | 'auto'): Promise<{ messageId: string }> {
+export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notice' | 'reply' | 'auto' | 'ai'): Promise<{ messageId: string }> {
   const isLid = rawPhone.startsWith('lid:');
   const to = isLid ? rawPhone : normalizePhone(rawPhone);
   const digits = to.replace(/\D/g, '');
@@ -347,6 +441,10 @@ export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notic
     lastSentAt = Date.now();
     recent.push(lastSentAt);
     const messageId = sent?.key?.id ?? '';
+    if (messageId) {
+      sentByServer.add(messageId);
+      if (sentByServer.size > 500) sentByServer.delete(sentByServer.values().next().value as string);
+    }
     await logRow({ waMessageId: messageId || null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: to, type: `baileys:${kind}`, status: 'sent', body: kind === 'otp' ? '(verification code)' : text });
     return { messageId };
   });

@@ -2543,6 +2543,16 @@
           .wa-b.first.out::before { content:""; position:absolute; right:-7px; top:0; border-style:solid; border-color:var(--wa-out) transparent transparent var(--wa-out); border-width:0 0 8px 8px; border-top-color:transparent; border-left-color:var(--wa-out); }
           .wa-b.pending { opacity:.65; }
           .wa-b.failed { background:#FEE2E2; }
+          .wa-b.deleted { font-style:italic; color:#667781; }
+          .wa-connect { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; display:none; gap:22px; align-items:center; flex-wrap:wrap; }
+          .wa-connect.show { display:flex; }
+          .wa-connect.show ~ .wa-app { height:calc(100vh - 500px); min-height:460px; }
+          .wa-qrbox { width:232px; height:232px; border:1px solid var(--border); border-radius:12px; padding:6px; display:flex; align-items:center; justify-content:center; background:#fff; flex:none; }
+          .wa-qrbox svg { width:100%; height:100%; }
+          .wa-steps { margin:10px 0 14px; padding-left:18px; font-size:13.5px; line-height:1.8; }
+          .wa-ai-btn { height:44px; border-radius:22px; border:1px solid #C4B5FD; background:#F5F3FF; color:#6D28D9; font-weight:700; font-size:12.5px; padding:0 14px; cursor:pointer; flex:none; white-space:nowrap; }
+          .wa-ai-btn:disabled { opacity:.5; cursor:not-allowed; }
+          .wa-danger { color:#B91C1C !important; border-color:#FECACA !important; }
           .wa-meta { float:right; margin:6px 0 -4px 12px; font-size:10.5px; color:#667781; white-space:nowrap; }
           .wa-tag { display:inline-block; font-size:10px; font-weight:700; color:#475569; background:rgba(0,0,0,.06); border-radius:4px; padding:0 5px; margin-right:4px; text-transform:uppercase; letter-spacing:.3px; }
           .wa-retry { border:0; background:none; color:#B91C1C; font-weight:700; font-size:11px; cursor:pointer; text-decoration:underline; padding:0 0 0 6px; }
@@ -2599,6 +2609,8 @@
           </div>
         </div>
 
+        <div class="wa-connect" id="waConnect"></div>
+
         <div class="wa-app no-info" id="waApp">
           <div class="wa-col wa-list">
             <div class="wa-lhead">
@@ -2618,6 +2630,7 @@
               <div class="wa-qr-row" id="waQuick"></div>
               <div class="wa-comp">
                 <textarea id="waText" rows="1" placeholder="Type a message" maxlength="2000" oninput="waGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();waSend();}"></textarea>
+                <button class="wa-ai-btn" type="button" id="waAiBtn" onclick="waSuggest()" title="Let AI write a reply for you to check and send">✨ Suggest</button>
                 <button class="wa-send" type="button" id="waSendBtn" onclick="waSend()" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 21l19-9-19-9 2.3 7.5L14 12l-9.2 1.5z"/></svg></button>
               </div>
               <div class="wa-hint" id="waHint"></div>
@@ -2641,6 +2654,17 @@
             <div class="wa-preview"><div style="font-size:11px; font-weight:700; color:#54656F; margin-bottom:6px;">PREVIEW</div><div class="wa-b out first" id="waPrev"></div></div>
             <div class="form-group"><label for="waQuickEdit">Quick replies <span style="font-weight:400; color:var(--text-muted);">· one per line, up to 12; tap one above the reply box to use it</span></label>
               <textarea id="waQuickEdit" class="form-control" rows="9"></textarea></div>
+            <div style="border-top:1px solid var(--border); padding-top:14px; display:grid; gap:12px;">
+              <div style="font-weight:800; font-size:14px;">AI replies <span id="waAiState" style="font-weight:500; font-size:12px;"></span></div>
+              <label class="wa-switch"><input type="checkbox" id="waAiOn" /> Let AI answer messages in Automatic chats</label>
+              <div class="form-group"><label for="waAiNotes">What the AI should know <span style="font-weight:400; color:var(--text-muted);">· hours, cities, offers, anything to say or avoid</span></label>
+                <textarea id="waAiNotes" class="form-control" rows="4" maxlength="3000"></textarea></div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group"><label for="waAiMax">AI messages per person a day</label><input id="waAiMax" type="number" min="1" max="30" class="form-control" /></div>
+                <div class="form-group"><label for="waAiPause">After the team replies, AI waits (hours)</label><input id="waAiPause" type="number" min="1" max="168" class="form-control" /></div>
+              </div>
+              <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">In an Automatic chat the AI answers each new message a few seconds after the person stops typing. It never makes up businesses or prices, hands payments and complaints to the team, and goes quiet when someone on the team replies (here or on the phone). If AI is off or fails, the automatic reply above goes out instead. In Manual chats, use ✨ Suggest to get a draft you can edit.</div>
+            </div>
             <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">The auto-reply only answers someone who wrote first, never starts a chat, and never answers old messages imported from the phone. Chats set to Manual never get it.</div>
             <div><button class="btn btn-primary" type="button" onclick="waSaveAuto()">Save</button></div>
           </div>
@@ -7082,20 +7106,60 @@
     }).join('');
   };
   function waBadge(n) { var b = document.getElementById('waNavBadge'); if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; } }
+  var waAi = { configured: false, enabled: false };
+  function waRenderConnect(r) {
+    var box = document.getElementById('waConnect'), l = r.linked || {};
+    if (!box) return;
+    var need = !(l.state === 'open') && r.provider !== 'meta';
+    box.classList.toggle('show', need);
+    if (!need) { box.innerHTML = ''; return; }
+    if (l.state === 'qr' && l.qrSvg) {
+      box.innerHTML = '<div class="wa-qrbox">' + l.qrSvg + '</div><div style="flex:1; min-width:240px;"><div style="font-weight:800; font-size:17px;">Scan to connect WhatsApp</div>' +
+        '<ol class="wa-steps"><li>Open WhatsApp on the phone with the number to use</li><li>Tap <b>Settings</b> (iPhone) or <b>⋮</b> (Android) → <b>Linked devices</b></li><li>Tap <b>Link a device</b> and point the camera here</li></ol>' +
+        '<div style="font-size:12.5px; color:var(--text-muted);">The code refreshes by itself. Chats from the phone come in once it connects.</div>' +
+        '<div style="margin-top:12px;"><button class="btn btn-sm" type="button" onclick="waCancelLink()">Cancel</button></div></div>';
+      return;
+    }
+    if (l.state === 'connecting') {
+      box.innerHTML = '<div style="font-weight:700;">Connecting to WhatsApp…</div><div style="font-size:13px; color:var(--text-muted);">' + escH(l.error || 'This takes a few seconds.') + '</div>';
+      return;
+    }
+    box.innerHTML = '<div style="width:64px; height:64px; border-radius:50%; background:#DCFCE7; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg></div>' +
+      '<div style="flex:1; min-width:240px;"><div style="font-weight:800; font-size:17px;">Connect your WhatsApp number</div>' +
+      '<div style="font-size:13px; color:var(--text-muted); margin:4px 0 12px;">' + escH(l.error || 'Link the number here to see its chats and reply. Use a spare number, not your main business number.') + '</div>' +
+      '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><button class="btn btn-primary btn-sm" type="button" onclick="waStartLink()">Show QR code</button>' +
+      '<span style="font-size:12.5px; color:var(--text-muted);">or</span><input id="waPairIn" type="tel" class="form-control" style="width:190px;" placeholder="+91 number to link" />' +
+      '<button class="btn btn-sm" type="button" onclick="waPairLink()">Get pairing code</button></div><div id="waPairMsg" style="font-size:13px; margin-top:8px;"></div></div>';
+  }
+  window.waStartLink = function() {
+    api.adminWhatsappLink().then(function() { toast('Getting a QR code…'); setTimeout(waLoadList, 2500); }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  window.waCancelLink = function() { api.adminWhatsappUnlink().then(waLoadList).catch(function(e) { toast(fmtErr(e), 'error'); }); };
+  window.waPairLink = function() {
+    var v = ((document.getElementById('waPairIn') || {}).value || '').trim(), out = document.getElementById('waPairMsg');
+    if (!v) { out.textContent = 'Enter the number with its country code.'; return; }
+    out.textContent = 'Asking WhatsApp…';
+    api.adminWhatsappLink(v).then(function(r) {
+      out.innerHTML = 'On that phone: WhatsApp → Linked devices → Link a device → <em>Link with phone number instead</em>, then type <b style="font-size:17px; letter-spacing:1px;">' + escH(r.pairingCode || '') + '</b>';
+    }).catch(function(e) { out.textContent = fmtErr(e); });
+  };
   function waRenderConn(r) {
     var l = r.linked || {}, dot = document.getElementById('waDot'), t = document.getElementById('waConnText'), u = document.getElementById('waUsage');
     if (!dot) return;
+    waAi = r.ai || waAi;
+    waRenderConnect(r);
     if (r.provider === 'baileys' && l.state === 'open') {
       dot.className = 'wa-dot ok';
       t.textContent = 'Connected · ' + (l.number || 'linked number');
-      u.textContent = (l.usage ? l.usage.lastHour + ' of ' + l.limits.perHour + ' messages this hour · ' + l.usage.last24h + ' of ' + l.limits.perDay + ' today · ' : '') + 'Auto-reply ' + (r.settings.autoReply ? 'on' : 'off');
+      u.textContent = (l.usage ? l.usage.lastHour + ' of ' + l.limits.perHour + ' messages this hour · ' + l.usage.last24h + ' of ' + l.limits.perDay + ' today · ' : '') + 'Auto-reply ' + (r.settings.autoReply ? 'on' : 'off') +
+        ' · AI ' + (!waAi.configured ? 'not set up' : waAi.enabled ? 'on' : 'off');
     } else if (r.provider === 'meta') {
       dot.className = 'wa-dot ok'; t.textContent = 'Sending with the Meta WhatsApp API'; u.textContent = 'Free replies allowed within 24 hours of their last message';
     } else {
       dot.className = 'wa-dot warn';
       t.innerHTML = (l.state === 'connecting' ? 'Reconnecting to WhatsApp…' : l.state === 'qr' ? 'Waiting for the QR code to be scanned' : 'No WhatsApp number linked') +
-        ' · <a href="#" onclick="document.querySelector(\'[data-view=settings]\').click();return false;">Open Settings</a>';
-      u.textContent = l.error || 'Chats are shown, but replies cannot be sent until a number is connected.';
+        '';
+      u.textContent = 'Connect the number below to see its chats and reply.';
     }
   }
   function waLoadList() {
@@ -7142,8 +7206,10 @@
       '<h4>Conversation</h4><div class="wa-kv"><span>Messages</span><span>' + msgs.length + ' (' + ins + ' from them)</span>' +
       (first ? '<span>Since</span><span>' + escH(new Date(first).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) + '</span>' : '') +
       (c.lastInboundAt ? '<span>Last from them</span><span>' + escH(waWhen(c.lastInboundAt)) + '</span>' : '') + '</div>' +
-      (num ? '<h4>Actions</h4><div style="display:grid; gap:8px;"><button class="btn btn-sm" type="button" onclick="navigator.clipboard.writeText(\'+' + num + '\').then(function(){toast(\'Number copied\')})">Copy number</button>' +
-        '<a class="btn btn-sm" href="tel:+' + num + '">Call</a></div>' : '');
+      (c.aiPausedUntil && new Date(c.aiPausedUntil) > new Date() ? '<div style="margin-top:10px; font-size:12.5px; background:#F5F3FF; color:#5B21B6; border-radius:8px; padding:8px 10px;">✨ AI is quiet in this chat until ' + escH(new Date(c.aiPausedUntil).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })) + ' because the team replied.</div>' : '') +
+      '<h4>Actions</h4><div style="display:grid; gap:8px;">' +
+      (num ? '<button class="btn btn-sm" type="button" onclick="navigator.clipboard.writeText(\'+' + num + '\').then(function(){toast(\'Number copied\')})">Copy number</button><a class="btn btn-sm" href="tel:+' + num + '">Call</a>' : '') +
+      '<button class="btn btn-sm wa-danger" type="button" onclick="waDeleteChat()">Delete chat</button></div>';
   }
   window.waToggleInfo = function() {
     var app = document.getElementById('waApp');
@@ -7151,11 +7217,12 @@
   };
 
   function waBubbleHtml(m, prevDir) {
-    var t = m.type || '', tag = /auto$/.test(t) ? 'Auto-reply' : /otp$/.test(t) ? 'Code' : /^phone/.test(t) ? 'From phone' : /notice$/.test(t) ? 'Notice' : '';
+    var t = m.type || '', tag = /:ai$/.test(t) ? '✨ AI' : /auto$/.test(t) ? 'Auto-reply' : /otp$/.test(t) ? 'Code' : /^phone/.test(t) ? 'From phone' : /notice$/.test(t) ? 'Notice' : '';
+    if (m.status === 'deleted') tag = '';
     var failed = m.status === 'failed', out = m.direction !== 'INBOUND';
     var ticks = out ? (m.pending ? ' 🕓' : failed ? '' : ' <span style="color:#53BDEB;">✓✓</span>') : '';
-    return '<div class="wa-b ' + (out ? 'out' : 'in') + (prevDir !== m.direction ? ' first' : '') + (m.pending ? ' pending' : '') + (failed ? ' failed' : '') + '">' +
-      (tag ? '<span class="wa-tag">' + tag + '</span>' : '') + escH(m.body || '') +
+    return '<div class="wa-b ' + (out ? 'out' : 'in') + (prevDir !== m.direction ? ' first' : '') + (m.pending ? ' pending' : '') + (failed ? ' failed' : '') + (m.status === 'deleted' ? ' deleted' : '') + '">' +
+      (tag ? '<span class="wa-tag">' + tag + '</span>' : '') + (m.status === 'deleted' ? '🚫 ' : '') + escH(m.body || '') +
       '<span class="wa-meta">' + escH(new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })) + ticks +
       (failed ? ' · not sent<button type="button" class="wa-retry" data-body="' + escH(m.body || '') + '" onclick="waRetry(this)">Retry</button>' : '') + '</span></div>';
   }
@@ -7184,6 +7251,9 @@
     var metaOld = r.provider === 'meta' && (!c.lastInboundAt || Date.now() - new Date(c.lastInboundAt).getTime() > 864e5);
     var can = !!r.provider && !(lid && r.provider !== 'baileys');
     btn.disabled = !can; ta.disabled = !can;
+    var ai = document.getElementById('waAiBtn');
+    ai.disabled = !can || !(r.ai && r.ai.configured);
+    ai.title = !(r.ai && r.ai.configured) ? 'AI is not set up on the server yet (ANTHROPIC_API_KEY)' : 'Let AI write a reply for you to check and send';
     ta.placeholder = can ? 'Type a message' : 'Replies are off';
     hint.textContent = !r.provider ? 'Link a WhatsApp number in Settings to reply.' : metaOld ? 'Meta only delivers free text within 24 hours of their last message.' : 'Enter sends · Shift+Enter for a new line · ' + (c.effectiveMode === 'manual' ? 'Manual chat: no auto-reply' : 'Automatic chat: auto-reply answers when nobody has');
   }
@@ -7223,6 +7293,28 @@
     ta.value = ''; waGrow(ta);
     waDoSend(waOpen, text);
   };
+  window.waSuggest = function() {
+    if (!waOpen) return;
+    var b = document.getElementById('waAiBtn'), ta = document.getElementById('waText'), phone = waOpen;
+    b.disabled = true; b.textContent = '✨ Writing…';
+    api.adminWaSuggest(phone).then(function(r) {
+      if (waOpen !== phone) return;
+      if (!r.text) { toast('Nothing needs saying here right now'); return; }
+      ta.value = r.text; waGrow(ta); ta.focus();
+    }).catch(function(e) { toast(fmtErr(e), 'error'); })
+      .then(function() { b.disabled = false; b.textContent = '✨ Suggest'; });
+  };
+  window.waDeleteChat = function() {
+    if (!waOpen) return;
+    var phone = waOpen;
+    uiConfirm({ title: 'Delete this chat?', body: 'All its messages are removed here, and the chat is deleted on the linked phone too. This cannot be undone.', confirmLabel: 'Delete chat', danger: true }).then(function(ok) {
+      if (!ok) return;
+      api.adminWaDelete(phone).then(function(r) {
+        toast(r.onPhone ? 'Chat deleted here and on the phone' : 'Chat deleted here');
+        waCloseChat(); waLoadList();
+      }).catch(function(e) { toast(fmtErr(e), 'error'); });
+    });
+  };
   window.waRetry = function(el) { if (waOpen) waDoSend(waOpen, el.getAttribute('data-body') || ''); };
   window.waSetMode = function(mode) {
     if (!waOpen) return;
@@ -7252,6 +7344,11 @@
       cool.value = String(s.cooldownHours);
       document.getElementById('waAutoMsg').value = s.message;
       document.getElementById('waQuickEdit').value = (s.quickReplies || []).join('\n');
+      document.getElementById('waAiOn').checked = !!s.aiEnabled;
+      document.getElementById('waAiNotes').value = s.aiInstructions || '';
+      document.getElementById('waAiMax').value = s.aiMaxPerChatPerDay || 8;
+      document.getElementById('waAiPause').value = s.aiPauseHours || 12;
+      document.getElementById('waAiState').innerHTML = r.aiConfigured ? '<span class="status-tag tag-active">Ready</span>' : '<span class="status-tag tag-pending">Needs ANTHROPIC_API_KEY on the server</span>';
       waPreview();
       document.getElementById('waDrawerBack').classList.add('show');
       document.getElementById('waDrawer').classList.add('show');
@@ -7269,6 +7366,10 @@
       cooldownHours: parseInt(document.getElementById('waCool').value, 10) || 12,
       message: document.getElementById('waAutoMsg').value.trim(),
       quickReplies: document.getElementById('waQuickEdit').value.split('\n').map(function(x) { return x.trim(); }).filter(Boolean).slice(0, 12),
+      aiEnabled: document.getElementById('waAiOn').checked,
+      aiInstructions: document.getElementById('waAiNotes').value.trim(),
+      aiMaxPerChatPerDay: parseInt(document.getElementById('waAiMax').value, 10) || 8,
+      aiPauseHours: parseInt(document.getElementById('waAiPause').value, 10) || 12,
     };
     if (!body.message) { toast('Write the automatic reply first', 'error'); return; }
     api.adminWaInboxSettings(body).then(function() { toast('Saved'); waCloseDrawer(); waLoadList(); }).catch(function(e) { toast(fmtErr(e), 'error'); });

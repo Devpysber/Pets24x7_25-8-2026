@@ -5,6 +5,8 @@
 //   GET  /api/admin/whatsapp/chats/:phone          one conversation; marks it read
 //   POST /api/admin/whatsapp/chats/:phone/send     { text } → reply from the active sender
 //   POST /api/admin/whatsapp/chats/:phone/mode     { mode: auto | manual | default }
+//   POST /api/admin/whatsapp/chats/:phone/suggest  AI draft for the reply box (not sent)
+//   DELETE /api/admin/whatsapp/chats/:phone        delete the chat here and on the linked phone
 //   GET  /api/admin/whatsapp/inbox-settings        auto-reply settings
 //   PUT  /api/admin/whatsapp/inbox-settings        { autoReply, defaultMode, message, cooldownHours }
 
@@ -18,7 +20,9 @@ import { BadRequestError } from '../shared/errors.js';
 import { whatsappProvider } from '../whatsapp/cloud-api.js';
 import { chatId, getInboxSettings, INBOX_DEFAULTS, phoneVariants, saveInboxSettings } from '../whatsapp/inbox.js';
 import { sendReply } from '../whatsapp/reply.js';
-import { linkStatus } from '../whatsapp/baileys.js';
+import { deleteChatOnPhone, linkStatus } from '../whatsapp/baileys.js';
+import { aiConfigured } from '../ai/claude.js';
+import { draftReply } from '../whatsapp/ai-reply.js';
 
 export const adminWaInboxRouter = Router();
 adminWaInboxRouter.use('/whatsapp', requireAuth('admin'));
@@ -86,7 +90,8 @@ adminWaInboxRouter.get(
       chats: out.slice(0, 300),
       settings,
       provider: whatsappProvider(),
-      linked: { state: l.state, number: l.linkedNumber, usage: l.usage, limits: l.limits, error: l.error },
+      linked: { state: l.state, number: l.linkedNumber, usage: l.usage, limits: l.limits, error: l.error, qrSvg: l.qrSvg },
+      ai: { configured: aiConfigured(), enabled: settings.aiEnabled },
       unreadTotal: out.reduce((n, r) => n + r.unread, 0),
     });
   }),
@@ -113,7 +118,8 @@ adminWaInboxRouter.get(
     const lastIn = messages.find((m) => m.direction === 'INBOUND')?.createdAt ?? null;
     res.json({
       ok: true,
-      chat: { phone: id, name: chat.name, mode: chat.mode, effectiveMode: chat.mode ?? settings.defaultMode, who: who.get(id) ?? null, lastInboundAt: lastIn },
+      chat: { phone: id, name: chat.name, mode: chat.mode, effectiveMode: chat.mode ?? settings.defaultMode, who: who.get(id) ?? null, lastInboundAt: lastIn, aiPausedUntil: chat.aiPausedUntil },
+      ai: { configured: aiConfigured(), enabled: settings.aiEnabled },
       messages: messages.reverse(),
       provider: whatsappProvider(),
     });
@@ -150,10 +156,40 @@ adminWaInboxRouter.post(
   }),
 );
 
+adminWaInboxRouter.post(
+  '/whatsapp/chats/:phone/suggest',
+  asyncHandler(async (req, res) => {
+    const id = chatId(String(req.params.phone));
+    if (!id) throw new BadRequestError('Not a phone number');
+    if (!aiConfigured()) throw new BadRequestError('AI is not set up. Add ANTHROPIC_API_KEY to the server .env; until then use the quick replies.');
+    const [s, chat] = await Promise.all([getInboxSettings(), prisma.waChat.findUnique({ where: { phone: id } })]);
+    try {
+      const text = await draftReply(id, { instructions: s.aiInstructions, name: chat?.name ?? null, forceAnswer: true });
+      res.json({ ok: true, text: text ?? '' });
+    } catch (err) {
+      throw new BadRequestError('The AI could not write a reply right now: ' + (err as Error).message);
+    }
+  }),
+);
+
+adminWaInboxRouter.delete(
+  '/whatsapp/chats/:phone',
+  asyncHandler(async (req, res) => {
+    const id = chatId(String(req.params.phone));
+    if (!id) throw new BadRequestError('Not a phone number');
+    const onPhone = await deleteChatOnPhone(id);
+    const v = phoneVariants(id);
+    const gone = await prisma.waMessage.deleteMany({ where: { OR: [{ fromNumber: { in: v } }, { toNumber: { in: v } }] } });
+    await prisma.waChat.deleteMany({ where: { phone: id } });
+    await audit(req, 'whatsapp.chat_delete', { phone: id, messages: gone.count, onPhone });
+    res.json({ ok: true, deleted: gone.count, onPhone });
+  }),
+);
+
 adminWaInboxRouter.get(
   '/whatsapp/inbox-settings',
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true, settings: await getInboxSettings(), defaults: INBOX_DEFAULTS });
+    res.json({ ok: true, settings: await getInboxSettings(), defaults: INBOX_DEFAULTS, aiConfigured: aiConfigured() });
   }),
 );
 
@@ -167,10 +203,14 @@ adminWaInboxRouter.put(
         message: z.string().trim().min(1).max(1000),
         cooldownHours: z.coerce.number().int().min(1).max(168),
         quickReplies: z.array(z.string().trim().min(1).max(500)).max(12).default([]),
+        aiEnabled: z.boolean().default(true),
+        aiInstructions: z.string().max(3000).default(''),
+        aiMaxPerChatPerDay: z.coerce.number().int().min(1).max(30).default(8),
+        aiPauseHours: z.coerce.number().int().min(1).max(168).default(12),
       })
       .parse(req.body ?? {});
     const saved = await saveInboxSettings(body as any, req.auth!.sub);
-    await audit(req, 'whatsapp.inbox_settings', { autoReply: body.autoReply, defaultMode: body.defaultMode, cooldownHours: body.cooldownHours });
+    await audit(req, 'whatsapp.inbox_settings', { autoReply: body.autoReply, defaultMode: body.defaultMode, cooldownHours: body.cooldownHours, aiEnabled: body.aiEnabled });
     res.json({ ok: true, settings: saved });
   }),
 );

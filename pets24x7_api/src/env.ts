@@ -81,6 +81,11 @@ const Env = z.object({
   WA_BAILEYS_PER_NUMBER_PER_HOUR: z.coerce.number().int().positive().default(4),
   WA_BAILEYS_MIN_GAP_MS: z.coerce.number().int().nonnegative().default(4000),
 
+  // Claude, for WhatsApp replies. Without a key the inbox uses the template
+  // auto-reply and quick replies only.
+  ANTHROPIC_API_KEY: z.string().optional().transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  AI_MODEL: z.string().default('claude-sonnet-5'),
+
   STATIC_DATA_DIR: z.string().default('../pets24x7_new/data'),
   PUBLIC_SHORTLINK_BASE: z.string().url().default('https://pets24x7.com'),
 
