@@ -32,6 +32,7 @@ import { adminPaymentAlertEmail, membershipUpgradedEmail, paymentPendingEmail } 
 import { adminNotifyEmails } from '../mail/admin-notify.js';
 import { invalidateVendorInsights } from '../feed/reco/vendor-insights.js';
 import type { MembershipStatus } from '@prisma/client';
+import { decorateParentPlan, getPlanLimits } from '../plans/limits.js';
 
 export const membershipRouter = Router();
 
@@ -43,7 +44,14 @@ membershipRouter.get(
       where: { active: true },
       orderBy: [{ sortOrder: 'asc' }, { priceMinor: 'asc' }],
     });
-    res.json({ ok: true, plans });
+    // Each card leads with the enforced monthly contact allowance, and the free
+    // tier's allowance is sent so the page can say what membership adds.
+    const limits = await getPlanLimits();
+    res.json({
+      ok: true,
+      plans: plans.map((p) => decorateParentPlan(p, limits)),
+      freeContactsPerMonth: limits.parent.FREE.contactsPerMonth,
+    });
   }),
 );
 

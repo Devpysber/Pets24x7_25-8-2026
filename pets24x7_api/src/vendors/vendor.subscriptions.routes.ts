@@ -13,6 +13,9 @@ import { notifyIf } from '../mail/notify.js';
 import { paymentReceiptEmail } from '../mail/lifecycle-templates.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../shared/errors.js';
+import { decorateVendorPlan, getPlanLimits, monthRange, normalizeVendorTier, UNLIMITED } from '../plans/limits.js';
+import { grantPlanFeatured } from '../plans/featured-grant.js';
+import { enquiryScope } from './dashboard.routes.js';
 
 export const vendorSubscriptionsRouter = Router();
 
@@ -227,6 +230,17 @@ async function refreshVendorSubscription(vendorId: string): Promise<void> {
   await reloadVendorSubscription(vendorId).catch((err) =>
     logger.warn({ err, vendorId }, 'vendor subscriptions: re-check failed; serving cached plan'),
   );
+}
+
+/**
+ * The vendor's current plan, read the same way GET /me reads it (saved rows
+ * loaded, this vendor re-checked across instances, lapsed terms folded back).
+ * For code outside this file that enforces what the plan allows.
+ */
+export async function resolveVendorSubscription(vendorId: string) {
+  await loadVendorSubscriptions();
+  await refreshVendorSubscription(vendorId);
+  return currentVendorSubscription(vendorId);
 }
 
 function saveInBackground(vendorId: string): void {
@@ -473,6 +487,14 @@ async function activatePaidPlan(opts: {
     });
   });
 
+  // Gold and Diamond include a Featured placement for the whole term.
+  const limits = await getPlanLimits().catch(() => null);
+  if (limits?.vendor[normalizeVendorTier(updatedSub.tier)].featuredSlot) {
+    await grantPlanFeatured(vendorId, updatedSub.endsAt).catch((err) =>
+      logger.error({ err, vendorId }, 'vendor subscriptions: plan Featured slot not granted'),
+    );
+  }
+
   const vendor = await prisma.vendor
     .findUnique({ where: { id: vendorId }, select: { email: true, businessName: true } })
     .catch(() => null);
@@ -608,7 +630,10 @@ vendorSubscriptionsRouter.get(
     await loadPersistedPlanStores();
     // Switched-off plans are hidden: listing one only to have checkout refuse
     // it (or, before, silently sell a different plan) helps nobody.
-    res.json({ ok: true, plans: purchasablePlans() });
+    // Perk lines for leads, photos, review requests and Featured are written
+    // from the enforced limits, so the card always says what the plan does.
+    const limits = await getPlanLimits();
+    res.json({ ok: true, plans: purchasablePlans().map((p) => decorateVendorPlan(p, limits)) });
   }),
 );
 
@@ -628,9 +653,30 @@ vendorSubscriptionsRouter.get(
       select: { id: true, businessName: true, phone: true, email: true, category: true, city: true }
     }).catch(() => null);
 
+    // What the plan allows and how much of it is used this month.
+    const allLimits = await getPlanLimits();
+    const live = activeSub.status === 'ACTIVE' || activeSub.status === 'PAID';
+    const tier = live ? normalizeVendorTier(activeSub.tier) : 'BASIC';
+    const limits = allLimits.vendor[tier];
+    const owner = await prisma.vendor
+      .findUnique({ where: { id: vendorId }, select: { listingId: true, businessName: true } })
+      .catch(() => null);
+    const scope = enquiryScope(owner);
+    let leadsUsed = 0;
+    if (scope) {
+      const { start, end } = monthRange();
+      leadsUsed = await prisma.enquiry.count({ where: { AND: [scope, { createdAt: { gte: start, lt: end } }] } }).catch(() => 0);
+    }
+
     res.json({
       ok: true,
-      subscription: activeSub,
+      subscription: {
+        ...activeSub,
+        leadLimit: limits.leadsPerMonth === UNLIMITED ? 9999 : limits.leadsPerMonth,
+        leadsUsed,
+      },
+      limits: { tier, ...limits, unlimitedLeads: limits.leadsPerMonth === UNLIMITED },
+      usage: { leadsThisMonth: leadsUsed },
       invoices: invoices,
       vendor: vendor || { id: vendorId, businessName: 'Vendor Account' }
     });

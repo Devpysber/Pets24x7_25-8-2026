@@ -177,8 +177,388 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireNavToggles);
   else wireNavToggles();
 
+  // ---- Contact lock ----
+  // Phone numbers and WhatsApp buttons work only for signed-in people. For
+  // everyone else, on every page that loads this file:
+  //  - tel:, wa.me/<number>, api.whatsapp.com and whatsapp:// links open a
+  //    "sign in to contact" box instead (share links, wa.me/?text=, stay open);
+  //  - window.open() of such a link does the same (enquiry forms use it);
+  //  - the WhatsApp enquiry forms (#bookForm, #leadForm) ask to sign in before
+  //    sending, and what was typed is put back after signing in;
+  //  - phone numbers written in the page are masked (+91 99300 •••••).
+  // Until /api/me answers, the page counts as signed out; a tap made in that
+  // moment waits for the answer and then goes through if signed in.
+  var authRole = null, authKnown = false, authWaiters = [];
+  var DRAFT_KEY = 'p24:gateDraft';
+  var GATED_FORMS = { bookForm: 1, leadForm: 1 };
+
+  function track(action, extra) {
+    try {
+      var body = { action: action, path: location.pathname + location.search };
+      var m = /^\/(?:in|us)\/[^\/]+\/([^\/]+)\/?$/i.exec(location.pathname);
+      if (m) { try { body.listingId = decodeURIComponent(m[1]); } catch (e) {} }
+      if (extra) for (var k in extra) body[k] = extra[k];
+      fetch(BASE + '/api/activity/track', {
+        method: 'POST', credentials: 'include', keepalive: true,
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function contactKind(href) {
+    href = String(href || '').trim();
+    if (/^tel:/i.test(href)) return 'phone';
+    if (/^whatsapp:/i.test(href)) return 'whatsapp';
+    if (/^(https?:)?\/\/(wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)\//i.test(href)) {
+      // wa.me/?text=… (no number) only shares a link — not a contact.
+      if (/wa\.me\/\d/i.test(href) || /[?&]phone=\d/i.test(href)) return 'whatsapp';
+    }
+    return null;
+  }
+
+  function whenAuthKnown(fn) { if (authKnown) fn(); else authWaiters.push(fn); }
+
+  // ---- Plan allowance (signed-in pet parents) ----
+  // Each membership includes a number of contacts a month (free accounts a
+  // few, Gold unlimited); /api/access/contact says how many are left and which
+  // listings are already unlocked this month (free to contact again). Other
+  // roles are never limited. If the allowance cannot be read the tap goes
+  // through: enquiries are still enforced by the API.
+  var quota = null, quotaKnown = false, quotaWaiters = [];
+  function whenQuotaKnown(fn) { if (quotaKnown) fn(); else quotaWaiters.push(fn); }
+  function settleQuota(q) {
+    quota = q; quotaKnown = true;
+    var ws = quotaWaiters; quotaWaiters = [];
+    ws.forEach(function (fn) { try { fn(); } catch (e) {} });
+  }
+  function loadQuota() {
+    fetch(BASE + '/api/access/contact', { credentials: 'include', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { settleQuota(d && d.quota ? d.quota : null); })
+      .catch(function () { settleQuota(null); });
+  }
+  function contactTarget() {
+    var m = /^\/(?:in|us)\/[^\/]+\/([^\/]+)\/?$/i.exec(location.pathname);
+    if (m) { try { return decodeURIComponent(m[1]); } catch (e) {} }
+    return 'site';
+  }
+  function allowedByPlan() {
+    if (!quota || quota.unlimited) return true;
+    return quota.unlocked.indexOf(contactTarget()) !== -1 || quota.remaining > 0;
+  }
+  // 'ok' | 'signin' | 'upgrade', or null while still finding out.
+  function syncDecision() {
+    if (!authKnown) return null;
+    if (!authRole) return 'signin';
+    if (authRole !== 'pet_parent') return 'ok';
+    if (!quotaKnown) return null;
+    return allowedByPlan() ? 'ok' : 'upgrade';
+  }
+  function asyncDecision(cb) {
+    whenAuthKnown(function () {
+      if (!authRole) return cb('signin');
+      if (authRole !== 'pet_parent') return cb('ok');
+      whenQuotaKnown(function () { cb(allowedByPlan() ? 'ok' : 'upgrade'); });
+    });
+  }
+  // Records the unlock (once per listing a month) and says what is left.
+  function spendContact(kind) {
+    if (authRole !== 'pet_parent' || !quota || quota.unlimited) return;
+    var target = contactTarget();
+    if (quota.unlocked.indexOf(target) !== -1) return;
+    quota.unlocked.push(target);
+    quota.used += 1;
+    quota.remaining = Math.max(0, quota.remaining - 1);
+    try {
+      fetch(BASE + '/api/access/contact', {
+        method: 'POST', credentials: 'include', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: target, kind: kind === 'form' ? 'enquiry' : kind, path: location.pathname })
+      }).catch(function () {});
+    } catch (e) {}
+    toast(quota.remaining === 0
+      ? 'That was your last contact included this month.'
+      : quota.remaining + ' of ' + quota.limit + ' contacts left this month on your plan.');
+  }
+  var toastEl = null, toastTimer = null;
+  function toast(msg) {
+    if (!document.body) return;
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.setAttribute('role', 'status');
+      toastEl.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483001;background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font:500 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px);text-align:center';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 4000);
+  }
+
+  function nextUrl() { return location.pathname + location.search + location.hash; }
+
+  var gateBox = null;
+  function showGate(kind, mode) {
+    var upgrade = mode === 'upgrade';
+    track(upgrade ? 'plan_limit' : 'contact_locked', { target: kind });
+    if (!gateBox) {
+      var st = document.createElement('style');
+      st.textContent =
+        '.p24-gate{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}' +
+        '.p24-gate[hidden]{display:none}' +
+        '.p24-gate-card{background:#fff;color:#111827;border-radius:14px;max-width:380px;width:100%;padding:24px 22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.25);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center}' +
+        '.p24-gate-card h2{font-size:19px;margin:6px 0 6px;line-height:1.3}' +
+        '.p24-gate-card p{margin:0 0 18px;color:#4B5563}' +
+        '.p24-gate-card a,.p24-gate-card button{display:flex;align-items:center;justify-content:center;min-height:46px;width:100%;box-sizing:border-box;border-radius:10px;font:600 15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-decoration:none;cursor:pointer;margin-top:10px}' +
+        '.p24-gate-go{background:#2563EB;color:#fff;border:0}' +
+        '.p24-gate-biz{background:#fff;color:#1F2937;border:1px solid #D1D5DB}' +
+        '.p24-gate-x{background:none;border:0;color:#6B7280;font-weight:500!important}' +
+        '.p24-gate-lock{font-size:30px;line-height:1}' +
+        '.p24-gate-card [hidden]{display:none}';
+      document.head.appendChild(st);
+      gateBox = document.createElement('div');
+      gateBox.className = 'p24-gate';
+      gateBox.setAttribute('role', 'dialog');
+      gateBox.setAttribute('aria-modal', 'true');
+      gateBox.setAttribute('aria-labelledby', 'p24GateTitle');
+      gateBox.innerHTML =
+        '<div class="p24-gate-card">' +
+          '<div class="p24-gate-lock" aria-hidden="true">🔒</div>' +
+          '<h2 id="p24GateTitle">Sign in to contact</h2>' +
+          '<p id="p24GateText">Phone numbers and WhatsApp are available to signed-in members. It is free and takes under a minute.</p>' +
+          '<a class="p24-gate-go" data-gate-go href="#">Sign in / Create free account</a>' +
+          '<a class="p24-gate-biz" data-gate-biz href="#">I run a pet business</a>' +
+          '<button type="button" class="p24-gate-x" data-gate-close>Not now</button>' +
+        '</div>';
+      document.body.appendChild(gateBox);
+      gateBox.addEventListener('click', function (e) {
+        if (e.target === gateBox || (e.target.closest && e.target.closest('[data-gate-close]'))) hideGate();
+      });
+      gateBox.querySelector('[data-gate-go]').addEventListener('click', function () { track('gate_sign_in', { target: 'parent' }); });
+      gateBox.querySelector('[data-gate-biz]').addEventListener('click', function () { track('gate_sign_in', { target: 'vendor' }); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && gateBox && !gateBox.hidden) hideGate(); });
+    }
+    var next = encodeURIComponent(nextUrl());
+    var go = gateBox.querySelector('[data-gate-go]');
+    var biz = gateBox.querySelector('[data-gate-biz]');
+    if (upgrade) {
+      var plan = quota && quota.tier && quota.tier !== 'FREE'
+        ? quota.tier.charAt(0) + quota.tier.slice(1).toLowerCase() + ' membership' : 'free account';
+      gateBox.querySelector('#p24GateTitle').textContent = 'This month’s contacts are used up';
+      gateBox.querySelector('#p24GateText').textContent =
+        'Your ' + plan + ' includes ' + (quota ? quota.limit : '') + ' contacts a month (calls, WhatsApp and enquiries), and you have used them all. ' +
+        'Upgrade your membership to keep contacting businesses now, or wait until the 1st.' +
+        (kind === 'form' ? ' What you typed is kept.' : '');
+      go.textContent = 'See membership plans';
+      go.setAttribute('href', '/membership/?next=' + next + '&utm_source=contact_limit');
+      biz.hidden = true;
+    } else {
+      gateBox.querySelector('#p24GateTitle').textContent = 'Sign in to contact';
+      gateBox.querySelector('#p24GateText').textContent = kind === 'form'
+        ? 'Sign in to send this enquiry on WhatsApp. It is free and takes under a minute — what you typed is kept.'
+        : 'Phone numbers and WhatsApp are available to signed-in members. It is free and takes under a minute.';
+      go.textContent = 'Sign in / Create free account';
+      go.setAttribute('href', '/parent-login/?next=' + next);
+      biz.setAttribute('href', '/vendor-login/?next=' + next);
+      biz.hidden = false;
+    }
+    gateBox.hidden = false;
+    gateBox.querySelector('[data-gate-go]').focus();
+  }
+  function hideGate() { if (gateBox) gateBox.hidden = true; }
+
+  function openContact(href, target) {
+    if (/^tel:|^whatsapp:/i.test(href) || target !== '_blank') { location.href = href; return; }
+    var w = realOpen ? realOpen.call(window, href, '_blank', 'noopener') : null;
+    if (!w) location.href = href; // popup blocked after the wait
+  }
+
+  // Capture on window: runs before any page's own click handlers, so a
+  // blocked tap is not also counted as a phone/WhatsApp tap on the listing.
+  window.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    var kind = contactKind(href);
+    if (!kind) return;
+    var d = syncDecision();
+    if (d === 'ok') { spendContact(kind); track(kind === 'phone' ? 'phone_click' : 'whatsapp_click'); return; }
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (d) { showGate(kind, d); return; }
+    var tgt = a.getAttribute('target');
+    asyncDecision(function (r) {
+      if (r === 'ok') { spendContact(kind); track(kind === 'phone' ? 'phone_click' : 'whatsapp_click'); openContact(href, tgt); }
+      else showGate(kind, r);
+    });
+  }, true);
+
+  var realOpen = window.open;
+  window.open = function (url) {
+    var kind = contactKind(url);
+    if (!kind) return realOpen.apply(window, arguments);
+    var d = syncDecision();
+    // An enquiry form spends its contact on submit; the WhatsApp it opens next
+    // is the same contact, so nothing more is spent.
+    if (d === 'ok') { spendContact(kind); return realOpen.apply(window, arguments); }
+    if (d) { showGate(kind, d); return null; }
+    asyncDecision(function (r) {
+      if (r === 'ok') { spendContact(kind); openContact(String(url), '_blank'); }
+      else showGate(kind, r);
+    });
+    return null;
+  };
+
+  function saveDraft(form) {
+    try {
+      var vals = {};
+      Array.prototype.forEach.call(form.elements, function (el) {
+        var key = el.id || el.name;
+        if (!key || el.type === 'password' || el.type === 'file' || el.type === 'submit' || el.type === 'button') return;
+        vals[key] = (el.type === 'checkbox' || el.type === 'radio') ? (el.checked ? '1' : '') : el.value;
+      });
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ path: location.pathname, form: form.id, vals: vals }));
+    } catch (e) {}
+  }
+  function restoreDraft() {
+    try {
+      var d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+      if (!d || d.path !== location.pathname) return;
+      var form = document.getElementById(d.form);
+      if (!form) return;
+      sessionStorage.removeItem(DRAFT_KEY);
+      Array.prototype.forEach.call(form.elements, function (el) {
+        var key = el.id || el.name;
+        if (!key || !(key in d.vals)) return;
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!d.vals[key];
+        else el.value = d.vals[key];
+      });
+      form.scrollIntoView({ block: 'center' });
+    } catch (e) {}
+  }
+
+  window.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !GATED_FORMS[form.id]) return;
+    // The For Businesses lead form is a business writing to Pets24x7: it needs
+    // a sign-in, never a pet parent's contact allowance.
+    var biz = form.id === 'leadForm';
+    var d = syncDecision();
+    if (d === 'ok' || (biz && d === 'upgrade')) {
+      if (!biz) spendContact('form');
+      return;
+    }
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    saveDraft(form);
+    if (d) { showGate('form', d); return; }
+    asyncDecision(function (r) {
+      if (r !== 'ok' && !(biz && r === 'upgrade')) { showGate('form', r); return; }
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch (err) {}
+      if (form.requestSubmit) form.requestSubmit(); else if (form.onsubmit) form.onsubmit();
+    });
+  }, true);
+
+  // Phone numbers in the page text: 10+ digits, optionally with +, spaces,
+  // dashes, dots or brackets. Prices (commas), pincodes (6 digits) and years
+  // do not match. The last five digits are masked; originals are kept so
+  // signing in (or the answer to /api/me) puts them back.
+  var PHONE_RE = /\+?\d[\d\s().-]{8,}\d/g;
+  var masked = [];
+  var maskObserver = null;
+  // "+91 99300 90487" -> "+91 99300 •••••": the last five digits go.
+  function maskPhoneNumber(s) {
+    var n = s.replace(/\D/g, '').length, seen = 0;
+    return s.replace(/\d/g, function (d) { seen++; return seen > n - 5 ? '•' : d; });
+  }
+  function maskNode(root) {
+    if (!root || authRole) return;
+    if (root.nodeType === 3) { maskOne(root); return; }
+    if (root.nodeType !== 1 || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|INPUT|SELECT|OPTION|CODE)$/.test(root.nodeName)) return;
+    if (root.isContentEditable) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        var p = n.parentNode;
+        if (!p || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|OPTION|CODE)$/.test(p.nodeName)) return NodeFilter.FILTER_REJECT;
+        if (p.closest && p.closest('form, [contenteditable], .p24-gate')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var list = [], n;
+    while ((n = w.nextNode())) list.push(n);
+    list.forEach(maskOne);
+  }
+  function maskOne(node) {
+    var t = node.nodeValue;
+    if (!t || t.length < 10 || !/\d{3}/.test(t)) return;
+    var changed = false;
+    var out = t.replace(PHONE_RE, function (m) {
+      var digits = m.replace(/\D/g, '').length;
+      if (digits < 10 || digits > 13) return m;
+      changed = true;
+      return maskPhoneNumber(m);
+    });
+    if (changed) { masked.push([node, t]); node.nodeValue = out; }
+  }
+  function startMasking() {
+    if (authRole || !document.body) return;
+    maskNode(document.body);
+    if (window.MutationObserver && !maskObserver) {
+      maskObserver = new MutationObserver(function (muts) {
+        if (authRole) return;
+        muts.forEach(function (mu) {
+          if (mu.type === 'characterData') maskOne(mu.target);
+          else Array.prototype.forEach.call(mu.addedNodes, maskNode);
+        });
+      });
+      maskObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+  }
+  function unmaskAll() {
+    if (maskObserver) { maskObserver.disconnect(); maskObserver = null; }
+    masked.forEach(function (p) { if (p[0].isConnected !== false) p[0].nodeValue = p[1]; });
+    masked = [];
+    // Pages ship our own number pre-masked (<span data-p24-phone="…">), so it
+    // never flashes before this script runs.
+    revealPhones(document);
+    // …including ones a page script renders later (listing.html builds its card after load).
+    if (window.MutationObserver && document.body) {
+      new MutationObserver(function (muts) {
+        muts.forEach(function (mu) {
+          Array.prototype.forEach.call(mu.addedNodes, function (n) { if (n.nodeType === 1) revealPhones(n); });
+        });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+  }
+  function revealPhones(root) {
+    if (root.matches && root.matches('[data-p24-phone]')) root.textContent = root.getAttribute('data-p24-phone');
+    Array.prototype.forEach.call(root.querySelectorAll('[data-p24-phone]'), function (el) {
+      el.textContent = el.getAttribute('data-p24-phone');
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startMasking);
+  else startMasking();
+
+  function settleAuth(role) {
+    authRole = role || null;
+    authKnown = true;
+    if (authRole) {
+      if (authRole === 'pet_parent') loadQuota(); else settleQuota(null);
+      unmaskAll();
+      hideGate();
+      track('page_view', { title: (document.title || '').slice(0, 200) });
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreDraft);
+      else restoreDraft();
+    }
+    var ws = authWaiters; authWaiters = [];
+    ws.forEach(function (fn) { try { fn(); } catch (e) {} });
+  }
+
   fetch(BASE + '/api/me', { credentials: 'include', headers: { 'Accept': 'application/json' } })
     .then(function (r) { return r.json(); })
-    .then(function (m) { if (m && m.role) applySignedIn(m.role); })
-    .catch(function () { /* offline / not signed in — leave as-is */ });
+    .then(function (m) {
+      settleAuth(m && m.role);
+      if (m && m.role) applySignedIn(m.role);
+    })
+    .catch(function () { settleAuth(null); /* offline / not signed in — stays locked */ });
 })();

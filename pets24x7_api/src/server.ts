@@ -57,6 +57,9 @@ import { mailEnabled, verifyMailTransport } from './mail/mailer.js';
 import { refreshDefaultPlanCopy } from './payments/default-plans.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
+import { userActivityMiddleware, startUserActivityPrune } from './activity/user-activity.js';
+import { userActivityTrackRouter, adminUserActivityRouter } from './activity/user-activity.routes.js';
+import { accessRouter, adminPlanLimitsRouter } from './plans/plans.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -118,6 +121,10 @@ app.use('/api', makeLimiter('api-global', {
   legacyHeaders: false,
 }));
 
+// Who did what: sign-ins, sign-outs and every change a signed-in person makes
+// (see activity/user-activity.ts). Records after the response, never blocks it.
+app.use('/api', userActivityMiddleware);
+
 // ---- Root & Healthcheck ----
 app.get('/', (_req, res) => res.json({
   ok: true,
@@ -156,8 +163,12 @@ app.use('/api/me',      meRouter);
 app.use('/api/parent',  parentDashboardRouter);
 app.use('/api/vendor',  vendorDashboardRouter);
 app.use('/api/listings', listingsRouter);
+app.use('/api/activity', userActivityTrackRouter); // POST /api/activity/track
 app.use('/api/activity', activityRouter);
 app.use('/api/admin',   adminActivityRouter);
+app.use('/api/admin',   adminUserActivityRouter); // GET /api/admin/user-activity
+app.use('/api/admin',   adminPlanLimitsRouter);   // GET/PUT /api/admin/plan-limits
+app.use('/api/access',  accessRouter);            // contact allowance under the parent's plan
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/memberships', membershipRouter);
 app.use('/api/payments/razorpay', razorpayRouter);
@@ -315,6 +326,7 @@ async function ensureSeedAdmin(): Promise<void> {
     startEngagementJob();       // 3-4 random times a day; at most one promo per parent per day
     startVendorEngagementJob(); // the same for businesses, in an earlier window
     startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
+    startUserActivityPrune();   // deletes user_activity rows older than 180 days, daily
   } else {
     logger.info('RUN_JOBS=false: scheduled sweeps are not started on this instance');
   }

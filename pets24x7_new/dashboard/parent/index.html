@@ -1008,6 +1008,8 @@
       state.saved = d.saved || [];
       state.nearbyDeals = d.nearbyDeals || [];
       state.upcomingEvents = d.upcomingEvents || [];
+      // Calls, WhatsApp and enquiries included this month by the plan.
+      state.contactQuota = d.contactQuota || null;
       // /api/memberships/me carries planId + discountPercent; the dashboard
       // summary does not. Whichever answers last must not downgrade the richer
       // one, or "Current plan" and the member-discount strip disappear.
@@ -1126,6 +1128,17 @@
     });
   }
 
+  // "2 of 3 business contacts left this month" — what the plan allows.
+  function contactQuotaLine() {
+    var q = state.contactQuota;
+    if (!q) return '';
+    if (q.unlimited) return '<div style="font-size: 12px; color: #047857; margin-top: 6px; font-weight: 600;">Unlimited business contacts</div>';
+    var out = q.remaining <= 0;
+    return '<div style="font-size: 12px; margin-top: 6px; font-weight: 600; color: ' + (out ? '#B45309' : 'var(--text-main)') + ';">' +
+      q.remaining + ' of ' + q.limit + ' business contacts left this month' +
+      (out ? ' — upgrade for more' : '') + '</div>';
+  }
+
   function renderAccount() {
     var container = document.getElementById('accountOverviewContainer');
     if (!container) return;
@@ -1207,6 +1220,7 @@
           </div>
           <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${esc(m.plan || 'Membership')}</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${m.active ? 'Benefits active' : 'Explore plans & benefits'}</div>
+          ${contactQuotaLine()}
         </div>
       </div>
 

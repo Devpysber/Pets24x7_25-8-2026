@@ -303,6 +303,13 @@
     adminWaMessages:  function (dir)        { return req('GET',  '/api/admin/wa-messages' + (dir ? '?direction=' + encodeURIComponent(dir) : '')); },
     adminAudit:       function ()          { return req('GET',  '/api/admin/audit'); },
     adminActivity:    function (kind)      { return req('GET',  '/api/admin/activity' + (kind ? '?kind=' + encodeURIComponent(kind) : '')); },
+    adminUserActivity: function (opts)     {
+      var o = opts || {}, qs = [];
+      ['role', 'action', 'q', 'actorId', 'before', 'limit'].forEach(function (k) {
+        if (o[k]) qs.push(k + '=' + encodeURIComponent(o[k]));
+      });
+      return req('GET', '/api/admin/user-activity' + (qs.length ? '?' + qs.join('&') : ''));
+    },
     adminDirectory:     function (opts)     {
       var o = opts || {}, qs = [];
       if (o.q)        qs.push('q=' + encodeURIComponent(o.q));
@@ -325,6 +332,8 @@
     adminPublish:       function ()         { return req('POST', '/api/admin/publish', {}); },
     adminPublishStatus: function ()         { return req('GET',  '/api/admin/publish/status'); },
     adminSettings:    function ()          { return req('GET',  '/api/admin/settings'); },
+    adminPlanLimits:     function ()       { return req('GET', '/api/admin/plan-limits'); },
+    adminPlanLimitsSave: function (limits) { return req('PUT', '/api/admin/plan-limits', { limits: limits }); },
     adminMyProfile:   function ()          { return req('GET',   '/api/admin/me/profile'); },
     adminMyProfileSave: function (body)    { return req('PATCH', '/api/admin/me/profile', body); },
     adminSettingsSave:function (obj)       { return req('PUT',  '/api/admin/settings', obj); },

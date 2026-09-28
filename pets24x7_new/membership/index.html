@@ -184,6 +184,7 @@
 <div class="container">
   <div id="activeBanner" class="active-banner" hidden></div>
   <div class="err" id="err" role="alert"></div>
+  <p id="freeNote" style="text-align:center;color:var(--text-muted);font-size:14px;margin:0 0 16px" hidden></p>
   <div class="grid" id="planGrid" aria-live="polite" aria-busy="true">
     <div class="plan-skel"></div><div class="plan-skel"></div><div class="plan-skel"></div>
   </div>
@@ -221,7 +222,7 @@
       <p>Message us on WhatsApp from the number on your account with what you need, where and when. We shortlist businesses near you, check availability and, on Silver and Gold, book it and confirm with you.</p>
     </details>
     <details><summary>Do you offer refunds?</summary>
-      <p>Within 7 days of purchase if you haven&rsquo;t used the concierge yet, message us on WhatsApp at +91 99300 90487.</p>
+      <p>Within 7 days of purchase if you haven&rsquo;t used the concierge yet, message us on WhatsApp at <span data-p24-phone="+91 99300 90487">+91 99300 •••••</span>.</p>
     </details>
   </section>
 
@@ -475,6 +476,13 @@
     api.me('pet_parent').catch(function(){ return {role:null}; }),
   ]).then(function (results) {
     allPlans = results[0].plans || [];
+    // What a free account gets, so the plans read as "more than this".
+    var freeN = results[0].freeContactsPerMonth;
+    var fn = document.getElementById('freeNote');
+    if (fn && typeof freeN === 'number' && freeN >= 0) {
+      fn.textContent = 'A free account includes ' + freeN + ' business contact' + (freeN === 1 ? '' : 's') + ' a month (calls, WhatsApp and enquiries). Membership adds more.';
+      fn.hidden = false;
+    }
     var me = results[1] || {};
     signedIn = me.role === 'pet_parent';
     if (!signedIn) { render(); return; }

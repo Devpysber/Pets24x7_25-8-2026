@@ -1046,3 +1046,60 @@ model JobLock {
 
   @@map("job_locks")
 }
+
+// -----------------------------------------------------------
+// User activity — what each signed-in person did, for the admin panel.
+//
+// ListingActivity answers "what happened on this listing"; AuditLog answers
+// "what did an admin change". This answers "what did this person do": sign
+// in, sign out, pages opened, contact details revealed, and every change they
+// made through the API. Visitors who are not signed in appear only when they
+// hit the contact lock (tapped a phone number or WhatsApp while signed out),
+// so anonymous page views never fill the table.
+// -----------------------------------------------------------
+model UserActivity {
+  id        String   @id @default(cuid())
+  // "pet_parent" | "vendor" | "admin"; null for a signed-out visitor.
+  actorRole String?  @db.VarChar(16)
+  actorId   String?  @db.VarChar(191)
+  // "sign_in" | "sign_out" | "page_view" | "contact_locked" | "phone_click" |
+  // "whatsapp_click" | "action"
+  action    String   @db.VarChar(32)
+  // Human-readable line for the admin table ("Saved a listing").
+  label     String?  @db.VarChar(255)
+  method    String?  @db.VarChar(8)
+  path      String?  @db.VarChar(512)
+  listingId String?  @db.VarChar(191)
+  status    Int?
+  meta      Json?
+  ipHash    String?  @db.VarChar(64)
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorRole, actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("user_activity")
+}
+
+// -----------------------------------------------------------
+// Contact unlocks — a pet parent revealing a phone number, opening WhatsApp or
+// sending an enquiry. Plans allow a number of these per calendar month (India
+// time); see plans/entitlements.ts. One row per parent + target per month:
+// contacting the same listing again that month costs nothing. `target` is a
+// listing id, or "site" for Pets24x7's own number on non-listing pages.
+// -----------------------------------------------------------
+model ContactUnlock {
+  id        String   @id @default(cuid())
+  parentId  String   @db.VarChar(191)
+  target    String   @db.VarChar(191)
+  // "YYYY-MM" in India time.
+  month     String   @db.VarChar(7)
+  kind      String   @db.VarChar(16) // "phone" | "whatsapp" | "enquiry"
+  tier      String   @db.VarChar(16) // plan tier when unlocked
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, month, target])
+  @@index([parentId, month])
+  @@map("contact_unlocks")
+}

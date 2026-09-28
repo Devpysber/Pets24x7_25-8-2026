@@ -26,6 +26,8 @@ import { invalidateVendorInsights } from '../feed/reco/vendor-insights.js';
 import { normalizePhone } from '../shared/phone.js';
 import { vendorReviewScope } from '../reviews/vendor.routes.js';
 import { profileCompletion } from './profile-completion.js';
+import { vendorPlan, visibleLeadIds, leadsThisMonth, maskPhone } from '../plans/entitlements.js';
+import { UNLIMITED } from '../plans/limits.js';
 import type { Prisma, Vendor } from '@prisma/client';
 
 // The forms send '' for an empty field while the database holds null; treat
@@ -45,7 +47,7 @@ vendorDashboardRouter.use(requireAuth('vendor'));
  * Veterinary Hospital"s), or who renamed itself to match, read and updated
  * that listing's leads, customer phone numbers included.
  */
-function enquiryScope(v: { listingId: string | null; businessName: string | null } | null): Prisma.EnquiryWhereInput | null {
+export function enquiryScope(v: { listingId: string | null; businessName: string | null } | null): Prisma.EnquiryWhereInput | null {
   if (!v?.listingId) return null;
   const or: Prisma.EnquiryWhereInput[] = [{ listingId: v.listingId }];
   if (v.businessName) {
@@ -80,7 +82,10 @@ vendorDashboardRouter.get(
 
     // Live rollups — reviews, review-request invites, campaigns, services.
     let reviewAgg = { total: 0, pending: 0, published: 0, average: null as number | null, recent: [] as any[] };
-    let invites = { sent: 0, opened: 0, completed: 0, remaining: 50 };
+    // What the plan allows, shown on the dashboard and used for the invite cap.
+    const plan = await vendorPlan(v.id);
+    const reviewCap = plan.limits.reviewRequestsPerDay;
+    let invites = { sent: 0, opened: 0, completed: 0, remaining: reviewCap };
     let campaigns: any[] = [];
     let serviceCount = 0;
     let hasCollectedReviews = false;
@@ -108,7 +113,7 @@ vendorDashboardRouter.get(
         ]);
       const avg = avgAgg._avg.rating;
       reviewAgg = { total, pending, published, average: avg != null ? Math.round(avg * 10) / 10 : null, recent };
-      invites = { sent, opened, completed, remaining: Math.max(0, 50 - sentToday) };
+      invites = { sent, opened, completed, remaining: Math.max(0, reviewCap - sentToday) };
       campaigns = camps;
       serviceCount = svc;
       hasCollectedReviews = total > 0;
@@ -172,6 +177,7 @@ vendorDashboardRouter.get(
       customerInvites: invites,
       campaigns,
       serviceCount,
+      plan: { tier: plan.tier, ...plan.limits },
     });
   }),
 );
@@ -280,7 +286,27 @@ vendorDashboardRouter.get(
         enquiries: enquiries.map((e) => ({ ...e, phone: '', email: null })),
       });
     }
-    res.json({ ok: true, enquiries });
+    // The plan decides how many leads a month come with the customer's contact
+    // details (the first N each month). The rest still show — name, pet, need —
+    // so the business can see what upgrading would give it.
+    const plan = await vendorPlan(req.auth!.sub);
+    const [visible, used] = await Promise.all([
+      visibleLeadIds(plan.limits.leadsPerMonth, where, enquiries),
+      leadsThisMonth(where),
+    ]);
+    const leadPlan = {
+      tier: plan.tier,
+      leadsPerMonth: plan.limits.leadsPerMonth,
+      unlimited: plan.limits.leadsPerMonth === UNLIMITED,
+      usedThisMonth: used,
+    };
+    res.json({
+      ok: true,
+      leadPlan,
+      enquiries: enquiries.map((e) =>
+        visible.has(e.id) ? e : { ...e, phone: maskPhone(e.phone), email: null, lockedByPlan: true },
+      ),
+    });
   }),
 );
 
@@ -412,7 +438,8 @@ const UpdateBusinessBody = z.object({
   // hosted URL or a small resized data URL produced by the dashboard.
   galleryImages: z
     .array(imageSrc)
-    .max(5, 'You can keep at most 5 photos')
+    // The per-plan limit is checked in the handler; this is the hard ceiling.
+    .max(20, 'You can keep at most 20 photos')
     .optional(),
 });
 
@@ -453,7 +480,7 @@ function parseGallery(raw: string | null | undefined): string[] {
   if (!raw) return [];
   try {
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string').slice(0, 5) : [];
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string').slice(0, 20) : [];
   } catch {
     return [];
   }
@@ -470,6 +497,18 @@ vendorDashboardRouter.patch(
     if (!v) throw new ForbiddenError();
 
     const { galleryImages, ...rest } = body;
+    // Photos allowed by the plan. Adding past it is refused; photos kept from a
+    // bigger plan before a downgrade are not taken away (and saving the rest of
+    // the form with them still works).
+    if (galleryImages !== undefined) {
+      const { tier, limits } = await vendorPlan(v.id);
+      const before = parseGallery(v.galleryImages).length;
+      if (galleryImages.length > limits.photos && galleryImages.length > before) {
+        throw new BadRequestError(
+          `Your ${tier.charAt(0) + tier.slice(1).toLowerCase()} plan includes ${limits.photos} photos. Upgrade your plan to add more.`,
+        );
+      }
+    }
     const data: Record<string, unknown> = { ...rest };
     if (rest.imageUrl !== undefined) data.imageUrl = rest.imageUrl || null;
     if (galleryImages !== undefined) data.galleryImages = JSON.stringify(galleryImages);

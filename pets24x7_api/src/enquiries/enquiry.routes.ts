@@ -15,12 +15,15 @@ import { requireAuth, optionalAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { normalizePhone } from '../shared/phone.js';
-import { getListingById } from '../listings/index.js';
+import { getListingById, getPublicListingById } from '../listings/index.js';
 import { notifyVendorById } from '../whatsapp/notify.js';
 import { notifyIf } from '../mail/notify.js';
 import { enquiryReceivedEmail, vendorNewEnquiryEmail } from '../mail/action-templates.js';
 import { logger } from '../logger.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
+import { unlockContact, vendorPlan, visibleLeadIds, maskPhone } from '../plans/entitlements.js';
+import { UNLIMITED } from '../plans/limits.js';
+import { enquiryScope } from '../vendors/dashboard.routes.js';
 import { invalidateParent } from '../feed/reco/cache.js';
 
 export const enquiryRouter = Router();
@@ -98,6 +101,24 @@ enquiryRouter.post(
       return res.status(200).json({ ok: true, duplicate: true, enquiry: duplicate });
     }
 
+    // A signed-in pet parent spends one of the month's contacts (free again for
+    // a listing already contacted this month). A marketing-page lead is a
+    // business writing to Pets24x7, not a parent contacting one.
+    const isBusinessLead = (body.source ?? '').startsWith('marketing');
+    if (petParentId && !isBusinessLead) {
+      // Same rule as POST /api/access/contact: only a public listing is a target of its own.
+      const target = listingId && getPublicListingById(listingId) ? listingId : 'site';
+      const unlock = await unlockContact(petParentId, target, 'enquiry');
+      if (!unlock.ok) {
+        return res.status(402).json({
+          ok: false,
+          error: 'plan_limit',
+          message: `You have used all ${unlock.quota.limit} contacts included this month. Upgrade your membership to send more enquiries.`,
+          quota: unlock.quota,
+        });
+      }
+    }
+
     const enquiry = await prisma.enquiry.create({
       data: {
         petParentId,
@@ -141,25 +162,36 @@ enquiryRouter.post(
           where: { listingId: targetListingId },
           select: { id: true, email: true, businessName: true, status: true, claimedAt: true },
         })
-        .then((v) => {
+        .then(async (v) => {
           // A customer's phone number goes only to an approved business that
           // has actually completed its claim. A suspended or rejected claimant
           // keeps its listingId, and a PENDING one has not been verified as the
           // owner yet — neither has any business receiving it.
           if (!v || !v.claimedAt || !isVendorApproved(v.status)) return;
+          // Past the plan's monthly lead allowance, the business hears that a
+          // lead came in — not who to call. Upgrading shows it in the dashboard.
+          const plan = await vendorPlan(v.id);
+          let locked = false;
+          if (plan.limits.leadsPerMonth !== UNLIMITED) {
+            const scope = enquiryScope({ listingId: targetListingId, businessName: v.businessName });
+            const visible = scope ? await visibleLeadIds(plan.limits.leadsPerMonth, scope, [enquiry]) : new Set<string>();
+            locked = !visible.has(enquiry.id);
+          }
           notifyIf(v.email, (to) =>
             vendorNewEnquiryEmail(to, v.businessName, {
               name: enquiry.name,
-              phone: enquiry.phone,
+              phone: locked ? maskPhone(enquiry.phone) : enquiry.phone,
               petType: enquiry.petType,
               preferredDate: enquiry.preferredDate,
               notes: enquiry.notes,
               city: enquiry.city,
-            }),
+            }, { locked, leadLimit: plan.limits.leadsPerMonth }),
           );
           return notifyVendorById(
             v.id,
-            `New Pets24x7 enquiry from ${enquiry.name} (${enquiry.phone}): ${enquiry.notes || 'no message'}`,
+            locked
+              ? `New Pets24x7 enquiry from ${enquiry.name}: ${enquiry.notes || 'no message'}. You have used this month's ${plan.limits.leadsPerMonth} free leads — upgrade your plan in the dashboard to see their number.`
+              : `New Pets24x7 enquiry from ${enquiry.name} (${enquiry.phone}): ${enquiry.notes || 'no message'}`,
           );
         })
         .catch(() => {});

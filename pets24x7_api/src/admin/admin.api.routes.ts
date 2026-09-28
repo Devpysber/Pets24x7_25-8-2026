@@ -27,7 +27,9 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { vendorSubscriptionStore } from '../vendors/vendor.subscriptions.routes.js';
+import { vendorSubscriptionStore, saveVendorSubscription } from '../vendors/vendor.subscriptions.routes.js';
+import { grantPlanFeatured, endPlanFeatured } from '../plans/featured-grant.js';
+import { getPlanLimits, normalizeVendorTier } from '../plans/limits.js';
 import { syncVendorToListingIndex } from '../vendors/dashboard.routes.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
@@ -3268,11 +3270,19 @@ adminApiRouter.post(
     if (!vendorId || !current) throw new NotFoundError('Subscription not found');
 
     const now = new Date();
-    const next: Record<string, any> = { ...current, status };
+    // A lapsed or expired paid plan is folded back to BASIC with the old tier
+    // kept in previousTier; "Activate" means that paid plan, not Basic again.
+    let base: Record<string, any> = current;
+    if (status === 'ACTIVE' && normalizeVendorTier(current.tier) === 'BASIC' && current.previousTier) {
+      const prev = memoryVendorSubPlans.find((p) => p.tier === current.previousTier);
+      const { previousTier, previousEndsAt, ...rest } = current;
+      base = { ...rest, tier: previousTier, tierName: prev?.name ?? previousTier, badge: prev?.badge ?? current.badge, endsAt: null };
+    }
+    const next: Record<string, any> = { ...base, status };
     if (status === 'ACTIVE') {
-      const ends = current.endsAt ? new Date(current.endsAt) : null;
+      const ends = base.endsAt ? new Date(base.endsAt) : null;
       if (!ends || ends <= now) {
-        const plan = memoryVendorSubPlans.find((p) => p.tier === current.tier);
+        const plan = memoryVendorSubPlans.find((p) => p.tier === base.tier);
         next.startsAt = now;
         next.endsAt = new Date(now.getTime() + (Number(plan?.durationDays) || 30) * 24 * 3600 * 1000);
       }
@@ -3282,6 +3292,19 @@ adminApiRouter.post(
       if (!ends || ends > now) next.endsAt = now;
     }
     vendorSubscriptionStore.set(vendorId, next);
+    // Saved, not only cached: every instance re-reads the saved row every 15s,
+    // so an unsaved change was reverted within seconds and lost on restart.
+    await saveVendorSubscription(vendorId, req.auth!.sub);
+
+    // The plan's complimentary Featured placement follows the plan.
+    const limits = await getPlanLimits();
+    if (status === 'ACTIVE' && next.endsAt && limits.vendor[normalizeVendorTier(next.tier)].featuredSlot) {
+      await grantPlanFeatured(vendorId, new Date(next.endsAt)).catch((err) =>
+        req.log.warn({ err, vendorId }, 'admin plan activate: featured slot not granted'),
+      );
+    } else if (status !== 'ACTIVE') {
+      await endPlanFeatured(vendorId).catch((err) => req.log.warn({ err, vendorId }, 'admin plan end: featured slot not ended'));
+    }
 
     await prisma.auditLog.create({
       data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: `vendor_subscription.${status.toLowerCase()}`, meta: { vendorId, subscriptionId: current.id ?? null }, ipAddress: req.ip ?? null },

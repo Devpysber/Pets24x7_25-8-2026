@@ -1694,6 +1694,8 @@
     var mine = api.vendorSubMe()
       .then(function(r) {
         vendorSubState.subscription = r.subscription || null;
+        vendorSubState.limits = r.limits || null;
+        vendorSubState.usage = r.usage || null;
         vendorSubState.invoices = r.invoices || [];
       })
       .catch(function() { vendorSubState.subscription = null; vendorSubState.invoices = []; });
@@ -1735,7 +1737,14 @@
         validityEl.textContent = 'No expiry — upgrade any time';
       }
     }
-    if (leadsEl) leadsEl.textContent = '∞ Unlimited Customer Leads';
+    var lim = vendorSubState.limits;
+    if (leadsEl) {
+      if (!lim || lim.unlimitedLeads) leadsEl.textContent = '∞ Unlimited Customer Leads';
+      else {
+        var used = (vendorSubState.usage && vendorSubState.usage.leadsThisMonth) || 0;
+        leadsEl.textContent = Math.min(used, lim.leadsPerMonth) + ' / ' + lim.leadsPerMonth + ' leads this month';
+      }
+    }
     if (badgeStatEl) badgeStatEl.textContent = sub.tier === 'DIAMOND' ? 'Diamond Verified Business'
       : sub.tier === 'GOLD' ? 'Verified Gold Business'
       : sub.tier === 'SILVER' ? 'Verified Pro Business' : 'Verified Business Listing';
@@ -1867,7 +1876,7 @@
       var pp = planPriceFor(p);
       name = p.name + ' (' + (pp.period.indexOf('year') !== -1 ? 'Annual' : 'Monthly') + ')';
       price = pp.price;
-      desc = '∞ Unlimited Customer Leads & Full Listing Access';
+      desc = (p.perks && p.perks[0]) || 'Customer leads & full listing access';
       vendorSubState.checkoutTarget = { type: itemType, payload: p.id, billingPeriod: pp.billing };
     } else {
       // Campaigns and Featured placements have their own checkout flows.
@@ -2411,7 +2420,7 @@
     body.innerHTML = list.map(function(e) {
       return `
         <tr>
-          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}</td>
+          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}${e.locked ? ' <span title="Upgrade your plan to see this customer\'s contact" style="font-size:11px; font-weight:600; color:#B45309; background:#FEF3C7; border-radius:999px; padding:1px 8px; white-space:nowrap;">🔒 Upgrade to see contact</span>' : ''}</td>
           <td data-label="Pet">${esc(e.petName)}</td>
           <td data-label="Service">${esc(e.service)}</td>
           <td data-label="Date" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${esc(e.date)}</td>
@@ -2485,6 +2494,7 @@
     var list = state.enquiries.filter(function(e){ return filter === 'all' || e.status === filter; });
     var body = document.getElementById('fullEnquiriesTableBody');
     if (!body) return;
+    renderLeadMeter(body);
     if (!list.length) {
       body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">' +
         (state.enquiries.length ? 'No enquiries match this filter.' : 'No enquiries yet. Customer requests from your Pets24x7 listing will appear here.') + '</td></tr>';
@@ -2494,7 +2504,7 @@
     body.innerHTML = list.map(function(e) {
       return `
         <tr>
-          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}</td>
+          <td class="cell-primary" data-label="Customer" style="font-weight:600;">${esc(e.name)}${e.locked ? ' <span title="Upgrade your plan to see this customer\'s contact" style="font-size:11px; font-weight:600; color:#B45309; background:#FEF3C7; border-radius:999px; padding:1px 8px; white-space:nowrap;">🔒 Upgrade to see contact</span>' : ''}</td>
           <td data-label="Pet">${esc(e.petName)}${e.species ? ' <span style="font-size:11px; color:var(--text-muted);">(' + esc(e.species) + ')</span>' : ''}</td>
           <td data-label="Service">${esc(e.service)}</td>
           <td data-label="Date" style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${esc(e.date)}</td>
@@ -2505,6 +2515,40 @@
         </tr>
       `;
     }).join('');
+  }
+
+  // "Leads this month: 3 of 5 with contact details" above the enquiries table,
+  // with the upgrade button once the allowance is used.
+  function renderLeadMeter(body) {
+    var table = body.closest('.table-container') || body.closest('table');
+    if (!table || !table.parentNode) return;
+    var box = document.getElementById('vLeadMeter');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'vLeadMeter';
+      box.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 14px; margin-bottom:12px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:#F8FAFC;';
+      table.parentNode.insertBefore(box, table);
+    }
+    var lp = state.leadPlan;
+    if (!lp) { box.style.display = 'none'; return; }
+    box.style.display = 'flex';
+    var tierName = lp.tier.charAt(0) + lp.tier.slice(1).toLowerCase();
+    if (lp.unlimited) {
+      box.innerHTML = '<span><strong>' + esc(tierName) + ' plan:</strong> unlimited leads with full contact details. This month: ' + lp.usedThisMonth + ' lead' + (lp.usedThisMonth === 1 ? '' : 's') + '.</span>';
+      return;
+    }
+    var over = lp.usedThisMonth > lp.leadsPerMonth;
+    var shown = Math.min(lp.usedThisMonth, lp.leadsPerMonth);
+    box.innerHTML = '<span><strong>' + esc(tierName) + ' plan:</strong> ' + shown + ' of ' + lp.leadsPerMonth +
+      ' leads with contact details used this month' +
+      (over ? ' · <strong style="color:#B45309;">' + (lp.usedThisMonth - lp.leadsPerMonth) + ' more waiting behind the upgrade</strong>' : '') + '.</span>' +
+      '<button class="btn btn-sm btn-primary" onclick="goUpgradePlan()">Upgrade for more leads</button>';
+  }
+
+  function goUpgradePlan() {
+    closeModal('enquiryModal');
+    var nav = document.querySelector('.nav-item[data-view="subscriptions"]');
+    if (nav) nav.click();
   }
 
   function renderEnquiryFilters() {
@@ -2881,11 +2925,12 @@
     var waMsg = "Hi " + e.name + ", regarding your enquiry for " + e.service + " on Pets24x7.";
 
     var body = document.getElementById('enquiryModalBody');
-    var digits = cleanPhone.replace(/[^0-9]/g, '');
+    var digits = e.locked ? '' : cleanPhone.replace(/[^0-9]/g, '');
+    if (e.locked) cleanPhone = '';
     body.innerHTML = `
       <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:6px; padding:14px; margin-bottom:14px; font-size:13px;">
         <div style="font-size:15px; font-weight:700; margin-bottom:2px;">${esc(e.name)}</div>
-        <div style="color:var(--text-muted);">Phone: ${e.phone ? '<a href="tel:' + esc(cleanPhone) + '">' + esc(e.phone) + '</a>' : 'shown once your account is approved'}</div>
+        <div style="color:var(--text-muted);">Phone: ${e.locked ? esc(e.phone) + ' <span style="color:#B45309;">(hidden — this month\'s leads on your plan are used up)</span>' : e.phone ? '<a href="tel:' + esc(cleanPhone) + '">' + esc(e.phone) + '</a>' : 'shown once your account is approved'}</div>
         ${e.petName && e.petName !== 'Pet' ? '<div style="color:var(--text-muted); margin-top:2px;">Pet: ' + esc(e.petName) + '</div>' : ''}
         ${e.email ? '<div style="color:var(--text-muted); margin-top:2px;">Email: <a href="mailto:' + esc(e.email) + '">' + esc(e.email) + '</a></div>' : ''}
         <div style="color:var(--text-muted); margin-top:2px;">Service: ${esc(e.service)}</div>
@@ -2901,6 +2946,7 @@
       <div style="display:flex; flex-direction:column; gap:8px;">
         ${digits.length >= 10 ? '<a href="https://wa.me/' + digits + '?text=' + encodeURIComponent(waMsg) + '" target="_blank" class="btn btn-wa btn-sm" style="width:100%;">Respond on WhatsApp</a>' : ''}
         ${cleanPhone ? '<a href="tel:' + esc(cleanPhone) + '" class="btn btn-sm" style="width:100%; justify-content:center;">Call customer</a>' : ''}
+        ${e.locked ? '<button class="btn btn-sm btn-primary" style="width:100%; justify-content:center;" onclick="goUpgradePlan()">Upgrade plan to see this customer</button>' : ''}
         ${awaitingApproval() ? '<p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Status updates are available after your account is approved.</p>' : ''}
         <div style="display:${awaitingApproval() ? 'none' : 'flex'}; gap:8px; margin-top:4px; flex-wrap:wrap;">
           ${e.status !== 'responded' ? '<button class="btn btn-sm" style="flex:1; min-width:120px;" onclick="updateEnquiryStatus(\'' + esc(e.id) + '\', \'RESPONDED\', this)">Mark responded</button>' : ''}
@@ -2932,6 +2978,7 @@
 
   function refreshEnquiries() {
     return api.vendorEnquiries().then(function(r) {
+      state.leadPlan = r.leadPlan || null;
       state.enquiries = (r.enquiries || []).map(mapEnquiry);
       // Recompute aggregate from the live list.
       var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
@@ -3118,6 +3165,8 @@
       id: e.id,
       name: e.name || 'Pet Parent',
       phone: e.phone || '',
+      // Past the plan's monthly lead allowance: phone arrives masked, no email.
+      locked: !!e.lockedByPlan,
       petName: e.petType || 'Pet',
       species: '',
       service: e.category || e.listingName || 'General enquiry',
@@ -3313,8 +3362,8 @@
     });
   }
 
-  // ---- Listing photo gallery (max 5) ----
-  var GALLERY_MAX = 5;
+  // ---- Listing photo gallery (limit set by the plan) ----
+  var GALLERY_MAX = 2;
 
   function renderVendorGallery() {
     var grid = document.getElementById('vGalleryGrid');
@@ -3335,7 +3384,7 @@
     if (add) {
       var full = list.length >= GALLERY_MAX;
       add.disabled = full;
-      add.textContent = full ? 'Photo limit reached (5)' : '+ Add photo';
+      add.textContent = full ? 'Photo limit on your plan reached (' + GALLERY_MAX + ') — upgrade for more' : '+ Add photo';
     }
   }
 
@@ -3377,7 +3426,7 @@
       var list = (state.vendor.galleryImages || []).slice();
       var msg = document.getElementById('vGalleryMsg');
       if (list.length >= GALLERY_MAX) {
-        if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = 'You can keep at most 5 photos. Remove one first.'; }
+        if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = 'Your plan includes ' + GALLERY_MAX + ' photos. Remove one, or upgrade your plan for more.'; }
         return;
       }
       if (msg) { msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resizing...'; }
@@ -3863,6 +3912,7 @@
       state.reviewAgg = d.reviews || state.reviewAgg;
       state.enquiryAgg = d.enquiries || state.enquiryAgg;
       state.invites = d.customerInvites || state.invites;
+      if (d.plan && d.plan.photos) { GALLERY_MAX = d.plan.photos; state.plan = d.plan; renderVendorGallery(); }
       renderEnquiryFilters();
       if (d.serviceCount != null) state.serviceCount = d.serviceCount;
       // The summary only carries the 5 newest; never let it overwrite the
@@ -3897,6 +3947,7 @@
     });
 
     api.vendorEnquiries().then(function(r) {
+      state.leadPlan = r.leadPlan || null;
       state.enquiries = (r.enquiries || []).map(mapEnquiry);
       var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
       state.enquiries.forEach(function(e){ if (agg[e.status] != null) agg[e.status]++; });

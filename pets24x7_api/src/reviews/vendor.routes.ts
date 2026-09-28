@@ -23,11 +23,11 @@ import { notifyIf } from '../mail/notify.js';
 import { reviewReplyPostedEmail, reviewRequestsSentEmail } from '../mail/action-templates.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
 import { invalidateVendorInsights } from '../feed/reco/vendor-insights.js';
+import { vendorPlan } from '../plans/entitlements.js';
 
 export const vendorReviewsRouter = Router();
 vendorReviewsRouter.use(requireAuth('vendor'));
 
-const DAILY_CAP = 50;
 /** A customer asked within this window is not messaged again. */
 const RESEND_WINDOW_MS = 7 * 24 * 3600 * 1000;
 
@@ -69,7 +69,7 @@ const BulkBody = z.object({
   customers: z.array(z.object({
     phone: z.string().min(6),
     name:  z.string().min(1).max(60).optional(),
-  })).min(1).max(DAILY_CAP),
+  })).min(1).max(500), // the plan's daily cap trims the batch below
 });
 
 // Stricter route limiter on top of global.
@@ -94,9 +94,12 @@ vendorReviewsRouter.post(
     const sentToday = await prisma.reviewRequest.count({
       where: { vendorId, sentAt: { gte: startOfDay } },
     });
+    // The daily cap is the plan's (plans/limits.ts).
+    const { limits } = await vendorPlan(vendorId);
+    const DAILY_CAP = limits.reviewRequestsPerDay;
     const remaining = DAILY_CAP - sentToday;
     if (remaining <= 0) {
-      throw new TooManyRequestsError(`Daily cap reached (${DAILY_CAP}/day). Try again tomorrow.`);
+      throw new TooManyRequestsError(`Daily cap reached (${DAILY_CAP}/day on your plan). Try again tomorrow, or upgrade your plan for more.`);
     }
     const toSend = body.customers.slice(0, remaining);
 

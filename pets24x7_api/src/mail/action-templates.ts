@@ -505,11 +505,49 @@ export function vendorNewEnquiryEmail(
     notes: string;
     city: string | null;
   },
+  // locked: past the plan's monthly lead allowance — the phone arrives masked
+  // and the mail offers the upgrade instead of call buttons.
+  opts: { locked?: boolean; leadLimit?: number } = {},
 ): MailInput {
   // Digits-only dial string, so the call / WhatsApp buttons work from a phone.
   const digits = String(enquiry.phone ?? '').replace(/[^\d+]/g, '');
-  const dial = digits.replace(/\D/g, '').length >= 7 ? digits : '';
+  const dial = !opts.locked && digits.replace(/\D/g, '').length >= 7 ? digits : '';
   businessName = who(businessName, 'there');
+  if (opts.locked) {
+    return {
+      tag: 'vendor_new_enquiry',
+      to,
+      subject: `New enquiry for ${businessName} — upgrade to see the contact`,
+      html: page({
+        eyebrow: 'Lead',
+        banner: ['New enquiry', 'success'],
+        heading: 'You have a new enquiry',
+        intro: h`A pet parent just enquired about <strong>${businessName}</strong>. Your plan's ${String(opts.leadLimit ?? '')} leads with contact details are used up for this month, so their number is hidden.`,
+        blocks: [
+          InfoBox([
+            ['Name', enquiry.name],
+            ['Phone', enquiry.phone],
+            ['Pet', enquiry.petType || '—'],
+            ['Preferred date', enquiry.preferredDate ? day(enquiry.preferredDate) : '—'],
+            ['City', enquiry.city || '—'],
+          ]),
+          Quote(enquiry.notes || 'No message left.'),
+          Button('Upgrade to see this customer', vendorDash('subscriptions')),
+        ],
+        preheader: `${enquiry.name} enquired — upgrade to see their number`,
+      }),
+      text: `New enquiry for ${businessName}
+
+Name: ${enquiry.name}
+Phone: hidden (monthly lead limit reached)
+Pet: ${enquiry.petType || '-'}
+
+${enquiry.notes || 'No message left.'}
+
+Upgrade to see this customer: ${vendorDash('subscriptions')}
+`,
+    };
+  }
   return {
     tag: 'vendor_new_enquiry',
     to,
