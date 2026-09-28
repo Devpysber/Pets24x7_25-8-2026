@@ -14,7 +14,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { requireAuth } from '../auth/middleware.js';
 import { getPublicListingById } from '../listings/index.js';
-import { identifyCaller, recordUserActivity } from './user-activity.js';
+import { identifyCaller, labelFor, recordUserActivity } from './user-activity.js';
 
 export const userActivityTrackRouter = Router();
 export const adminUserActivityRouter = Router();
@@ -216,7 +216,9 @@ adminUserActivityRouter.get(
         email: person?.email ?? null,
         phone: person?.phone ?? null,
         action: r.action,
-        label: r.label ?? r.action,
+        // Rows stored before a route had a readable label ("DELETE /api/…")
+        // are put into words with today's labels.
+        label: r.label && /^(POST|PUT|PATCH|DELETE) \//.test(r.label) && r.method && r.path ? labelFor(r.method, r.path) : r.label ?? r.action,
         path: r.path,
         method: r.method,
         status: r.status,

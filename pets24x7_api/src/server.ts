@@ -60,6 +60,8 @@ import { devRouter } from './dev/dev.routes.js';
 import { userActivityMiddleware, startUserActivityPrune } from './activity/user-activity.js';
 import { userActivityTrackRouter, adminUserActivityRouter } from './activity/user-activity.routes.js';
 import { accessRouter, adminPlanLimitsRouter, vendorPlanSlotsRouter } from './plans/plans.routes.js';
+import { adminTrashRouter } from './trash/trash.routes.js';
+import { startTrashPrune } from './trash/trash.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -168,6 +170,7 @@ app.use('/api/activity', activityRouter);
 app.use('/api/admin',   adminActivityRouter);
 app.use('/api/admin',   adminUserActivityRouter); // GET /api/admin/user-activity
 app.use('/api/admin',   adminPlanLimitsRouter);   // GET/PUT /api/admin/plan-limits
+app.use('/api/admin',   adminTrashRouter);        // Recently deleted: list, restore, purge
 app.use('/api/access',  accessRouter);            // contact allowance under the parent's plan
 app.use('/api/whatsapp', whatsappRouter);
 app.use('/api/memberships', membershipRouter);
@@ -328,6 +331,7 @@ async function ensureSeedAdmin(): Promise<void> {
     startVendorEngagementJob(); // the same for businesses, in an earlier window
     startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
     startUserActivityPrune();   // deletes user_activity rows older than 180 days, daily
+    startTrashPrune();          // Recently deleted entries older than 180 days
   } else {
     logger.info('RUN_JOBS=false: scheduled sweeps are not started on this instance');
   }

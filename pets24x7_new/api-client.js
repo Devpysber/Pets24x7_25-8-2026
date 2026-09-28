@@ -307,6 +307,15 @@
 
     adminWaMessages:  function (dir)        { return req('GET',  '/api/admin/wa-messages' + (dir ? '?direction=' + encodeURIComponent(dir) : '')); },
     adminAudit:       function ()          { return req('GET',  '/api/admin/audit'); },
+    adminTrash:        function (kind, q, all) {
+      var qs = [];
+      if (kind) qs.push('kind=' + encodeURIComponent(kind));
+      if (q) qs.push('q=' + encodeURIComponent(q));
+      if (all) qs.push('includeRestored=1');
+      return req('GET', '/api/admin/trash' + (qs.length ? '?' + qs.join('&') : ''));
+    },
+    adminTrashRestore: function (id)       { return req('POST',   '/api/admin/trash/' + encodeURIComponent(id) + '/restore', {}); },
+    adminTrashPurge:   function (id)       { return req('DELETE', '/api/admin/trash/' + encodeURIComponent(id)); },
     adminActivity:    function (kind)      { return req('GET',  '/api/admin/activity' + (kind ? '?kind=' + encodeURIComponent(kind) : '')); },
     adminUserActivity: function (opts)     {
       var o = opts || {}, qs = [];

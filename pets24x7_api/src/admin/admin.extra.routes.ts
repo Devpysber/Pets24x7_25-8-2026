@@ -27,6 +27,8 @@ import {
   serviceModeratedEmail,
   vendorWelcomeEmail,
 } from '../mail/action-templates.js';
+import { saveTrash } from '../trash/trash.js';
+import { isTestAccount, isTestPayment } from '../shared/test-data.js';
 
 export const adminExtraRouter = Router();
 adminExtraRouter.use(requireAuth('admin'));
@@ -204,8 +206,8 @@ adminExtraRouter.get(
       orderBy: { createdAt: 'desc' },
       take: 200,
       include: {
-        vendor: { select: { businessName: true, city: true, category: true } },
-        payment: { select: { status: true } },
+        vendor: { select: { businessName: true, city: true, category: true, email: true } },
+        payment: { select: { status: true, gatewayTxnId: true, merchantTxnId: true } },
       },
     });
     res.json({
@@ -223,6 +225,8 @@ adminExtraRouter.get(
         amount: rupees(f.priceMinor),
         status: f.status,
         paymentStatus: f.payment?.status ?? null,
+        // Settled by the developer payment bypass, or a test account: not revenue.
+        test: isTestPayment(f.payment) || isTestAccount({ id: f.vendorId, email: f.vendor.email }),
         startsAt: f.startsAt,
         endsAt: f.endsAt,
         };
@@ -615,7 +619,10 @@ adminExtraRouter.patch(
 adminExtraRouter.delete(
   '/deals/:id',
   asyncHandler(async (req, res) => {
-    await prisma.deal.delete({ where: { id: req.params.id ?? '' } }).catch(() => { throw new NotFoundError('Deal not found'); });
+    const row = await prisma.deal.findUnique({ where: { id: req.params.id ?? '' } });
+    if (!row) throw new NotFoundError('Deal not found');
+    await saveTrash('deal', row.id, row.title, { row }, { role: 'admin', id: req.auth!.sub });
+    await prisma.deal.delete({ where: { id: row.id } }).catch(() => { throw new NotFoundError('Deal not found'); });
     await audit(req, 'deal.delete', { dealId: req.params.id });
     res.json({ ok: true });
   }),
@@ -687,7 +694,10 @@ adminExtraRouter.patch(
 adminExtraRouter.delete(
   '/events/:id',
   asyncHandler(async (req, res) => {
-    await prisma.event.delete({ where: { id: req.params.id ?? '' } }).catch(() => { throw new NotFoundError('Event not found'); });
+    const row = await prisma.event.findUnique({ where: { id: req.params.id ?? '' } });
+    if (!row) throw new NotFoundError('Event not found');
+    await saveTrash('event', row.id, row.title, { row }, { role: 'admin', id: req.auth!.sub });
+    await prisma.event.delete({ where: { id: row.id } }).catch(() => { throw new NotFoundError('Event not found'); });
     await audit(req, 'event.delete', { eventId: req.params.id });
     res.json({ ok: true });
   }),
@@ -710,7 +720,11 @@ adminExtraRouter.get(
   asyncHandler(async (req, res) => {
     const take = Math.min(500, Number(req.query.limit ?? 200) || 200);
     const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take });
-    res.json({ ok: true, logs });
+    // Who did it, by name, not only "ADMIN".
+    const adminIds = [...new Set(logs.filter((l) => l.actorType === 'ADMIN').map((l) => l.actorId))];
+    const admins = adminIds.length ? await prisma.admin.findMany({ where: { id: { in: adminIds } }, select: { id: true, name: true } }) : [];
+    const nameOf = new Map(admins.map((a) => [a.id, a.name]));
+    res.json({ ok: true, logs: logs.map((l) => ({ ...l, actorName: l.actorType === 'ADMIN' ? nameOf.get(l.actorId) ?? 'Admin' : null })) });
   }),
 );
 

@@ -15,6 +15,7 @@ import { notify } from '../mail/notify.js';
 import { adminNotifyEmails } from '../mail/admin-notify.js';
 import { adminDailyDigestEmail } from '../mail/lifecycle-templates.js';
 import { startRandomDailyJob } from './random-schedule.js';
+import { REAL_PAYMENT } from '../shared/test-data.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -55,7 +56,7 @@ export async function collectAdminDigest(now = new Date()): Promise<AdminDigest>
     prisma.vendor.count({ where: { createdAt: window } }),
     prisma.listing.count({ where: { importedAt: window } }),
     prisma.payment.aggregate({
-      where: { status: 'SUCCESS', createdAt: window },
+      where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: window },
       _sum: { amountMinor: true },
       _count: { _all: true },
     }),

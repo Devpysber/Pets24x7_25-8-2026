@@ -134,6 +134,17 @@ const LEGACY_PERK_PHRASES = [
 
 /** Rewrites default plans that still carry the old promises. Safe to run on every boot. */
 export async function refreshDefaultPlanCopy(): Promise<void> {
+  // "Cancel anytime" contradicted plans that never renew by themselves; any
+  // plan still carrying it (admin-edited ones too) gets the plain wording.
+  const all = await prisma.membershipPlan.findMany({ select: { id: true, perks: true } }).catch(() => []);
+  for (const row of all) {
+    const perks = Array.isArray(row.perks) ? (row.perks as unknown[]).map(String) : null;
+    if (!perks || !perks.some((x) => /^cancel any ?time$/i.test(x.trim()))) continue;
+    await prisma.membershipPlan.update({
+      where: { id: row.id },
+      data: { perks: perks.map((x) => (/^cancel any ?time$/i.test(x.trim()) ? 'No auto-renewal: renew only if you want to' : x)) as any },
+    });
+  }
   for (const plan of DEFAULT_PLANS) {
     const row = await prisma.membershipPlan.findUnique({ where: { sku: plan.sku }, select: { id: true, perks: true } });
     if (!row) continue;

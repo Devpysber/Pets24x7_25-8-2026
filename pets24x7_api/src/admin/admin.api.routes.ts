@@ -29,7 +29,7 @@ import { prisma } from '../db.js';
 import { logger } from '../logger.js';
 import { vendorSubscriptionStore, saveVendorSubscription } from '../vendors/vendor.subscriptions.routes.js';
 import { grantPlanFeatured, endPlanFeatured } from '../plans/featured-grant.js';
-import { getPlanLimits, normalizeVendorTier } from '../plans/limits.js';
+import { decorateParentPlan, decorateVendorPlan, getPlanLimits, normalizeVendorTier } from '../plans/limits.js';
 import { syncVendorToListingIndex } from '../vendors/dashboard.routes.js';
 import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
@@ -69,6 +69,8 @@ import {
 } from '../mail/action-templates.js';
 import { accountDeletedEmail, reviewThanksEmail, vendorReactivatedEmail } from '../mail/lifecycle-templates.js';
 import { applyFeaturedStatus } from './admin.extra.routes.js';
+import { saveTrash, snapshotListing, snapshotParent, snapshotPhotos, snapshotVendor } from '../trash/trash.js';
+import { REAL_PARENT, REAL_PAYMENT, REAL_VENDOR, isTestAccount, isTestPayment } from '../shared/test-data.js';
 
 export const adminApiRouter = Router();
 adminApiRouter.use(requireAuth('admin'));
@@ -156,22 +158,22 @@ adminApiRouter.get(
       prisma.vendor.count({ where: { status: 'PENDING' } }),
       prisma.vendor.count({ where: { status: 'ACTIVE', claimedAt: { not: null } } }),
       prisma.vendor.count({ where: { listingId: { not: null }, claimedAt: { not: null } } }),
-      prisma.petParent.count(),
-      prisma.vendor.count({ where: { status: 'ACTIVE', listingId: { not: null }, claimedAt: { not: null } } }),
+      prisma.petParent.count({ where: REAL_PARENT }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { status: 'ACTIVE', listingId: { not: null }, claimedAt: { not: null } }] } }),
       prisma.enquiry.count(),
       prisma.marketingCampaign.count({ where: { status: 'ACTIVE' } }),
       prisma.marketingCampaign.count({ where: { status: 'PENDING_REVIEW' } }),
       prisma.review.count({ where: { status: 'HIDDEN' } }),
       prisma.review.count({ where: { status: 'PENDING' } }),
-      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS' } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', ...REAL_PAYMENT } }),
       prisma.payment.aggregate({
         _sum: { amountMinor: true },
-        where: { status: 'SUCCESS', createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
+        where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
       }),
-      prisma.vendor.findMany({ where: { claimedAt: { not: null } }, orderBy: { createdAt: 'desc' }, take: 5, select: { businessName: true, city: true, createdAt: true } }),
-      prisma.petParent.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { name: true, city: true, createdAt: true } }),
+      prisma.vendor.findMany({ where: { AND: [REAL_VENDOR, { claimedAt: { not: null } }] }, orderBy: { createdAt: 'desc' }, take: 5, select: { businessName: true, city: true, createdAt: true } }),
+      prisma.petParent.findMany({ where: REAL_PARENT, orderBy: { createdAt: 'desc' }, take: 5, select: { name: true, city: true, createdAt: true } }),
       prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { name: true, listingName: true, category: true, createdAt: true } }),
-      prisma.payment.findMany({ where: { status: 'SUCCESS' }, orderBy: { createdAt: 'desc' }, take: 5, select: { amountMinor: true, purpose: true, createdAt: true } }),
+      prisma.payment.findMany({ where: { status: 'SUCCESS', ...REAL_PAYMENT }, orderBy: { createdAt: 'desc' }, take: 5, select: { amountMinor: true, purpose: true, createdAt: true } }),
       prisma.membership.count({ where: { status: 'ACTIVE' } }),
     ]);
 
@@ -194,7 +196,7 @@ adminApiRouter.get(
         by: ['goal'],
         where: {
           OR: [
-            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] } } } },
+            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] }, ...REAL_PAYMENT } } },
             { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } },
           ],
         },
@@ -203,7 +205,7 @@ adminApiRouter.get(
       prisma.featuredListing.count({
         where: {
           OR: [
-            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] } } } },
+            { payment: { is: { status: { in: ['SUCCESS', 'REFUNDED'] }, ...REAL_PAYMENT } } },
             { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } },
           ],
         },
@@ -402,24 +404,28 @@ adminApiRouter.get(
           ? { status }
           : status === 'UNCLAIMED'
             ? { claimedAt: null, status: { not: 'PENDING' } }
-            : null;
-    const pageWhere: Prisma.VendorWhereInput = statusWhere ? { AND: [dbWhere, statusWhere] } : dbWhere;
+            // Default: business accounts only (claimed, or waiting / suspended /
+            // rejected). The import's unclaimed placeholder rows used to fill
+            // this page ("240 vendors" for 2 real businesses); they, and the
+            // directory itself, are under "Unclaimed" and on the Directory page.
+            : { OR: [{ claimedAt: { not: null } }, { status: { in: ['PENDING', 'SUSPENDED', 'REJECTED'] } }] };
+    const pageWhere: Prisma.VendorWhereInput = { AND: [dbWhere, statusWhere] };
 
     const [pageVendors, actionableVendors, registeredVendorsCount, activeVendorsCount, pendingVendorsCount, claimedListingsCount] = await Promise.all([
       prisma.vendor.findMany({ where: pageWhere, orderBy: { createdAt: 'desc' }, take: 200 }),
       // Unfiltered, the panel filters client-side — so the rows an admin has to
       // act on ride along even when they are older than the newest 200.
-      statusWhere
+      status
         ? Promise.resolve([])
         : prisma.vendor.findMany({
             where: { AND: [dbWhere, { status: { in: ['PENDING', 'SUSPENDED'] } }] },
             orderBy: { createdAt: 'desc' },
             take: 200,
           }),
-      prisma.vendor.count({ where: { OR: [{ claimedAt: { not: null } }, { status: 'PENDING' }] } }),
-      prisma.vendor.count({ where: { claimedAt: { not: null }, status: { in: ['ACTIVE', 'CLAIMED'] } } }),
-      prisma.vendor.count({ where: { status: 'PENDING' } }),
-      prisma.vendor.count({ where: { claimedAt: { not: null } } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { OR: [{ claimedAt: { not: null } }, { status: 'PENDING' }] }] } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { claimedAt: { not: null }, status: { in: ['ACTIVE', 'CLAIMED'] } }] } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { status: 'PENDING' }] } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { claimedAt: { not: null } }] } }),
     ]);
     const seen = new Set(pageVendors.map((v) => v.id));
     const dbVendors = [...pageVendors, ...actionableVendors.filter((v) => !seen.has(v.id))];
@@ -448,12 +454,13 @@ adminApiRouter.get(
         approvedAt: v.approvedAt,
         createdAt: v.createdAt,
         source: isClaimed ? 'REGISTERED_VENDOR' : 'DIRECTORY_LISTING',
+        test: isTestAccount(v),
       };
     });
 
     let directoryListingsFormatted: any[] = [];
 
-    if (status === 'UNCLAIMED' || status === 'ALL' || status === '') {
+    if (status === 'UNCLAIMED') {
       // Newest first: an import adds rows at the end of the index, and a capped
       // search that walks 34k scraped rows first would never reach them — which
       // is why a fresh import bumped the count but showed nothing in the table.
@@ -586,6 +593,10 @@ adminApiRouter.delete(
       select: { id: true, businessName: true, email: true, phone: true, listingId: true },
     });
     if (!vendor) throw new NotFoundError('Vendor not found');
+
+    // Kept for Recently deleted, before anything goes.
+    const snap = await snapshotVendor(id);
+    if (snap) await saveTrash('vendor', id, vendor.businessName || id, snap, { role: 'admin', id: req.auth!.sub });
 
     const [campaigns, featured] = await Promise.all([
       prisma.marketingCampaign.findMany({ where: { vendorId: id }, select: { id: true } }),
@@ -1130,6 +1141,8 @@ adminApiRouter.delete(
     const current = await listingPhotosOrThrow(id);
     if (!Number.isInteger(idx) || idx < 0 || idx >= current.length) throw new NotFoundError('No photo at that position');
     const next = current.filter((_, i) => i !== idx);
+    const snap = await snapshotPhotos(id, idx);
+    if (snap) await saveTrash('listing_photo', id, `Photo ${idx + 1} of ${getListingById(id)?.name ?? id}`, snap, { role: 'admin', id: req.auth!.sub });
     res.json(await savePhotos(req, id, next, 'listing.photos.delete', { removedIndex: idx }));
   }),
 );
@@ -1152,6 +1165,8 @@ adminApiRouter.delete(
         `"${vendor.businessName}" has claimed this listing. Deleting it keeps their account but removes the listing from the site.`,
       );
     }
+    const snap = await snapshotListing(id);
+    if (snap) await saveTrash('listing', id, [existing.name, existing.city].filter(Boolean).join(', '), snap, { role: 'admin', id: req.auth!.sub });
     if (vendor) {
       await prisma.$transaction([
         prisma.vendor.update({ where: { id: vendor.id }, data: { listingId: null } }),
@@ -1249,6 +1264,7 @@ adminApiRouter.get(
         enquiries: p._count.enquiries,
         memberships: p._count.memberships,
         createdAt: p.createdAt,
+        test: isTestAccount(p),
       })),
     });
   }),
@@ -1267,6 +1283,9 @@ adminApiRouter.delete(
       select: { id: true, name: true, email: true, phone: true },
     });
     if (!parent) throw new NotFoundError('Pet parent not found');
+
+    const snap = await snapshotParent(id);
+    if (snap) await saveTrash('parent', id, [parent.name, parent.email ?? parent.phone].filter(Boolean).join(' · '), snap, { role: 'admin', id: req.auth!.sub });
 
     const memberships = await prisma.membership.findMany({ where: { parentId: id }, select: { id: true } });
 
@@ -1576,7 +1595,7 @@ adminApiRouter.get(
       prisma.marketingCampaign.count({ where: { status: 'ACTIVE' } }),
       prisma.marketingCampaign.count({ where: { status: 'PENDING_REVIEW' } }),
       prisma.marketingCampaign.count({ where: { status: 'COMPLETED' } }),
-      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { purpose: 'CAMPAIGN', status: 'SUCCESS' } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { purpose: 'CAMPAIGN', status: 'SUCCESS', ...REAL_PAYMENT } }),
     ]);
     res.json({
       ok: true,
@@ -1678,20 +1697,24 @@ adminApiRouter.get(
         take: pg.take,
         include: {
           parent: { select: { name: true } },
-          membership: { include: { plan: { select: { name: true } } } },
+          membership: { include: { plan: { select: { name: true } }, parent: { select: { name: true } } } },
           campaign: { include: { vendor: { select: { businessName: true } } } },
           featuredListing: { include: { vendor: { select: { businessName: true } } } },
         },
       }),
-      prisma.payment.groupBy({ by: ['status'], _count: true, _sum: { amountMinor: true } }),
+      prisma.payment.groupBy({ by: ['status'], where: REAL_PAYMENT, _count: true, _sum: { amountMinor: true } }),
       prisma.payment.aggregate({
         _sum: { amountMinor: true },
-        where: { status: 'SUCCESS', createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
+        where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
       }),
       prisma.payment.count({ where }),
     ]);
 
     const sumFor = (s: string) => rupees(byStatus.find((b) => b.status === s)?._sum.amountMinor ?? 0);
+    // A payment whose account was deleted lost its payer and plan links. The
+    // plan is recognised by price; the payer is said to be gone, not left blank.
+    const plans = await prisma.membershipPlan.findMany({ select: { name: true, priceMinor: true } });
+    const planByPrice = new Map(plans.map((pl) => [pl.priceMinor, pl.name]));
 
     res.json({
       ok: true,
@@ -1707,14 +1730,15 @@ adminApiRouter.get(
       payments: payments.map((p) => {
         const who =
           p.parent?.name ??
+          p.membership?.parent?.name ??
           p.campaign?.vendor.businessName ??
           p.featuredListing?.vendor.businessName ??
-          '—';
+          (p.purpose === 'MEMBERSHIP' ? 'Deleted account' : 'Deleted business');
         const item =
           p.membership?.plan.name ??
           (p.campaign ? `Campaign · ${p.campaign.durationDays} Days` : null) ??
           (p.featuredListing ? `Featured · ${p.featuredListing.durationDays} Days` : null) ??
-          p.purpose;
+          (p.purpose === 'MEMBERSHIP' ? (planByPrice.get(p.amountMinor) ?? 'Membership') : p.purpose);
         return {
           id: p.id,
           payer: who,
@@ -1725,6 +1749,8 @@ adminApiRouter.get(
           status: p.status,
           txnId: p.gatewayTxnId ?? p.merchantTxnId,
           date: p.createdAt,
+          // Settled by the developer payment bypass: no money moved.
+          test: isTestPayment(p),
         };
       }),
     });
@@ -1896,25 +1922,27 @@ adminApiRouter.get(
       respondedEnquiries, totalEnquiries, activeVendors, claimedVendors,
       enquiryRows, parentRows, vendorRows, paymentRows, activityRows, topCityRows,
     ] = await Promise.all([
-      prisma.vendor.count({ where: { createdAt: win } }),
-      prisma.petParent.count({ where: { createdAt: win } }),
+      // A new business is one that registered or claimed (the import creates
+      // unclaimed placeholder rows by the hundred).
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { claimedAt: win }] } }),
+      prisma.petParent.count({ where: { AND: [REAL_PARENT, { createdAt: win }] } }),
       prisma.enquiry.count({ where: { createdAt: win } }),
-      prisma.payment.count({ where: { status: 'SUCCESS', createdAt: win } }),
-      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', createdAt: win } }),
-      prisma.vendor.count({ where: { createdAt: prevWin } }),
-      prisma.petParent.count({ where: { createdAt: prevWin } }),
+      prisma.payment.count({ where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: win } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: win } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { claimedAt: prevWin }] } }),
+      prisma.petParent.count({ where: { AND: [REAL_PARENT, { createdAt: prevWin }] } }),
       prisma.enquiry.count({ where: { createdAt: prevWin } }),
-      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', createdAt: prevWin } }),
+      prisma.payment.aggregate({ _sum: { amountMinor: true }, where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: prevWin } }),
       prisma.enquiry.count({ where: { createdAt: win, status: { in: ['RESPONDED', 'COMPLETED'] } } }),
       prisma.enquiry.count({ where: { createdAt: win } }),
-      prisma.vendor.count({ where: { status: { in: ['ACTIVE', 'CLAIMED'] } } }),
-      prisma.vendor.count({ where: { claimedAt: { not: null } } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { status: { in: ['ACTIVE', 'CLAIMED'] } }] } }),
+      prisma.vendor.count({ where: { AND: [REAL_VENDOR, { claimedAt: { not: null } }] } }),
       // Raw rows for the daily series — cheap at this volume, and it keeps the
       // bucketing in one place rather than in six database dialects.
       prisma.enquiry.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
-      prisma.petParent.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
-      prisma.vendor.findMany({ where: { createdAt: win }, select: { createdAt: true } }),
-      prisma.payment.findMany({ where: { status: 'SUCCESS', createdAt: win }, select: { createdAt: true, amountMinor: true } }),
+      prisma.petParent.findMany({ where: { AND: [REAL_PARENT, { createdAt: win }] }, select: { createdAt: true } }),
+      prisma.vendor.findMany({ where: { AND: [REAL_VENDOR, { claimedAt: win }] }, select: { createdAt: true } }),
+      prisma.payment.findMany({ where: { status: 'SUCCESS', ...REAL_PAYMENT, createdAt: win }, select: { createdAt: true, amountMinor: true } }),
       // Listing views are one row per page view, so 30 days of raw activity
       // grows with traffic and was all loaded into memory here. The totals per
       // kind come back as a grouped count; only the contact taps (a small
@@ -1952,8 +1980,9 @@ adminApiRouter.get(
       if (k in contactByDay) contactByDay[k] = (contactByDay[k] ?? 0) + 1;
     }
 
-    const pct = (nowN: number, prevN: number) =>
-      prevN === 0 ? (nowN > 0 ? 100 : 0) : Math.round(((nowN - prevN) / prevN) * 100);
+    // null = nothing to compare with (the panel says "new"), not a made-up +100%.
+    const pct = (nowN: number, prevN: number): number | null =>
+      prevN === 0 ? (nowN > 0 ? null : 0) : Math.round(((nowN - prevN) / prevN) * 100);
 
     const revenue = rupees(revenueAgg._sum.amountMinor ?? 0);
     const prevRevenue = rupees(prevRevenueAgg._sum.amountMinor ?? 0);
@@ -2496,7 +2525,7 @@ adminApiRouter.get(
           id: true, vendorId: true, goal: true, priceMinor: true, durationDays: true,
           notes: true, status: true, createdAt: true, startsAt: true, endsAt: true,
           vendor: { select: vendorSelect },
-          payment: { select: { status: true } },
+          payment: { select: { status: true, gatewayTxnId: true, merchantTxnId: true } },
         },
         take: 200,
       }),
@@ -2506,7 +2535,7 @@ adminApiRouter.get(
           id: true, vendorId: true, city: true, category: true, priceMinor: true, durationDays: true,
           status: true, createdAt: true, startsAt: true, endsAt: true,
           vendor: { select: vendorSelect },
-          payment: { select: { status: true } },
+          payment: { select: { status: true, gatewayTxnId: true, merchantTxnId: true } },
         },
         take: 200,
       }),
@@ -2515,14 +2544,15 @@ adminApiRouter.get(
     const buyers: any[] = [];
     // amountPaidRupees is money that cleared (0 otherwise); priceRupees is the
     // plan's price whatever happened to the payment.
-    const moneyFields = (status: string, paymentStatus: string | null | undefined, priceMinor: number) => {
+    const moneyFields = (status: string, paymentStatus: string | null | undefined, priceMinor: number, test = false) => {
       const kind = purchaseKind(status, paymentStatus);
       return {
         purchaseKind: kind,
-        purchaseLabel: PURCHASE_LABEL[kind],
+        purchaseLabel: test && kind === 'PAID' ? 'Test purchase (no money moved)' : PURCHASE_LABEL[kind],
         paid: kind === 'PAID',
+        test,
         priceRupees: Math.round(priceMinor / 100),
-        amountPaidRupees: kind === 'PAID' ? Math.round(priceMinor / 100) : 0,
+        amountPaidRupees: kind === 'PAID' && !test ? Math.round(priceMinor / 100) : 0,
         paymentStatus: paymentStatus ?? null,
         statusLabel: RUN_STATUS_LABEL[status] ?? status,
       };
@@ -2545,7 +2575,7 @@ adminApiRouter.get(
         planName: `${CAMPAIGN_GOAL_NAMES[c.goal] ?? String(c.goal)} · ${c.durationDays} Days`,
         goal: c.goal,
         type: 'CAMPAIGN',
-        ...moneyFields(c.status, c.payment?.status, c.priceMinor),
+        ...moneyFields(c.status, c.payment?.status, c.priceMinor, isTestPayment(c.payment) || isTestAccount({ id: c.vendorId, email: c.vendor?.email })),
         durationDays: c.durationDays,
         filledTargetDetails: {
           whatsappNumber: c.vendor?.whatsapp || c.vendor?.phone || null,
@@ -2573,7 +2603,7 @@ adminApiRouter.get(
         planName: `Featured Top Placement · ${f.durationDays} Days`,
         goal: 'FEATURED_TOP_SLOT',
         type: 'FEATURED',
-        ...moneyFields(f.status, f.payment?.status, f.priceMinor),
+        ...moneyFields(f.status, f.payment?.status, f.priceMinor, isTestPayment(f.payment) || isTestAccount({ id: f.vendorId, email: f.vendor?.email })),
         durationDays: f.durationDays,
         filledTargetDetails: {
           whatsappNumber: f.vendor?.whatsapp || f.vendor?.phone || null,
@@ -2908,7 +2938,9 @@ adminApiRouter.get(
       .findMany({ orderBy: [{ sortOrder: 'asc' }, { priceMinor: 'asc' }] })
       .catch(() => []);
     if (dbPlans.length > 0) {
-      res.json({ ok: true, plans: dbPlans.map(parentPlanOut), source: 'db' });
+      // Shown the way members see them: the enforced contact allowance first.
+      const limits = await getPlanLimits();
+      res.json({ ok: true, plans: dbPlans.map((pl) => decorateParentPlan(parentPlanOut(pl), limits)), source: 'db' });
       return;
     }
     // Nothing seeded yet: show the starter catalogue. Editing one of these
@@ -3011,11 +3043,11 @@ adminApiRouter.get(
       prisma.membership.findMany({
         take: 200,
         orderBy: { createdAt: 'desc' },
-        include: { parent: true, plan: true },
+        include: { parent: true, plan: true, activatingPayment: { select: { gatewayTxnId: true, merchantTxnId: true, parentId: true } } },
       }),
-      prisma.membership.count({ where: { status: { in: PAID } } }),
-      prisma.membership.count({ where: { status: 'ACTIVE' } }),
-      prisma.membership.aggregate({ _sum: { pricePaidMinor: true }, where: { status: { in: PAID } } }),
+      prisma.membership.count({ where: { status: { in: PAID }, parent: REAL_PARENT, OR: [{ activatingPayment: null }, { activatingPayment: REAL_PAYMENT }] } }),
+      prisma.membership.count({ where: { status: 'ACTIVE', parent: REAL_PARENT, OR: [{ activatingPayment: null }, { activatingPayment: REAL_PAYMENT }] } }),
+      prisma.membership.aggregate({ _sum: { pricePaidMinor: true }, where: { status: { in: PAID }, parent: REAL_PARENT, OR: [{ activatingPayment: null }, { activatingPayment: REAL_PAYMENT }] } }),
       prisma.membership.groupBy({ by: ['planId'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
     ]);
 
@@ -3030,6 +3062,7 @@ adminApiRouter.get(
       tier: m.plan?.tier || '—',
       billingPeriod: m.plan?.billingPeriod || '—',
       pricePaidRupees: rupees(m.pricePaidMinor || 0),
+      test: isTestAccount(m.parent) || isTestPayment(m.activatingPayment),
       autoRenew: m.autoRenew,
       status: m.status,
       startsAt: m.startsAt,
@@ -3142,7 +3175,10 @@ function toVendorPlan(b: VendorPlanInput, base: Record<string, any>): Record<str
 adminApiRouter.get(
   '/subscriptions/vendor-plans',
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true, plans: memoryVendorSubPlans });
+    // The catalogue's lead, photo, review and Featured lines are written from
+    // the enforced limits (plans/limits.ts), exactly as businesses see them.
+    const limits = await getPlanLimits();
+    res.json({ ok: true, plans: memoryVendorSubPlans.map((pl) => decorateVendorPlan(pl, limits)) });
   }),
 );
 
@@ -3253,12 +3289,14 @@ adminApiRouter.get(
         status: effectiveStatus,
         startsAt: activeSub.startsAt ?? null,
         endsAt: activeSub.endsAt ?? null,
+        test: isTestAccount(v),
       });
     }
     subscribers.sort((a, b) => new Date(b.startsAt ?? 0).getTime() - new Date(a.startsAt ?? 0).getTime());
 
-    const totalRevenue = subscribers.reduce((sum, s) => sum + (s.pricePaidRupees || 0), 0);
-    const activeCount = subscribers.filter((s) => s.status === 'ACTIVE').length;
+    const real = subscribers.filter((s) => !s.test);
+    const totalRevenue = real.reduce((sum, s) => sum + (s.pricePaidRupees || 0), 0);
+    const activeCount = real.filter((s) => s.status === 'ACTIVE').length;
     const goldCount = subscribers.filter((s) => s.tier === 'GOLD' || s.tier === 'DIAMOND').length;
 
     res.json({

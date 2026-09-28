@@ -1103,3 +1103,29 @@ model ContactUnlock {
   @@index([parentId, month])
   @@map("contact_unlocks")
 }
+
+// -----------------------------------------------------------
+// Recently deleted — every delete keeps a full snapshot here first, so an
+// admin can restore it (admin > Recently deleted). `snapshot` holds the row,
+// the rows deleted with it, and the links that were unhooked (payments,
+// enquiries, reviews) so restore puts all of it back. Kept 180 days.
+// -----------------------------------------------------------
+model DeletedRecord {
+  id         String    @id @default(cuid())
+  // "parent" | "vendor" | "listing" | "listing_photo" | "deal" | "event" | "pet" | "service"
+  kind       String    @db.VarChar(24)
+  recordId   String    @db.VarChar(191)
+  label      String    @db.VarChar(255)
+  snapshot   Json
+  // Who deleted it: "admin" | "pet_parent" | "vendor"
+  deletedByRole String? @db.VarChar(16)
+  deletedById   String? @db.VarChar(191)
+  deletedAt  DateTime  @default(now())
+  restoredAt DateTime?
+  restoredBy String?   @db.VarChar(191)
+
+  @@index([deletedAt])
+  @@index([kind, deletedAt])
+  @@index([recordId])
+  @@map("deleted_records")
+}

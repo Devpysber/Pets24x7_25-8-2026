@@ -31,6 +31,7 @@ import {
 } from '../mail/action-templates.js';
 import { isRecommendable } from '../feed/reco/city-index.js';
 import { contactQuota } from '../plans/entitlements.js';
+import { saveTrash } from '../trash/trash.js';
 
 export const parentDashboardRouter = Router();
 
@@ -532,6 +533,7 @@ parentDashboardRouter.delete(
     const existing = await prisma.pet.findUnique({ where: { id: req.params.id ?? '' } });
     if (!existing) throw new NotFoundError('Pet not found');
     if (existing.ownerId !== req.auth!.sub) throw new ForbiddenError();
+    await saveTrash('pet', existing.id, existing.name, { row: existing }, { role: 'pet_parent', id: req.auth!.sub });
     await prisma.pet.delete({ where: { id: existing.id } });
     invalidateParent(req.auth!.sub);
     const owner = await ownerContact(req.auth!.sub);

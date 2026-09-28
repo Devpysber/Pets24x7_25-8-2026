@@ -121,11 +121,36 @@ const LABELS: Array<[string, RegExp, string]> = [
   ['PATCH', /^\/api\/vendor\/reviews\/[^/]+\/reply$/, 'Replied to a review'],
   ['POST', /^\/api\/vendor\/register-business$/, 'Registered a business'],
   ['POST', /^\/api\/vendor\/claim\/submit-email$/, 'Submitted a listing claim'],
+  ['DELETE', /^\/api\/vendor\/plan-featured\/[^/]+$/, 'Moved a Featured placement'],
+  ['POST', /^\/api\/vendor\/plan-featured\/?$/, 'Placed a Featured placement'],
+  // Admin panel
+  ['DELETE', /^\/api\/admin\/parents\/[^/]+$/, 'Deleted a pet parent'],
+  ['DELETE', /^\/api\/admin\/vendors\/[^/]+$/, 'Deleted a business account'],
+  ['DELETE', /^\/api\/admin\/listings\/[^/]+\/photos\/[^/]+$/, 'Deleted a listing photo'],
+  ['DELETE', /^\/api\/admin\/listings\/[^/]+$/, 'Deleted a directory listing'],
+  ['DELETE', /^\/api\/admin\/deals\/[^/]+$/, 'Deleted a deal'],
+  ['DELETE', /^\/api\/admin\/events\/[^/]+$/, 'Deleted an event'],
+  ['POST', /^\/api\/admin\/trash\/[^/]+\/restore$/, 'Restored a deleted record'],
+  ['DELETE', /^\/api\/admin\/trash\/[^/]+$/, 'Permanently removed a deleted record'],
+  ['POST', /^\/api\/admin\/vendors\/[^/]+\/status$/, 'Changed a business status'],
+  ['POST', /^\/api\/admin\/subscriptions\/vendor-subscribers\/[^/]+\/status$/, 'Changed a business plan status'],
+  ['PUT', /^\/api\/admin\/plan-limits$/, 'Changed plan limits'],
+  ['POST', /^\/api\/admin\/plan-limits\/notice$/, 'Emailed Basic businesses'],
+  ['POST', /^\/api\/admin\/publish/, 'Published the website'],
 ];
 
-function labelFor(method: string, path: string): string {
+// Anything else in the admin panel: "Updated reviews", "Created featured", …
+function adminLabel(method: string, path: string): string | null {
+  const m = /^\/api\/admin\/([a-z-]+)/.exec(path);
+  if (!m) return null;
+  const what = (m[1] ?? '').replace(/-/g, ' ');
+  const verb = method === 'DELETE' ? 'Deleted' : method === 'POST' ? 'Created / ran' : 'Updated';
+  return `${verb} ${what} (admin)`;
+}
+
+export function labelFor(method: string, path: string): string {
   for (const [m, re, label] of LABELS) if (m === method && re.test(path)) return label;
-  return `${method} ${path}`;
+  return adminLabel(method, path) ?? `${method} ${path}`;
 }
 
 // Machine traffic and the tracking endpoints themselves (they write their own rows).

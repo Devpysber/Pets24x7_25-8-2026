@@ -14,6 +14,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../shared/errors.js';
 import { notifyIf } from '../mail/notify.js';
 import { serviceAddedEmail, serviceRemovedEmail, serviceUpdatedEmail } from '../mail/action-templates.js';
+import { saveTrash } from '../trash/trash.js';
 
 export const vendorServicesRouter = Router();
 
@@ -118,6 +119,7 @@ vendorServicesRouter.delete(
     const existing = await prisma.service.findUnique({ where: { id: req.params.id ?? '' } });
     if (!existing) throw new NotFoundError('Service not found');
     if (existing.vendorId !== req.auth!.sub) throw new ForbiddenError();
+    await saveTrash('service', existing.id, existing.name, { row: existing }, { role: 'vendor', id: req.auth!.sub });
     await prisma.service.delete({ where: { id: existing.id } });
     const vendor = await vendorContact(req.auth!.sub);
     notifyIf(vendor?.email, (to) => serviceRemovedEmail(to, vendor!.businessName, existing.name));
