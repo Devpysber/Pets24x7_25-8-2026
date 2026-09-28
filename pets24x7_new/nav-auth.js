@@ -631,3 +631,12 @@
     })
     .catch(function () { settleAuth(null); /* offline / not signed in — stays locked */ });
 })();
+
+/* Walking-pets strip above the footer (pets-anim.js), loaded after the page
+   so it never delays anything that matters. */
+(function () {
+  if (window.__p24Parade || document.getElementById('p24PetsAnim')) return;
+  var s = document.createElement('script');
+  s.src = '/pets-anim.js'; s.defer = true; s.id = 'p24PetsAnim';
+  (document.head || document.documentElement).appendChild(s);
+})();
