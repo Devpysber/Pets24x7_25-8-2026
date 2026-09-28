@@ -177,6 +177,43 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireNavToggles);
   else wireNavToggles();
 
+  // ---- Listing pages: keep the enquiry form clear ----
+  // The sidebar (enquiry form + owner card) is sticky on wide screens. When it
+  // is taller than the window it sticks by its bottom edge instead of its top
+  // (negative top), so the Send button can always be reached. The floating
+  // WhatsApp pill and the phone "Enquire" bar hide while they would cover the
+  // form, and come back once it scrolls away.
+  function wireListingSidebar() {
+    var card = document.getElementById('enquiryForm');
+    if (!card) return;
+    var aside = card.closest('aside');
+    var pill = document.querySelector('.float-wa');
+    var bar = document.querySelector('.mobile-book-bar');
+    var queued = false;
+    function update() {
+      queued = false;
+      var vh = window.innerHeight;
+      if (aside) aside.style.setProperty('--aside-top', Math.min(90, vh - aside.offsetHeight - 16) + 'px');
+      var r = card.getBoundingClientRect();
+      var onScreen = r.top < vh && r.bottom > 0;
+      if (bar) bar.classList.toggle('is-covering', onScreen);
+      if (pill) {
+        // The whole sidebar (form and owner card), not only the form.
+        var box = aside ? aside.getBoundingClientRect() : r;
+        var f = pill.getBoundingClientRect();
+        pill.classList.toggle('is-covering', f.left < box.right && f.right > box.left && f.top < box.bottom && f.bottom > box.top);
+      }
+    }
+    function queue() { if (!queued) { queued = true; requestAnimationFrame(update); } }
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    // The form grows (error / success messages, restored drafts).
+    if (window.ResizeObserver && aside) new ResizeObserver(queue).observe(aside);
+    update();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireListingSidebar);
+  else wireListingSidebar();
+
   // ---- Contact lock ----
   // Phone numbers and WhatsApp buttons work only for signed-in people. For
   // everyone else, on every page that loads this file:

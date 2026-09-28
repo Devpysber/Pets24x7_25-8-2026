@@ -171,7 +171,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .ai-summary p{color:var(--text)!important;font-size:14px;margin:0!important;line-height:1.6}
 .gmap-embed{width:100%;height:280px;border:0;border-radius:10px;margin-top:14px}
 
-.booking-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow);position:sticky;top:90px;height:fit-content;scroll-margin-top:84px}
+.booking-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow);height:fit-content;scroll-margin-top:84px}
+/* The sidebar sticks as one column. With only the enquiry card sticky, the
+   owner card under it scrolled up over the form. --aside-top comes from
+   nav-auth.js: a column taller than the screen sticks by its bottom edge,
+   so the Send button is always reachable. */
+@media (min-width:1025px){.pdp-layout>aside{position:sticky;top:var(--aside-top,90px);align-self:start}}
+/* Floating WhatsApp pill and phone booking bar step aside while they would
+   cover the enquiry form (toggled by nav-auth.js). */
+.float-wa,.mobile-book-bar{transition:opacity .2s,transform .2s}
+.float-wa.is-covering,.mobile-book-bar.is-covering{opacity:0;pointer-events:none;transform:translateY(16px)}
 .booking-card .cat-tag{display:inline-flex;align-items:center;gap:6px;background:var(--primary-light);color:var(--primary);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:8px}
 .booking-card h3{font-size:18px;font-weight:800;margin-bottom:4px;line-height:1.2}
 .booking-card .price-tax{font-size:12px;color:var(--text-muted);margin-bottom:18px}
