@@ -2569,12 +2569,33 @@
         <div class="card" id="waCard" style="margin-bottom:18px; font-feature-settings:'calt' 0;">
           <div class="card-header" style="flex-wrap:wrap; gap:10px;">
             <div>
-              <div class="card-title">WhatsApp codes for listing claims</div>
+              <div class="card-title">WhatsApp for codes and notices</div>
               <div class="card-subtitle" id="waMode">Checking…</div>
             </div>
             <button class="btn btn-sm" type="button" onclick="waCheck()">↻ Check again</button>
           </div>
-          <ol id="waSteps" style="list-style:none; margin:0; padding:0; display:grid; gap:10px;"></ol>
+
+          <!-- Linked number (Baileys) -->
+          <div style="border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+              <div>
+                <div style="font-weight:700; font-size:14px;">Linked WhatsApp number</div>
+                <div id="waLinkState" style="font-size:12.5px; color:var(--text-muted);">—</div>
+              </div>
+              <div id="waLinkBtns" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            </div>
+            <div id="waLinkBody" style="margin-top:12px;"></div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:10px; line-height:1.5;">
+              Low volume only: sign-in and claim codes and short account notices, one at a time, a few seconds apart, with hourly and daily caps.
+              Review requests and anything sent to many people never use this number. Use a spare number, not your main business number, in case WhatsApp restricts it.
+            </div>
+          </div>
+
+          <details id="waMetaBox">
+            <summary style="cursor:pointer; font-weight:700; font-size:14px; margin-bottom:10px;">Meta WhatsApp API (official) <span id="waMetaTag" style="font-weight:500;"></span></summary>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Used for review requests, and for codes whenever no number is linked.</div>
+            <ol id="waSteps" style="list-style:none; margin:0; padding:0; display:grid; gap:10px;"></ol>
+          </details>
           <div id="waTestRow" style="display:none; margin-top:16px; gap:8px; flex-wrap:wrap; align-items:center;">
             <input id="waTestPhone" type="tel" class="form-control" style="width:220px; max-width:100%;" placeholder="+91 98xxxxxxxx" />
             <button class="btn btn-sm btn-primary" type="button" onclick="waTest()">Send a test code</button>
@@ -6834,25 +6855,71 @@
 
 
   // ---- Settings: WhatsApp claim codes ----
+  var waPoll = null;
+  var WA_STATE = { off: ['Not linked', 'tag-unclaimed'], connecting: ['Connecting…', 'tag-pending'], qr: ['Waiting for scan', 'tag-pending'], open: ['Connected', 'tag-active'], logged_out: ['Logged out', 'tag-suspended'] };
+  function waRenderLink(l) {
+    var st = WA_STATE[l.state] || [l.state, ''];
+    document.getElementById('waLinkState').innerHTML = '<span class="status-tag ' + st[1] + '">' + escH(st[0]) + '</span> ' +
+      (l.linkedNumber ? escH(l.linkedNumber) + ' · ' : '') +
+      escH(l.usage.lastHour + ' of ' + l.limits.perHour + ' sent this hour, ' + l.usage.last24h + ' of ' + l.limits.perDay + ' today') +
+      (l.error ? '<br><span style="color:var(--danger);">' + escH(l.error) + '</span>' : '');
+    var btns = document.getElementById('waLinkBtns'), body = document.getElementById('waLinkBody');
+    if (l.state === 'open') {
+      btns.innerHTML = '<button class="btn btn-sm" type="button" onclick="waUnlink()">Unlink</button>';
+      body.innerHTML = '';
+    } else if (l.state === 'qr' || l.state === 'connecting') {
+      btns.innerHTML = '<button class="btn btn-sm" type="button" onclick="waUnlink()">Cancel</button>';
+      body.innerHTML = l.qrSvg
+        ? '<div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;"><div style="width:240px; max-width:100%; background:#fff; padding:6px; border:1px solid var(--border); border-radius:10px;">' + l.qrSvg + '</div>' +
+          '<ol style="font-size:13px; line-height:1.7; padding-left:18px; margin:0;"><li>Open WhatsApp on the phone with the number to use.</li><li>Settings → Linked devices → Link a device.</li><li>Scan this code. It refreshes by itself.</li></ol></div>'
+        : '<div style="font-size:13px; color:var(--text-muted);">Starting…</div>';
+    } else {
+      btns.innerHTML = '<button class="btn btn-sm btn-primary" type="button" onclick="waLink()">Link with QR code</button>';
+      body.innerHTML = '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><span style="font-size:12.5px; color:var(--text-muted);">Or link without scanning:</span>' +
+        '<input id="waPairPhone" type="tel" class="form-control" style="width:200px; max-width:100%;" placeholder="Number to link, +91…" />' +
+        '<button class="btn btn-sm" type="button" onclick="waPair()">Get pairing code</button><span id="waPairOut" style="font-size:13px;"></span></div>';
+    }
+    clearTimeout(waPoll);
+    var view = document.getElementById('view-settings');
+    if ((l.state === 'qr' || l.state === 'connecting') && view && view.classList.contains('active')) waPoll = setTimeout(waCheck, 3000);
+  }
+  window.waLink = function() { api.adminWhatsappLink().then(function() { setTimeout(waCheck, 1500); }).catch(function(e) { toast(fmtErr(e), 'error'); }); };
+  window.waPair = function() {
+    var ph = (document.getElementById('waPairPhone') || {}).value || '', out = document.getElementById('waPairOut');
+    if (!ph.trim()) { out.textContent = 'Enter the number with country code.'; return; }
+    out.textContent = 'Asking WhatsApp…';
+    api.adminWhatsappLink(ph.trim()).then(function(r) {
+      out.innerHTML = 'On that phone: WhatsApp → Linked devices → Link a device → <em>Link with phone number instead</em>, then type <strong style="font-size:16px; letter-spacing:1px;">' + escH(r.pairingCode || '') + '</strong>';
+      clearTimeout(waPoll); waPoll = setTimeout(waCheck, 4000);
+    }).catch(function(e) { out.textContent = fmtErr(e); });
+  };
+  window.waUnlink = function() {
+    uiConfirm('Unlink this WhatsApp number? Codes will go through the Meta API if it is set up, otherwise claims wait for approval.').then(function(ok) {
+      if (!ok) return;
+      api.adminWhatsappUnlink().then(function() { toast('Number unlinked'); waCheck(); }).catch(function(e) { toast(fmtErr(e), 'error'); });
+    });
+  };
   window.waCheck = function() {
     var box = document.getElementById('waSteps'), mode = document.getElementById('waMode');
     if (!box) return;
-    mode.textContent = 'Checking with Meta…';
+    if (!mode.textContent || mode.textContent === 'Checking…') mode.textContent = 'Checking…';
     return api.adminWhatsappStatus().then(function(r) {
-      mode.innerHTML = '<span class="status-tag ' + (r.ready ? 'tag-active' : 'tag-pending') + '">' + (r.ready ? 'Working' : 'Not ready') + '</span> ' + escH(r.claimMode);
+      if (r.linked) waRenderLink(r.linked);
+      document.getElementById('waMetaTag').innerHTML = r.metaReady ? '<span class="status-tag tag-active">Working</span>' : '<span class="status-tag tag-unclaimed">Not set up</span>';
+      var sender = r.provider === 'baileys' ? 'Linked number' : r.provider === 'meta' ? 'Meta API' : 'None';
+      mode.innerHTML = '<span class="status-tag ' + (r.ready ? 'tag-active' : 'tag-pending') + '">Sending with: ' + escH(sender) + '</span> ' + escH(r.claimMode);
       box.innerHTML = (r.steps || []).map(function(s) {
         return '<li style="display:flex; gap:10px; align-items:flex-start;"><span style="flex:none; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; background:' + (s.ok ? '#16A34A' : '#DC2626') + ';">' + (s.ok ? '✓' : '!') + '</span>' +
           '<span><strong style="font-size:13.5px;">' + escH(s.label) + '</strong><br><span style="font-size:12.5px; color:var(--text-muted);">' + escH(s.detail) + '</span></span></li>';
       }).join('');
-      var ok = (r.steps || []).some(function(s) { return s.key === 'token' && s.ok; });
-      document.getElementById('waTestRow').style.display = ok ? 'flex' : 'none';
+      document.getElementById('waTestRow').style.display = r.ready ? 'flex' : 'none';
     }).catch(function(e) { mode.textContent = fmtErr(e); });
   };
   window.waTest = function() {
     var ph = document.getElementById('waTestPhone').value.trim(), out = document.getElementById('waTestOut');
     if (!ph) { out.textContent = 'Enter a WhatsApp number with country code.'; return; }
     out.textContent = 'Sending…';
-    api.adminWhatsappTest(ph).then(function(r) { out.textContent = 'Sent. The code on that phone should read ' + r.code + '.'; })
+    api.adminWhatsappTest(ph).then(function(r) { out.textContent = 'Sent with ' + (r.provider === 'baileys' ? 'the linked number' : 'the Meta API') + '. The code on that phone should read ' + r.code + '.'; waCheck(); })
       .catch(function(e) { out.textContent = fmtErr(e); });
   };
 

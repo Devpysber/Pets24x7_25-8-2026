@@ -16,7 +16,7 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { ForbiddenError, NotFoundError, TooManyRequestsError } from '../shared/errors.js';
 import { normalizePhone } from '../shared/phone.js';
-import { sendReviewRequestTemplate, whatsappConfigured } from '../whatsapp/cloud-api.js';
+import { sendReviewRequestTemplate, metaConfigured } from '../whatsapp/cloud-api.js';
 import { getListingById } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
@@ -111,7 +111,8 @@ vendorReviewsRouter.post(
     // deliver it. So the row (and its code) is created first and kept even when
     // the send fails — the vendor then gets a wa.me link to send by hand,
     // instead of losing the request entirely.
-    const waReady = whatsappConfigured();
+    // Review requests are bulk by nature, so only the official Meta API sends them.
+    const waReady = metaConfigured();
     if (!waReady) {
       logger.warn({ vendorId }, 'WhatsApp not configured — review requests will be link-only');
     }

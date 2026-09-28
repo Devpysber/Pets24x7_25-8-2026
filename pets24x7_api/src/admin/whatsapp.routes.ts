@@ -1,7 +1,9 @@
-// Admin WhatsApp check — is the Cloud API set up well enough to send claim codes?
+// Admin WhatsApp — the two senders for codes and short notices.
 //
-//   GET  /api/admin/whatsapp/status   each setup step, checked live against Meta
-//   POST /api/admin/whatsapp/test     { phone } → sends the real code template once
+//   GET  /api/admin/whatsapp/status   linked number (Baileys) + Meta setup steps
+//   POST /api/admin/whatsapp/link     { phone? } → start linking: QR, or a pairing code for that phone
+//   POST /api/admin/whatsapp/unlink   log the linked number out and forget it
+//   POST /api/admin/whatsapp/test     { phone } → sends one real code on the active sender
 //
 // Nothing here returns a credential; values are reported as set / not set.
 
@@ -14,7 +16,8 @@ import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError } from '../shared/errors.js';
 import { logger } from '../logger.js';
-import { sendOtpTemplate, whatsappConfigured } from '../whatsapp/cloud-api.js';
+import { metaConfigured, sendOtpTemplate, whatsappConfigured, whatsappProvider } from '../whatsapp/cloud-api.js';
+import { linkStatus, requestPairingCode, startBaileys, unlinkBaileys } from '../whatsapp/baileys.js';
 
 export const adminWhatsappRouter = Router();
 adminWhatsappRouter.use('/whatsapp', requireAuth('admin'));
@@ -40,7 +43,7 @@ adminWhatsappRouter.get(
   '/whatsapp/status',
   asyncHandler(async (_req, res) => {
     const steps: Step[] = [];
-    const configured = whatsappConfigured();
+    const configured = metaConfigured();
     steps.push({
       key: 'credentials',
       label: 'Phone number ID and access token on the server',
@@ -90,14 +93,51 @@ adminWhatsappRouter.get(
       detail: env.WA_APP_SECRET ? 'WA_APP_SECRET is set.' : 'Optional for sending codes. Set WA_APP_SECRET so incoming webhooks are verified.',
     });
 
-    const ready = steps.filter((s) => s.key !== 'secret').every((s) => s.ok) && steps.length >= 4;
+    const metaReady = steps.filter((s) => s.key !== 'secret').every((s) => s.ok) && steps.length >= 4;
+    const provider = whatsappProvider();
+    const ready = provider === 'baileys' || (provider === 'meta' && metaReady);
     res.json({
       ready,
+      provider,
+      providerSetting: env.WA_PROVIDER,
+      linked: await linkStatus(),
+      metaReady,
       steps,
-      claimMode: ready
-        ? 'Claims send a 6-digit WhatsApp code to the number on the listing.'
-        : 'Claims cannot send a WhatsApp code, so every claim waits for approval in Vendors.',
+      claimMode: provider === 'baileys'
+        ? 'Codes and notices go out from your linked WhatsApp number. Claims send a 6-digit code to the number on the listing.'
+        : ready
+          ? 'Codes and notices go out through the Meta WhatsApp API. Claims send a 6-digit code to the number on the listing.'
+          : 'No WhatsApp sender is working, so claims cannot send a code and every claim waits for approval in Vendors.',
     });
+  }),
+);
+
+adminWhatsappRouter.post(
+  '/whatsapp/link',
+  asyncHandler(async (req, res) => {
+    const { phone } = z.object({ phone: z.string().trim().max(20).optional() }).parse(req.body ?? {});
+    if (env.WA_PROVIDER === 'meta') throw new BadRequestError('WA_PROVIDER is set to meta on the server; the linked number is switched off.');
+    let pairingCode: string | null = null;
+    if (phone) {
+      try { pairingCode = await requestPairingCode(phone); } catch (err) { throw new BadRequestError((err as Error).message); }
+    } else {
+      await startBaileys();
+    }
+    await prisma.auditLog
+      .create({ data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'whatsapp.link', meta: { method: phone ? 'pairing_code' : 'qr' }, ipAddress: req.ip ?? null } })
+      .catch(() => {});
+    res.json({ ok: true, pairingCode });
+  }),
+);
+
+adminWhatsappRouter.post(
+  '/whatsapp/unlink',
+  asyncHandler(async (req, res) => {
+    await unlinkBaileys();
+    await prisma.auditLog
+      .create({ data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'whatsapp.unlink', meta: {}, ipAddress: req.ip ?? null } })
+      .catch(() => {});
+    res.json({ ok: true });
   }),
 );
 
@@ -105,7 +145,7 @@ adminWhatsappRouter.post(
   '/whatsapp/test',
   asyncHandler(async (req, res) => {
     const { phone } = z.object({ phone: z.string().trim().min(8).max(20) }).parse(req.body ?? {});
-    if (!whatsappConfigured()) throw new BadRequestError('WhatsApp is not set up on the server yet.');
+    if (!whatsappConfigured()) throw new BadRequestError('No WhatsApp sender is working yet. Link a number or finish the Meta setup.');
     const code = String(Math.floor(100000 + Math.random() * 900000));
     try {
       await sendOtpTemplate(phone, code);
@@ -116,6 +156,6 @@ adminWhatsappRouter.post(
     await prisma.auditLog
       .create({ data: { actorType: 'ADMIN', actorId: req.auth!.sub, action: 'whatsapp.test', meta: { phone }, ipAddress: req.ip ?? null } })
       .catch(() => {});
-    res.json({ ok: true, code });
+    res.json({ ok: true, code, provider: whatsappProvider() });
   }),
 );

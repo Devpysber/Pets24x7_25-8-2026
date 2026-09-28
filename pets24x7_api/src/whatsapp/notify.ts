@@ -4,7 +4,7 @@
 
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { sendText, whatsappConfigured } from './cloud-api.js';
+import { sendText, whatsappConfigured, whatsappProvider } from './cloud-api.js';
 import { normalizePhone } from '../shared/phone.js';
 
 export async function logWaMessage(entry: {
@@ -61,6 +61,11 @@ export async function notify(rawPhone: string, text: string): Promise<void> {
   // for a guaranteed 401 and filled the admin WhatsApp log with failed rows.
   if (!whatsappConfigured()) {
     logger.debug({ phone }, 'notify: WhatsApp not configured, nudge not sent');
+    return;
+  }
+  // The linked-number sender keeps its own log rows (sent and failed).
+  if (whatsappProvider() === 'baileys') {
+    await sendText(phone, text).catch((err) => logger.debug({ err: String(err?.message ?? err), phone }, 'notify: WA send skipped'));
     return;
   }
   try {

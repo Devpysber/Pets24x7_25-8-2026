@@ -66,6 +66,21 @@ const Env = z.object({
   WA_REVIEW_TEMPLATE_NAME: z.string().default('pets24x7_review_request'),
   WA_REVIEW_TEMPLATE_LANG: z.string().default('en'),
 
+  // Which WhatsApp sender to use. auto = the linked WhatsApp number (Baileys)
+  // when it is connected, otherwise the Meta Cloud API when that is set up.
+  WA_PROVIDER: z.enum(['auto', 'baileys', 'meta']).default('auto'),
+  // Where the linked number's session keys live. Keep it out of git and
+  // readable only by the API user; deleting it unlinks the number.
+  WA_BAILEYS_DIR: z.string().default('.wa-session'),
+  // Sending limits for the linked number. An unofficial client that sends
+  // fast or in bulk gets the number banned, so every send goes through a
+  // slow single queue and these caps.
+  WA_BAILEYS_PER_MINUTE: z.coerce.number().int().positive().default(6),
+  WA_BAILEYS_PER_HOUR: z.coerce.number().int().positive().default(40),
+  WA_BAILEYS_PER_DAY: z.coerce.number().int().positive().default(150),
+  WA_BAILEYS_PER_NUMBER_PER_HOUR: z.coerce.number().int().positive().default(4),
+  WA_BAILEYS_MIN_GAP_MS: z.coerce.number().int().nonnegative().default(4000),
+
   STATIC_DATA_DIR: z.string().default('../pets24x7_new/data'),
   PUBLIC_SHORTLINK_BASE: z.string().url().default('https://pets24x7.com'),
 

@@ -119,6 +119,8 @@
     adminMailLogItem:   function (id)                    { return req('GET',  '/api/admin/mail/log/' + encodeURIComponent(id)); },
     adminWhatsappStatus: function ()                     { return req('GET',  '/api/admin/whatsapp/status'); },
     adminWhatsappTest:  function (phone)                 { return req('POST', '/api/admin/whatsapp/test', { phone: phone }); },
+    adminWhatsappLink:  function (phone)                 { return req('POST', '/api/admin/whatsapp/link', phone ? { phone: phone } : {}); },
+    adminWhatsappUnlink: function ()                     { return req('POST', '/api/admin/whatsapp/unlink', {}); },
     adminMailPreview:   function (templateId, data)      { return req('POST', '/api/admin/mail/preview', { templateId: templateId, data: data || {} }); },
     adminMailAudience:  function (audience)              { return req('POST', '/api/admin/mail/audience/count', { audience: audience }); },
     adminMailSend:      function (p)                     { return req('POST', '/api/admin/mail/send', p); },

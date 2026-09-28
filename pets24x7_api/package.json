@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "baileys": "7.0.0-rc14",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -39,6 +40,7 @@
     "nodemailer": "^9.1.0",
     "pino": "^9.4.0",
     "pino-http": "^10.3.0",
+    "qrcode": "1.5.4",
     "read-excel-file": "^9.3.10",
     "zod": "^3.23.8"
   },
@@ -51,6 +53,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.7.0",
     "@types/nodemailer": "^8.0.1",
+    "@types/qrcode": "^1.5.6",
     "embedded-postgres": "^18.4.0-beta.17",
     "pino-pretty": "^11.2.2",
     "prisma": "^5.20.0",

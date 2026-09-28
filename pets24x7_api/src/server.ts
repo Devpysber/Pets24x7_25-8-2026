@@ -25,6 +25,7 @@ import { adminAuthRouter } from './auth/admin.routes.js';
 import { adminApiRouter, loadPersistedPlanStores } from './admin/admin.api.routes.js';
 import { adminMailRouter } from './admin/mail.routes.js';
 import { adminWhatsappRouter } from './admin/whatsapp.routes.js';
+import { startBaileysIfLinked } from './whatsapp/baileys.js';
 import { adminImportRouter } from './admin/import.routes.js';
 import { adminPublishRouter } from './admin/publish.routes.js';
 import { adminExtraRouter } from './admin/admin.extra.routes.js';
@@ -356,6 +357,7 @@ async function ensureSeedAdmin(): Promise<void> {
   void verifyMailTransport().catch(() => {});
   app.listen(env.PORT, env.HOST, () => {
     logger.info(`pets24x7-api ready on http://${env.HOST}:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
+    startBaileysIfLinked();
   });
 })().catch((err) => {
   logger.fatal({ err }, 'boot failure');

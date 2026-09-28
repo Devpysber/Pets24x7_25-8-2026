@@ -13,3 +13,6 @@ prisma/.cache
 
 # Data dumps produced by scripts/export-data.mjs (contains customer rows)
 export/
+
+# linked WhatsApp session keys (Baileys)
+.wa-session/

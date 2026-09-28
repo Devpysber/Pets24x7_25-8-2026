@@ -8,6 +8,7 @@
 import { env } from '../env.js';
 import { logger } from '../logger.js';
 import { normalizePhone } from '../shared/phone.js';
+import { baileysReady, baileysSend, otpText } from './baileys.js';
 
 const GRAPH = 'https://graph.facebook.com/v20.0';
 
@@ -16,8 +17,29 @@ const GRAPH = 'https://graph.facebook.com/v20.0';
 // and fall back rather than burning a round trip on a guaranteed error.
 const PLACEHOLDER = /^(0+|x+|changeme|your[-_]?token.*|test.*)$/i;
 
-/** True when real Cloud API credentials are present. */
+/**
+ * Which sender carries codes and short notices right now. The linked number
+ * (Baileys) is preferred when connected, unless WA_PROVIDER pins one.
+ */
+function useBaileys(): boolean {
+  if (env.WA_PROVIDER === 'meta') return false;
+  return baileysReady();
+}
+
+/** True when codes and notices can be sent on WhatsApp by either sender. */
 export function whatsappConfigured(): boolean {
+  return useBaileys() || (env.WA_PROVIDER !== 'baileys' && metaConfigured());
+}
+
+/** Which sender a code or notice would go out on, for status screens. */
+export function whatsappProvider(): 'baileys' | 'meta' | null {
+  if (useBaileys()) return 'baileys';
+  if (env.WA_PROVIDER !== 'baileys' && metaConfigured()) return 'meta';
+  return null;
+}
+
+/** True when real Cloud API credentials are present. */
+export function metaConfigured(): boolean {
   const id = (env.WA_PHONE_NUMBER_ID ?? '').trim();
   const token = (env.WA_ACCESS_TOKEN ?? '').trim();
   if (!id || !token) return false;
@@ -54,6 +76,7 @@ async function postMessage(body: unknown): Promise<SendResponse> {
 }
 
 export async function sendOtpTemplate(phone: string, code: string): Promise<{ messageId: string }> {
+  if (useBaileys()) return baileysSend(phone, otpText(code), 'otp');
   const to = normalizePhone(phone).replace(/^\+/, ''); // Meta wants digits only
   const data = await postMessage({
     messaging_product: 'whatsapp',
@@ -72,6 +95,7 @@ export async function sendOtpTemplate(phone: string, code: string): Promise<{ me
 }
 
 // Vendor → past-customer review request. Uses approved Marketing template.
+// Meta only, never the linked number: these go to many people at once.
 // Variables: {{1}} customer name, {{2}} business name, {{3}} short-link URL.
 export async function sendReviewRequestTemplate(
   phone: string,
@@ -105,6 +129,7 @@ export async function sendReviewRequestTemplate(
 // Plain text — works only with users who messaged us in the last 24h (the
 // "service window"). Useful for transactional replies, NOT for OTP cold-sends.
 export async function sendText(phone: string, body: string): Promise<{ messageId: string }> {
+  if (useBaileys()) return baileysSend(phone, body, 'notice');
   const to = normalizePhone(phone).replace(/^\+/, '');
   const data = await postMessage({
     messaging_product: 'whatsapp',
