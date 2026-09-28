@@ -1,6 +1,6 @@
 /* Pet parade: a dog walking, a cat strolling the other way and a puppy chasing
-   a ball, drawn in SVG, across a strip just above the footer of every public
-   page. Decoration only: hidden from screen readers, never clickable, paused
+   a ball, drawn in SVG, along the top of the footer of every public page.
+   Decoration only: hidden from screen readers, never clickable, paused
    while off screen, standing still for reduced-motion users. */
 (function () {
   'use strict';
@@ -50,10 +50,9 @@
 
   var css = document.createElement('style');
   css.textContent =
-    '.p24-parade{position:relative;height:88px;overflow:hidden;pointer-events:none;user-select:none;background:transparent}' +
+    '.p24-parade{position:relative;height:84px;margin-bottom:14px;overflow:hidden;pointer-events:none;user-select:none;background:transparent}' +
     '.p24-parade{width:100%;flex:0 0 auto;align-self:stretch}' +
-    '.p24-parade.pa-fixed{position:fixed;left:0;right:0;bottom:0;width:auto;z-index:0}' +
-    '.p24-parade .pa-ground{position:absolute;left:0;right:0;bottom:10px;border-top:2px dashed rgba(148,163,184,.45)}' +
+    '.p24-parade .pa-ground{position:absolute;left:0;right:0;bottom:10px;border-top:2px dashed rgba(148,163,184,.28)}' +
     '.p24-parade .pa-pet{position:absolute;bottom:11px;left:0;will-change:transform;animation:paAcross var(--dur,24s) linear infinite;animation-delay:var(--delay,0s)}' +
     '.p24-parade .pa-pet.back{animation-name:paBack}' +
     '.p24-parade .pa-pet.run{animation-name:paRun}' +
@@ -102,16 +101,13 @@
       // a white puppy sprinting after its ball
       '<div class="pa-pet run" style="--speed:200;--step:.3s;--size:62px"><span class="pa-ball"></span>' + dog({ body: '#F8FAFC', mid: '#E2E8F0', dark: '#CBD5E1', ear: '#92400E', snout: '#FFFFFF', collar: '#2563EB', patch: '#FDE68A' }) + '</div>';
 
-    var foot = document.querySelector('body > footer, footer.site-footer, footer');
-    var bs = window.getComputedStyle(document.body);
-    if (foot && foot.parentNode) foot.parentNode.insertBefore(strip, foot);
-    else if (/flex/.test(bs.display) && bs.flexDirection.indexOf('column') !== 0) {
-      // Small centred pages (404, reset, thank-you) lay the body out as a row:
-      // pin the strip to the bottom edge and keep room for it under the card.
-      strip.classList.add('pa-fixed');
-      document.body.appendChild(strip);
-      document.body.style.paddingBottom = 'max(' + (bs.paddingBottom || '0px') + ', 96px)';
-    } else document.body.appendChild(strip);
+    // The pets walk along the top of the footer, inside it: no extra band in
+    // the page, nothing shifted. Pages without a footer get no parade.
+    var foot = document.querySelector('body > footer') || document.querySelector('footer');
+    if (!foot) return;
+    foot.insertBefore(strip, foot.firstChild);
+    var pt = parseFloat(window.getComputedStyle(foot).paddingTop) || 0;
+    strip.style.marginTop = (-pt) + 'px';
 
     // Speed stays the same on a phone and a wide screen: duration = distance / speed.
     function size() {
