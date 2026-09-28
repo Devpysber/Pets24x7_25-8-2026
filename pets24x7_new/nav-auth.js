@@ -430,7 +430,14 @@
     });
   }, true);
 
-  var realOpen = window.open;
+  // Inside the Pets24x7 Android app a WebView opens no new windows, so a link
+  // meant for a new tab (WhatsApp, a payment page) is followed in place; the
+  // app hands WhatsApp / phone / UPI links to their own apps.
+  var IN_APP = /Pets24x7App/.test(navigator.userAgent);
+  var realOpen = IN_APP
+    ? function (u) { if (u) location.href = String(u); return window; }
+    : window.open;
+  // (window.open itself is wrapped below and falls through to realOpen.)
   window.open = function (url) {
     var kind = contactKind(url);
     if (!kind) return realOpen.apply(window, arguments);

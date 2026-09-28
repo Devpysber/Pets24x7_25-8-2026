@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pets24x7.app",
+      "sha256_cert_fingerprints": [
+        "0B:45:BE:3D:50:91:9E:B6:2F:D4:CB:EB:4A:0F:93:78:3D:65:60:38:01:A2:86:F4:51:46:E5:BD:21:6B:D3:EA"
+      ]
+    }
+  }
+]
