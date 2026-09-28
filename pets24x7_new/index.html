@@ -639,6 +639,34 @@
   @media (prefers-reduced-motion: reduce) {
     .rv-on .rv { opacity: 1 !important; transform: none !important; }
   }
+
+  /* Numbers band: light like every other section, with pet faces that move */
+  .numbers { background: #fff; color: var(--text); padding: 72px 0; }
+  .numbers::before, .numbers::after { display: none; }
+  .num-card { background: #fff; border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(15,23,42,.05); padding: 24px 14px 22px; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+  .num-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(37,99,235,.12); border-color: rgba(37,99,235,.35); }
+  .num-card strong { color: var(--primary); }
+  .num-card span.lbl { color: var(--text-muted); }
+  .num-face { width: 84px; height: 84px; margin: 0 auto 10px; border-radius: 50%; background: var(--primary-light); box-shadow: inset 0 0 0 5px #DBEAFE; display: flex; align-items: center; justify-content: center; }
+  .num-face .pf { width: 70px; height: 70px; overflow: visible; animation: pfBob 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
+  .num-card:nth-child(2) .pf { animation-delay: -.8s; } .num-card:nth-child(3) .pf { animation-delay: -1.6s; } .num-card:nth-child(4) .pf { animation-delay: -2.4s; }
+  .pf .pf-ear { transform-box: fill-box; animation: pfEarL 2.8s ease-in-out infinite; }
+  .pf .pf-ear.l { transform-origin: 80% 90%; } .pf .pf-ear.r { transform-origin: 20% 90%; animation-name: pfEarR; animation-delay: .3s; }
+  .pf .pf-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: pfBlink 4.2s infinite; }
+  .num-card:nth-child(2) .pf-blink { animation-delay: 1.1s; } .num-card:nth-child(3) .pf-blink { animation-delay: 2.2s; } .num-card:nth-child(4) .pf-blink { animation-delay: .6s; }
+  .pf .pf-tongue { transform-box: fill-box; transform-origin: 50% 0; animation: pfLick 1.6s ease-in-out infinite; }
+  .pf .pf-nose { transform-box: fill-box; transform-origin: 50% 50%; animation: pfSniff 1.2s ease-in-out infinite; }
+  .pf .pf-whisk { transform-box: fill-box; transform-origin: 50% 50%; animation: pfSniff 1.2s ease-in-out infinite; }
+  .num-card:hover .pf { animation: pfHappy .6s ease-in-out 2; }
+  @keyframes pfBob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-3px) rotate(-4deg); } 75% { transform: translateY(-1px) rotate(4deg); } }
+  @keyframes pfEarL { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(-12deg); } 90% { transform: rotate(6deg); } }
+  @keyframes pfEarR { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(12deg); } 90% { transform: rotate(-6deg); } }
+  @keyframes pfBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  @keyframes pfLick { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.35); } }
+  @keyframes pfSniff { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes pfHappy { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-8px) rotate(-8deg); } 60% { transform: translateY(-4px) rotate(8deg); } }
+  @media (max-width: 768px) { .numbers { padding: 48px 0; } .num-face { width: 70px; height: 70px; } .num-face .pf { width: 58px; height: 58px; } }
+  @media (prefers-reduced-motion: reduce) { .pf, .pf * { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -838,10 +866,10 @@
 <!-- NUMBERS: live counts from the API, counted up when they come into view -->
 <section class="numbers" aria-label="Pets24x7 in numbers">
   <div class="container num-grid">
-    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div><strong data-stat="listings" data-count>34,169</strong><span class="lbl">Pet businesses listed</span></div>
-    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div><strong data-stat="cities" data-count>2,212</strong><span class="lbl">Cities in India &amp; USA</span></div>
-    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div><strong data-stat="categories" data-count>16</strong><span class="lbl">Kinds of pet service</span></div>
-    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></div><strong>0</strong><span class="lbl">Booking fees, ever</span></div>
+    <div class="num-card"><div class="num-face"><svg class="pf" viewBox="0 0 80 80" aria-hidden="true"><ellipse class="pf-ear l" cx="17" cy="36" rx="9" ry="17" fill="#B45309" transform="rotate(18 17 36)"/><ellipse class="pf-ear r" cx="63" cy="36" rx="9" ry="17" fill="#B45309" transform="rotate(-18 63 36)"/><circle cx="40" cy="42" r="25" fill="#F59E0B"/><ellipse cx="40" cy="54" rx="14" ry="10.5" fill="#FDE68A"/><g class="pf-blink"><ellipse cx="31" cy="38" rx="4" ry="4.6" fill="#1F2937"/><ellipse cx="49" cy="38" rx="4" ry="4.6" fill="#1F2937"/><circle cx="32.4" cy="36" r="1.4" fill="#fff"/><circle cx="50.4" cy="36" r="1.4" fill="#fff"/></g><ellipse cx="40" cy="49" rx="5" ry="3.6" fill="#1F2937"/><path d="M34.5 55 q5.5 4.5 11 0" stroke="#1F2937" stroke-width="1.8" fill="none" stroke-linecap="round"/><path class="pf-tongue" d="M37 57 q3 9 6 0 z" fill="#F472B6"/><circle cx="25" cy="50" r="3" fill="#FB923C" opacity=".45"/><circle cx="55" cy="50" r="3" fill="#FB923C" opacity=".45"/></svg></div><strong data-stat="listings" data-count>34,169</strong><span class="lbl">Pet businesses listed</span></div>
+    <div class="num-card"><div class="num-face"><svg class="pf" viewBox="0 0 80 80" aria-hidden="true"><path class="pf-ear l" d="M17 30 L20 6 L36 20 Z" fill="#94A3B8"/><path d="M21 25 L22.5 12 L31 20 Z" fill="#FBCFE8"/><path class="pf-ear r" d="M63 30 L60 6 L44 20 Z" fill="#94A3B8"/><path d="M59 25 L57.5 12 L49 20 Z" fill="#FBCFE8"/><circle cx="40" cy="43" r="25" fill="#CBD5E1"/><path d="M33 20 q2 5 0 9 M40 19 v10 M47 20 q-2 5 0 9" stroke="#94A3B8" stroke-width="2.2" fill="none" stroke-linecap="round"/><g class="pf-blink"><ellipse cx="31" cy="41" rx="4.4" ry="5.4" fill="#16A34A"/><ellipse cx="49" cy="41" rx="4.4" ry="5.4" fill="#16A34A"/><ellipse cx="31" cy="41" rx="1.5" ry="4.4" fill="#0F172A"/><ellipse cx="49" cy="41" rx="1.5" ry="4.4" fill="#0F172A"/></g><path class="pf-nose" d="M37 50 h6 l-3 3.4 z" fill="#F472B6"/><path d="M40 53.4 q-3.5 4 -7 1.5 M40 53.4 q3.5 4 7 1.5" stroke="#475569" stroke-width="1.6" fill="none" stroke-linecap="round"/><g class="pf-whisk" stroke="#64748B" stroke-width="1.1" stroke-linecap="round"><path d="M27 51 H12 M27 54 L13 58"/><path d="M53 51 H68 M53 54 L67 58"/></g></svg></div><strong data-stat="cities" data-count>2,212</strong><span class="lbl">Cities in India &amp; USA</span></div>
+    <div class="num-card"><div class="num-face"><svg class="pf" viewBox="0 0 80 80" aria-hidden="true"><path class="pf-ear l" d="M18 26 q-8 4 -6 16 q6 -2 12 -8 z" fill="#44403C"/><path class="pf-ear r" d="M62 26 q8 4 6 16 q-6 -2 -12 -8 z" fill="#44403C"/><circle cx="40" cy="43" r="25" fill="#E7C9A0"/><path d="M33 24 q7 -4 14 0 M31 29 q9 -4 18 0" stroke="#B08968" stroke-width="1.8" fill="none" stroke-linecap="round"/><ellipse cx="40" cy="53" rx="15" ry="12" fill="#57534E"/><g class="pf-blink"><ellipse cx="31" cy="40" rx="4" ry="4.6" fill="#0F172A"/><ellipse cx="49" cy="40" rx="4" ry="4.6" fill="#0F172A"/><circle cx="32.4" cy="38" r="1.4" fill="#fff"/><circle cx="50.4" cy="38" r="1.4" fill="#fff"/></g><ellipse cx="40" cy="49" rx="5.5" ry="3.6" fill="#0F172A"/><path d="M34 56 q6 4 12 0" stroke="#0F172A" stroke-width="1.6" fill="none" stroke-linecap="round"/><path class="pf-tongue" d="M37.5 57.5 q2.5 7 5 0 z" fill="#F472B6"/></svg></div><strong data-stat="categories" data-count>16</strong><span class="lbl">Kinds of pet service</span></div>
+    <div class="num-card"><div class="num-face"><svg class="pf" viewBox="0 0 80 80" aria-hidden="true"><g class="pf-ear l"><ellipse cx="29" cy="16" rx="7" ry="17" fill="#F1F5F9" stroke="#E2E8F0"/><ellipse cx="29" cy="17" rx="3.4" ry="12" fill="#FBCFE8"/></g><g class="pf-ear r"><ellipse cx="51" cy="16" rx="7" ry="17" fill="#F1F5F9" stroke="#E2E8F0"/><ellipse cx="51" cy="17" rx="3.4" ry="12" fill="#FBCFE8"/></g><circle cx="40" cy="47" r="23" fill="#F8FAFC" stroke="#E2E8F0"/><g class="pf-blink"><ellipse cx="31" cy="44" rx="4" ry="4.6" fill="#1F2937"/><ellipse cx="49" cy="44" rx="4" ry="4.6" fill="#1F2937"/><circle cx="32.4" cy="42" r="1.4" fill="#fff"/><circle cx="50.4" cy="42" r="1.4" fill="#fff"/></g><path class="pf-nose" d="M37 52 h6 l-3 3 z" fill="#F472B6"/><path d="M40 55 v3 M40 58 q-3 3 -6 1 M40 58 q3 3 6 1" stroke="#64748B" stroke-width="1.5" fill="none" stroke-linecap="round"/><rect x="37.8" y="59" width="4.4" height="4.4" rx="1" fill="#fff" stroke="#E2E8F0" stroke-width=".8"/><circle cx="27" cy="53" r="3" fill="#FDA4AF" opacity=".5"/><circle cx="53" cy="53" r="3" fill="#FDA4AF" opacity=".5"/></svg></div><strong>0</strong><span class="lbl">Booking fees, ever</span></div>
   </div>
 </section>
 
