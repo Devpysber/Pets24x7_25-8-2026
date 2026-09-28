@@ -804,6 +804,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Enquiries
       </a>
+      <a class="nav-item" data-view="whatsapp">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg>
+        WhatsApp <span id="waNavBadge" style="display:none; margin-left:auto; background:#16A34A; color:#fff; font-size:11px; font-weight:700; border-radius:999px; padding:1px 7px;"></span>
+      </a>
       <a class="nav-item" data-view="services">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Services
@@ -2482,6 +2486,81 @@
         </div>
       </section>
 
+      <section id="view-whatsapp" class="view-pane">
+        <style>
+          .wa-wrap { display:grid; grid-template-columns: 330px 1fr; gap:0; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; height: calc(100vh - 250px); min-height: 480px; }
+          .wa-list { border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; }
+          .wa-list-head { padding:10px; border-bottom:1px solid var(--border); }
+          .wa-items { overflow-y:auto; flex:1; }
+          .wa-item { display:flex; gap:10px; padding:11px 12px; border-bottom:1px solid #F1F5F9; cursor:pointer; align-items:flex-start; width:100%; text-align:left; background:#fff; border-left:3px solid transparent; }
+          .wa-item:hover { background:#F8FAFC; }
+          .wa-item.on { background:#F0FDF4; border-left-color:#16A34A; }
+          .wa-av { flex:none; width:38px; height:38px; border-radius:50%; background:#DCFCE7; color:#166534; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+          .wa-meta { flex:1; min-width:0; }
+          .wa-top { display:flex; justify-content:space-between; gap:6px; }
+          .wa-name { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .wa-time { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+          .wa-last { font-size:12.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .wa-sub { display:flex; gap:6px; align-items:center; margin-top:3px; font-size:11px; color:var(--text-muted); }
+          .wa-unread { background:#16A34A; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:0 7px; min-width:18px; text-align:center; }
+          .wa-chip { border-radius:999px; padding:0 7px; font-weight:700; font-size:10.5px; }
+          .wa-chip.auto { background:#DBEAFE; color:#1E40AF; } .wa-chip.manual { background:#FEF3C7; color:#92400E; }
+          .wa-thread { display:flex; flex-direction:column; min-height:0; background:#EFEAE2; }
+          .wa-thead { background:#fff; padding:10px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
+          .wa-msgs { flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:6px; }
+          .wa-b { max-width:72%; padding:7px 10px 5px; border-radius:10px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.06); }
+          .wa-b.in { align-self:flex-start; background:#fff; border-top-left-radius:2px; }
+          .wa-b.out { align-self:flex-end; background:#D9FDD3; border-top-right-radius:2px; }
+          .wa-b .t { display:block; text-align:right; font-size:10.5px; color:#64748B; margin-top:2px; }
+          .wa-day { align-self:center; background:#fff; color:#475569; font-size:11px; padding:2px 10px; border-radius:8px; margin:6px 0; }
+          .wa-comp { background:#F0F2F5; padding:10px; display:flex; gap:8px; align-items:flex-end; }
+          .wa-comp textarea { flex:1; resize:none; min-height:42px; max-height:140px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font:inherit; font-size:14px; }
+          .wa-seg { display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+          .wa-seg button { padding:6px 12px; font-size:12.5px; font-weight:600; background:#fff; border:0; cursor:pointer; color:var(--text-muted); }
+          .wa-seg button.on { background:var(--primary); color:#fff; }
+          .wa-empty { margin:auto; text-align:center; color:#64748B; font-size:14px; padding:30px; }
+          .wa-back { display:none; }
+          @media (max-width: 860px) {
+            .wa-wrap { grid-template-columns: 1fr; height: calc(100vh - 200px); }
+            .wa-wrap.open .wa-list { display:none; } .wa-wrap:not(.open) .wa-thread { display:none; }
+            .wa-back { display:inline-flex; }
+            .wa-b { max-width:86%; }
+          }
+        </style>
+        <div class="card" style="margin-bottom:14px; padding:14px 16px;">
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div id="waSender" style="font-size:13px;">Checking sender…</div>
+            <button class="btn btn-sm" type="button" onclick="document.getElementById('waAutoBox').open = !document.getElementById('waAutoBox').open">Automatic reply settings</button>
+          </div>
+          <details id="waAutoBox" style="margin-top:4px;">
+            <summary style="display:none;">Automatic reply</summary>
+            <div style="display:grid; gap:12px; margin-top:12px;">
+              <label style="display:flex; gap:8px; align-items:center; font-weight:600; font-size:13.5px;"><input type="checkbox" id="waAutoOn" /> Send an automatic reply when someone messages us</label>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;" class="rsp-cols-2">
+                <div class="form-group"><label for="waDefMode">New chats are</label>
+                  <select id="waDefMode" class="form-control"><option value="auto">Automatic (auto-reply answers first)</option><option value="manual">Manual (only the team replies)</option></select></div>
+                <div class="form-group"><label for="waCool">Reply to the same person at most every (hours)</label><input id="waCool" type="number" min="1" max="168" class="form-control" /></div>
+              </div>
+              <div class="form-group"><label for="waAutoMsg">Automatic reply text <span style="font-weight:400; color:var(--text-muted);">({name} becomes their WhatsApp name)</span></label><textarea id="waAutoMsg" class="form-control" rows="3" maxlength="1000"></textarea></div>
+              <div><button class="btn btn-primary btn-sm" type="button" onclick="waSaveAuto()">Save automatic reply</button></div>
+            </div>
+          </details>
+        </div>
+        <div class="wa-wrap" id="waWrap">
+          <div class="wa-list">
+            <div class="wa-list-head"><input id="waQ" type="search" class="form-control" placeholder="🔍 Search name, number, message…" oninput="waRenderList()" /></div>
+            <div class="wa-items" id="waItems"><div class="wa-empty">Loading…</div></div>
+          </div>
+          <div class="wa-thread">
+            <div class="wa-thead" id="waHead"><div style="color:var(--text-muted); font-size:13px;">Pick a chat</div></div>
+            <div class="wa-msgs" id="waMsgs"><div class="wa-empty">Select a chat on the left to read and reply.</div></div>
+            <div class="wa-comp" id="waComp" style="display:none;">
+              <textarea id="waText" rows="1" placeholder="Type a reply…" maxlength="2000" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();waSend();}"></textarea>
+              <button class="btn btn-primary" type="button" id="waSendBtn" onclick="waSend()">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
       <section id="view-useractivity" class="view-pane">
         <div class="page-head">
           <div>
@@ -3260,6 +3339,7 @@
       import: ['Import Data', 'Load vendors, pet parents or enquiries from a CSV or JSON file.'],
       mail: ['Emails', 'Preview every automated email, and send one by hand.'],
       useractivity: ['User Activity', 'Who did what on the site, newest first.'],
+      whatsapp: ['WhatsApp', 'Every chat on your WhatsApp number. Reply by hand, or let the auto-reply answer.'],
       trash: ['Recently deleted', 'Restore anything deleted in the last 180 days.'],
       audit: ['Audit Log', 'Every privileged action, newest first.'],
       settings: ['Admin Settings', 'Update platform-wide settings.']
@@ -5240,6 +5320,9 @@
     useractivity: function() {
       return window.loadUserActivity();
     },
+    whatsapp: function() {
+      return window.waInboxInit();
+    },
     trash: function() {
       return window.loadTrash();
     },
@@ -6694,7 +6777,7 @@
      refresh on the button. The Dashboard keeps its own 30-second refresh. */
   var LIVE_MS = { activity: 15000, useractivity: 15000, reports: 120000 };
   var LIVE_DEFAULT_MS = 30000;
-  var LIVE_OFF = { dash: 1, settings: 1, mail: 1, import: 1, directory: 1 };
+  var LIVE_OFF = { dash: 1, settings: 1, mail: 1, import: 1, directory: 1, whatsapp: 1 };
   var liveLastAt = {};
 
   function activeViewId() {
@@ -6853,6 +6936,139 @@
     }).observe(pane, { childList: true, subtree: true });
   });
 
+
+
+  // ---- WhatsApp inbox ----
+  var waChats = [], waOpen = null, waTimer = null, waLastSig = '';
+  function waAgo(d) {
+    var t = new Date(d), now = new Date();
+    if (t.toDateString() === now.toDateString()) return t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  }
+  function waInitials(c) { var s = (c.name || c.who || '').replace(/^(Pet parent|Business) · /, '').trim(); return s ? s.split(/\s+/).slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase() : '#'; }
+  function waTitle(c) { return c.name || (c.who ? c.who.replace(/^(Pet parent|Business) · /, '') : '') || c.phone; }
+  window.waRenderList = function() {
+    var q = ((document.getElementById('waQ') || {}).value || '').toLowerCase().trim();
+    var list = waChats.filter(function(c) { return !q || [c.phone, c.name, c.who, c.lastText].some(function(x) { return String(x || '').toLowerCase().indexOf(q) >= 0; }); });
+    var box = document.getElementById('waItems');
+    if (!list.length) { box.innerHTML = '<div class="wa-empty">' + (waChats.length ? 'No chat matches.' : 'No chats yet. Messages people send to your WhatsApp number appear here.') + '</div>'; return; }
+    box.innerHTML = list.map(function(c) {
+      var mode = c.effectiveMode === 'manual' ? '<span class="wa-chip manual">Manual</span>' : '<span class="wa-chip auto">Auto</span>';
+      return '<button type="button" class="wa-item' + (waOpen === c.phone ? ' on' : '') + '" onclick="waOpenChat(\'' + escH(c.phone) + '\')">' +
+        '<span class="wa-av">' + escH(waInitials(c)) + '</span><span class="wa-meta">' +
+        '<span class="wa-top"><span class="wa-name">' + escH(waTitle(c)) + '</span><span class="wa-time">' + escH(waAgo(c.lastAt)) + '</span></span>' +
+        '<span class="wa-top"><span class="wa-last">' + (c.lastDirection === 'OUTBOUND' ? '✓ ' : '') + escH(c.lastText || '') + '</span>' + (c.unread ? '<span class="wa-unread">' + c.unread + '</span>' : '') + '</span>' +
+        '<span class="wa-sub">' + mode + '<span>' + escH(c.phone) + '</span>' + (c.who ? '<span>· ' + escH(c.who.split(' · ')[0]) + '</span>' : '') + '</span>' +
+        '</span></button>';
+    }).join('');
+  };
+  function waBadge(n) {
+    var b = document.getElementById('waNavBadge');
+    if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; }
+  }
+  function waLoadList() {
+    return api.adminWaChats().then(function(r) {
+      waChats = r.chats || [];
+      waBadge(r.unreadTotal || 0);
+      var s = document.getElementById('waSender');
+      if (s) s.innerHTML = r.provider
+        ? '<span class="status-tag tag-active">Sending with: ' + (r.provider === 'baileys' ? 'linked number' : 'Meta API') + '</span> Automatic reply is <strong>' + (r.settings.autoReply ? 'on' : 'off') + '</strong>; new chats are <strong>' + (r.settings.defaultMode === 'manual' ? 'manual' : 'automatic') + '</strong>.'
+        : '<span class="status-tag tag-pending">No sender</span> Link a WhatsApp number in <a href="#" onclick="document.querySelector(\'[data-view=settings]\').click();return false;">Settings</a> to receive and answer chats here.';
+      waRenderList();
+    });
+  }
+  function waRenderThread(r, keepScroll) {
+    var c = r.chat, box = document.getElementById('waMsgs');
+    var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    var mode = c.mode || 'default';
+    document.getElementById('waHead').innerHTML =
+      '<div style="display:flex; gap:10px; align-items:center; min-width:0;"><button class="btn btn-sm wa-back" type="button" onclick="waCloseChat()">←</button><span class="wa-av">' + escH(waInitials(c)) + '</span>' +
+      '<div style="min-width:0;"><div style="font-weight:700;">' + escH(waTitle(c)) + '</div><div style="font-size:12px; color:var(--text-muted);">' + escH(c.phone) + (c.who ? ' · ' + escH(c.who) : '') + '</div></div></div>' +
+      '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><span style="font-size:12px; color:var(--text-muted);">Replies:</span><span class="wa-seg">' +
+      [['auto', 'Automatic'], ['manual', 'Manual'], ['default', 'Default']].map(function(o) {
+        var label = o[1];
+        return '<button type="button" class="' + (mode === o[0] ? 'on' : '') + '" title="' + (o[0] === 'auto' ? 'The auto-reply answers their next message, then you take over' : o[0] === 'manual' ? 'Only the team replies to this chat' : 'Follow the inbox default') + '" onclick="waSetMode(\'' + o[0] + '\')">' + label + '</button>';
+      }).join('') + '</span></div>';
+    var sig = r.messages.length + ':' + (r.messages.length ? r.messages[r.messages.length - 1].id : '');
+    if (keepScroll && sig === waLastSig) return;
+    waLastSig = sig;
+    var day = '', html = '';
+    r.messages.forEach(function(m) {
+      var d = new Date(m.createdAt).toDateString();
+      if (d !== day) { day = d; html += '<div class="wa-day">' + escH(new Date(m.createdAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })) + '</div>'; }
+      var tag = /auto$/.test(m.type || '') ? 'auto-reply · ' : /otp$/.test(m.type || '') ? 'code · ' : /^phone/.test(m.type || '') ? 'from phone · ' : /notice$/.test(m.type || '') ? 'notice · ' : '';
+      var fail = m.status === 'failed' ? ' <span style="color:#DC2626;">not sent</span>' : '';
+      html += '<div class="wa-b ' + (m.direction === 'INBOUND' ? 'in' : 'out') + '">' + escH(m.body || '') +
+        '<span class="t">' + tag + escH(new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })) + (m.direction === 'OUTBOUND' ? ' ✓' : '') + fail + '</span></div>';
+    });
+    box.innerHTML = html || '<div class="wa-empty">No messages yet.</div>';
+    if (!keepScroll || nearBottom) box.scrollTop = box.scrollHeight;
+    var comp = document.getElementById('waComp');
+    comp.style.display = 'flex';
+    var old = r.provider === 'meta' && (!c.lastInboundAt || Date.now() - new Date(c.lastInboundAt).getTime() > 24 * 3600 * 1000);
+    document.getElementById('waText').placeholder = !r.provider ? 'Link a WhatsApp number in Settings to reply' : old ? 'Meta allows free replies only within 24 hours of their last message' : 'Type a reply… (Enter sends, Shift+Enter for a new line)';
+  }
+  window.waOpenChat = function(phone, quiet) {
+    if (!quiet) { waOpen = phone; waLastSig = ''; document.getElementById('waWrap').classList.add('open'); waRenderList(); }
+    return api.adminWaChat(phone).then(function(r) {
+      if (waOpen !== phone) return;
+      waRenderThread(r, !!quiet);
+      var c = waChats.filter(function(x) { return x.phone === phone; })[0];
+      if (c && c.unread) { c.unread = 0; waRenderList(); waBadge(waChats.reduce(function(n, x) { return n + (x.unread || 0); }, 0)); }
+    }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  window.waCloseChat = function() { waOpen = null; document.getElementById('waWrap').classList.remove('open'); waRenderList(); };
+  window.waSend = function() {
+    var ta = document.getElementById('waText'), text = ta.value.trim(), btn = document.getElementById('waSendBtn');
+    if (!text || !waOpen) return;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    var phone = waOpen;
+    api.adminWaSend(phone, text).then(function() { ta.value = ''; return waOpenChat(phone, true); }).then(waLoadList)
+      .catch(function(e) { toast(fmtErr(e), 'error'); })
+      .then(function() { btn.disabled = false; btn.textContent = 'Send'; });
+  };
+  window.waSetMode = function(mode) {
+    if (!waOpen) return;
+    var phone = waOpen;
+    api.adminWaMode(phone, mode).then(function() {
+      toast(mode === 'manual' ? 'Manual: only the team replies to this chat' : mode === 'auto' ? 'Automatic: the auto-reply may answer this chat' : 'This chat follows the inbox default');
+      return Promise.all([waOpenChat(phone, true), waLoadList()]);
+    }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  function waLoadAuto() {
+    return api.adminWaInboxSettings().then(function(r) {
+      var s = r.settings;
+      document.getElementById('waAutoOn').checked = !!s.autoReply;
+      document.getElementById('waDefMode').value = s.defaultMode;
+      document.getElementById('waCool').value = s.cooldownHours;
+      document.getElementById('waAutoMsg').value = s.message;
+    });
+  }
+  window.waSaveAuto = function() {
+    var body = {
+      autoReply: document.getElementById('waAutoOn').checked,
+      defaultMode: document.getElementById('waDefMode').value,
+      cooldownHours: parseInt(document.getElementById('waCool').value, 10) || 12,
+      message: document.getElementById('waAutoMsg').value.trim(),
+    };
+    if (!body.message) { toast('Write the automatic reply text first', 'error'); return; }
+    api.adminWaInboxSettings(body).then(function() { toast('Automatic reply saved'); waLoadList(); }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  window.waInboxInit = function() {
+    clearInterval(waTimer);
+    // New messages show up by themselves while this page is open.
+    waTimer = setInterval(function() {
+      var v = document.getElementById('view-whatsapp');
+      if (!v || !v.classList.contains('active') || document.hidden) return;
+      waLoadList();
+      if (waOpen) waOpenChat(waOpen, true);
+    }, 6000);
+    return Promise.all([waLoadList(), waLoadAuto()]).catch(function(e) {
+      document.getElementById('waItems').innerHTML = '<div class="wa-empty" style="color:var(--danger);">' + escH(fmtErr(e)) + '</div>';
+    });
+  };
+  // Unread count on the menu, even when another page is open.
+  setTimeout(function() { if (api.adminWaChats) api.adminWaChats().then(function(r) { waBadge(r.unreadTotal || 0); }).catch(function() {}); }, 2500);
 
   // ---- Settings: WhatsApp claim codes ----
   var waPoll = null;

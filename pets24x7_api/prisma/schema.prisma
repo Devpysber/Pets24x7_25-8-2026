@@ -922,6 +922,20 @@ enum WaDirection {
 // -----------------------------------------------------------
 // Generic key/value settings edited from the admin panel.
 // -----------------------------------------------------------
+// One row per WhatsApp contact in the admin inbox: display name, whether
+// the auto-reply may answer them, and what the team has read.
+model WaChat {
+  phone           String    @id // +<digits>
+  name            String?
+  mode            String? // "auto" | "manual"; null follows the inbox default
+  lastReadAt      DateTime?
+  lastAutoReplyAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("wa_chats")
+}
+
 model Setting {
   key       String   @id
   value     Json

@@ -25,7 +25,10 @@ import makeWASocket, {
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  isLidUser,
+  isPnUser,
   useMultiFileAuthState,
+  type WAMessage,
   type WASocket,
 } from 'baileys';
 
@@ -97,9 +100,9 @@ export function startBaileys(): Promise<void> {
       if (u.qr) {
         qr = u.qr;
         state = 'qr';
-        if (!qrDeadline) qrDeadline = Date.now() + 3 * 60_000;
-        // Nobody scanned for three minutes: stop showing codes until asked again.
-        if (Date.now() > qrDeadline) { stopBaileys(); lastError = 'Linking timed out. Press "Link a number" again.'; }
+        if (!qrDeadline) qrDeadline = Date.now() + 5 * 60_000;
+        // Nobody scanned for five minutes: stop showing codes until asked again.
+        if (Date.now() > qrDeadline) { stopBaileys(); lastError = 'The QR code expired before it was scanned. Press "Link with QR code" to get a new one.'; }
       }
       if (u.connection === 'open') {
         state = 'open'; qr = null; qrDeadline = 0; retry = 0;
@@ -125,14 +128,12 @@ export function startBaileys(): Promise<void> {
       }
     });
 
-    // Replies from people land in the admin WhatsApp log.
+    // Every one-to-one message lands in the admin inbox: what people send us,
+    // and what the team types on the phone itself. New incoming messages may
+    // get the auto-reply (see inbox.ts).
     s.ev.on('messages.upsert', ({ messages, type }) => {
       if (type !== 'notify') return;
-      for (const m of messages) {
-        if (m.key.fromMe || !m.key.remoteJid?.endsWith('@s.whatsapp.net')) continue;
-        const text = m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? null;
-        void logRow({ waMessageId: m.key.id ?? null, direction: 'INBOUND', fromNumber: '+' + m.key.remoteJid.split('@')[0], toNumber: me ? '+' + me : null, type: 'baileys:text', status: 'received', body: text });
-      }
+      for (const m of messages) void onMessage(s, m);
     });
   })().catch((err) => {
     starting = null; state = 'off';
@@ -140,6 +141,47 @@ export function startBaileys(): Promise<void> {
     logger.error({ err }, 'baileys: start failed');
   });
   return starting;
+}
+
+function textOf(m: WAMessage): string | null {
+  const c: any = m.message ?? {};
+  const inner = c.ephemeralMessage?.message ?? c.viewOnceMessage?.message ?? c;
+  return inner.conversation ?? inner.extendedTextMessage?.text ?? inner.imageMessage?.caption ?? inner.videoMessage?.caption
+    ?? (inner.imageMessage ? '[photo]' : inner.videoMessage ? '[video]' : inner.audioMessage ? '[voice note]' : inner.documentMessage ? '[document]'
+      : inner.stickerMessage ? '[sticker]' : inner.locationMessage ? '[location]' : inner.contactMessage ? '[contact]' : null);
+}
+
+/** The person's phone number for a chat, even when WhatsApp hides it behind a LID. */
+async function phoneOf(s: WASocket, m: WAMessage): Promise<string | null> {
+  const jid = m.key.remoteJid ?? '';
+  const alt = (m.key as any).remoteJidAlt as string | undefined;
+  let pn: string | null = isPnUser(jid) ? jid : isPnUser(alt) ? alt! : null;
+  if (!pn && isLidUser(jid)) {
+    try { pn = await (s as any).signalRepository?.lidMapping?.getPNForLID(jid); } catch { pn = null; }
+  }
+  if (!pn) return null;
+  const d = pn.split('@')[0]?.split(':')[0] ?? '';
+  return /^\d{8,}$/.test(d) ? '+' + d : null;
+}
+
+async function onMessage(s: WASocket, m: WAMessage): Promise<void> {
+  try {
+    if (!m.message || m.key.remoteJid === 'status@broadcast' || m.key.remoteJid?.endsWith('@g.us')) return;
+    const phone = await phoneOf(s, m);
+    if (!phone) return;
+    const text = textOf(m);
+    if (!text) return; // protocol messages, reactions, receipts
+    if (m.key.fromMe) {
+      // Typed on the phone (messages this server sends are already logged under the same id).
+      await logRow({ waMessageId: m.key.id ?? null, direction: 'OUTBOUND', fromNumber: me ? '+' + me : null, toNumber: phone, type: 'phone:text', status: 'sent', body: text });
+      return;
+    }
+    await logRow({ waMessageId: m.key.id ?? null, direction: 'INBOUND', fromNumber: phone, toNumber: me ? '+' + me : null, type: 'baileys:text', status: 'received', body: text });
+    const { handleInbound } = await import('./inbox.js');
+    await handleInbound(phone, m.pushName ?? null);
+  } catch (err) {
+    logger.debug({ err }, 'baileys: incoming message not handled');
+  }
 }
 
 /** Connect on boot only when a number was linked before (no QR loop on a fresh server). */
@@ -224,7 +266,7 @@ async function resolveJid(digits: string): Promise<string | null> {
  * with the WhatsApp message id once it is sent; rejects when a cap is hit,
  * the number is not on WhatsApp, or the link is down.
  */
-export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notice'): Promise<{ messageId: string }> {
+export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notice' | 'reply' | 'auto'): Promise<{ messageId: string }> {
   const to = normalizePhone(rawPhone);
   const digits = to.replace(/\D/g, '');
   const job = queue.then(async () => {
@@ -235,7 +277,8 @@ export function baileysSend(rawPhone: string, text: string, kind: 'otp' | 'notic
     if (recent.length >= env.WA_BAILEYS_PER_MINUTE) throw new WaLimitError('WhatsApp is busy right now. Please try again in a minute.');
     const [hour, day, toHour] = await Promise.all([sentSince(60 * 60_000), sentSince(24 * 60 * 60_000), sentSince(60 * 60_000, to)]);
     if (hour >= env.WA_BAILEYS_PER_HOUR || day >= env.WA_BAILEYS_PER_DAY) throw new WaLimitError('WhatsApp sending limit reached for now. Please use email instead.');
-    if (toHour >= env.WA_BAILEYS_PER_NUMBER_PER_HOUR) throw new WaLimitError('Too many messages to this number. Please try again later.');
+    // Codes and notices are capped per person; replies in a conversation they started are not.
+    if ((kind === 'otp' || kind === 'notice') && toHour >= env.WA_BAILEYS_PER_NUMBER_PER_HOUR) throw new WaLimitError('Too many messages to this number. Please try again later.');
 
     const jid = await resolveJid(digits);
     if (!jid) throw new Error('This number is not on WhatsApp.');

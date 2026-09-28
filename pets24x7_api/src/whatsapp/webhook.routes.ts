@@ -10,6 +10,7 @@ import { env } from '../env.js';
 import { logger } from '../logger.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { logWaMessage } from './notify.js';
+import { handleInbound } from './inbox.js';
 
 export const whatsappRouter = Router();
 
@@ -82,6 +83,8 @@ whatsappRouter.post(
               body: msg.text?.body ?? msg.button?.text ?? null,
               payload: msg,
             });
+            const contact = (value?.contacts ?? []).find((c: any) => c?.wa_id === msg.from);
+            await handleInbound(msg.from ?? '', contact?.profile?.name ?? null);
           }
         }
       }
