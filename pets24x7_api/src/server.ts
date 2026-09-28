@@ -62,6 +62,7 @@ import { userActivityTrackRouter, adminUserActivityRouter } from './activity/use
 import { accessRouter, adminPlanLimitsRouter, vendorPlanSlotsRouter } from './plans/plans.routes.js';
 import { adminTrashRouter } from './trash/trash.routes.js';
 import { startTrashPrune } from './trash/trash.js';
+import { startEmailLogPrune } from './mail/mailer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -332,6 +333,7 @@ async function ensureSeedAdmin(): Promise<void> {
     startAdminDigestJob();      // one briefing a day: what is waiting, and what moved
     startUserActivityPrune();   // deletes user_activity rows older than 180 days, daily
     startTrashPrune();          // Recently deleted entries older than 180 days
+    startEmailLogPrune();       // email log rows older than 90 days
   } else {
     logger.info('RUN_JOBS=false: scheduled sweeps are not started on this instance');
   }

@@ -109,6 +109,14 @@
 
     // Admin email console
     adminMailTemplates: function ()                      { return req('GET',  '/api/admin/mail/templates'); },
+    adminMailLog:       function (q, status, before)     {
+      var qs = [];
+      if (q) qs.push('q=' + encodeURIComponent(q));
+      if (status) qs.push('status=' + encodeURIComponent(status));
+      if (before) qs.push('before=' + encodeURIComponent(before));
+      return req('GET', '/api/admin/mail/log' + (qs.length ? '?' + qs.join('&') : ''));
+    },
+    adminMailLogItem:   function (id)                    { return req('GET',  '/api/admin/mail/log/' + encodeURIComponent(id)); },
     adminMailPreview:   function (templateId, data)      { return req('POST', '/api/admin/mail/preview', { templateId: templateId, data: data || {} }); },
     adminMailAudience:  function (audience)              { return req('POST', '/api/admin/mail/audience/count', { audience: audience }); },
     adminMailSend:      function (p)                     { return req('POST', '/api/admin/mail/send', p); },

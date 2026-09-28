@@ -2058,6 +2058,41 @@
             </div>
           </div>
         </div>
+      
+        <!-- Sent log: every email the platform tried to send -->
+        <div class="card" id="mailLogCard" style="margin-top:18px;">
+          <div class="card-header" style="flex-wrap:wrap; gap:10px;">
+            <div>
+              <div class="card-title">Sent log</div>
+              <div class="card-subtitle">Every email the platform sent or tried to send, newest first. Click one to see exactly what went out. Kept 90 days.</div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <input id="mailLogQ" type="search" class="form-control" style="width:220px; max-width:100%;" placeholder="🔍 Email address, subject, type…" onkeydown="if(event.key==='Enter')loadMailLog()">
+              <select id="mailLogStatus" class="form-control" style="width:auto;" onchange="loadMailLog()">
+                <option value="">All results</option><option value="sent">Sent</option><option value="failed">Failed</option>
+                <option value="suppressed">Blocked (opted out)</option><option value="not_sent">Not sent</option>
+              </select>
+              <button class="btn btn-sm" onclick="loadMailLog()">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="metrics-grid" id="mailLogCounts" style="margin-bottom:14px;"></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>When</th><th>To</th><th>Subject</th><th>Type</th><th>Result</th></tr></thead>
+              <tbody id="mailLogBody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <div style="text-align:center; margin-top:12px;"><button class="btn btn-sm" id="mailLogMore" style="display:none;" onclick="loadMailLog(true)">Load older</button></div>
+        </div>
+        <div id="mailLogView" style="display:none; position:fixed; inset:0; z-index:9000; background:rgba(15,23,42,.55); padding:24px 12px; overflow:auto;" onclick="if(event.target===this)closeMailLogView()">
+          <div style="max-width:720px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start; padding:14px 16px; border-bottom:1px solid var(--border);">
+              <div id="mailLogViewHead" style="font-size:13px;"></div>
+              <button class="btn btn-sm" onclick="closeMailLogView()">Close</button>
+            </div>
+            <iframe id="mailLogFrame" title="Email as sent" style="width:100%; height:70vh; border:0; background:#F3F4F6;" sandbox=""></iframe>
+          </div>
+        </div>
       </section>
 
       <!-- DATA IMPORT -->
@@ -4902,7 +4937,7 @@
   var LOADERS = {
     import: function() { return importInit(); },
     directory: function() { pubLoad(); return dirLoad(dirState.page || 1); },
-    mail: function() { recoLoadCampaigns(); return mailInit(); },
+    mail: function() { recoLoadCampaigns(); loadMailLog(); return mailInit(); },
     dash: function() {
       // The action center has its own loading/error state and refresh cadence;
       // it must not hold up or fail the headline figures.
@@ -6780,6 +6815,53 @@
       requestAnimationFrame(function () { queued = false; psApply(pane); });
     }).observe(pane, { childList: true, subtree: true });
   });
+
+
+  // ---- Emails: sent log ----
+  var mailLogNext = null;
+  var MAIL_RESULT = { sent: ['Sent', 'tag-active'], failed: ['Failed', 'tag-suspended'], suppressed: ['Blocked · opted out', 'tag-pending'], not_sent: ['Not sent', 'tag-unclaimed'] };
+  window.loadMailLog = function(append) {
+    var body = document.getElementById('mailLogBody');
+    if (!body) return Promise.resolve();
+    var q = ((document.getElementById('mailLogQ') || {}).value || '').trim();
+    var st = (document.getElementById('mailLogStatus') || {}).value || '';
+    if (!append) body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Loading…</td></tr>';
+    return api.adminMailLog(q, st, append ? mailLogNext : '').then(function(r) {
+      var c = r.counts24h || {};
+      var box = document.getElementById('mailLogCounts');
+      if (box) box.innerHTML = [['Sent (24h)', c.sent || 0], ['Failed (24h)', c.failed || 0], ['Blocked · opted out (24h)', c.suppressed || 0], ['Not sent (24h)', c.not_sent || 0]]
+        .map(function(x) { return '<div class="metric-card"><span class="metric-lbl">' + x[0] + '</span><div class="metric-val">' + x[1] + '</div></div>'; }).join('');
+      mailLogNext = r.nextBefore || null;
+      var more = document.getElementById('mailLogMore');
+      if (more) more.style.display = mailLogNext ? 'inline-flex' : 'none';
+      var html = (r.rows || []).map(function(m) {
+        var res = MAIL_RESULT[m.status] || [m.status, ''];
+        var when = new Date(m.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return '<tr style="cursor:pointer;" onclick="openMailLog(\'' + escH(m.id) + '\')">' +
+          '<td style="white-space:nowrap;font-size:12px;">' + escH(when) + '</td>' +
+          '<td style="font-size:12.5px;">' + escH(m.to) + '</td>' +
+          '<td style="font-weight:600;">' + escH(m.subject) + '</td>' +
+          '<td style="font-size:12px;color:var(--text-muted);">' + escH((m.tag || '').replace(/_/g, ' ') || '—') + (m.kind === 'marketing' ? ' · marketing' : '') + '</td>' +
+          '<td><span class="status-tag ' + res[1] + '" title="' + escH(m.error || '') + '">' + escH(res[0]) + '</span></td></tr>';
+      }).join('');
+      if (append) body.insertAdjacentHTML('beforeend', html);
+      else body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No emails logged yet. New ones appear here as they go out.</td></tr>';
+    }).catch(function(e) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--danger);">' + escH(fmtErr(e)) + '</td></tr>';
+    });
+  };
+  window.openMailLog = function(id) {
+    api.adminMailLogItem(id).then(function(r) {
+      var m = r.row, res = MAIL_RESULT[m.status] || [m.status, ''];
+      document.getElementById('mailLogViewHead').innerHTML =
+        '<div style="font-weight:700;font-size:14px;">' + escH(m.subject) + '</div>' +
+        '<div style="color:var(--text-muted);">To ' + escH(m.to) + ' · ' + new Date(m.createdAt).toLocaleString('en-IN') + ' · <span class="status-tag ' + res[1] + '">' + escH(res[0]) + '</span></div>' +
+        (m.error ? '<div style="color:var(--danger);margin-top:4px;">' + escH(m.error) + '</div>' : '');
+      document.getElementById('mailLogFrame').srcdoc = m.html || '<p style="font-family:sans-serif;padding:24px;color:#6B7280">This message contained a sign-in code, so its body is not stored.</p>';
+      document.getElementById('mailLogView').style.display = 'block';
+    }).catch(function(e) { toast(fmtErr(e), 'error'); });
+  };
+  window.closeMailLogView = function() { document.getElementById('mailLogView').style.display = 'none'; };
 
   /* ================= EMAIL CONSOLE =================
      Templates and their sample data come from the server catalogue, so this

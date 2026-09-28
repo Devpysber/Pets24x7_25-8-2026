@@ -178,6 +178,16 @@ vendorClaimRegistrationRouter.post(
     const normSubmitted = normalizePhone(rawPhone);
     const submittedLast10 = lastDigits(rawPhone, 10);
 
+    // The listing's number is private (broker model), so this step must not
+    // work as a way to guess it: after 5 wrong numbers for one listing in a
+    // day, it stops answering for that listing.
+    const recentFails = await prisma.listingClaim.count({
+      where: { listingId, status: 'VERIFICATION_FAILED', createdAt: { gt: new Date(Date.now() - 24 * 3600_000) } },
+    });
+    if (recentFails >= 5) {
+      throw new TooManyRequestsError('Too many attempts for this listing today. Try again tomorrow, or contact support@pets24x7.com to prove it is yours.');
+    }
+
     // Check if listing is already claimed in DB
     const dbVendor = await prisma.vendor.findFirst({
       where: { OR: [{ listingId }, { id: listingId }] },

@@ -236,6 +236,27 @@ listingsRouter.get(
   }),
 );
 
+// GET /api/listings/:id/claim-status — is this listing already someone's?
+// Listing pages are built ahead of time, so a claim made since the last
+// publish (or still under review) would otherwise keep showing "Claim this
+// listing". The page asks this and swaps the card. Answers only the state,
+// never who holds it.
+listingsRouter.get(
+  '/:id/claim-status',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id ?? '';
+    if (!getPublicListingById(id)) throw new NotFoundError('Listing not found');
+    const v = await prisma.vendor
+      .findFirst({ where: { listingId: id, claimedAt: { not: null } }, select: { status: true, mustChangePassword: true } })
+      .catch(() => null);
+    const state = !v || v.status === 'REJECTED' ? 'unclaimed'
+      : v.status === 'PENDING' || v.mustChangePassword ? 'pending'
+      : 'claimed';
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ ok: true, state });
+  }),
+);
+
 // Kept last: '/:id' matches anything, so every literal path must precede it.
 listingsRouter.get(
   '/:id',

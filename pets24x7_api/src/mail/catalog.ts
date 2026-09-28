@@ -296,6 +296,36 @@ export const MAIL_CATALOG: CatalogEntry[] = [
       }),
   },
   {
+    id: 'vendor/new_enquiry_locked',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'New enquiry lead (over plan limit)',
+    description: "A lead past the plan's monthly allowance: contact masked, upgrade button.",
+    sample: {
+      businessName: BIZ,
+      leadLimit: 5,
+      enquiry: { name: PARENT, phone: '+9198••••••10', petType: 'Dog', notes: 'Need boarding for 3 nights.', city: 'Mumbai' },
+    },
+    build: (to, d) =>
+      T.vendorNewEnquiryEmail(to, d.businessName, {
+        name: d.enquiry?.name,
+        phone: d.enquiry?.phone,
+        petType: d.enquiry?.petType ?? null,
+        preferredDate: d.enquiry?.preferredDate ? new Date(d.enquiry.preferredDate) : soon(),
+        notes: d.enquiry?.notes ?? '',
+        city: d.enquiry?.city ?? null,
+      }, { locked: true, leadLimit: Number(d.leadLimit ?? 5) }),
+  },
+  {
+    id: 'vendor/plan_limits_notice',
+    kind: 'transactional',
+    category: 'Vendor',
+    label: 'Free plan limits notice',
+    description: 'One-time note to Basic businesses: leads, photos and review requests on the free plan.',
+    sample: { businessName: BIZ, basic: { leadsPerMonth: 5, photos: 2, reviewRequestsPerDay: 5 } },
+    build: (to, d) => T.vendorPlanLimitsNoticeEmail(to, d.businessName, d.basic ?? { leadsPerMonth: 5, photos: 2, reviewRequestsPerDay: 5 }),
+  },
+  {
     id: 'vendor/welcome',
     kind: 'transactional',
     category: 'Vendor',

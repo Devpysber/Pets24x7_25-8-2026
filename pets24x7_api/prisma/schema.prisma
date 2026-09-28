@@ -1129,3 +1129,27 @@ model DeletedRecord {
   @@index([recordId])
   @@map("deleted_records")
 }
+
+// -----------------------------------------------------------
+// Email log — every message the platform tried to send, and what happened:
+// sent, failed, suppressed (opted out), or not sent (no SMTP / not production).
+// Admin > Emails > Sent log. Bodies of messages that carry a sign-in code are
+// never stored. Kept 90 days.
+// -----------------------------------------------------------
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String   @db.VarChar(320)
+  subject   String   @db.VarChar(500)
+  tag       String?  @db.VarChar(80)
+  kind      String   @db.VarChar(20) // transactional | marketing
+  status    String   @db.VarChar(20) // sent | failed | suppressed | not_sent
+  error     String?  @db.Text
+  messageId String?  @db.VarChar(255)
+  html      String?  @db.LongText
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([to])
+  @@map("email_log")
+}

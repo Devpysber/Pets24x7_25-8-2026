@@ -12,6 +12,7 @@ import { logger } from '../logger.js';
 import type { MailKind } from './optout.js';
 import { isOptedOut, unsubscribeUrl } from './optout.js';
 import { UNSUBSCRIBE_SLOT, withTracking } from './components.js';
+import { prisma } from '../db.js';
 
 let cached: Transporter | null = null;
 
@@ -119,6 +120,28 @@ export function withUnsubscribeText(text: string, url: string | null): string {
  * Best-effort send. Never throws: a mail outage must not fail a signup, so the
  * caller gets `false` and the error is logged.
  */
+/**
+ * One row per attempt in email_log (admin > Emails > Sent log). Never throws
+ * and never delays the send. A message carrying a sign-in code keeps its
+ * subject redacted and its body out of the log.
+ */
+function logMail(input: MailInput, kind: MailKind, status: 'sent' | 'failed' | 'suppressed' | 'not_sent', extra: { error?: string; messageId?: string } = {}): void {
+  prisma.emailLog
+    .create({
+      data: {
+        to: input.to.slice(0, 320),
+        subject: (input.sensitive ? '[sign-in code]' : input.subject).slice(0, 500),
+        tag: input.tag ? input.tag.slice(0, 80) : null,
+        kind,
+        status,
+        error: extra.error ? extra.error.slice(0, 2000) : null,
+        messageId: extra.messageId ? extra.messageId.slice(0, 255) : null,
+        html: input.sensitive ? null : input.html,
+      },
+    })
+    .catch((err) => logger.warn({ err }, '[mail] could not write the email log'));
+}
+
 export async function sendMail(rawInput: MailInput): Promise<boolean> {
   const kind: MailKind = rawInput.kind ?? 'transactional';
   // Tag own-site links with UTM parameters before anything logs or sends it.
@@ -131,10 +154,12 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
       // A suppression-list outage must not silently start mailing opted-out
       // people, so fail closed.
       logger.error({ err, to: input.to }, '[mail] opt-out check failed — suppressing');
+      logMail(input, kind, 'suppressed', { error: 'opt-out check failed' });
       return false;
     }
     if (suppressed) {
       logger.info({ to: input.to, subject: input.subject }, '[mail] suppressed — recipient opted out');
+      logMail(input, kind, 'suppressed', { error: 'recipient opted out' });
       return false;
     }
   }
@@ -153,6 +178,7 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
       { to: input.to, subject: safeSubject, ...(input.sensitive ? {} : { text: input.text }) },
       '[mail] not sent — NODE_ENV is not production (set MAIL_ALLOW_DEV_SEND=true to override)',
     );
+    logMail(input, kind, 'not_sent', { error: 'not production (dev)' });
     return false;
   }
 
@@ -162,6 +188,7 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
       { to: input.to, subject: safeSubject, ...(input.sensitive ? {} : { text: input.text }) },
       '[mail] SMTP not configured — message not sent',
     );
+    logMail(input, kind, 'not_sent', { error: 'SMTP not configured' });
     return false;
   }
   try {
@@ -178,9 +205,21 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
         : undefined;
     const info = await tx.sendMail({ from: env.MAIL_FROM, ...message, ...(headers ? { headers } : {}) });
     logger.info({ to: input.to, subject: safeSubject, messageId: info.messageId }, '[mail] sent');
+    logMail({ ...input, html: message.html }, kind, 'sent', { messageId: info.messageId });
     return true;
   } catch (err) {
     logger.error({ err, to: input.to, subject: safeSubject }, '[mail] send failed');
+    logMail(input, kind, 'failed', { error: (err as Error)?.message ?? String(err) });
     return false;
   }
+}
+
+/** Email log rows older than 90 days are deleted once a day. */
+export function startEmailLogPrune(): void {
+  const run = () =>
+    prisma.emailLog
+      .deleteMany({ where: { createdAt: { lt: new Date(Date.now() - 90 * 86_400_000) } } })
+      .catch((err) => logger.warn({ err }, '[mail] email log prune failed'));
+  setTimeout(run, 120_000).unref?.();
+  setInterval(run, 24 * 3_600_000).unref?.();
 }

@@ -212,3 +212,50 @@ adminMailRouter.post(
     res.json({ ok: true, templateId: entry.id, sent, failed, results });
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Sent log: every email the platform tried to send (mail/mailer.ts logMail).
+//
+//   GET /api/admin/mail/log?q=&status=&before=&limit=   newest first
+//   GET /api/admin/mail/log/:id                         one message, with its body
+// ---------------------------------------------------------------------------
+adminMailRouter.get(
+  '/mail/log',
+  asyncHandler(async (req, res) => {
+    const take = Math.max(1, Math.min(300, Math.trunc(Number(req.query.limit ?? 100)) || 100));
+    const q = String(req.query.q ?? '').trim().slice(0, 120);
+    const status = String(req.query.status ?? '');
+    const beforeRaw = String(req.query.before ?? '');
+    const before = beforeRaw && !Number.isNaN(Date.parse(beforeRaw)) ? new Date(beforeRaw) : null;
+    const where = {
+      ...(['sent', 'failed', 'suppressed', 'not_sent'].includes(status) ? { status } : {}),
+      ...(before ? { createdAt: { lt: before } } : {}),
+      ...(q ? { OR: [{ to: { contains: q } }, { subject: { contains: q } }, { tag: { contains: q } }] } : {}),
+    };
+    const dayAgo = new Date(Date.now() - 86_400_000);
+    const [rows, counts] = await Promise.all([
+      prisma.emailLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: { id: true, to: true, subject: true, tag: true, kind: true, status: true, error: true, createdAt: true },
+      }),
+      prisma.emailLog.groupBy({ by: ['status'], where: { createdAt: { gt: dayAgo } }, _count: { _all: true } }),
+    ]);
+    res.json({
+      ok: true,
+      rows,
+      counts24h: Object.fromEntries(counts.map((c) => [c.status, c._count._all])),
+      nextBefore: rows.length === take ? rows[rows.length - 1]!.createdAt : null,
+    });
+  }),
+);
+
+adminMailRouter.get(
+  '/mail/log/:id',
+  asyncHandler(async (req, res) => {
+    const row = await prisma.emailLog.findUnique({ where: { id: req.params.id ?? '' } });
+    if (!row) throw new BadRequestError('Not found');
+    res.json({ ok: true, row });
+  }),
+);

@@ -214,6 +214,31 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireListingSidebar);
   else wireListingSidebar();
 
+  // ---- Listing pages: the owner card follows the live claim ----
+  // Pages are built ahead of time, so a listing claimed since the last publish
+  // (or with a claim under review) still said "Claim this listing, free".
+  function syncOwnerCard() {
+    var card = document.querySelector('.owner-card');
+    var m = /^\/(?:in|us)\/[^\/]+\/([^\/]+)\/?$/i.exec(location.pathname);
+    if (!card || !m) return;
+    var id; try { id = decodeURIComponent(m[1]); } catch (e) { return; }
+    fetch(BASE + '/api/listings/' + encodeURIComponent(id) + '/claim-status', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.state === 'unclaimed') return;
+        var name = (document.querySelector('h1') || {}).textContent || 'the business';
+        card.innerHTML = d.state === 'claimed'
+          ? '<strong>✓ Managed by the business</strong><p>The details on this page are kept up to date by ' + escText(name) + '.</p>' +
+            '<p class="owner-small">Is this your business? <a href="/vendor-login/">Sign in to your dashboard</a></p>'
+          : '<strong>A claim is being verified</strong><p>Someone has claimed this listing and Pets24x7 is confirming it belongs to them.</p>' +
+            '<p class="owner-small">Is this your business and you did not claim it? Email <a href="mailto:support@pets24x7.com?subject=Listing%20claim%20dispute">support@pets24x7.com</a>.</p>';
+      })
+      .catch(function () { /* keep the built card */ });
+  }
+  function escText(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncOwnerCard);
+  else syncOwnerCard();
+
   // ---- Contact lock ----
   // Phone numbers and WhatsApp buttons work only for signed-in people. For
   // everyone else, on every page that loads this file:
