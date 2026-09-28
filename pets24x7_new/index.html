@@ -587,6 +587,58 @@
     .hero-pets *, .cat-item:hover .cat-icon { animation: none !important; }
     .hero-pets .hp-float { opacity: .9; }
   }
+  /* ================= UNIFORM LOOK: one rhythm, one heading, one card, one motion ================= */
+  section, .cats, .destinations, .featured, .pp-steps, .hero, .app-show { padding: 80px 0; }
+  .numbers { padding: 64px 0; }
+  .traveler-hero { padding: 64px 0 80px; }
+  /* backgrounds alternate white / soft grey; blue only for hero, numbers, final call */
+  .cats { background: #fff; }
+  .pp-steps { background: var(--bg-alt); }
+  .destinations { background: var(--bg-alt); }
+  .featured { background: #fff; }
+  .pp-faq { background: #fff; }
+  .hero { background: radial-gradient(ellipse at top right, rgba(37,99,235,0.07), transparent 60%), var(--bg-alt); }
+  .premium { background: var(--bg-alt); }
+  /* headings */
+  .section-head { margin-bottom: 44px; }
+  .section-head h2, .as-copy h2, .final-cta h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -0.6px; font-weight: 800; }
+  .section-head p { font-size: 17px; }
+  .section-eyebrow { font-weight: 700; letter-spacing: 1.2px; }
+  .b2b-title { font-size: clamp(30px, 5vw, 46px); font-weight: 800; line-height: 1.1; letter-spacing: -1px; color: var(--text); margin-bottom: 18px; max-width: 880px; }
+  .b2b-title .accent { color: var(--primary); }
+  .section-more { text-align: center; margin-top: 32px; }
+  .dest-group-label { text-align: left; }
+  /* one card language: 16px corners, same border, same lift on hover */
+  .cat-item, .dest-item, .feat-card, .value-card, .step-card, .testimonial, .num-card, .premium-card { border-radius: var(--radius-lg); }
+  details.faq-item { border-radius: 14px; transition: box-shadow .25s, border-color .25s; }
+  .cat-item, .dest-item, .feat-card, .value-card, .testimonial { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background-color .25s ease; }
+  .cat-item:hover, .dest-item:hover, .feat-card:hover, .value-card:hover, .testimonial:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(37,99,235,.12); border-color: rgba(37,99,235,.35); }
+  .dest-item:hover .dest-circle, .cat-item:hover .cat-icon { background: linear-gradient(135deg, #BFDBFE, #93C5FD); }
+  .value-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light); color: var(--primary); box-shadow: inset 0 0 0 5px #DBEAFE; margin-bottom: 18px; transition: transform .25s; }
+  .value-card:hover .value-icon, .testimonial:hover .value-icon { transform: rotate(-6deg) scale(1.06); }
+  .testimonial .value-icon { width: 48px; height: 48px; margin-bottom: 14px; }
+  .testimonial .value-icon svg { width: 22px; height: 22px; }
+  /* steps: blue, same as everything else */
+  .pp-grid::before { border-top-color: #BFDBFE; }
+  .pp-badge { box-shadow: 0 10px 30px rgba(37,99,235,.16), inset 0 0 0 6px #DBEAFE; }
+  .pp-badge::after { background: var(--primary); }
+  .pp-cta a.btn { border-radius: 999px; background: var(--primary); box-shadow: 0 8px 20px rgba(37,99,235,.25); padding: 14px 28px; }
+  .pp-cta a.btn:hover { background: var(--primary-dark); box-shadow: 0 12px 26px rgba(37,99,235,.32); }
+  /* one entrance motion for the whole page */
+  .rv-on .rv { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+  .rv-on .rv.in { opacity: 1; transform: none; }
+  @media (max-width: 768px) {
+    section, .cats, .destinations, .featured, .pp-steps, .hero, .app-show { padding: 56px 0; }
+    .numbers { padding: 48px 0; }
+    .traveler-hero { padding: 40px 0 56px; }
+    .section-head { margin-bottom: 32px; }
+    .section-head p { font-size: 15.5px; }
+    .pp-grid::before { display: none; }
+    .pp-grid { gap: 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rv-on .rv { opacity: 1 !important; transform: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -732,8 +784,11 @@
 <!-- SERVICE CATEGORIES -->
 <section class="cats" id="cats">
   <div class="container">
-    <h2>Pet services we cover</h2>
-    <p class="sub">From a grooming appointment to a 24x7 emergency vet — find providers near you in seconds.</p>
+    <div class="section-head">
+      <span class="section-eyebrow">Services</span>
+      <h2>Pet services we cover</h2>
+      <p>From a grooming appointment to a 24x7 emergency vet, find providers near you in seconds.</p>
+    </div>
     <div class="cat-grid" id="catGrid">
       <a class="cat-item" data-cat="veterinary-clinics" href="/in/mumbai/veterinary-clinics/"><span class="cat-icon">🩺</span><span class="cat-info"><strong>Veterinary Clinics</strong><span>2,500+ listings</span></span></a>
       <a class="cat-item" data-cat="pet-grooming-spa" href="/in/mumbai/pet-grooming-spa/"><span class="cat-icon">🛁</span><span class="cat-info"><strong>Grooming &amp; Spa</strong><span>2,900+ listings</span></span></a>
@@ -755,7 +810,7 @@
 <section class="pp-steps" id="how-pets">
   <div class="container">
     <div class="section-head">
-      <span class="section-eyebrow" style="color:#EA580C;">For pet parents</span>
+      <span class="section-eyebrow">For pet parents</span>
       <h2>Happy pet, happy you, in 3 easy steps</h2>
       <p>No apps to install, no booking fees. Just the right care for your dog, cat or bird.</p>
     </div>
@@ -776,7 +831,7 @@
         <p>Send one message. The Pets24x7 team connects you with the business and helps you confirm a slot.</p>
       </div>
     </div>
-    <div class="pp-cta"><a href="#searchForm" onclick="setTimeout(function(){var q=document.getElementById('searchCity');q&&q.focus();},350)">Find care for my pet →</a></div>
+    <div class="pp-cta"><a class="btn btn-primary" href="#searchForm" onclick="setTimeout(function(){var q=document.getElementById('searchCity');q&&q.focus();},350)">Find care for my pet →</a></div>
   </div>
 </section>
 
@@ -793,7 +848,11 @@
 <!-- POPULAR CITIES -->
 <section class="destinations" id="destinations">
   <div class="container">
-    <h2>Popular cities</h2>
+    <div class="section-head">
+      <span class="section-eyebrow">Cities</span>
+      <h2>Popular cities</h2>
+      <p>The busiest pet-care cities on Pets24x7 across India and the USA.</p>
+    </div>
 
     <div class="dest-group-label">India · Top cities</div>
     <div class="dest-grid" id="citiesIN"></div>
@@ -809,14 +868,13 @@
 <!-- FEATURED LISTINGS -->
 <section class="featured">
   <div class="container">
-    <div class="featured-head">
-      <div>
-        <h2>Pet businesses near you</h2>
-        <p>Vets, groomers, boarders and trainers listed on Pets24x7.</p>
-      </div>
-      <a href="/in/mumbai/" style="color:var(--primary);font-weight:700;font-size:14px;">Browse all listings →</a>
+    <div class="section-head" id="featHead">
+      <span class="section-eyebrow">Near you</span>
+      <h2>Pet businesses near you</h2>
+      <p>Vets, groomers, boarders and trainers listed on Pets24x7.</p>
     </div>
     <div class="feat-grid" id="featGrid"></div>
+    <div class="section-more" id="featMore"><a href="/in/mumbai/" class="btn btn-outline">Browse all listings →</a></div>
   </div>
 </section>
 
@@ -935,7 +993,7 @@
 <section id="faq-pets" class="pp-faq">
   <div class="container">
     <div class="section-head">
-      <span class="section-eyebrow" style="color:#EA580C;">Pet parents ask</span>
+      <span class="section-eyebrow">Pet parents ask</span>
       <h2>Good questions, straight answers</h2>
     </div>
     <div class="faq-list">
@@ -951,29 +1009,29 @@
 <!-- B2B HERO -->
 <section class="hero" id="b2b">
   <div class="container">
-    <h1>Pet Business Owner? Get More <span class="accent">Direct Enquiries.</span> Zero Commission Until You Earn.</h1>
+    <h2 class="b2b-title">Pet business owner? Get more <span class="accent">direct enquiries.</span> Zero commission until you earn.</h2>
     <p class="subhead">List your veterinary clinic, grooming salon, boarding facility, walker or trainer on Pets24x7 — and convert local Google searches into WhatsApp leads. No setup fees. No long contracts.</p>
 
     <div class="hero-ctas">
       <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=hero&utm_campaign=business_signup" class="btn btn-whatsapp" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-        List My Pet Business Free →
+        List my pet business free →
       </a>
-      <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+      <a href="#how-it-works" class="btn btn-outline">See how it works</a>
     </div>
 
     <div class="trust-badges">
       <span class="trust-badge"><span class="check">✓</span> No upfront cost</span>
       <span class="trust-badge"><span class="check">✓</span> Enquiries sent to your WhatsApp</span>
       <span class="trust-badge"><span class="check">✓</span> Google rating shown</span>
-      <span class="trust-badge"><span class="check">✓</span> SEO-Optimised Listing</span>
+      <span class="trust-badge"><span class="check">✓</span> SEO-optimised listing</span>
     </div>
 
     <div class="hero-strip">
-      <div class="stat"><strong data-stat="listings">34,169</strong><span>Pet Businesses Listed</span></div>
-      <div class="stat"><strong data-stat="cities">2,212</strong><span>Cities · India + USA</span></div>
-      <div class="stat"><strong data-stat="categories">16</strong><span>Service Categories</span></div>
-      <div class="stat"><strong>0%</strong><span>Setup Fee</span></div>
+      <div class="stat"><strong data-stat="listings">34,169</strong><span>Pet businesses listed</span></div>
+      <div class="stat"><strong data-stat="cities">2,212</strong><span>Cities in India &amp; USA</span></div>
+      <div class="stat"><strong data-stat="categories">16</strong><span>Service categories</span></div>
+      <div class="stat"><strong>0%</strong><span>Setup fee</span></div>
     </div>
   </div>
 </section>
@@ -983,13 +1041,13 @@
   <div class="container">
     <div class="section-head">
       <span class="section-eyebrow">Why Pets24x7</span>
-      <h2>Built for Pet Businesses That Want To Own The Customer</h2>
+      <h2>Built for pet businesses that want to own the customer</h2>
       <p>Stop paying ad-tech middlemen for clicks. Start owning your customers, your reviews and your bookings.</p>
     </div>
     <div class="value-grid">
-      <div class="value-card"><div class="value-icon">🔍</div><h3>SEO-Optimised Visibility</h3><p>We rank for "vets near me", "dog grooming in <em>your city</em>" and other pet-intent searches — so pet parents can find your listing.</p></div>
-      <div class="value-card"><div class="value-icon">💸</div><h3>Keep 100% of Revenue</h3><p>No commission on bookings. No card-on-file surprises. Customers pay you direct. Pay only for premium visibility, if you want it.</p></div>
-      <div class="value-card"><div class="value-icon">📱</div><h3>Direct WhatsApp Enquiries</h3><p>We send every pet-parent enquiry to your WhatsApp. Quote your rate, upsell vaccinations, dental, grooming add-ons. Build a real client list.</p></div>
+      <div class="value-card"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h3>SEO-optimised visibility</h3><p>We rank for "vets near me", "dog grooming in <em>your city</em>" and other pet-intent searches — so pet parents can find your listing.</p></div>
+      <div class="value-card"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></div><h3>Keep 100% of revenue</h3><p>No commission on bookings. No card-on-file surprises. Customers pay you direct. Pay only for premium visibility, if you want it.</p></div>
+      <div class="value-card"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg></div><h3>Direct WhatsApp enquiries</h3><p>We send every pet-parent enquiry to your WhatsApp. Quote your rate, upsell vaccinations, dental, grooming add-ons. Build a real client list.</p></div>
     </div>
   </div>
 </section>
@@ -998,14 +1056,26 @@
 <section id="how-it-works" class="steps">
   <div class="container">
     <div class="section-head">
-      <span class="section-eyebrow">How It Works</span>
-      <h2>From Sign-Up to First Enquiry in 3 Simple Steps</h2>
+      <span class="section-eyebrow">For pet businesses</span>
+      <h2>From sign-up to first enquiry in 3 simple steps</h2>
       <p>Less than a day. No paperwork. No tech skills needed.</p>
     </div>
-    <div class="steps-grid">
-      <div class="step-card"><div class="step-num">1</div><h3>Submit Your Business</h3><p>Send us your business details on WhatsApp — name, address, services, phone, Google reviews link. We handle the rest.</p></div>
-      <div class="step-card"><div class="step-num">2</div><h3>We Optimise &amp; Feature</h3><p>Our team optimises your listing, adds your services and photos, and places you on the right city and category pages.</p></div>
-      <div class="step-card"><div class="step-num">3</div><h3>Get Direct Enquiries</h3><p>We pass each enquiry to you on WhatsApp. You confirm bookings. No commission. No middlemen. No surprises.</p></div>
+    <div class="pp-grid">
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><rect x="9" y="7" width="30" height="36" rx="5" stroke="#2563EB" stroke-width="4"/><path d="M16 17h16M16 25h16M16 33h9" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/><circle cx="36" cy="36" r="8" fill="#16A34A"/><path d="M32.5 36l2.5 2.5 4.5-5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>Submit your business</h3>
+        <p>Send us your details on WhatsApp: name, address, services, phone and Google reviews link. We handle the rest.</p>
+      </div>
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><path d="M24 6l5.2 10.6 11.8 1.7-8.5 8.3 2 11.7L24 32.8l-10.5 5.5 2-11.7L7 18.3l11.8-1.7z" stroke="#2563EB" stroke-width="4" stroke-linejoin="round"/><path d="M24 15l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5" fill="#F59E0B"/></svg></div>
+        <h3>We optimise &amp; feature</h3>
+        <p>We polish your listing, add your services and photos, and place you on the right city and category pages.</p>
+      </div>
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><path d="M24 6a17 17 0 0 0-14.6 25.7L7 41l9.6-2.4A17 17 0 1 0 24 6z" stroke="#16A34A" stroke-width="4" stroke-linejoin="round"/><path d="M16 22h16M16 29h10" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/></svg></div>
+        <h3>Get direct enquiries</h3>
+        <p>We pass each enquiry to you on WhatsApp. You confirm the booking. No commission, no middlemen.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1015,10 +1085,10 @@
   <div class="container">
     <div class="section-head">
       <span class="section-eyebrow">Why Pet Businesses List With Us</span>
-      <h2>From Boutique Groomers to 24x7 Animal Hospitals</h2>
+      <h2>From boutique groomers to 24x7 animal hospitals</h2>
     </div>
     <div class="testimonials">
-      <div class="testimonial"><div class="stars">🔍</div><blockquote>Your listing is built to rank for the searches pet parents actually type — &ldquo;vet near me&rdquo;, &ldquo;dog grooming in <em>your city</em>&rdquo; — linked to your Google Business profile.</blockquote><cite><span class="avatar">1</span> SEO-optimised listing page</cite></div><div class="testimonial"><div class="stars">💬</div><blockquote>Every enquiry lands in your WhatsApp with the pet parent&rsquo;s name, number and what they need. You quote, you confirm, you keep the client.</blockquote><cite><span class="avatar">2</span> Direct WhatsApp leads</cite></div><div class="testimonial"><div class="stars">💸</div><blockquote>No setup fee, no commission on what you earn, no lock-in. Featured placement is the only paid extra, and only if you want it.</blockquote><cite><span class="avatar">3</span> Zero commission</cite></div>
+      <div class="testimonial"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><blockquote>Your listing is built to rank for the searches pet parents actually type — &ldquo;vet near me&rdquo;, &ldquo;dog grooming in <em>your city</em>&rdquo; — linked to your Google Business profile.</blockquote><cite><span class="avatar">1</span> SEO-optimised listing page</cite></div><div class="testimonial"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg></div><blockquote>Every enquiry lands in your WhatsApp with the pet parent&rsquo;s name, number and what they need. You quote, you confirm, you keep the client.</blockquote><cite><span class="avatar">2</span> Direct WhatsApp leads</cite></div><div class="testimonial"><div class="value-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></div><blockquote>No setup fee, no commission on what you earn, no lock-in. Featured placement is the only paid extra, and only if you want it.</blockquote><cite><span class="avatar">3</span> Zero commission</cite></div>
     </div>
   </div>
 </section>
@@ -1029,7 +1099,7 @@
     <div class="premium-card">
       <div>
         <span class="premium-badge">⭐ FEATURED LISTING</span>
-        <h3>Get Seen First with Featured Placement</h3>
+        <h3>Get seen first with featured placement</h3>
         <p style="color:var(--text-muted);">Stand out at the top of city + category search pages with our Featured Listing package — designed for pet businesses serious about growth.</p>
         <ul class="premium-list">
           <li>Top placement in your city &amp; category</li>
@@ -1042,7 +1112,7 @@
       </div>
       <div class="premium-visual">
         <div class="glow-card">
-          <div style="font-size:32px;margin-bottom:8px;">📈</div>
+          <div style="margin:0 auto 10px;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
           <div style="font-size:24px;font-weight:800;margin-bottom:4px;">Top of page</div>
           <div style="font-size:13px;opacity:0.9;">Placed above standard listings<br/>in your city &amp; category</div>
         </div>
@@ -1056,7 +1126,7 @@
   <div class="container">
     <div class="section-head">
       <span class="section-eyebrow">FAQ</span>
-      <h2>Questions Pet Business Owners Ask Most</h2>
+      <h2>Questions pet business owners ask most</h2>
       <p>Quick answers. Honest pricing. Zero fine print.</p>
     </div>
     <div class="faq-list">
@@ -1073,12 +1143,12 @@
 <!-- FINAL CTA -->
 <section class="final-cta" id="final">
   <div class="container">
-    <h2>Ready to Fill Your Calendar with Pet Parents?</h2>
+    <h2>Ready to fill your calendar with pet parents?</h2>
     <p>Claim your listing among <span data-stat="listings">34,169</span> pet businesses across India and the USA. Zero risk. Zero setup. Start today.</p>
     <div class="hero-ctas">
       <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20list%20my%20pet%20business...&utm_source=website&utm_medium=final_cta&utm_campaign=business_signup" class="btn btn-whatsapp" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>
-        Chat to List Now (30 sec)
+        Chat to list now (30 sec)
       </a>
       <a href="tel:+919930090487" class="btn btn-outline">📞 Call <span data-p24-phone="+91 99300 90487">+91 99300 •••••</span></a>
     </div>
@@ -1375,13 +1445,13 @@
       })).slice(0, 8);
       renderFeatured();
 
-      var head = document.querySelector('.featured-head p');
+      var head = document.querySelector('#featHead p');
       if (head && pick) {
         head.textContent = pool === rated
           ? 'Highly-rated pet businesses in ' + pick.city + ', by Google reviews.'
           : 'Pet businesses in ' + pick.city + ' listed on Pets24x7.';
       }
-      var browseAll = document.querySelector('.featured-head a');
+      var browseAll = document.querySelector('#featMore a');
       if (browseAll && pick) {
         browseAll.href = '/' + String(pick.country || 'in').toLowerCase() + '/' + encodeURIComponent(pick.city_slug) + '/';
       }
@@ -1411,12 +1481,12 @@
       homeRecoRid = d.rid || '';
       homeRecoItems = items;
       renderFeatured();
-      var h2 = document.querySelector('.featured-head h2');
+      var h2 = document.querySelector('#featHead h2');
       if (h2) h2.textContent = 'Recommended near you';
       var cityName = d.city || (pick && pick.city) || '';
-      var head = document.querySelector('.featured-head p');
+      var head = document.querySelector('#featHead p');
       if (head && cityName) head.textContent = 'Pet businesses in ' + cityName + ', ranked on reviews and what pet parents contact.';
-      var browseAll = document.querySelector('.featured-head a');
+      var browseAll = document.querySelector('#featMore a');
       var first = items.filter(function (it) { return !it.sponsored && it.city_slug; })[0];
       if (browseAll && first) {
         browseAll.href = '/' + String(first.country || cc).toLowerCase() + '/' + encodeURIComponent(first.city_slug) + '/';
@@ -1598,6 +1668,47 @@
     new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? start() : stop(); }); }, { threshold: 0.25 }).observe(root);
   } else start();
   document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); });
+})();
+</script>
+<script>
+/* One entrance animation for the whole page: headings, cards and steps fade up
+   the first time they scroll into view, siblings a beat apart. Cards the page
+   draws later (cities, recommendations) are picked up too. Off for
+   reduced-motion; without JS nothing is ever hidden. */
+(function () {
+  if (!('IntersectionObserver' in window)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var SEL = '.section-head, .cat-item, .dest-group-label, .dest-item, .feat-card, .pp-step, .num-card, .value-card, .testimonial, details.faq-item, .premium-card, .b2b-title, .hero .subhead, .hero-ctas, .trust-badges, .hero-strip, .final-cta h2, .final-cta p, .final-cta .hero-ctas, .as-copy, .section-more, .pp-cta';
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var el = e.target;
+      io.unobserve(el);
+      el.classList.add('in');
+      // hand the element back to its own hover transitions once it has arrived
+      setTimeout(function () { el.classList.remove('rv', 'in'); el.style.transitionDelay = ''; }, 1100);
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  function scan(root) {
+    var list = (root.matches && root.matches(SEL)) ? [root] : [];
+    if (root.querySelectorAll) list = list.concat([].slice.call(root.querySelectorAll(SEL)));
+    list.forEach(function (el) {
+      if (el.dataset.rv) return;
+      el.dataset.rv = '1';
+      // already on screen at load: leave it alone, no flash
+      var r = el.getBoundingClientRect();
+      if (r.top < innerHeight && r.bottom > 0 && document.readyState !== 'complete' && !el.closest('#featGrid, #citiesIN, #citiesUS, #citiesUS2')) return;
+      var sib = el.parentNode ? [].indexOf.call(el.parentNode.children, el) : 0;
+      el.style.transitionDelay = Math.min(sib, 6) * 70 + 'ms';
+      el.classList.add('rv');
+      io.observe(el);
+    });
+  }
+  document.documentElement.classList.add('rv-on');
+  scan(document.body);
+  new MutationObserver(function (ms) {
+    ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); }); });
+  }).observe(document.body, { childList: true, subtree: true });
 })();
 </script>
 </body>
