@@ -2566,6 +2566,21 @@
 
       <!-- 11. SETTINGS VIEW -->
       <section id="view-settings" class="view-pane">
+        <div class="card" id="waCard" style="margin-bottom:18px; font-feature-settings:'calt' 0;">
+          <div class="card-header" style="flex-wrap:wrap; gap:10px;">
+            <div>
+              <div class="card-title">WhatsApp codes for listing claims</div>
+              <div class="card-subtitle" id="waMode">Checking…</div>
+            </div>
+            <button class="btn btn-sm" type="button" onclick="waCheck()">↻ Check again</button>
+          </div>
+          <ol id="waSteps" style="list-style:none; margin:0; padding:0; display:grid; gap:10px;"></ol>
+          <div id="waTestRow" style="display:none; margin-top:16px; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input id="waTestPhone" type="tel" class="form-control" style="width:220px; max-width:100%;" placeholder="+91 98xxxxxxxx" />
+            <button class="btn btn-sm btn-primary" type="button" onclick="waTest()">Send a test code</button>
+            <span id="waTestOut" style="font-size:12.5px; color:var(--text-muted);"></span>
+          </div>
+        </div>
         <div class="card">
           <div class="card-title" style="margin-bottom:4px;">My admin account</div>
           <div class="card-subtitle" style="margin-bottom:16px;" id="apRole">—</div>
@@ -5218,6 +5233,7 @@
       });
     },
     settings: function() {
+      waCheck();
       loadAdminProfile();
       planLimitsLoad();
       recoLoadConfig();
@@ -6816,6 +6832,29 @@
     }).observe(pane, { childList: true, subtree: true });
   });
 
+
+  // ---- Settings: WhatsApp claim codes ----
+  window.waCheck = function() {
+    var box = document.getElementById('waSteps'), mode = document.getElementById('waMode');
+    if (!box) return;
+    mode.textContent = 'Checking with Meta…';
+    return api.adminWhatsappStatus().then(function(r) {
+      mode.innerHTML = '<span class="status-tag ' + (r.ready ? 'tag-active' : 'tag-pending') + '">' + (r.ready ? 'Working' : 'Not ready') + '</span> ' + escH(r.claimMode);
+      box.innerHTML = (r.steps || []).map(function(s) {
+        return '<li style="display:flex; gap:10px; align-items:flex-start;"><span style="flex:none; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; background:' + (s.ok ? '#16A34A' : '#DC2626') + ';">' + (s.ok ? '✓' : '!') + '</span>' +
+          '<span><strong style="font-size:13.5px;">' + escH(s.label) + '</strong><br><span style="font-size:12.5px; color:var(--text-muted);">' + escH(s.detail) + '</span></span></li>';
+      }).join('');
+      var ok = (r.steps || []).some(function(s) { return s.key === 'token' && s.ok; });
+      document.getElementById('waTestRow').style.display = ok ? 'flex' : 'none';
+    }).catch(function(e) { mode.textContent = fmtErr(e); });
+  };
+  window.waTest = function() {
+    var ph = document.getElementById('waTestPhone').value.trim(), out = document.getElementById('waTestOut');
+    if (!ph) { out.textContent = 'Enter a WhatsApp number with country code.'; return; }
+    out.textContent = 'Sending…';
+    api.adminWhatsappTest(ph).then(function(r) { out.textContent = 'Sent. The code on that phone should read ' + r.code + '.'; })
+      .catch(function(e) { out.textContent = fmtErr(e); });
+  };
 
   // ---- Emails: sent log ----
   var mailLogNext = null;

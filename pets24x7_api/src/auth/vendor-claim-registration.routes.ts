@@ -227,13 +227,19 @@ vendorClaimRegistrationRouter.post(
     // text is the listing's own, in E.164 when the listing carries a country
     // code, otherwise as the owner typed it (the trailing digits already match).
     const otpPhone = storedPhone.trim().startsWith('+') ? normalizePhone(storedPhone) : normSubmitted;
-    const needsOtp = whatsappConfigured();
+    let needsOtp = whatsappConfigured();
     if (needsOtp) {
       try {
         await issueOtp(otpPhone, 'VENDOR_CLAIM', { ip: req.ip, ua: req.headers['user-agent'] as string | undefined });
       } catch (err) {
         // A code sent less than a minute ago is still valid — carry on with it.
-        if (!(err instanceof TooManyRequestsError)) throw err;
+        if (!(err instanceof TooManyRequestsError)) {
+          // Meta refused the send (expired token, template not approved…).
+          // Don't strand the owner: the claim goes to manual admin approval,
+          // exactly as when WhatsApp is not set up.
+          logger.warn({ err, listingId }, 'claim: WhatsApp code not sent, falling back to admin approval');
+          needsOtp = false;
+        }
       }
     }
 

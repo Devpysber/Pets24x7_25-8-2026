@@ -24,6 +24,7 @@ import { vendorClaimRegistrationRouter } from './auth/vendor-claim-registration.
 import { adminAuthRouter } from './auth/admin.routes.js';
 import { adminApiRouter, loadPersistedPlanStores } from './admin/admin.api.routes.js';
 import { adminMailRouter } from './admin/mail.routes.js';
+import { adminWhatsappRouter } from './admin/whatsapp.routes.js';
 import { adminImportRouter } from './admin/import.routes.js';
 import { adminPublishRouter } from './admin/publish.routes.js';
 import { adminExtraRouter } from './admin/admin.extra.routes.js';
@@ -160,6 +161,7 @@ app.use('/api/admin',   adminAuthRouter);
 app.use('/api/admin',   adminApiRouter);
 app.use('/api/admin',   adminExtraRouter);
 app.use('/api/admin',   adminMailRouter);
+app.use('/api/admin',   adminWhatsappRouter);
 app.use('/api/admin',   adminImportRouter);
 app.use('/api/admin',   adminPublishRouter);
 app.use('/api/me',      meRouter);
