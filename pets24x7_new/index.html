@@ -369,6 +369,158 @@
     *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   }
   @media (min-width: 769px) { .float-wa { display: none; } }
+
+  /* ================= APP SHOWCASE (phone mock drawn in CSS, no images) ================= */
+  .app-show { padding: 80px 0; background: linear-gradient(180deg, #F8FAFF 0%, #EEF3FF 100%); overflow: hidden; }
+  .as-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+  .as-copy .as-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--primary); background: #fff; border: 1px solid #DBE5FF; padding: 6px 12px; border-radius: 999px; }
+  .as-kicker .dot { width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: asPing 1.8s infinite; }
+  @keyframes asPing { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 80%,100% { box-shadow: 0 0 0 10px rgba(34,197,94,0); } }
+  .as-copy h2 { font-size: clamp(30px, 4.4vw, 48px); line-height: 1.08; letter-spacing: -1px; font-weight: 800; margin: 18px 0 14px; color: #0F172A; }
+  .as-copy h2 .grad { background: linear-gradient(90deg, #2563EB, #7C3AED 60%, #DB2777); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .as-copy > p { color: var(--text-muted); font-size: 17px; max-width: 520px; }
+  .as-steps { list-style: none; margin: 26px 0 28px; padding: 0; display: grid; gap: 10px; max-width: 520px; }
+  .as-step { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid transparent; background: transparent; cursor: pointer; transition: background .3s, border-color .3s, box-shadow .3s; font: inherit; color: inherit; }
+  .as-step:hover { background: rgba(255,255,255,.7); }
+  .as-step .n { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; background: #E2E8F0; color: #475569; transition: all .3s; }
+  .as-step strong { display: block; font-size: 15.5px; color: #0F172A; }
+  .as-step span.d { display: block; font-size: 13.5px; color: var(--text-muted); margin-top: 2px; }
+  .as-step .bar { grid-column: 2; height: 3px; border-radius: 3px; background: #E2E8F0; overflow: hidden; margin-top: 8px; }
+  .as-step .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2563EB, #7C3AED); }
+  .as-step.on { background: #fff; border-color: #DBE5FF; box-shadow: 0 10px 30px rgba(37,99,235,.10); }
+  .as-step.on .n { background: linear-gradient(135deg, #2563EB, #7C3AED); color: #fff; box-shadow: 0 8px 18px rgba(37,99,235,.35); }
+  .as-step.on .bar i { animation: asFill var(--dur, 3.6s) linear forwards; }
+  .as-step.done .n { background: #DCFCE7; color: #15803D; }
+  @keyframes asFill { from { width: 0; } to { width: 100%; } }
+  .as-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .as-store { display: inline-flex; align-items: center; gap: 10px; background: #0B0F19; color: #fff !important; border-radius: 12px; padding: 9px 16px 9px 12px; min-height: 52px; position: relative; text-decoration: none !important; box-shadow: 0 10px 24px rgba(15,23,42,.18); }
+  .as-store svg { width: 26px; height: 28px; flex: none; }
+  .as-store small { display: block; font-size: 10.5px; letter-spacing: .4px; opacity: .8; text-transform: uppercase; line-height: 1.1; }
+  .as-store b { display: block; font-size: 18px; font-weight: 700; line-height: 1.15; }
+  .as-store .soon { position: absolute; top: -9px; right: -8px; background: linear-gradient(135deg, #F59E0B, #EF4444); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .3px; box-shadow: 0 6px 14px rgba(239,68,68,.35); }
+  .as-web { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 18px; border-radius: 12px; font-weight: 700; background: #fff; color: var(--primary) !important; border: 2px solid #DBE5FF; }
+  .as-note { font-size: 13px; color: var(--text-muted); margin-top: 12px; }
+
+  /* stage */
+  .as-stage { position: relative; height: 620px; display: grid; place-items: center; perspective: 1400px; }
+  .as-stage::before { content: ""; position: absolute; width: 520px; height: 520px; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #DCE6FF 45%, #C7D5FF 70%, rgba(199,213,255,0) 71%); }
+  .as-orbit { position: absolute; width: 560px; height: 560px; max-width: 110%; border-radius: 50%; border: 1px dashed rgba(37,99,235,.18); animation: asSpin 60s linear infinite; }
+  .as-orbit i { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #7C3AED; top: -5px; left: 50%; box-shadow: 0 0 14px #7C3AED; }
+  @keyframes asSpin { to { transform: rotate(360deg); } }
+  .as-phone { position: relative; width: 290px; height: 590px; border-radius: 48px; padding: 11px; background: linear-gradient(145deg, #2B2F3A, #0B0D12 55%, #1C1F27); box-shadow: inset 0 0 0 2px #3A3F4B, inset 0 0 0 5px #0B0D12, 0 50px 80px -20px rgba(15,23,42,.45), 0 30px 40px -30px rgba(37,99,235,.5); transform: rotateY(-16deg) rotateX(6deg) rotateZ(2deg); transform-style: preserve-3d; animation: asFloat 7s ease-in-out infinite; z-index: 2; }
+  @keyframes asFloat { 0%,100% { transform: rotateY(-16deg) rotateX(6deg) rotateZ(2deg) translateY(0); } 50% { transform: rotateY(-10deg) rotateX(4deg) rotateZ(1deg) translateY(-12px); } }
+  .as-phone .btn-side { position: absolute; width: 4px; border-radius: 2px; background: linear-gradient(90deg, #111, #3A3F4B); }
+  .as-phone .b1 { left: -4px; top: 120px; height: 34px; } .as-phone .b2 { left: -4px; top: 168px; height: 56px; } .as-phone .b3 { right: -4px; top: 150px; height: 80px; }
+  .as-screen { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: #fff; font-family: 'Inter', system-ui, sans-serif; color: #0F172A; }
+  .as-glare { position: absolute; inset: 0; border-radius: 38px; pointer-events: none; background: linear-gradient(115deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 28%, rgba(255,255,255,0) 70%, rgba(255,255,255,.08) 100%); z-index: 20; }
+  .as-island { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 92px; height: 26px; border-radius: 20px; background: #05060A; z-index: 15; }
+  .as-status { height: 44px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 24px 6px; font-size: 12px; font-weight: 700; }
+  .as-status .ic { display: flex; gap: 4px; align-items: center; }
+  .as-status .sig { display: flex; gap: 1.5px; align-items: flex-end; } .as-status .sig b { width: 3px; background: #0F172A; border-radius: 1px; }
+  .as-status .bat { width: 22px; height: 11px; border: 1.5px solid #0F172A; border-radius: 3px; padding: 1px; } .as-status .bat b { display: block; height: 100%; width: 78%; background: #0F172A; border-radius: 1px; }
+  .as-views { position: absolute; top: 44px; bottom: 62px; left: 0; right: 0; }
+  .as-v { position: absolute; inset: 0; padding: 10px 14px; opacity: 0; transform: translateX(28px) scale(.98); transition: opacity .45s ease, transform .55s cubic-bezier(.2,.8,.2,1); pointer-events: none; overflow: hidden; }
+  .as-v.on { opacity: 1; transform: none; }
+  .as-v.out { opacity: 0; transform: translateX(-28px) scale(.98); }
+  .as-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 62px; border-top: 1px solid #EEF2F7; display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; padding-bottom: 8px; }
+  .as-nav div { display: grid; place-items: center; font-size: 9.5px; font-weight: 600; color: #94A3B8; gap: 1px; padding-top: 6px; }
+  .as-nav div svg { width: 19px; height: 19px; }
+  .as-nav div.on { color: #2563EB; } .as-nav div.on svg { background: rgba(37,99,235,.12); border-radius: 12px; padding: 2px 10px; width: 39px; box-sizing: content-box; }
+  .as-home-ind { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 110px; height: 4px; border-radius: 3px; background: #0F172A; z-index: 16; }
+
+  /* in-screen UI */
+  .as-logo { font-weight: 900; font-size: 19px; letter-spacing: -.5px; color: #2563EB; } .as-logo em { font-style: normal; color: #EF4444; font-size: 12px; vertical-align: top; }
+  .as-hi { font-size: 12px; color: #64748B; margin: 8px 0 2px; } .as-q { font-size: 17px; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  .as-search { display: flex; align-items: center; gap: 8px; border: 1.5px solid #2563EB; border-radius: 14px; padding: 9px 11px; font-size: 12.5px; font-weight: 600; box-shadow: 0 6px 16px rgba(37,99,235,.12); min-height: 38px; }
+  .as-search svg { width: 15px; height: 15px; color: #2563EB; flex: none; }
+  .as-caret { display: inline-block; width: 1.5px; height: 14px; background: #2563EB; margin-left: 1px; vertical-align: -2px; animation: asBlink 1s steps(1) infinite; }
+  @keyframes asBlink { 50% { opacity: 0; } }
+  .as-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .as-cat { border-radius: 14px; padding: 10px 6px; text-align: center; font-size: 10.5px; font-weight: 700; background: #F1F5FF; }
+  .as-cat i { display: block; font-style: normal; font-size: 20px; margin-bottom: 3px; }
+  .as-cat:nth-child(2) { background: #FFF1F2; } .as-cat:nth-child(3) { background: #F0FDF4; } .as-cat:nth-child(4) { background: #FFFBEB; } .as-cat:nth-child(5) { background: #F5F3FF; } .as-cat:nth-child(6) { background: #ECFEFF; }
+  .as-banner { margin-top: 12px; border-radius: 16px; padding: 12px; color: #fff; background: linear-gradient(135deg, #2563EB, #7C3AED); position: relative; overflow: hidden; font-size: 11px; }
+  .as-banner b { display: block; font-size: 14px; } .as-banner::after { content: "🐾"; position: absolute; right: 8px; bottom: -6px; font-size: 44px; opacity: .25; transform: rotate(-15deg); }
+  .as-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+  .as-head .back { width: 26px; height: 26px; border-radius: 9px; background: #F1F5F9; display: grid; place-items: center; font-size: 13px; }
+  .as-chips { display: flex; gap: 6px; margin-bottom: 8px; } .as-chips span { font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: #F1F5F9; color: #475569; } .as-chips span.on { background: #2563EB; color: #fff; }
+  .as-card { display: grid; grid-template-columns: 54px 1fr; gap: 10px; padding: 9px; border: 1px solid #EEF2F7; border-radius: 14px; margin-bottom: 8px; background: #fff; opacity: 0; transform: translateY(12px); }
+  .as-v.on .as-card { animation: asUp .5s ease forwards; } .as-v.on .as-card:nth-child(3) { animation-delay: .15s; } .as-v.on .as-card:nth-child(4) { animation-delay: .3s; } .as-v.on .as-card:nth-child(5) { animation-delay: .45s; }
+  @keyframes asUp { to { opacity: 1; transform: none; } }
+  .as-thumb { height: 54px; border-radius: 11px; display: grid; place-items: center; font-size: 24px; background: linear-gradient(135deg, #FDE68A, #F59E0B); }
+  .as-card:nth-child(4) .as-thumb { background: linear-gradient(135deg, #BFDBFE, #6366F1); } .as-card:nth-child(5) .as-thumb { background: linear-gradient(135deg, #BBF7D0, #10B981); }
+  .as-card b { font-size: 12px; display: block; line-height: 1.2; } .as-card small { font-size: 10px; color: #64748B; display: block; margin-top: 2px; }
+  .as-card .tag { display: inline-block; font-size: 8.5px; font-weight: 800; color: #B45309; background: #FEF3C7; border-radius: 6px; padding: 1px 6px; margin-top: 3px; }
+  .as-stars { color: #F59E0B; font-size: 10px; letter-spacing: 1px; }
+  .as-hero { height: 128px; border-radius: 16px; background: radial-gradient(circle at 70% 30%, #FDE68A, #F59E0B 55%, #D97706); position: relative; overflow: hidden; display: grid; place-items: center; font-size: 54px; }
+  .as-hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 80%, rgba(255,255,255,.35), transparent 40%); }
+  .as-name { font-size: 16px; font-weight: 800; margin: 10px 0 2px; } .as-meta { font-size: 10.5px; color: #64748B; }
+  .as-svc { display: flex; justify-content: space-between; font-size: 11px; padding: 7px 0; border-bottom: 1px dashed #E2E8F0; } .as-svc b { color: #0F172A; }
+  .as-wa { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; background: #22C55E; color: #fff; font-weight: 800; font-size: 12.5px; border-radius: 12px; padding: 10px; box-shadow: 0 8px 18px rgba(34,197,94,.35); }
+  .as-v.on .as-wa { animation: asPulse 1.6s ease-in-out infinite; }
+  @keyframes asPulse { 50% { transform: scale(1.03); box-shadow: 0 10px 26px rgba(34,197,94,.5); } }
+  .as-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 -18px 40px rgba(15,23,42,.18); padding: 12px 14px 14px; transform: translateY(100%); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .as-v.on .as-sheet { transform: none; }
+  .as-dim { position: absolute; inset: 0; background: rgba(15,23,42,.35); opacity: 0; transition: opacity .5s; } .as-v.on .as-dim { opacity: 1; }
+  .as-grab { width: 36px; height: 4px; border-radius: 3px; background: #CBD5E1; margin: 0 auto 10px; }
+  .as-field { border: 1px solid #E2E8F0; border-radius: 10px; padding: 7px 10px; margin-bottom: 7px; font-size: 11.5px; font-weight: 600; min-height: 32px; } .as-field small { display: block; font-size: 8.5px; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .as-send { background: #2563EB; color: #fff; text-align: center; font-weight: 800; font-size: 12.5px; border-radius: 12px; padding: 10px; }
+  .as-chat { background: #ECE5DD; position: absolute; inset: 0; padding: 0; }
+  .as-chat .top { background: #075E54; color: #fff; padding: 10px 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; }
+  .as-chat .top .av { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #2563EB, #7C3AED); display: grid; place-items: center; font-size: 13px; }
+  .as-chat .top small { display: block; font-weight: 500; font-size: 9.5px; opacity: .85; }
+  .as-msgs { padding: 10px; display: grid; gap: 7px; }
+  .as-msg { max-width: 82%; font-size: 11px; padding: 7px 9px; border-radius: 10px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.08); opacity: 0; transform: translateY(8px) scale(.96); line-height: 1.35; }
+  .as-msg.me { justify-self: end; background: #DCF8C6; }
+  .as-msg time { display: block; text-align: right; font-size: 8.5px; color: #64748B; margin-top: 2px; }
+  .as-v.on .as-msg { animation: asUp .45s ease forwards; }
+  /* the "typing…" bubble shows, then gives way to the reply */
+  .as-msg.typing { max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+  .as-v.on .as-msg.typing { animation: asTypingBubble 1.2s ease .8s forwards; }
+  @keyframes asTypingBubble { 0% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; } 15%, 80% { opacity: 1; transform: none; max-height: 30px; padding-top: 7px; padding-bottom: 7px; } 100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; } } .as-v.on .as-msg:nth-child(3) { animation-delay: 1.9s; } .as-v.on .as-msg:nth-child(4) { animation-delay: 2.6s; }
+  .as-typing { display: inline-flex; gap: 3px; } .as-typing i { width: 5px; height: 5px; border-radius: 50%; background: #94A3B8; animation: asDots 1s infinite; } .as-typing i:nth-child(2) { animation-delay: .15s; } .as-typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes asDots { 50% { transform: translateY(-3px); opacity: .5; } }
+  .as-booked { font-weight: 800; color: #15803D; }
+  /* tap marker */
+  .as-tap { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: rgba(15,23,42,.18); border: 2px solid rgba(255,255,255,.9); z-index: 18; opacity: 0; pointer-events: none; transition: left .6s cubic-bezier(.2,.8,.2,1), top .6s cubic-bezier(.2,.8,.2,1); }
+  .as-tap.go { animation: asTap .7s ease; }
+  @keyframes asTap { 0% { opacity: 0; transform: scale(1.4); } 30% { opacity: 1; transform: scale(1); } 60% { opacity: 1; transform: scale(.8); } 100% { opacity: 0; transform: scale(1.6); } }
+  /* floating cards around the phone */
+  .as-float { position: absolute; z-index: 3; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.9); border-radius: 16px; padding: 10px 12px; box-shadow: 0 18px 40px rgba(15,23,42,.14); font-size: 12.5px; display: flex; gap: 10px; align-items: center; opacity: 0; transform: translateY(14px) scale(.95); transition: opacity .6s, transform .6s cubic-bezier(.2,.8,.2,1); }
+  .as-float.show { opacity: 1; transform: none; }
+  .as-float .ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; flex: none; }
+  .as-float b { display: block; font-size: 13px; } .as-float small { color: #64748B; }
+  .as-f1 { top: 36px; left: 4%; } .as-f1 .ico { background: #FEF3C7; }
+  .as-f2 { top: 250px; right: -4px; } .as-f2 .ico { background: #DBEAFE; }
+  .as-f3 { bottom: 70px; left: 14px; } .as-f3 .ico { background: #DCFCE7; }
+  @media (max-width: 900px) {
+    .as-wrap { grid-template-columns: 1fr; gap: 20px; }
+    .as-stage { height: 560px; order: -1; }
+  }
+  @media (max-width: 480px) {
+    .app-show { padding: 56px 0; }
+    .as-stage { height: 470px; }
+    .as-phone { width: 232px; height: 472px; border-radius: 40px; padding: 9px; }
+    .as-screen, .as-glare { border-radius: 32px; }
+    .as-views { top: 40px; bottom: 56px; }
+    .as-status { height: 40px; }
+    .as-float { font-size: 11px; padding: 8px 10px; } .as-float b { font-size: 11.5px; }
+    .as-f1 { left: -6px; top: 6px; } .as-f2 { right: -8px; top: 200px; } .as-f3 { left: -4px; bottom: 30px; }
+    /* the smaller phone screen: tighter app UI so every screen fits */
+    .as-v { padding: 8px 11px; }
+    .as-q { font-size: 14.5px; margin-bottom: 8px; } .as-hi { margin-top: 4px; }
+    .as-cats { gap: 6px; margin-top: 9px; } .as-cat { padding: 7px 4px; font-size: 9.5px; } .as-cat i { font-size: 16px; }
+    .as-banner { margin-top: 9px; padding: 9px; } .as-banner b { font-size: 12px; }
+    .as-hero { height: 80px; font-size: 38px; } .as-name { font-size: 14px; margin-top: 7px; }
+    .as-svc { padding: 5px 0; font-size: 10.5px; } .as-wa { padding: 8px; margin-top: 8px; font-size: 11.5px; }
+    .as-card { grid-template-columns: 44px 1fr; padding: 7px; gap: 8px; } .as-thumb { height: 44px; font-size: 20px; }
+    .as-field { padding: 5px 8px; min-height: 28px; margin-bottom: 5px; } .as-send { padding: 8px; }
+    .as-cta > * { flex: 1 1 100%; justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .as-phone, .as-orbit, .as-kicker .dot, .as-v.on .as-wa, .as-caret { animation: none !important; }
+    .as-v, .as-sheet, .as-float, .as-tap { transition: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -512,6 +664,117 @@
       <a href="/in/mumbai/" style="color:var(--primary);font-weight:700;font-size:14px;">Browse all listings →</a>
     </div>
     <div class="feat-grid" id="featGrid"></div>
+  </div>
+</section>
+
+
+<!-- APP SHOWCASE: the Android app, playing on a phone drawn in CSS -->
+<section class="app-show" id="app" aria-labelledby="appShowTitle">
+  <div class="container as-wrap">
+    <div class="as-copy">
+      <span class="as-kicker"><span class="dot"></span> Pets24x7 app · Coming soon</span>
+      <h2 id="appShowTitle">Pet care, <span class="grad">in your pocket.</span></h2>
+      <p>Find a vet, groomer or boarder near you, compare them, and get a confirmed slot on WhatsApp. The Android app is almost here; everything it does works on this website today.</p>
+      <ol class="as-steps" id="asSteps">
+        <li><button type="button" class="as-step" data-scene="0"><span class="n">1</span><span><strong>Search what your pet needs</strong><span class="d">Vets, grooming, boarding, walkers, trainers, pet taxi.</span><span class="bar"><i></i></span></span></button></li>
+        <li><button type="button" class="as-step" data-scene="1"><span class="n">2</span><span><strong>Compare businesses near you</strong><span class="d">Ratings, services and prices, premium partners first.</span><span class="bar"><i></i></span></span></button></li>
+        <li><button type="button" class="as-step" data-scene="3"><span class="n">3</span><span><strong>Send one enquiry</strong><span class="d">Your pet, the date and what you need, in 20 seconds.</span><span class="bar"><i></i></span></span></button></li>
+        <li><button type="button" class="as-step" data-scene="4"><span class="n">4</span><span><strong>Get it confirmed on WhatsApp</strong><span class="d">Pets24x7 checks the slot and price and replies to you.</span><span class="bar"><i></i></span></span></button></li>
+      </ol>
+      <div class="as-cta">
+        <a class="as-store" href="#app" aria-label="Pets24x7 on Google Play: coming soon" onclick="return false;">
+          <svg viewBox="0 0 26 28" aria-hidden="true"><path fill="#34A853" d="M1.2.6 14.4 13.9 1.3 27.3C.8 27 .5 26.4.5 25.7V2.2C.5 1.5.8.9 1.2.6Z"/><path fill="#FBBC04" d="m18.8 9.4-4.4 4.5 4.4 4.4 5-2.8c1.4-.8 1.4-2.1 0-2.9l-5-3.2Z"/><path fill="#EA4335" d="M14.4 13.9 1.3 27.3c.5.3 1.2.3 1.9-.1l15.6-8.9-4.4-4.4Z"/><path fill="#4285F4" d="M14.4 13.9 18.8 9.4 3.2.7C2.5.3 1.8.3 1.2.6l13.2 13.3Z"/></svg>
+          <span><small>Coming soon on</small><b>Google Play</b></span>
+          <span class="soon">SOON</span>
+        </a>
+        <a class="as-web" href="/search/">Use it now on the web →</a>
+      </div>
+      <p class="as-note">Same account on the app and the website. iPhone app after Android.</p>
+    </div>
+
+    <div class="as-stage" aria-hidden="true">
+      <div class="as-orbit"><i></i></div>
+      <div class="as-float as-f1"><span class="ico">⭐</span><span><b>4.9 · Paws &amp; Claws</b><small>Groomer · 1.2 km away</small></span></div>
+      <div class="as-float as-f2"><span class="ico">📩</span><span><b>Enquiry sent</b><small>We'll confirm on WhatsApp</small></span></div>
+      <div class="as-float as-f3"><span class="ico">✅</span><span><b>Booked for Sat, 10 am</b><small>Bruno's grooming · ₹899</small></span></div>
+
+      <div class="as-phone">
+        <span class="btn-side b1"></span><span class="btn-side b2"></span><span class="btn-side b3"></span>
+        <div class="as-screen">
+          <div class="as-island"></div>
+          <div class="as-status"><span id="asClock">9:41</span><span class="ic"><span class="sig"><b style="height:4px"></b><b style="height:6px"></b><b style="height:8px"></b><b style="height:10px"></b></span><span class="bat"><b></b></span></span></div>
+
+          <div class="as-views">
+            <!-- 0: home -->
+            <div class="as-v" data-v="0">
+              <div class="as-logo">pets<em>24x7</em></div>
+              <div class="as-hi">Good morning, Riya 👋</div>
+              <div class="as-q">What does Bruno need today?</div>
+              <div class="as-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span id="asType"></span><span class="as-caret"></span></div>
+              <div class="as-cats">
+                <div class="as-cat"><i>🩺</i>Vets</div><div class="as-cat"><i>✂️</i>Grooming</div><div class="as-cat"><i>🏠</i>Boarding</div>
+                <div class="as-cat"><i>🦮</i>Walking</div><div class="as-cat"><i>🎓</i>Training</div><div class="as-cat"><i>🚕</i>Pet taxi</div>
+              </div>
+              <div class="as-banner"><b>Members get a pet-care concierge</b>We find, book and follow up for you.</div>
+            </div>
+            <!-- 1: results -->
+            <div class="as-v" data-v="1">
+              <div class="as-head"><span class="back">‹</span>Groomers near Bandra</div>
+              <div class="as-chips"><span class="on">Top rated</span><span>Nearest</span><span>Open now</span></div>
+              <div class="as-card"><div class="as-thumb">✂️</div><div><b>Paws &amp; Claws Grooming</b><span class="as-stars">★★★★★</span> <small style="display:inline">4.9 · 1.2 km</small><span class="tag">PREMIUM PARTNER</span></div></div>
+              <div class="as-card"><div class="as-thumb">🛁</div><div><b>Fluffy Tail Spa</b><span class="as-stars">★★★★☆</span> <small style="display:inline">4.6 · 2.0 km</small><small>Bath · Haircut · Nail trim</small></div></div>
+              <div class="as-card"><div class="as-thumb">🐩</div><div><b>Happy Paws Studio</b><span class="as-stars">★★★★☆</span> <small style="display:inline">4.5 · 3.1 km</small><small>Home visits available</small></div></div>
+            </div>
+            <!-- 2: listing -->
+            <div class="as-v" data-v="2">
+              <div class="as-hero">🐕</div>
+              <div class="as-name">Paws &amp; Claws Grooming</div>
+              <div class="as-meta"><span class="as-stars">★★★★★</span> 4.9 · Bandra West · Open till 8 pm</div>
+              <div style="margin-top:8px">
+                <div class="as-svc"><span>Full groom (medium dog)</span><b>₹899</b></div>
+                <div class="as-svc"><span>Bath &amp; blow dry</span><b>₹549</b></div>
+                <div class="as-svc"><span>Nail trim</span><b>₹199</b></div>
+              </div>
+              <div class="as-wa">💬 Enquire on WhatsApp</div>
+            </div>
+            <!-- 3: enquiry sheet -->
+            <div class="as-v" data-v="3" style="padding:0">
+              <div class="as-dim"></div>
+              <div class="as-sheet">
+                <div class="as-grab"></div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">Enquire about Paws &amp; Claws</div>
+                <div class="as-field"><small>Pet</small><span id="asF1"></span></div>
+                <div class="as-field"><small>Preferred date</small><span id="asF2"></span></div>
+                <div class="as-field"><small>What do you need?</small><span id="asF3"></span></div>
+                <div class="as-send">Send enquiry</div>
+              </div>
+            </div>
+            <!-- 4: WhatsApp confirmation -->
+            <div class="as-v" data-v="4" style="padding:0">
+              <div class="as-chat">
+                <div class="top"><span class="av">🐾</span><span>Pets24x7<small>online</small></span></div>
+                <div class="as-msgs">
+                  <div class="as-msg me">Hi! Full groom for Bruno (Labrador) this Saturday?<time>9:42 ✓✓</time></div>
+                  <div class="as-msg typing"><span class="as-typing"><i></i><i></i><i></i></span></div>
+                  <div class="as-msg">Paws &amp; Claws has <b>Sat 10:00 am</b> free. Full groom ₹899. Shall I book it?<time>9:43</time></div>
+                  <div class="as-msg me">Yes please 🙌<time>9:43 ✓✓</time></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="as-nav">
+            <div data-t="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+            <div data-t="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</div>
+            <div data-t="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1L3.2 9.4l6.1-.8z"/></svg>Membership</div>
+            <div data-t="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account</div>
+          </div>
+          <div class="as-tap" id="asTap"></div>
+          <div class="as-home-ind"></div>
+          <div class="as-glare"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1058,6 +1321,90 @@
       });
     })
     .catch(function () {});
+})();
+</script>
+
+<script>
+/* App showcase: plays the app's main flow on the CSS phone like a short video.
+   Runs only while on screen; still for reduced-motion users; the step list
+   on the left follows the phone and jumps it to a step when tapped. */
+(function () {
+  var root = document.getElementById('app');
+  if (!root) return;
+  var views = root.querySelectorAll('.as-v');
+  var tabs = root.querySelectorAll('.as-nav [data-t]');
+  var steps = root.querySelectorAll('.as-step');
+  var floats = root.querySelectorAll('.as-float');
+  var tap = document.getElementById('asTap');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // scene: view, bottom tab, step, duration, tap position (% of screen), float card
+  var SCENES = [
+    { v: 0, t: 0, s: 0, ms: 4200, tap: [50, 22], f: 0, type: ['asType', 'Dog groomer in Bandra'] },
+    { v: 1, t: 1, s: 1, ms: 3400, tap: [45, 30], f: 0 },
+    { v: 2, t: 1, s: 1, ms: 3200, tap: [50, 80], f: -1 },
+    { v: 3, t: 1, s: 2, ms: 4600, tap: [50, 86], f: 1, fill: [['asF1', 'Bruno · Labrador'], ['asF2', 'Sat, 10:00 am'], ['asF3', 'Full groom, nails too']] },
+    { v: 4, t: 1, s: 3, ms: 5200, tap: null, f: 2 }
+  ];
+  var cur = -1, timer = null, typers = [], playing = false;
+
+  function clearTypers() { typers.forEach(clearInterval); typers = []; }
+  function typeInto(id, text, delay) {
+    var el = document.getElementById(id); if (!el) return;
+    el.textContent = '';
+    if (reduce) { el.textContent = text; return; }
+    var i = 0;
+    typers.push(setTimeout(function () {
+      var h = setInterval(function () { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(h); }, 55);
+      typers.push(h);
+    }, delay || 0));
+  }
+  function show(n) {
+    cur = n;
+    var sc = SCENES[n];
+    clearTypers();
+    views.forEach(function (el) {
+      var on = +el.getAttribute('data-v') === sc.v;
+      if (el.classList.contains('on') && !on) { el.classList.remove('on'); el.classList.add('out'); setTimeout(function () { el.classList.remove('out'); }, 500); }
+      if (on) { el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
+    });
+    tabs.forEach(function (t) { t.classList.toggle('on', +t.getAttribute('data-t') === sc.t); });
+    steps.forEach(function (b, i) {
+      var active = i === sc.s;
+      b.classList.toggle('done', i < sc.s);
+      if (active) { b.classList.remove('on'); void b.offsetWidth; b.style.setProperty('--dur', stepDuration(i) + 'ms'); b.classList.add('on'); }
+      else b.classList.remove('on');
+    });
+    floats.forEach(function (f, i) { f.classList.toggle('show', i === sc.f); });
+    if (sc.type) typeInto(sc.type[0], sc.type[1], 300);
+    if (sc.fill) sc.fill.forEach(function (f, i) { typeInto(f[0], f[1], 500 + i * 1100); });
+    if (sc.tap && !reduce) {
+      setTimeout(function () {
+        tap.style.left = sc.tap[0] + '%'; tap.style.top = sc.tap[1] + '%';
+        tap.classList.remove('go'); void tap.offsetWidth; tap.classList.add('go');
+      }, Math.max(0, sc.ms - 900));
+    }
+    clearTimeout(timer);
+    if (playing && !reduce) timer = setTimeout(function () { show((cur + 1) % SCENES.length); }, sc.ms);
+  }
+  // A step's progress bar spans every scene that belongs to it.
+  function stepDuration(i) { return SCENES.filter(function (s) { return s.s === i; }).reduce(function (a, s) { return a + s.ms; }, 0); }
+
+  steps.forEach(function (b) {
+    b.addEventListener('click', function () { show(+b.getAttribute('data-scene')); });
+  });
+
+  // Live clock in the status bar.
+  var clock = document.getElementById('asClock');
+  function tick() { var d = new Date(); clock.textContent = d.getHours() % 12 || 12; clock.textContent += ':' + String(d.getMinutes()).padStart(2, '0'); }
+  tick(); setInterval(tick, 30000);
+
+  function start() { if (playing) return; playing = true; show(cur < 0 ? 0 : cur); }
+  function stop() { playing = false; clearTimeout(timer); clearTypers(); }
+  if (reduce) { show(0); return; }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? start() : stop(); }); }, { threshold: 0.25 }).observe(root);
+  } else start();
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); });
 })();
 </script>
 </body>
