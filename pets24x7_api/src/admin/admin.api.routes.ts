@@ -1497,12 +1497,36 @@ adminApiRouter.get(
         })
       : [];
     const vendorByListing = new Map(vendors.map((v) => [v.listingId as string, v]));
+
+    // Membership plans promise "your enquiries handled ahead of non-members"
+    // and "same-day priority on Gold". Each row carries the parent's live tier,
+    // and new enquiries from members come first on the page, highest tier first.
+    const parentIds = [...new Set(enquiries.map((e) => e.petParentId).filter((x): x is string => !!x))];
+    const now = new Date();
+    const memberships = parentIds.length
+      ? await prisma.membership.findMany({
+          where: { parentId: { in: parentIds }, status: 'ACTIVE', OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          select: { parentId: true, plan: { select: { tier: true } } },
+        })
+      : [];
+    const TIER_RANK: Record<string, number> = { GOLD: 3, SILVER: 2, BRONZE: 1 };
+    const tierByParent = new Map<string, string>();
+    for (const m of memberships) {
+      const t = String(m.plan.tier);
+      const prev = tierByParent.get(m.parentId);
+      if (!prev || (TIER_RANK[t] ?? 0) > (TIER_RANK[prev] ?? 0)) tierByParent.set(m.parentId, t);
+    }
+    const priority = (e: (typeof enquiries)[number]) =>
+      e.status === 'NEW' && e.petParentId ? TIER_RANK[tierByParent.get(e.petParentId) ?? ''] ?? 0 : 0;
+    // Stable: equal priority keeps newest-first.
+    const ordered = enquiries.map((e, i) => ({ e, i })).sort((a, b) => priority(b.e) - priority(a.e) || a.i - b.i).map((x) => x.e);
+
     res.json({
       ok: true,
       total,
       page: pg.page,
       perPage: pg.perPage,
-      enquiries: enquiries.map((e) => {
+      enquiries: ordered.map((e) => {
         const l = e.listingId ? getListingById(e.listingId) : undefined;
         const v = e.listingId ? vendorByListing.get(e.listingId) : undefined;
         return {
@@ -1532,6 +1556,7 @@ adminApiRouter.get(
         status: e.status,
         notes: e.notes,
         date: e.createdAt,
+        memberTier: e.petParentId ? tierByParent.get(e.petParentId) ?? null : null,
         };
       }),
     });

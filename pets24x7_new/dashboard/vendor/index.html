@@ -3979,6 +3979,19 @@
     var viewParam = params.get('view');
     if (viewParam) navigate(viewParam);
 
+    // From the Business plans tab of /membership/: ?plan=<id>&billing=MONTHLY|ANNUAL
+    // opens checkout for that plan straight away (free plans need no checkout).
+    var planParam = params.get('plan');
+    if (planParam) {
+      navigate('subscriptions');
+      loadVendorSubscriptions().then(function() {
+        if (params.get('billing') === 'ANNUAL') setVendorSubBilling('ANNUAL');
+        var p = (vendorSubState.plans || []).find(function(x) { return x.id === planParam || x.sku === planParam; });
+        if (p && Number(p.priceRupees) > 0) openVendorPaymentModal('SUBSCRIPTION', p.id);
+        try { history.replaceState(null, '', location.pathname + '?view=subscriptions'); } catch (e) {}
+      });
+    }
+
     // Return from a campaign checkout — payment done, now awaiting admin review.
     handleEmailVerifyReturn(params);
 

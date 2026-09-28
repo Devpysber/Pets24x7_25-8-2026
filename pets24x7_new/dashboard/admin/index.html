@@ -4960,7 +4960,13 @@
         rows(tbodyOf('enquiries'), enquiryRows, 7, function(e, i) {
           var st = (e.status || 'NEW');
           var stCls = st === 'RESPONDED' || st === 'COMPLETED' ? 'tag-active' : (st === 'ARCHIVED' ? 'tag-suspended' : 'tag-pending');
-          return '<tr><td style="font-weight:700;">' + escH(e.parent) + '</td><td>' + escH(e.phone) + '</td><td>' + escH(e.vendor) +
+          // Members' new enquiries come first (API order); Gold is same-day.
+          var mb = e.memberTier
+            ? ' <span class="status-tag ' + (e.memberTier === 'GOLD' ? 'tag-unclaimed' : 'tag-active') + '" style="font-size:10px;" title="' +
+              (e.memberTier === 'GOLD' ? 'Gold member: same-day priority' : 'Member: handle ahead of non-members') + '">' +
+              escH(e.memberTier) + (e.memberTier === 'GOLD' ? ' · same day' : ' member') + '</span>'
+            : '';
+          return '<tr><td style="font-weight:700;">' + escH(e.parent) + mb + '</td><td>' + escH(e.phone) + '</td><td>' + escH(e.vendor) +
             '</td><td>' + escH(e.service) + '</td><td>' + dstr(e.date) + '</td><td><span class="status-tag ' + stCls + '">' + escH(st) + '</span></td>' +
             '<td style="text-align:right;"><button class="btn btn-sm" onclick="openEnquiryModal(' + i + ')">View</button></td></tr>';
         });

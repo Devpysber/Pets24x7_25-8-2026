@@ -158,7 +158,11 @@ const PARENT_CONTACT_LINE = /business contacts/i;
 export function decorateParentPlan<T extends { tier?: unknown; perks?: unknown }>(plan: T, limits: PlanLimits): T {
   const tier = normalizeParentTier(plan.tier);
   const perks = Array.isArray(plan.perks) ? (plan.perks as unknown[]).map(String) : [];
-  const rest = perks.filter((p) => !PARENT_CONTACT_LINE.test(p));
+  // "Cancel anytime" contradicted how plans work: they don't renew, so there
+  // is nothing to cancel. Said plainly instead.
+  const rest = perks
+    .filter((p) => !PARENT_CONTACT_LINE.test(p))
+    .map((p) => (/^cancel any ?time$/i.test(p.trim()) ? 'No auto-renewal: renew only if you want to' : p));
   return { ...plan, perks: [contactsLine(limits.parent[tier].contactsPerMonth), ...rest] };
 }
 
@@ -176,5 +180,15 @@ export function decorateVendorPlan<T extends { tier?: unknown; perks?: unknown; 
     `${l.reviewRequestsPerDay} review requests a day`,
     ...(l.featuredSlot ? ['Featured placement on your city & category pages for the whole plan'] : []),
   ];
-  return { ...plan, perks: [...lines, ...rest], leadLimit: l.leadsPerMonth === UNLIMITED ? 9999 : l.leadsPerMonth };
+  // Taglines were written when every plan had unlimited leads ("Verified Pro
+  // Badge + Unlimited Leads" on Silver); they follow the limit too.
+  const t = (plan as { tagline?: unknown }).tagline;
+  const tagline =
+    typeof t === 'string' && l.leadsPerMonth !== UNLIMITED ? t.replace(/unlimited leads/i, `${l.leadsPerMonth} Leads a Month`) : t;
+  return {
+    ...plan,
+    ...(tagline !== undefined ? { tagline } : {}),
+    perks: [...lines, ...rest],
+    leadLimit: l.leadsPerMonth === UNLIMITED ? 9999 : l.leadsPerMonth,
+  };
 }

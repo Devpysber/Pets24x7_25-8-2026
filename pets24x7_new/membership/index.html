@@ -38,6 +38,16 @@
   .toggle button{background:transparent;border:none;font-family:inherit;font-weight:700;font-size:14px;padding:8px 20px;border-radius:999px;cursor:pointer;color:var(--text-muted)}
   .toggle button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
   .toggle .save{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
+  /* Who the plans are for. Sits above the period toggle. */
+  .aud{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:5px;margin:0 0 18px;flex-wrap:wrap;justify-content:center}
+  .aud button{background:transparent;border:none;font-family:inherit;font-weight:700;font-size:15px;padding:10px 18px;min-height:44px;border-radius:10px;cursor:pointer;color:var(--text-muted)}
+  .aud button[aria-selected="true"]{background:var(--primary);color:#fff}
+  @media (max-width:420px){.aud{flex-wrap:nowrap}.aud button{font-size:13.5px;padding:10px 11px}}
+  .aud-note{max-width:760px;margin:0 auto 20px;padding:14px 18px;background:var(--primary-light);color:#1E3A8A;border-radius:12px;font-size:14px;text-align:center}
+  .aud-note a{font-weight:700}
+  [data-aud][hidden]{display:none!important}
+  .tier.free,.tier.basic{color:var(--text-muted)}.tier.diamond{color:#7C3AED}
+  .plan.free,.plan.basic{background:#FBFCFE}
   .container{max-width:1180px;margin:0 auto;padding:0 24px 80px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px}
   .plan{background:#fff;border:1px solid var(--border);border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;position:relative;transition:all 0.25s}
@@ -171,9 +181,14 @@
 </header>
 
 <section class="hero">
-  <span class="kicker">Pets24x7 Membership</span>
-  <h1>Pet care, sorted for you.</h1>
-  <p>Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.</p>
+  <span class="kicker" id="heroKicker">Pets24x7 Membership</span>
+  <h1 id="heroTitle">Pet care, sorted for you.</h1>
+  <p id="heroText">Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.</p>
+  <div class="aud" role="tablist" aria-label="Plans for">
+    <button type="button" role="tab" id="audParent" aria-selected="true" aria-controls="planGrid">🐾 For pet parents</button>
+    <button type="button" role="tab" id="audBiz" aria-selected="false" aria-controls="planGrid">🏪 For pet businesses</button>
+  </div>
+  <br>
   <div class="toggle">
     <button id="tMonthly" class="on" type="button" aria-pressed="true">Monthly</button>
     <button id="tAnnual" type="button" aria-pressed="false">Annual <span class="save">save 2 months</span></button>
@@ -182,6 +197,7 @@
 </section>
 
 <div class="container">
+  <div id="audNote" class="aud-note" hidden></div>
   <div id="activeBanner" class="active-banner" hidden></div>
   <div class="err" id="err" role="alert"></div>
   <p id="freeNote" style="text-align:center;color:var(--text-muted);font-size:14px;margin:0 0 16px" hidden></p>
@@ -189,7 +205,7 @@
     <div class="plan-skel"></div><div class="plan-skel"></div><div class="plan-skel"></div>
   </div>
 
-  <section class="section" aria-labelledby="howH">
+  <section class="section" aria-labelledby="howH" data-aud="parent">
     <h2 id="howH">How the concierge works</h2>
     <p class="lead">One WhatsApp message instead of calling around.</p>
     <div class="steps">
@@ -199,7 +215,7 @@
     </div>
   </section>
 
-  <section class="section" aria-labelledby="getH">
+  <section class="section" aria-labelledby="getH" data-aud="parent">
     <h2 id="getH">What members get</h2>
     <p class="lead">Every plan is delivered by the Pets24x7 team.</p>
     <div class="benefits">
@@ -210,7 +226,7 @@
     </div>
   </section>
 
-  <section class="faq">
+  <section class="faq" data-aud="parent">
     <h2>Common questions</h2>
     <details><summary>How are payments processed?</summary>
       <p>Securely via Razorpay — UPI, debit/credit cards, net banking and wallets all supported. We don&rsquo;t store your card details.</p>
@@ -226,12 +242,59 @@
     </details>
   </section>
 
-  <div class="cta-band">
+  <div class="cta-band" data-aud="parent">
     <div>
       <h3>Not sure which plan fits?</h3>
       <p>Tell us about your pet and we&rsquo;ll suggest the right one. No obligation.</p>
     </div>
     <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20Which%20membership%20plan%20is%20right%20for%20me%3F&amp;utm_source=website&amp;utm_medium=membership_cta&amp;utm_campaign=membership" target="_blank" rel="noopener">Ask us on WhatsApp</a>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section" aria-labelledby="bizHowH" data-aud="business" hidden>
+    <h2 id="bizHowH">How business plans work</h2>
+    <p class="lead">Customers find you on Pets24x7; we pass their enquiries to you.</p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>List or claim your business</h3><p>Free. Add your photos, services and opening hours so pet parents can choose you.</p></div>
+      <div class="step"><div class="n">2</div><h3>Get enquiries</h3><p>Pet parents enquire through Pets24x7. Your plan decides how many leads a month come with the customer&rsquo;s phone and email.</p></div>
+      <div class="step"><div class="n">3</div><h3>Grow with a paid plan</h3><p>More leads, more photos, more review requests, a higher place in search, and on Gold and Diamond a Featured spot.</p></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="bizGetH" data-aud="business" hidden>
+    <h2 id="bizGetH">What every business plan includes</h2>
+    <p class="lead">The limits on each card are exactly what your dashboard enforces.</p>
+    <div class="benefits">
+      <div class="benefit"><div class="ic">📩</div><h3>Every enquiry, recorded</h3><p>You always see who enquired and what they need. Past your plan&rsquo;s monthly allowance, the contact details unlock when you upgrade.</p></div>
+      <div class="benefit"><div class="ic">📈</div><h3>Higher in search</h3><p>Paid plans rank above free listings in your city, highest plan first, marked as a premium partner.</p></div>
+      <div class="benefit"><div class="ic">⭐</div><h3>Reviews that sell</h3><p>Send review requests to your customers from the dashboard; the daily number grows with your plan.</p></div>
+      <div class="benefit"><div class="ic">🔔</div><h3>No surprise charges</h3><p>Plans don&rsquo;t renew by themselves. When one ends you move to the free plan and keep your listing.</p></div>
+    </div>
+  </section>
+
+  <section class="faq" data-aud="business" hidden>
+    <h2>Questions from businesses</h2>
+    <details><summary>Is listing my business free?</summary>
+      <p>Yes. The Basic plan is free for ever and includes a set number of leads a month with full contact details. Paid plans raise or remove that limit.</p>
+    </details>
+    <details><summary>What happens to leads over my monthly limit?</summary>
+      <p>They still arrive in your dashboard with the customer&rsquo;s name, pet and request. The phone number and email unlock as soon as you upgrade, including for leads already received.</p>
+    </details>
+    <details><summary>How do I pay?</summary>
+      <p>From your business dashboard, securely via Razorpay: UPI, cards, net banking and wallets. You get an invoice for every payment.</p>
+    </details>
+    <details><summary>Do plans renew automatically?</summary>
+      <p>No. Your plan runs for the period you paid for and we remind you before it ends.</p>
+    </details>
+  </section>
+
+  <div class="cta-band" data-aud="business" hidden>
+    <div>
+      <h3>Want to talk it through?</h3>
+      <p>Tell us about your business and we&rsquo;ll suggest the right plan.</p>
+    </div>
+    <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20Which%20business%20plan%20is%20right%20for%20me%3F&amp;utm_source=website&amp;utm_medium=membership_cta&amp;utm_campaign=business_plans" target="_blank" rel="noopener">Ask us on WhatsApp</a>
   </div>
 </div>
 
@@ -256,6 +319,18 @@
     catch (e) { return cur + ' ' + n.toFixed(2); }
   }
   var SIGN_IN_URL = '/parent-login/?next=' + encodeURIComponent('/membership/');
+  // Who is looking decides which plans are shown first and what each button
+  // does. Pet parents buy a membership here; businesses buy in their
+  // dashboard (the card sends them there with the plan pre-selected).
+  var audience = 'parent';
+  var vendorSignedIn = false, adminSignedIn = false;
+  var bizPlans = [], vendorSub = null, freeContacts = null;
+  var HERO = {
+    parent: ['Pets24x7 Membership', 'Pet care, sorted for you.',
+      'Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.'],
+    business: ['Pets24x7 for Businesses', 'More customers for your pet business.',
+      'List free, get enquiries from pet parents near you, and pick a plan when you want more leads, photos and a higher place in search.']
+  };
 
   var allPlans = [];
   var currentPeriod = 'MONTHLY';
@@ -263,6 +338,7 @@
   var activeMembership = null;   // set when the signed-in parent already has a live membership
 
   function render() {
+    if (audience === 'business') return renderBiz();
     var list = allPlans.filter(function(p){ return p.billingPeriod === currentPeriod; });
     list.sort(function(a,b){ return a.sortOrder - b.sortOrder; });
     var grid = document.getElementById('planGrid');
@@ -275,16 +351,17 @@
     }
 
     var activePlanId = activeMembership && activeMembership.plan ? activeMembership.plan.id : null;
-
-    grid.innerHTML = list.map(function(p) {
+    grid.innerHTML = freeParentCard() + list.map(function(p) {
       var t = String(p.tier || '').toLowerCase().replace(/[^a-z]/g, '');
       var isPopular = (p.tier === 'SILVER');
       var perks = (Array.isArray(p.perks) ? p.perks : []).map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
       var isCurrent = activePlanId && p.id === activePlanId;
 
       var label, disabled = false;
-      if (!signedIn) {
-        label = 'Sign in to subscribe →';
+      if (adminSignedIn && !signedIn) {
+        label = 'Admin view'; disabled = true;
+      } else if (!signedIn) {
+        label = vendorSignedIn ? 'Sign in as a pet parent →' : 'Sign in to subscribe →';
       } else if (isCurrent) {
         label = '✓ Your current plan'; disabled = true;
       } else if (activeMembership) {
@@ -304,7 +381,7 @@
         (p.tagline ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">' + esc(p.tagline) + '</p>' : '') +
         '<div class="price"><span class="amt">' + fmtMoney(p.priceMinor, p.currency) + '</span><span class="unit">' +
           (p.billingPeriod === 'MONTHLY' ? '/month' : '/year') + '</span></div>' +
-        '<div class="price-sub">Billed ' + (p.billingPeriod === 'MONTHLY' ? 'monthly' : 'yearly') + ' &middot; cancel anytime</div>' +
+        '<div class="price-sub">One payment for ' + (p.billingPeriod === 'MONTHLY' ? 'a month' : 'a year') + ' &middot; no auto-renew</div>' +
         '<ul class="perks">' + perks + '</ul>' +
         '<button class="buy ' + (isPopular && !isCurrent ? '' : 'outline') + '" data-id="' + esc(p.id) + '"' +
           (disabled ? ' disabled' : '') + '>' + label + '</button>' +
@@ -316,6 +393,147 @@
       btn.dataset.label = btn.textContent;
       btn.addEventListener('click', function () { buy(btn.getAttribute('data-id'), btn); });
     });
+  }
+
+  // The free tier as a card, so a pet parent sees what paying adds.
+  function freeParentCard() {
+    if (freeContacts == null) return '';
+    var current = signedIn && !activeMembership;
+    var label, href = '';
+    if (current) label = '✓ Your current plan';
+    else if (signedIn) label = 'Included with every account';
+    else if (vendorSignedIn || adminSignedIn) label = 'For pet parents';
+    else { label = 'Create free account →'; href = SIGN_IN_URL; }
+    var perks = [
+      freeContacts + ' business contact' + (freeContacts === 1 ? '' : 's') + ' a month (call, WhatsApp, enquiries)',
+      'Search every vet, groomer, boarder and trainer',
+      'Save businesses and track your enquiries',
+      'Pet profiles and vaccination reminders'
+    ].map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    return '<article class="plan free' + (current ? ' current' : '') + '">' +
+      (current ? '<span class="badge" style="background:linear-gradient(135deg,#34D399,#10B981)">✓ Current plan</span>' : '') +
+      '<div class="tier free">FREE</div>' +
+      '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Free account</h3>' +
+      '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">For the occasional booking</p>' +
+      '<div class="price"><span class="amt">₹0</span><span class="unit">/for ever</span></div>' +
+      '<div class="price-sub">No payment needed</div>' +
+      '<ul class="perks">' + perks + '</ul>' +
+      (href ? '<a class="buy outline" style="text-align:center" href="' + href + '">' + label + '</a>'
+            : '<button class="buy outline" disabled>' + label + '</button>') +
+    '</article>';
+  }
+
+  // Business plan price for the chosen period — the same rule as the API
+  // (priceFor): a monthly plan's year is ten months' price; a plan sold by
+  // the year (Diamond) is the same in both views.
+  function bizPrice(p) {
+    var yearly = Number(p.durationDays) >= 365;
+    var rupees = Number(p.priceRupees) || 0;
+    if (yearly) return { rupees: rupees, unit: '/year', period: 'ANNUAL', sub: 'One payment for a year' };
+    if (currentPeriod === 'ANNUAL' && rupees > 0) return { rupees: rupees * 10, unit: '/year', period: 'ANNUAL', sub: 'One payment for a year · 2 months free' };
+    return { rupees: rupees, unit: '/month', period: 'MONTHLY', sub: rupees > 0 ? 'One payment for a month' : 'Free for ever' };
+  }
+  function bizBuyUrl(p, period) {
+    return '/dashboard/vendor/?view=subscriptions&plan=' + encodeURIComponent(p.id) + '&billing=' + period;
+  }
+  var BIZ_RANK = { BASIC: 0, SILVER: 1, GOLD: 2, DIAMOND: 3, PLATINUM: 3 };
+  // "Vendor Gold Platinum · Monthly" -> "Gold Platinum": the period is the toggle's job.
+  function bizName(p) { return String(p.name || '').replace(/^Vendor\s+/i, '').replace(/\s*·\s*(Monthly|Annual)$/i, ''); }
+  function tierTitle(t) { t = String(t || ''); return t.charAt(0) + t.slice(1).toLowerCase(); }
+
+  function renderBiz() {
+    var grid = document.getElementById('planGrid');
+    grid.removeAttribute('aria-busy');
+    var list = bizPlans.slice().sort(function (a, b) { return (Number(a.priceRupees) || 0) - (Number(b.priceRupees) || 0); });
+    if (!list.length) {
+      grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;grid-column:1/-1">Business plans are being updated — <a href="https://wa.me/919930090487">message us on WhatsApp</a>.</p>';
+      return;
+    }
+    var curTier = vendorSub ? String(vendorSub.tier || 'BASIC').toUpperCase() : null;
+    var curLive = vendorSub && (vendorSub.status === 'ACTIVE' || vendorSub.status === 'PAID');
+    grid.innerHTML = list.map(function (p) {
+      var tierKey = String(p.tier || '').toUpperCase();
+      var t = tierKey.toLowerCase().replace(/[^a-z]/g, '');
+      var pr = bizPrice(p);
+      var free = pr.rupees === 0;
+      var isCurrent = vendorSignedIn && curLive && curTier === tierKey;
+      var label, href = '', disabled = false;
+      if (vendorSignedIn) {
+        if (isCurrent) { label = '✓ Your current plan'; disabled = true; }
+        else if (free) { label = curTier && curTier !== 'BASIC' ? 'You move here when your plan ends' : 'Included'; disabled = true; }
+        else {
+          label = (BIZ_RANK[tierKey] || 0) > (BIZ_RANK[curTier] || 0) ? 'Upgrade to ' + tierTitle(tierKey) + ' →' : 'Switch to ' + tierTitle(tierKey) + ' →';
+          href = bizBuyUrl(p, pr.period);
+        }
+      } else if (adminSignedIn) {
+        label = 'Admin view'; disabled = true;
+      } else if (signedIn) {
+        label = 'Register your business →'; href = '/register-business/';
+      } else if (free) {
+        label = 'List your business free →'; href = '/register-business/';
+      } else {
+        label = 'Sign in to your business →';
+        href = '/vendor-login/?next=' + encodeURIComponent(bizBuyUrl(p, pr.period));
+      }
+      var popular = !!p.recommended && tierKey === 'GOLD';
+      var perks = (Array.isArray(p.perks) ? p.perks : []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+      var cls = 'buy' + (popular && !isCurrent ? '' : ' outline');
+      return '<article class="plan ' + t + (isCurrent ? ' current' : '') + '">' +
+        (isCurrent ? '<span class="badge" style="background:linear-gradient(135deg,#34D399,#10B981)">✓ Current plan</span>'
+                   : (popular ? '<span class="badge">Most chosen</span>' : '')) +
+        '<div class="tier ' + t + '">' + esc(tierKey) + '</div>' +
+        '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">' + esc(bizName(p)) + '</h3>' +
+        (p.tagline ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">' + esc(p.tagline) + '</p>' : '') +
+        '<div class="price"><span class="amt">' + (free ? '₹0' : fmtMoney(pr.rupees * 100, 'INR')) + '</span><span class="unit">' + (free ? '/for ever' : pr.unit) + '</span></div>' +
+        '<div class="price-sub">' + esc(pr.sub) + (free ? '' : ' &middot; no auto-renew') + '</div>' +
+        '<ul class="perks">' + perks + '</ul>' +
+        (href ? '<a class="' + cls + '" style="text-align:center;display:block" href="' + esc(href) + '">' + esc(label) + '</a>'
+              : '<button class="' + cls + '" disabled>' + esc(label) + '</button>') +
+      '</article>';
+    }).join('');
+  }
+
+  function setAudience(a, fromUser) {
+    audience = a === 'business' ? 'business' : 'parent';
+    var biz = audience === 'business';
+    document.getElementById('audParent').setAttribute('aria-selected', biz ? 'false' : 'true');
+    document.getElementById('audBiz').setAttribute('aria-selected', biz ? 'true' : 'false');
+    var h = HERO[audience];
+    document.getElementById('heroKicker').textContent = h[0];
+    document.getElementById('heroTitle').textContent = h[1];
+    document.getElementById('heroText').textContent = h[2];
+    Array.prototype.forEach.call(document.querySelectorAll('[data-aud]'), function (el) {
+      el.hidden = el.getAttribute('data-aud') !== audience;
+    });
+    var fn = document.getElementById('freeNote');
+    if (fn) fn.hidden = true; // the Free card says it now
+    // Membership banner is about the parent plan; the business one is set below.
+    document.getElementById('activeBanner').hidden = biz ? !vendorSub || !vendorSignedIn : !activeMembership;
+    if (biz && vendorSignedIn) showBizBanner(); else if (!biz && activeMembership) showActiveBanner(activeMembership, true);
+    var note = document.getElementById('audNote');
+    note.hidden = true;
+    if (!biz && vendorSignedIn && !signedIn) {
+      note.innerHTML = 'You&rsquo;re signed in as a business. These plans are for pet owners &mdash; <a href="#" data-go="business">see business plans</a>.';
+      note.hidden = false;
+    } else if (biz && signedIn && !vendorSignedIn) {
+      note.innerHTML = 'These plans are for pet businesses. Run one? <a href="/register-business/">List it free</a>, or <a href="#" data-go="parent">see pet-parent plans</a>.';
+      note.hidden = false;
+    }
+    if (fromUser) {
+      try { history.replaceState(null, '', location.pathname + (biz ? '?for=business' : '')); } catch (e) {}
+    }
+    render();
+  }
+
+  function showBizBanner() {
+    var b = document.getElementById('activeBanner');
+    if (!vendorSub) { b.hidden = true; return; }
+    var tier = String(vendorSub.tier || 'BASIC').toUpperCase();
+    var ends = vendorSub.endsAt ? new Date(vendorSub.endsAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+    b.innerHTML = '<span><strong>Your business is on ' + esc(tier.charAt(0) + tier.slice(1).toLowerCase()) + '.</strong> ' +
+      (ends && tier !== 'BASIC' ? 'Active until ' + ends + ' &middot; we&rsquo;ll remind you before it ends' : 'Upgrade any time for more leads and a higher place in search') + '</span>' +
+      '<span class="ab-actions"><a href="/dashboard/vendor/?view=subscriptions" style="background:#166534;color:#fff;padding:10px 14px;min-height:44px;display:inline-flex;align-items:center;border-radius:8px;font-weight:700;font-size:13px">Open dashboard &rarr;</a></span>';
+    b.hidden = false;
   }
 
   function loadRazorpay() {
@@ -413,7 +631,7 @@
     }).catch(function (e) { failBuy(btn, fmtErr(e)); });
   }
 
-  function showActiveBanner(active) {
+  function showActiveBanner(active, noRender) {
     activeMembership = active;                    // keep global in sync so plan cards lock
     var b = document.getElementById('activeBanner');
     var ends = active.endsAt ? new Date(active.endsAt).toLocaleDateString('en-IN', {month:'short',day:'numeric',year:'numeric'}) : 'soon';
@@ -424,8 +642,8 @@
       ' &middot; active until ' + ends + ' &middot; we&rsquo;ll remind you before it ends</span>' +
       '<span class="ab-actions">' +
       '<a href="/dashboard/parent/" style="background:#166534;color:#fff;padding:10px 14px;min-height:44px;display:inline-flex;align-items:center;border-radius:8px;font-weight:700;font-size:13px">Open dashboard &rarr;</a></span>';
-    b.hidden = false;
-    render();                                     // re-lock / re-label the plan cards
+    b.hidden = audience !== 'parent';
+    if (!noRender) render();                      // re-lock / re-label the plan cards
 
     var cb = document.getElementById('cancelMembershipBtn');
     if (cb) cb.addEventListener('click', function() {
@@ -469,29 +687,39 @@
   });
 
   // Boot
+  document.getElementById('audParent').addEventListener('click', function () { setAudience('parent', true); });
+  document.getElementById('audBiz').addEventListener('click', function () { setAudience('business', true); });
+  document.getElementById('audNote').addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-go]');
+    if (a) { e.preventDefault(); setAudience(a.getAttribute('data-go'), true); }
+  });
+
   Promise.all([
     api.membershipPlans(),
-    // Scoped to the parent role: unscoped, a leftover admin/vendor cookie
+    // Each role asked for separately: unscoped, a leftover admin/vendor cookie
     // outranks the parent session and the page showed "Sign in to subscribe".
     api.me('pet_parent').catch(function(){ return {role:null}; }),
+    api.me('vendor').catch(function(){ return {role:null}; }),
+    api.me('admin').catch(function(){ return {role:null}; }),
+    api.vendorSubPlans().catch(function(){ return { plans: [] }; }),
   ]).then(function (results) {
     allPlans = results[0].plans || [];
-    // What a free account gets, so the plans read as "more than this".
     var freeN = results[0].freeContactsPerMonth;
-    var fn = document.getElementById('freeNote');
-    if (fn && typeof freeN === 'number' && freeN >= 0) {
-      fn.textContent = 'A free account includes ' + freeN + ' business contact' + (freeN === 1 ? '' : 's') + ' a month (calls, WhatsApp and enquiries). Membership adds more.';
-      fn.hidden = false;
-    }
-    var me = results[1] || {};
-    signedIn = me.role === 'pet_parent';
-    if (!signedIn) { render(); return; }
+    freeContacts = (typeof freeN === 'number' && freeN >= 0) ? freeN : null;
+    signedIn = (results[1] || {}).role === 'pet_parent';
+    vendorSignedIn = (results[2] || {}).role === 'vendor';
+    adminSignedIn = (results[3] || {}).role === 'admin';
+    bizPlans = ((results[4] || {}).plans || []).filter(function (p) { return p.active !== false; });
 
-    // Resolve membership BEFORE first paint so the plan cards never flash a live "Subscribe" button.
-    return api.membershipMe().then(function(m){
-      if (m && m.active) { showActiveBanner(m.active); }   // showActiveBanner calls render()
-      else { render(); }
-    }).catch(function(){ render(); });
+    // ?for=business|parent wins; otherwise a signed-in business sees its own plans.
+    var q = /[?&]for=(business|parent)/.exec(location.search);
+    var start = q ? q[1] : (vendorSignedIn && !signedIn ? 'business' : 'parent');
+
+    var waits = [];
+    // Resolve memberships BEFORE first paint so no card flashes a live "Subscribe" button.
+    if (signedIn) waits.push(api.membershipMe().then(function (m) { if (m && m.active) activeMembership = m.active; }).catch(function () {}));
+    if (vendorSignedIn) waits.push(api.vendorSubMe().then(function (r) { vendorSub = r.subscription || null; }).catch(function () {}));
+    return Promise.all(waits).then(function () { setAudience(start, false); });
   }).catch(function (e) {
     document.getElementById('planGrid').removeAttribute('aria-busy');
     document.getElementById('planGrid').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;grid-column:1/-1">' +
