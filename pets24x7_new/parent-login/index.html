@@ -285,6 +285,9 @@
   // Google Sign-In — only rendered when the server reports a client id.
   api.siteConfig().then(function (cfg) {
     if (!cfg || !cfg.googleClientId) return;
+    // Google refuses its sign-in inside app WebViews (disallowed_useragent);
+    // the Pets24x7 app signs in with email or a code instead.
+    if (/Pets24x7App/.test(navigator.userAgent)) return;
     var s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;

@@ -316,6 +316,9 @@
   // because claiming or registering is what proves the listing is yours.
   api.siteConfig().then(function (cfg) {
     if (!cfg || !cfg.googleClientId) return;
+    // Google refuses its sign-in inside app WebViews (disallowed_useragent);
+    // the Pets24x7 app signs in with email or a code instead.
+    if (/Pets24x7App/.test(navigator.userAgent)) return;
     var el = document.createElement('script');
     el.src = 'https://accounts.google.com/gsi/client';
     el.async = true;

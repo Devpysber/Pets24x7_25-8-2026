@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Delete your account | Pets24x7</title>
+<meta name="description" content="How to delete your Pets24x7 account and what happens to your data." />
+<link rel="canonical" href="https://pets24x7.com/delete-account/" />
+<link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--primary:#2563EB;--text:#1F2937;--muted:#6B7280;--border:#E5E7EB;--bg:#F9FAFB;--danger:#DC2626}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);background:var(--bg);line-height:1.6}
+  header{background:#fff;border-bottom:1px solid var(--border);padding:14px 16px}
+  header img{height:34px}
+  main{max-width:720px;margin:0 auto;padding:32px 16px 48px}
+  h1{font-size:26px;font-weight:800;margin-bottom:8px}
+  h2{font-size:17px;font-weight:700;margin:24px 0 8px}
+  p,li{font-size:15px;color:#374151}
+  ul,ol{padding-left:22px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 18px;border-radius:10px;font-weight:700;text-decoration:none;border:0;cursor:pointer;font-size:15px}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-danger{background:#fff;color:var(--danger);border:1px solid #FCA5A5}
+  .done{background:#DCFCE7;color:#166534;border-radius:12px;padding:16px 18px;margin-bottom:16px;font-weight:600}
+  a{color:var(--primary)}
+</style>
+</head>
+<body>
+<header><a href="/"><img src="/pets24x7_logo.png" alt="Pets24x7" /></a></header>
+<main>
+  <div class="done" id="done" hidden>Your account has been deleted. A confirmation is on its way to your email.</div>
+  <h1>Delete your Pets24x7 account</h1>
+  <p>You can delete your account yourself at any time, from the app or the website. It takes effect straight away.</p>
+
+  <div class="card" id="signedIn" hidden>
+    <p style="margin-bottom:12px;">You are signed in as <strong id="who"></strong>.</p>
+    <button class="btn btn-danger" id="delBtn">Delete my account</button>
+  </div>
+
+  <div class="card" id="signedOut">
+    <h2 style="margin-top:0;">How to delete it</h2>
+    <ol>
+      <li>Sign in: <a href="/parent-login/?next=/delete-account/">pet parents</a> or <a href="/vendor-login/?next=/delete-account/">businesses</a>.</li>
+      <li>Come back to this page, or open <strong>My Dashboard → Account</strong> (businesses: <strong>Settings</strong>).</li>
+      <li>Choose <strong>Delete my account</strong> and type DELETE to confirm.</li>
+    </ol>
+    <p style="margin-top:10px;">Can't sign in? Email <a href="mailto:support@pets24x7.com?subject=Delete%20my%20account">support@pets24x7.com</a> from the address on your account and we will delete it within 7 days.</p>
+  </div>
+
+  <h2>What is deleted</h2>
+  <ul>
+    <li>Pet parents: your profile, pets, saved businesses, membership and sign-in details.</li>
+    <li>Businesses: your business account, services, campaigns and Featured placements. Your public listing stays in the directory as unclaimed.</li>
+  </ul>
+  <h2>What is kept, and for how long</h2>
+  <ul>
+    <li>Payment and invoice records, as required by tax law, without a link to your account.</li>
+    <li>Enquiries and reviews you sent to businesses, without your account attached.</li>
+    <li>A backup copy for up to 180 days so an account deleted by mistake can be restored on request; after that it is gone for good.</li>
+  </ul>
+  <p style="margin-top:16px;">See our <a href="/privacy.html">Privacy Policy</a> for details.</p>
+</main>
+<script src="/config.js"></script>
+<script src="/api-client.js"></script>
+<script src="/ui-dialogs.js"></script>
+<script>
+  if (/[?&]done=1/.test(location.search)) document.getElementById('done').hidden = false;
+  Promise.all([api.me('pet_parent').catch(function(){ return {}; }), api.me('vendor').catch(function(){ return {}; })]).then(function(r) {
+    var me = (r[0] && r[0].role) ? r[0] : (r[1] && r[1].role ? r[1] : null);
+    if (!me) return;
+    var u = me.user || {};
+    document.getElementById('who').textContent = u.name || u.businessName || u.email || u.phone || 'your account';
+    document.getElementById('signedIn').hidden = false;
+    document.getElementById('signedOut').hidden = true;
+    document.getElementById('delBtn').addEventListener('click', function() {
+      var btn = this;
+      uiPrompt({ title: 'Delete your account?', body: 'This cannot be undone from your side. Type DELETE to confirm.', label: 'Type DELETE', placeholder: 'DELETE', confirmLabel: 'Delete my account' })
+        .then(function(v) {
+          if (v == null) return;
+          if (String(v).trim().toUpperCase() !== 'DELETE') { alert('Type DELETE to confirm.'); return; }
+          btn.disabled = true;
+          api.deleteMyAccount().then(function() { location.href = '/delete-account/?done=1'; })
+            .catch(function(e) { btn.disabled = false; alert('Could not delete the account: ' + (e && e.message || e)); });
+        });
+    });
+  });
+</script>
+</body>
+</html>

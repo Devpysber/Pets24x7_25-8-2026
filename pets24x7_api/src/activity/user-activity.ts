@@ -135,6 +135,7 @@ const LABELS: Array<[string, RegExp, string]> = [
   ['POST', /^\/api\/admin\/vendors\/[^/]+\/status$/, 'Changed a business status'],
   ['POST', /^\/api\/admin\/subscriptions\/vendor-subscribers\/[^/]+\/status$/, 'Changed a business plan status'],
   ['PUT', /^\/api\/admin\/plan-limits$/, 'Changed plan limits'],
+  ['POST', /^\/api\/me\/delete-account$/, 'Deleted their own account'],
   ['POST', /^\/api\/admin\/plan-limits\/notice$/, 'Emailed Basic businesses'],
   ['POST', /^\/api\/admin\/publish/, 'Published the website'],
 ];

@@ -69,8 +69,9 @@ import {
 } from '../mail/action-templates.js';
 import { accountDeletedEmail, reviewThanksEmail, vendorReactivatedEmail } from '../mail/lifecycle-templates.js';
 import { applyFeaturedStatus } from './admin.extra.routes.js';
-import { saveTrash, snapshotListing, snapshotParent, snapshotPhotos, snapshotVendor } from '../trash/trash.js';
+import { saveTrash, snapshotListing, snapshotPhotos } from '../trash/trash.js';
 import { REAL_PARENT, REAL_PAYMENT, REAL_VENDOR, isTestAccount, isTestPayment } from '../shared/test-data.js';
+import { deleteParentAccount, deleteVendorAccount } from '../accounts/delete-account.js';
 
 export const adminApiRouter = Router();
 adminApiRouter.use(requireAuth('admin'));
@@ -588,36 +589,8 @@ adminApiRouter.delete(
   '/vendors/:id',
   asyncHandler(async (req, res) => {
     const id = req.params.id ?? '';
-    const vendor = await prisma.vendor.findUnique({
-      where: { id },
-      select: { id: true, businessName: true, email: true, phone: true, listingId: true },
-    });
+    const vendor = await deleteVendorAccount(id, { role: 'admin', id: req.auth!.sub });
     if (!vendor) throw new NotFoundError('Vendor not found');
-
-    // Kept for Recently deleted, before anything goes.
-    const snap = await snapshotVendor(id);
-    if (snap) await saveTrash('vendor', id, vendor.businessName || id, snap, { role: 'admin', id: req.auth!.sub });
-
-    const [campaigns, featured] = await Promise.all([
-      prisma.marketingCampaign.findMany({ where: { vendorId: id }, select: { id: true } }),
-      prisma.featuredListing.findMany({ where: { vendorId: id }, select: { id: true } }),
-    ]);
-
-    await prisma.$transaction(async (tx) => {
-      if (campaigns.length) {
-        await tx.payment.updateMany({
-          where: { campaignId: { in: campaigns.map((c) => c.id) } },
-          data: { campaignId: null },
-        });
-      }
-      if (featured.length) {
-        await tx.payment.updateMany({
-          where: { featuredListingId: { in: featured.map((f) => f.id) } },
-          data: { featuredListingId: null },
-        });
-      }
-      await tx.vendor.delete({ where: { id } });
-    });
 
     await prisma.auditLog.create({
       data: {
@@ -1278,28 +1251,8 @@ adminApiRouter.delete(
   '/parents/:id',
   asyncHandler(async (req, res) => {
     const id = req.params.id ?? '';
-    const parent = await prisma.petParent.findUnique({
-      where: { id },
-      select: { id: true, name: true, email: true, phone: true },
-    });
+    const parent = await deleteParentAccount(id, { role: 'admin', id: req.auth!.sub });
     if (!parent) throw new NotFoundError('Pet parent not found');
-
-    const snap = await snapshotParent(id);
-    if (snap) await saveTrash('parent', id, [parent.name, parent.email ?? parent.phone].filter(Boolean).join(' · '), snap, { role: 'admin', id: req.auth!.sub });
-
-    const memberships = await prisma.membership.findMany({ where: { parentId: id }, select: { id: true } });
-
-    await prisma.$transaction(async (tx) => {
-      await tx.enquiry.updateMany({ where: { petParentId: id }, data: { petParentId: null } });
-      if (memberships.length) {
-        await tx.payment.updateMany({
-          where: { membershipId: { in: memberships.map((m) => m.id) } },
-          data: { membershipId: null },
-        });
-      }
-      await tx.payment.updateMany({ where: { parentId: id }, data: { parentId: null } });
-      await tx.petParent.delete({ where: { id } });
-    });
 
     await prisma.auditLog.create({
       data: {

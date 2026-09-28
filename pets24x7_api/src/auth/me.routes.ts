@@ -1,12 +1,18 @@
 // GET  /api/me             → returns whichever role is signed in (parent | vendor | admin)
 // POST /api/me/logout       → clears all auth cookies in this browser (idempotent)
 // POST /api/me/logout-all   → also revokes every token already issued for those accounts
+// POST /api/me/delete-account { confirm: 'DELETE' } → a pet parent or business deletes its own account
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { readAuthCookie, verifyToken, clearAuthCookie, type ActorRole, type AuthPayload } from './jwt.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { revokeSessions, tokenRevoked } from './actor.js';
+import { requireAnyAuth } from './middleware.js';
+import { BadRequestError } from '../shared/errors.js';
+import { notifyIf } from '../mail/notify.js';
+import { accountDeletedEmail } from '../mail/lifecycle-templates.js';
+import { deleteParentAccount, deleteVendorAccount } from '../accounts/delete-account.js';
 
 export const meRouter = Router();
 
@@ -135,5 +141,41 @@ meRouter.post(
     clearAuthCookie(res, 'vendor');
     clearAuthCookie(res, 'admin');
     res.json({ ok: true, revoked });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Delete my account (pet parent or business). Google Play requires this in the
+// app and on the web (/delete-account/). The caller types DELETE to confirm.
+// A copy is kept in admin > Recently deleted for 180 days, so support can
+// restore an account deleted by mistake.
+// ---------------------------------------------------------------------------
+meRouter.post(
+  '/delete-account',
+  requireAnyAuth(['pet_parent', 'vendor']),
+  asyncHandler(async (req, res) => {
+    if (String((req.body ?? {}).confirm ?? '').trim().toUpperCase() !== 'DELETE') {
+      throw new BadRequestError('Type DELETE to confirm.');
+    }
+    const role = req.auth!.role;
+    const id = req.auth!.sub;
+    const by = { role, id };
+    const gone = role === 'pet_parent' ? await deleteParentAccount(id, by) : await deleteVendorAccount(id, by);
+    if (!gone) throw new BadRequestError('Account not found');
+    await prisma.auditLog
+      .create({
+        data: {
+          actorType: role === 'pet_parent' ? 'PET_PARENT' : 'VENDOR',
+          actorId: id,
+          action: role === 'pet_parent' ? 'parent.self_delete' : 'vendor.self_delete',
+          meta: { email: gone.email ?? null, phone: gone.phone ?? null, name: 'name' in gone ? gone.name : (gone as any).businessName },
+          ipAddress: req.ip ?? null,
+        },
+      })
+      .catch(() => {});
+    const name = 'name' in gone ? (gone as any).name : (gone as any).businessName;
+    notifyIf(gone.email, (to) => accountDeletedEmail(to, name ?? 'there'));
+    for (const r of ROLES) clearAuthCookie(res, r);
+    res.json({ ok: true });
   }),
 );

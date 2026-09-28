@@ -78,6 +78,7 @@
     // Auth helpers
     me:               function (role)                    { return req('GET',  '/api/me' + (role ? '?role=' + encodeURIComponent(role) : '')); },
     logout:           function ()                        { return req('POST', '/api/me/logout', {}); },
+    deleteMyAccount:  function ()                        { return req('POST', '/api/me/delete-account', { confirm: 'DELETE' }); },
 
     parentRequestOtp: function (p)                       { return req('POST', '/api/parent/request-otp', p); },
     parentVerify:     function (phone, code, extra)      { return req('POST', '/api/parent/verify',      Object.assign({ phone: phone, code: code }, extra || {})); },
