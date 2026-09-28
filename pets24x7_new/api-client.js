@@ -183,6 +183,11 @@
     // Vendor subscriptions & checkout
     vendorSubPlans:    function ()           { return req('GET',  '/api/vendor/subscriptions/plans'); },
     vendorSubMe:       function ()           { return req('GET',  '/api/vendor/subscriptions/me'); },
+    contactQuota:      function ()           { return req('GET',  '/api/access/contact'); },
+    contactSpend:      function (target, kind) { return req('POST', '/api/access/contact', { target: target || undefined, kind: kind }); },
+    vendorPlanSlots:      function ()                  { return req('GET',    '/api/vendor/plan-featured'); },
+    vendorPlanSlotPlace:  function (citySlug, catSlug) { return req('POST',   '/api/vendor/plan-featured', { citySlug: citySlug, categorySlug: catSlug || null }); },
+    vendorPlanSlotRemove: function (id)                { return req('DELETE', '/api/vendor/plan-featured/' + encodeURIComponent(id)); },
     vendorSubCheckout: function (p)          { return req('POST', '/api/vendor/subscriptions/checkout', p); },
     vendorSubVerify:   function (p)          { return req('POST', '/api/vendor/subscriptions/verify', p); },
 
@@ -334,6 +339,8 @@
     adminSettings:    function ()          { return req('GET',  '/api/admin/settings'); },
     adminPlanLimits:     function ()       { return req('GET', '/api/admin/plan-limits'); },
     adminPlanLimitsSave: function (limits) { return req('PUT', '/api/admin/plan-limits', { limits: limits }); },
+    adminPlanNoticeInfo: function ()       { return req('GET', '/api/admin/plan-limits/notice'); },
+    adminPlanNoticeSend: function ()       { return req('POST', '/api/admin/plan-limits/notice', {}); },
     adminMyProfile:   function ()          { return req('GET',   '/api/admin/me/profile'); },
     adminMyProfileSave: function (body)    { return req('PATCH', '/api/admin/me/profile', body); },
     adminSettingsSave:function (obj)       { return req('PUT',  '/api/admin/settings', obj); },

@@ -489,7 +489,7 @@ async function activatePaidPlan(opts: {
 
   // Gold and Diamond include a Featured placement for the whole term.
   const limits = await getPlanLimits().catch(() => null);
-  if (limits?.vendor[normalizeVendorTier(updatedSub.tier)].featuredSlot) {
+  if ((limits?.vendor[normalizeVendorTier(updatedSub.tier)].featuredSlots ?? 0) > 0) {
     await grantPlanFeatured(vendorId, updatedSub.endsAt).catch((err) =>
       logger.error({ err, vendorId }, 'vendor subscriptions: plan Featured slot not granted'),
     );

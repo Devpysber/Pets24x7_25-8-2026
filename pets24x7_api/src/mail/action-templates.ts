@@ -1518,3 +1518,38 @@ export function adminProfileChangedEmail(
     text: `Your Pets24x7 admin account was updated (${what || 'profile'}).\nIf this was not you, change the password immediately.\n`,
   };
 }
+
+// ===========================================================================
+// Plan limits notice — sent once to businesses on the free Basic plan when
+// admins announce the monthly lead allowance (admin > Settings > Plan limits).
+// ===========================================================================
+export function vendorPlanLimitsNoticeEmail(
+  to: string,
+  businessName: string,
+  basic: { leadsPerMonth: number; photos: number; reviewRequestsPerDay: number },
+): MailInput {
+  businessName = who(businessName, 'there');
+  const leads = basic.leadsPerMonth;
+  return {
+    tag: 'vendor_plan_limits_notice',
+    to,
+    subject: `Your free Pets24x7 plan: ${leads} leads a month with contact details`,
+    html: page({
+      eyebrow: 'Your plan',
+      heading: 'What the free Basic plan includes',
+      intro: h`Hi ${businessName}, we have set clear limits on the free Basic plan so paid plans can offer more. Your listing stays free and stays live.`,
+      blocks: [
+        InfoBox([
+          ['Leads with contact details', `${leads} a month`],
+          ['Photos on your listing', String(basic.photos)],
+          ['Review requests', `${basic.reviewRequestsPerDay} a day`],
+        ]),
+        Text(h`Every enquiry still reaches your dashboard. After the first ${String(leads)} in a month, the customer's phone number and email stay hidden until you upgrade, and they unlock straight away when you do, including for leads you already received.`),
+        Button('See plans and upgrade', vendorDash('subscriptions')),
+        Note('Paid plans do not renew by themselves. Questions? Reply to this email.'),
+      ],
+      preheader: `${leads} leads a month with contact details on the free plan`,
+    }),
+    text: `Hi ${businessName},\n\nThe free Basic plan now includes:\n- ${leads} leads a month with customer contact details\n- ${basic.photos} photos on your listing\n- ${basic.reviewRequestsPerDay} review requests a day\n\nEvery enquiry still reaches your dashboard. After the first ${leads} in a month, the customer's phone and email stay hidden until you upgrade; they unlock straight away when you do.\n\nSee plans: ${vendorDash('subscriptions')}\n`,
+  };
+}

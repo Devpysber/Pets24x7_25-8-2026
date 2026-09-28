@@ -59,7 +59,7 @@ import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
 import { userActivityMiddleware, startUserActivityPrune } from './activity/user-activity.js';
 import { userActivityTrackRouter, adminUserActivityRouter } from './activity/user-activity.routes.js';
-import { accessRouter, adminPlanLimitsRouter } from './plans/plans.routes.js';
+import { accessRouter, adminPlanLimitsRouter, vendorPlanSlotsRouter } from './plans/plans.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -176,6 +176,7 @@ app.use('/api/vendor/reviews', vendorReviewsRouter);
 app.use('/api/vendor/services', vendorServicesRouter);
 app.use('/api/vendor/campaigns', vendorCampaignsRouter);
 app.use('/api/vendor/featured', vendorFeaturedRouter);
+app.use('/api/vendor/plan-featured', vendorPlanSlotsRouter); // placing a plan's Featured slots
 app.use('/api/reviews', reviewPublicApiRouter);
 app.use('/api/enquiries', enquiryRouter);
 app.use('/api/featured', featuredPublicRouter);

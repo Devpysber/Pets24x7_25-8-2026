@@ -3323,7 +3323,7 @@ adminApiRouter.post(
 
     // The plan's complimentary Featured placement follows the plan.
     const limits = await getPlanLimits();
-    if (status === 'ACTIVE' && next.endsAt && limits.vendor[normalizeVendorTier(next.tier)].featuredSlot) {
+    if (status === 'ACTIVE' && next.endsAt && limits.vendor[normalizeVendorTier(next.tier)].featuredSlots > 0) {
       await grantPlanFeatured(vendorId, new Date(next.endsAt)).catch((err) =>
         req.log.warn({ err, vendorId }, 'admin plan activate: featured slot not granted'),
       );

@@ -586,6 +586,8 @@
 
       <!-- 1. DASHBOARD VIEW -->
       <section id="view-dash" class="view-pane active">
+        <!-- Free-plan limits, shown to Basic businesses until dismissed (filled by renderPlanNotice). -->
+        <div id="vPlanNotice" hidden style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:14px 18px; margin-bottom:16px; border:1px solid #FDE68A; background:#FFFBEB; color:#78350F; border-radius:12px; font-size:13.5px;"></div>
         <!-- Business Overview Card -->
         <div class="biz-overview-card">
           <div class="biz-overview-main">
@@ -841,7 +843,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Request Reviews on WhatsApp</div>
-              <div class="card-subtitle">One customer per line: phone number, optionally followed by " - name". Up to 50 a day.</div>
+              <div class="card-subtitle">One customer per line: phone number, optionally followed by " - name". Up to <span id="rrDailyCap">50</span> a day on your plan.</div>
             </div>
           </div>
           <label for="rrInput" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;">Customer phone numbers, one per line</label><textarea class="form-control" id="rrInput" rows="4" autocomplete="off" placeholder="+91 98765 43210 - Priya&#10;+91 91234 56789"></textarea>
@@ -1112,6 +1114,23 @@
               <div style="font-size:15px; font-weight:700; margin-top:4px; color:#FDE047;" id="vSubRankBoost">—</div>
             </div>
           </div>
+        </div>
+
+        <!-- The plan's own Featured placements (Gold 1, Diamond 3), placed by the business. -->
+        <div class="card" id="vPlanSlotsCard" style="margin-bottom:24px;" hidden>
+          <div class="card-header" style="flex-wrap:wrap; gap:10px;">
+            <div>
+              <div class="card-title">Featured placements on your plan</div>
+              <div class="card-subtitle" id="vPlanSlotsSub">—</div>
+            </div>
+          </div>
+          <div id="vPlanSlotsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+          <div id="vPlanSlotsForm" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select class="form-control" id="vPlanSlotCity" style="width:auto; min-width:180px;" aria-label="City"></select>
+            <select class="form-control" id="vPlanSlotPage" style="width:auto; min-width:220px;" aria-label="Page"></select>
+            <button class="btn btn-primary btn-sm" onclick="placePlanSlot()">Place here</button>
+          </div>
+          <div id="vPlanSlotsMsg" style="font-size:12.5px; margin-top:8px;"></div>
         </div>
 
         <!-- Plans & Billing Period Toggle Header -->
@@ -1585,6 +1604,7 @@
 
     if (viewId === 'subscriptions') {
       loadVendorSubscriptions();
+      loadPlanSlots();
     }
 
     document.title = info[0] + ' — Pets24x7 Vendor Portal';
@@ -2543,6 +2563,94 @@
       ' leads with contact details used this month' +
       (over ? ' · <strong style="color:#B45309;">' + (lp.usedThisMonth - lp.leadsPerMonth) + ' more waiting behind the upgrade</strong>' : '') + '.</span>' +
       '<button class="btn btn-sm btn-primary" onclick="goUpgradePlan()">Upgrade for more leads</button>';
+  }
+
+  // ---- Free-plan notice (dashboard home) ----
+  function renderPlanNotice(plan) {
+    var box = document.getElementById('vPlanNotice');
+    if (!box) return;
+    var dismissed = false;
+    try { dismissed = localStorage.getItem('p24:planNotice:' + plan.tier + ':' + plan.leadsPerMonth) === '1'; } catch (e) {}
+    if (plan.tier !== 'BASIC' || plan.leadsPerMonth < 0 || dismissed) { box.hidden = true; box.style.display = 'none'; return; }
+    box.innerHTML =
+      '<span><strong>Your free Basic plan:</strong> ' + plan.leadsPerMonth + ' leads a month come with the customer&rsquo;s phone and email, ' +
+      plan.photos + ' photos, ' + plan.reviewRequestsPerDay + ' review requests a day. Every enquiry still reaches you; past the limit the contact ' +
+      'details unlock when you upgrade, including for leads you already have.</span>' +
+      '<span style="display:flex; gap:8px; flex-wrap:wrap;">' +
+        '<button class="btn btn-sm btn-primary" onclick="goUpgradePlan()">See plans</button>' +
+        '<button class="btn btn-sm" onclick="dismissPlanNotice()">Got it</button>' +
+      '</span>';
+    box.hidden = false; box.style.display = 'flex';
+  }
+  function dismissPlanNotice() {
+    var p = state.plan || {};
+    try { localStorage.setItem('p24:planNotice:' + p.tier + ':' + p.leadsPerMonth, '1'); } catch (e) {}
+    var box = document.getElementById('vPlanNotice');
+    if (box) { box.hidden = true; box.style.display = 'none'; }
+  }
+
+  // ---- The plan's Featured placements (Gold 1, Diamond 3) ----
+  var planSlots = null;
+  function loadPlanSlots() {
+    return api.vendorPlanSlots().then(function(r) { planSlots = r; renderPlanSlots(); })
+      .catch(function() { var c = document.getElementById('vPlanSlotsCard'); if (c) c.hidden = true; });
+  }
+  function slotLabel(s) {
+    return (s.category ? s.category + ' page' : 'City page (all services)') + ' · ' + (s.city || s.citySlug);
+  }
+  function renderPlanSlots() {
+    var card = document.getElementById('vPlanSlotsCard');
+    if (!card || !planSlots) return;
+    var r = planSlots;
+    card.hidden = false;
+    var sub = document.getElementById('vPlanSlotsSub');
+    var list = document.getElementById('vPlanSlotsList');
+    var form = document.getElementById('vPlanSlotsForm');
+    if (!r.allowed) {
+      sub.textContent = 'Gold includes 1 Featured placement and Diamond 3, for the whole plan. Featured businesses show at the top of city and category pages.';
+      list.innerHTML = '<div><button class="btn btn-sm btn-primary" onclick="scrollToVendorPlans()">See Gold and Diamond</button></div>';
+      form.style.display = 'none';
+      return;
+    }
+    var ends = r.endsAt ? new Date(r.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    sub.textContent = r.used + ' of ' + r.allowed + ' in use' + (ends ? ' · until ' + ends : '') +
+      (r.used < r.allowed ? ' · choose where the rest appear' : '');
+    list.innerHTML = (r.slots || []).map(function(s) {
+      return '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:8px;">' +
+        '<span>⭐ ' + esc(slotLabel(s)) + '</span>' +
+        '<button class="btn btn-sm" onclick="removePlanSlot(\'' + esc(s.id) + '\')">Move</button></div>';
+    }).join('') || '<div style="color:var(--text-muted); font-size:13px;">No placements yet.</div>';
+    var free = r.used < r.allowed;
+    form.style.display = free ? 'flex' : 'none';
+    if (free) {
+      var cities = (r.options && r.options.cities) || [];
+      var cats = (r.options && r.options.categories) || [];
+      var mine = (state.vendor.city || '').toLowerCase();
+      document.getElementById('vPlanSlotCity').innerHTML = cities.map(function(c) {
+        return '<option value="' + esc(c.slug) + '"' + (c.name.toLowerCase() === mine ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+      }).join('');
+      var myCat = (state.vendor.category || '').toLowerCase();
+      document.getElementById('vPlanSlotPage').innerHTML = '<option value="">City page (all services)</option>' + cats.map(function(c) {
+        return '<option value="' + esc(c.slug) + '"' + (c.name.toLowerCase() === myCat ? ' selected' : '') + '>' + esc(c.name) + ' page</option>';
+      }).join('');
+    }
+  }
+  function placePlanSlot() {
+    var msg = document.getElementById('vPlanSlotsMsg');
+    var city = document.getElementById('vPlanSlotCity').value;
+    var page = document.getElementById('vPlanSlotPage').value;
+    msg.style.color = 'var(--text-muted)'; msg.textContent = 'Placing…';
+    api.vendorPlanSlotPlace(city, page).then(function() {
+      msg.style.color = 'var(--success)'; msg.textContent = 'Placed. It shows on that page straight away.';
+      return loadPlanSlots();
+    }).catch(function(e) { msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(e); });
+  }
+  function removePlanSlot(id) {
+    uiConfirm({ title: 'Move this placement?', body: 'It comes off that page now, and you can place it somewhere else.', confirmLabel: 'Remove it' })
+      .then(function(ok) {
+        if (!ok) return;
+        api.vendorPlanSlotRemove(id).then(loadPlanSlots).catch(function(e) { toast(fmtErr(e), 'error'); });
+      });
   }
 
   function goUpgradePlan() {
@@ -3913,6 +4021,11 @@
       state.enquiryAgg = d.enquiries || state.enquiryAgg;
       state.invites = d.customerInvites || state.invites;
       if (d.plan && d.plan.photos) { GALLERY_MAX = d.plan.photos; state.plan = d.plan; renderVendorGallery(); }
+      if (d.plan) {
+        var cap = document.getElementById('rrDailyCap');
+        if (cap) cap.textContent = d.plan.reviewRequestsPerDay;
+        renderPlanNotice(d.plan);
+      }
       renderEnquiryFilters();
       if (d.serviceCount != null) state.serviceCount = d.serviceCount;
       // The summary only carries the 5 newest; never let it overwrite the

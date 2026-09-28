@@ -22,8 +22,12 @@ export interface VendorLimits {
   leadsPerMonth: number;
   photos: number;
   reviewRequestsPerDay: number;
-  /** A complimentary Featured placement for the whole paid term. */
-  featuredSlot: boolean;
+  /**
+   * Complimentary Featured placements for the whole paid term. The first goes
+   * on the business's own city + category automatically; the business places
+   * the rest itself (any city, city page or a category page).
+   */
+  featuredSlots: number;
 }
 export interface PlanLimits {
   parent: Record<ParentTier, ParentLimits>;
@@ -41,16 +45,17 @@ export const DEFAULT_LIMITS: PlanLimits = {
     GOLD: { contactsPerMonth: UNLIMITED },
   },
   vendor: {
-    BASIC: { leadsPerMonth: 5, photos: 2, reviewRequestsPerDay: 5, featuredSlot: false },
-    SILVER: { leadsPerMonth: 50, photos: 5, reviewRequestsPerDay: 50, featuredSlot: false },
-    GOLD: { leadsPerMonth: UNLIMITED, photos: 10, reviewRequestsPerDay: 200, featuredSlot: true },
-    DIAMOND: { leadsPerMonth: UNLIMITED, photos: 20, reviewRequestsPerDay: 200, featuredSlot: true },
+    BASIC: { leadsPerMonth: 5, photos: 2, reviewRequestsPerDay: 5, featuredSlots: 0 },
+    SILVER: { leadsPerMonth: 50, photos: 5, reviewRequestsPerDay: 50, featuredSlots: 0 },
+    GOLD: { leadsPerMonth: UNLIMITED, photos: 10, reviewRequestsPerDay: 200, featuredSlots: 1 },
+    DIAMOND: { leadsPerMonth: UNLIMITED, photos: 20, reviewRequestsPerDay: 200, featuredSlots: 3 },
   },
 };
 
 /** Hard ceilings, whatever an admin types: the gallery column and the send pipeline have limits of their own. */
 const MAX_PHOTOS = 20;
 const MAX_REVIEW_REQUESTS = 500;
+const MAX_FEATURED_SLOTS = 10;
 
 const KEY = 'plans:limits';
 const CACHE_MS = 30_000;
@@ -80,7 +85,11 @@ export function sanitizeLimits(input: unknown): PlanLimits {
     d.photos = photos === UNLIMITED ? MAX_PHOTOS : photos;
     const rr = num(v.reviewRequestsPerDay, d.reviewRequestsPerDay, MAX_REVIEW_REQUESTS);
     d.reviewRequestsPerDay = rr === UNLIMITED ? MAX_REVIEW_REQUESTS : rr;
-    if (typeof v.featuredSlot === 'boolean') d.featuredSlot = v.featuredSlot;
+    // featuredSlot (true/false) is the setting's earlier shape.
+    if (v.featuredSlots !== undefined) {
+      const n = num(v.featuredSlots, d.featuredSlots, MAX_FEATURED_SLOTS);
+      d.featuredSlots = n === UNLIMITED ? MAX_FEATURED_SLOTS : n;
+    } else if (typeof v.featuredSlot === 'boolean') d.featuredSlots = v.featuredSlot ? Math.max(1, d.featuredSlots) : 0;
   }
   return out;
 }
@@ -178,7 +187,8 @@ export function decorateVendorPlan<T extends { tier?: unknown; perks?: unknown; 
     leadsLine(l.leadsPerMonth),
     `${l.photos} photos on your listing`,
     `${l.reviewRequestsPerDay} review requests a day`,
-    ...(l.featuredSlot ? ['Featured placement on your city & category pages for the whole plan'] : []),
+    ...(l.featuredSlots === 1 ? ['Featured placement on your city & category pages for the whole plan'] : []),
+    ...(l.featuredSlots > 1 ? [`${l.featuredSlots} Featured placements for the whole plan: yours, plus ${l.featuredSlots - 1} on any city or category page you choose`] : []),
   ];
   // Taglines were written when every plan had unlimited leads ("Verified Pro
   // Badge + Unlimited Leads" on Silver); they follow the limit too.

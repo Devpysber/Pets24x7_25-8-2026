@@ -2571,6 +2571,14 @@
             <button class="btn btn-primary btn-sm" onclick="planLimitsSave()">Save plan limits</button>
             <span id="plMsg" style="font-size:12.5px; color:var(--text-muted);"></span>
           </div>
+          <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
+            <div style="font-weight:700; margin-bottom:4px;">Tell Basic businesses</div>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">One email to each approved business on the free plan explaining its limits (leads with contact details, photos, review requests) and how to upgrade. Each business gets it once; they also see a banner in their dashboard.</div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-sm" id="plNoticeBtn" onclick="planNoticeSend()">Email Basic businesses</button>
+              <span id="plNoticeMsg" style="font-size:12.5px; color:var(--text-muted);"></span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -8289,18 +8297,44 @@
           return '<td data-label="' + t + '">' + plInput('plP_' + t, l.parent[t].contactsPerMonth) + '</td>';
         }).join('') + '</tr></tbody></table>';
       document.getElementById('plVendorBox').innerHTML =
-        '<table class="data-table"><thead><tr><th>Plan</th><th>Leads with contact / month</th><th>Photos</th><th>Review requests / day</th><th>Free Featured slot</th></tr></thead><tbody>' +
+        '<table class="data-table"><thead><tr><th>Plan</th><th>Leads with contact / month</th><th>Photos</th><th>Review requests / day</th><th>Free Featured slots</th></tr></thead><tbody>' +
         PL_VENDOR.map(function(t) {
         var v = l.vendor[t];
         return '<tr><td style="font-weight:700;">' + t.charAt(0) + t.slice(1).toLowerCase() + '</td>' +
           '<td>' + plInput('plV_' + t + '_leads', v.leadsPerMonth) + '</td>' +
           '<td>' + plInput('plV_' + t + '_photos', v.photos) + '</td>' +
           '<td>' + plInput('plV_' + t + '_rr', v.reviewRequestsPerDay) + '</td>' +
-          '<td><input type="checkbox" id="plV_' + t + '_feat"' + (v.featuredSlot ? ' checked' : '') + '></td></tr>';
+          '<td>' + plInput('plV_' + t + '_feat', v.featuredSlots) + '</td></tr>';
       }).join('') + '</tbody></table>';
       if (msg) msg.textContent = '';
+      planNoticeInfo();
     }).catch(function(e) { if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = fmtErr(e); } });
   };
+  function planNoticeInfo() {
+    var m = document.getElementById('plNoticeMsg');
+    return api.adminPlanNoticeInfo().then(function(r) {
+      m.textContent = r.toSend + ' to email · ' + r.alreadySent + ' already told · ' + r.basicBusinesses + ' Basic businesses with an email';
+      document.getElementById('plNoticeBtn').disabled = !r.toSend;
+      window.__plNoticeToSend = r.toSend;
+    }).catch(function(e) { m.textContent = fmtErr(e); });
+  }
+  window.planNoticeSend = function() {
+    var n = window.__plNoticeToSend || 0;
+    uiConfirm({
+      title: 'Email ' + n + ' Basic business' + (n === 1 ? '' : 'es') + '?',
+      body: 'Each gets one email explaining the free plan limits and how to upgrade. This cannot be unsent.',
+      confirmLabel: 'Send ' + n + ' email' + (n === 1 ? '' : 's')
+    }).then(function(ok) {
+      if (!ok) return;
+      var m = document.getElementById('plNoticeMsg');
+      m.textContent = 'Sending…';
+      api.adminPlanNoticeSend().then(function(r) {
+        toast('Sent to ' + r.sent + ' business' + (r.sent === 1 ? '' : 'es'), 'ok');
+        planNoticeInfo();
+      }).catch(function(e) { m.textContent = fmtErr(e); });
+    });
+  };
+
   window.planLimitsSave = function() {
     var msg = document.getElementById('plMsg');
     var limits = { parent: {}, vendor: {} }, bad = null;
@@ -8311,7 +8345,7 @@
         leadsPerMonth: read('plV_' + t + '_leads'),
         photos: read('plV_' + t + '_photos'),
         reviewRequestsPerDay: read('plV_' + t + '_rr'),
-        featuredSlot: document.getElementById('plV_' + t + '_feat').checked
+        featuredSlots: read('plV_' + t + '_feat')
       };
     });
     if (bad) { msg.style.color = 'var(--danger)'; msg.textContent = 'Use a whole number or "unlimited".'; document.getElementById(bad).focus(); return; }

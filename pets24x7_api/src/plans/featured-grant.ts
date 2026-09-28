@@ -21,17 +21,15 @@ export async function grantPlanFeatured(vendorId: string, endsAt: Date): Promise
   });
   if (!vendor?.listingId) return 'skipped';
 
-  // An earlier complimentary slot still running is stretched, not doubled.
-  const existing = await prisma.featuredListing.findFirst({
-    where: { vendorId, status: 'ACTIVE', priceMinor: 0 },
-    orderBy: { endsAt: 'desc' },
-  });
+  // Complimentary slots already running (the automatic one and any the
+  // business placed itself) are stretched to the new end, not doubled.
+  const existing = await prisma.featuredListing.count({ where: { vendorId, status: 'ACTIVE', priceMinor: 0 } });
   if (existing) {
-    if (!existing.endsAt || existing.endsAt < endsAt) {
-      await prisma.featuredListing.update({ where: { id: existing.id }, data: { endsAt } });
-      return 'extended';
-    }
-    return 'skipped';
+    const { count } = await prisma.featuredListing.updateMany({
+      where: { vendorId, status: 'ACTIVE', priceMinor: 0, OR: [{ endsAt: null }, { endsAt: { lt: endsAt } }] },
+      data: { endsAt },
+    });
+    return count ? 'extended' : 'skipped';
   }
 
   const listing = getListingById(vendor.listingId);
@@ -64,4 +62,52 @@ export async function endPlanFeatured(vendorId: string): Promise<number> {
   });
   if (count) logger.info({ vendorId, count }, 'plan featured slot ended with the plan');
   return count;
+}
+
+// ---------------------------------------------------------------------------
+// Placing the rest of a plan's slots (Diamond: 3). The business picks a city
+// and either that city's main page (categorySlug null) or one category page.
+// ---------------------------------------------------------------------------
+
+export function planSlotsActive(vendorId: string) {
+  return prisma.featuredListing.findMany({
+    where: { vendorId, status: 'ACTIVE', priceMinor: 0 },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, city: true, citySlug: true, category: true, categorySlug: true, startsAt: true, endsAt: true },
+  });
+}
+
+export async function placePlanSlot(opts: {
+  vendorId: string;
+  listingId: string;
+  city: { name: string; slug: string };
+  category: { name: string; slug: string } | null;
+  endsAt: Date;
+}): Promise<void> {
+  const now = new Date();
+  await prisma.featuredListing.create({
+    data: {
+      vendorId: opts.vendorId,
+      listingId: opts.listingId,
+      city: opts.city.name,
+      citySlug: opts.city.slug,
+      category: opts.category?.name ?? null,
+      categorySlug: opts.category?.slug ?? null,
+      priceMinor: 0,
+      currency: 'INR',
+      durationDays: Math.max(1, Math.round((opts.endsAt.getTime() - now.getTime()) / 86_400_000)),
+      status: 'ACTIVE',
+      startsAt: now,
+      endsAt: opts.endsAt,
+    },
+  });
+}
+
+/** Frees one complimentary slot so it can be placed elsewhere. */
+export async function removePlanSlot(vendorId: string, id: string): Promise<boolean> {
+  const { count } = await prisma.featuredListing.updateMany({
+    where: { id, vendorId, status: 'ACTIVE', priceMinor: 0 },
+    data: { status: 'CANCELLED', endsAt: new Date() },
+  });
+  return count > 0;
 }

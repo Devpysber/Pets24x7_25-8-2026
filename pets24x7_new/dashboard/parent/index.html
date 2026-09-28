@@ -785,6 +785,7 @@
         <label for="enqDisplayVendor">Business</label>
         <input type="text" id="enqDisplayVendor" readonly tabindex="-1" style="background: #F8FAFC; font-weight: 700;" />
         <div id="enqMemberBenefit" style="margin-top:8px;"></div>
+        <div id="enqQuota" style="margin-top:6px; font-size:12.5px;"></div>
       </div>
       <div class="form-group">
         <label for="enqPetSelect">Select Pet</label>
@@ -2610,7 +2611,7 @@
           '</div>' +
           '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(' + idArg + ')">Enquire / Book</button>' +
           '<button class="btn" id="vendorSaveBtn" data-id="' + esc(v.id) + '" style="width:100%; justify-content:center; margin-top:8px;" onclick="toggleSave(' + idArg + ', this)">' + saveButtonLabel(v.id) + '</button>' +
-          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/919930090487?text=' + pwaMsg + '" onclick="logListingTap(' + idArg + ', \'whatsapp_click\')">💬 Ask Pets24x7 on WhatsApp</a>' +
+          '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/919930090487?text=' + pwaMsg + '" onclick="return contactViaWhatsApp(event, ' + idArg + ')">💬 Ask Pets24x7 on WhatsApp</a>' +
           '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + esc(publicListingUrl(v)) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
         '</div>' +
       '</div>';
@@ -3140,6 +3141,7 @@
     document.getElementById('enqDisplayVendor').value = vendorName + (vendorCat ? ' (' + vendorCat + ')' : '');
     var mb = document.getElementById('enqMemberBenefit');
     if (mb) mb.innerHTML = memberBenefitHtml();
+    renderEnquiryQuota(vendorId);
 
     var petSel = document.getElementById('enqPetSelect');
     if (state.pets.length) {
@@ -3172,6 +3174,60 @@
     document.getElementById('enquiryModal').classList.remove('show');
   }
 
+  // ---- Monthly contact allowance (calls, WhatsApp, enquiries) ----
+  // Same rules as the public site: a listing already contacted this month is
+  // free; otherwise one contact is used; none left means the membership page.
+  function quotaAllows(listingId) {
+    var q = state.contactQuota;
+    if (!q || q.unlimited) return true;
+    var target = listingId || 'site';
+    return (q.unlocked || []).indexOf(target) !== -1 || q.remaining > 0;
+  }
+  function refreshContactQuota() {
+    return api.contactQuota().then(function(r) {
+      if (r && r.quota) { state.contactQuota = r.quota; if (typeof renderAccount === 'function') renderAccount(); }
+    }).catch(function() {});
+  }
+  function renderEnquiryQuota(listingId) {
+    var box = document.getElementById('enqQuota');
+    var btn = document.querySelector('#enquiryForm button[type="submit"]');
+    if (!box) return;
+    var q = state.contactQuota;
+    var blocked = false;
+    if (!q) box.innerHTML = '';
+    else if (q.unlimited) box.innerHTML = '<span style="color:#047857;">Unlimited contacts on your plan.</span>';
+    else if ((q.unlocked || []).indexOf(listingId || 'site') !== -1) box.innerHTML = '<span style="color:var(--text-muted);">You already contacted this business this month, so this is free.</span>';
+    else if (q.remaining > 0) box.innerHTML = '<span style="color:var(--text-muted);">Uses 1 of your ' + q.remaining + ' remaining contact' + (q.remaining === 1 ? '' : 's') + ' this month.</span>';
+    else {
+      blocked = true;
+      box.innerHTML = '<span style="color:#B45309; font-weight:600;">You have used all ' + q.limit + ' contacts included this month.</span> ' +
+        '<a href="#" onclick="closeEnquiryModal(); navigate(\'membership\'); return false;">Upgrade your membership</a>';
+    }
+    if (btn) btn.disabled = blocked;
+  }
+  function showPlanLimitPrompt() {
+    var q = state.contactQuota || {};
+    uiConfirm({
+      title: 'This month’s contacts are used up',
+      body: 'Your ' + (q.tier && q.tier !== 'FREE' ? q.tier.charAt(0) + q.tier.slice(1).toLowerCase() + ' membership' : 'free account') +
+        ' includes ' + (q.limit || '') + ' contacts a month (calls, WhatsApp and enquiries). Upgrade to keep contacting businesses now, or wait until the 1st.',
+      confirmLabel: 'See membership plans',
+      cancelLabel: 'Not now'
+    }).then(function(ok) { if (ok) navigate('membership'); });
+  }
+  // WhatsApp to Pets24x7 about a listing: one contact, like the public site.
+  function contactViaWhatsApp(e, listingId) {
+    if (!quotaAllows(listingId)) { e.preventDefault(); showPlanLimitPrompt(); return false; }
+    var q = state.contactQuota;
+    if (q && !q.unlimited && (q.unlocked || []).indexOf(listingId || 'site') === -1) {
+      q.unlocked = (q.unlocked || []).concat([listingId || 'site']);
+      q.used += 1; q.remaining = Math.max(0, q.remaining - 1);
+      api.contactSpend(listingId, 'whatsapp').then(refreshContactQuota).catch(function() {});
+    }
+    logListingTap(listingId, 'whatsapp_click');
+    return true;
+  }
+
   function submitEnquiry(e) {
     e.preventDefault();
     var notes = document.getElementById('enqNotes').value.trim();
@@ -3201,6 +3257,7 @@
 
     api.enquiryCreate(payload).then(function() {
       closeEnquiryModal();
+      refreshContactQuota();
       toast('Enquiry sent to ' + (payload.listingName || 'the business') + '.' + (payload.email ? ' A copy is on its way to your inbox.' : ''), 'ok');
       navigate('enquiries');
       // Refresh from server so the row shows its real persisted status.
@@ -3210,6 +3267,12 @@
         renderAccount();
       }).catch(function() { /* sent fine; the list refreshes on next load */ });
     }).catch(function(err) {
+      if (err && (err.status === 402 || err.code === 'plan_limit' || err.error === 'plan_limit')) {
+        closeEnquiryModal();
+        refreshContactQuota();
+        showPlanLimitPrompt();
+        return;
+      }
       toast('Could not send enquiry: ' + fmtErr(err), 'error');
     }).finally(function() {
       if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Send Enquiry'; }

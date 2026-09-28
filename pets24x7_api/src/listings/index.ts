@@ -5,7 +5,8 @@
 // The JSON files under ../pets24x7_new/data are now only a fallback for a fresh
 // database: if the table is empty at boot they are loaded and then written to
 // MySQL, so a new environment comes up with the full directory.
-
+
+
 import { isNotPetBusiness, plainText } from './pet-filter.js';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -592,6 +593,35 @@ export function listingsInCity(city: string, country?: string): ListingRecord[] 
 export function indexStats() {
   if (!statsCache) statsCache = computeIndexStats();
   return statsCache;
+}
+
+let placementCache: { at: number; value: { cities: Array<{ name: string; slug: string; count: number }>; categories: Array<{ name: string; slug: string }> } } | null = null;
+
+/**
+ * Cities (busiest first) and categories a Featured placement can go on, from
+ * the public index. Cached for 10 minutes.
+ */
+export function placementOptions() {
+  if (placementCache && Date.now() - placementCache.at < 600_000) return placementCache.value;
+  const cities = new Map<string, { name: string; slug: string; count: number }>();
+  const categories = new Map<string, { name: string; slug: string }>();
+  for (const item of byId.values()) {
+    if (item.hidden) continue;
+    const cs = item.city_slug;
+    if (item.city && cs) {
+      const c = cities.get(cs) ?? { name: item.city.trim(), slug: cs, count: 0 };
+      c.count++;
+      cities.set(cs, c);
+    }
+    const ks = item.category_slug;
+    if (item.category && ks && !categories.has(ks)) categories.set(ks, { name: item.category.trim(), slug: ks });
+  }
+  const value = {
+    cities: [...cities.values()].sort((a, b) => b.count - a.count).slice(0, 150),
+    categories: [...categories.values()].sort((a, b) => a.name.localeCompare(b.name)),
+  };
+  placementCache = { at: Date.now(), value };
+  return value;
 }
 
 /** Every listing in the index, hidden included: for admin figures. */
