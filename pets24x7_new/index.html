@@ -521,6 +521,72 @@
     .as-phone, .as-orbit, .as-kicker .dot, .as-v.on .as-wa, .as-caret { animation: none !important; }
     .as-v, .as-sheet, .as-float, .as-tap { transition: none !important; }
   }
+  /* ---- Pet-parent extras: hero pets, trust chips, 3 steps, numbers, FAQ ---- */
+  .traveler-hero .container { position: relative; }
+  .hero-pets { display: none; }
+  @media (min-width: 1100px) {
+    .hero-pets { display: block; position: absolute; right: 8px; top: -52px; width: 300px; height: auto; pointer-events: none; }
+  }
+  .hero-pets .hp-float { animation: hpRise 5s ease-in infinite; opacity: 0; }
+  .hero-pets .hp-float.d2 { animation-delay: 1.6s; } .hero-pets .hp-float.d3 { animation-delay: 3.2s; }
+  .hero-pets .hp-tail { transform-origin: 62px 172px; animation: hpWag .45s ease-in-out infinite alternate; }
+  .hero-pets .hp-dhead { transform-origin: 132px 160px; animation: hpTilt 5s ease-in-out infinite; }
+  .hero-pets .hp-blink { transform-origin: 132px 120px; animation: hpBlink 5s infinite; }
+  .hero-pets .hp-cblink { transform-origin: 242px 145px; animation: hpBlink 6s 1.3s infinite; }
+  .hero-pets .hp-ctail { transform-origin: 280px 204px; animation: hpSway 2.6s ease-in-out infinite alternate; }
+  .hero-pets .hp-chead { transform-origin: 242px 172px; animation: hpTilt 6s 2s ease-in-out infinite reverse; }
+  @keyframes hpWag { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+  @keyframes hpTilt { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(-7deg); } 90% { transform: rotate(4deg); } }
+  @keyframes hpBlink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+  @keyframes hpSway { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+  @keyframes hpRise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-80px); opacity: 0; } }
+
+  .hero-chips { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 20px; max-width: 980px; }
+  .hero-chips span { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: #fff;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); padding: 6px 12px; border-radius: 999px; }
+  .hero-chips svg { width: 15px; height: 15px; color: #FCD34D; flex-shrink: 0; }
+
+  .cat-item:hover .cat-icon { animation: catWiggle .5s ease-in-out; background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+  @keyframes catWiggle { 0%, 100% { transform: rotate(0) scale(1); } 30% { transform: rotate(-10deg) scale(1.1); } 60% { transform: rotate(8deg) scale(1.1); } }
+
+  .pp-steps { padding: 64px 0; background: linear-gradient(180deg, #fff 0%, #FFF7ED 100%); }
+  .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; position: relative; counter-reset: pp; }
+  .pp-grid::before { content: ""; position: absolute; top: 52px; left: 17%; right: 17%; border-top: 3px dashed #FDBA74; z-index: 0; }
+  .pp-step { text-align: center; position: relative; z-index: 1; padding: 0 8px; }
+  .pp-badge { width: 104px; height: 104px; margin: 0 auto 18px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 30px rgba(249,115,22,.18), inset 0 0 0 6px #FFEDD5; position: relative; transition: transform .25s; }
+  .pp-step:hover .pp-badge { transform: translateY(-6px) rotate(-4deg); }
+  .pp-badge svg { width: 46px; height: 46px; }
+  .pp-badge::after { counter-increment: pp; content: counter(pp); position: absolute; top: -2px; right: -2px; width: 30px; height: 30px; border-radius: 50%;
+    background: #F97316; color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; }
+  .pp-step h3 { font-size: 19px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+  .pp-step p { color: var(--text-muted); font-size: 15px; max-width: 300px; margin: 0 auto; }
+  .pp-cta { text-align: center; margin-top: 34px; }
+  .pp-cta a { display: inline-flex; align-items: center; gap: 8px; background: #F97316; color: #fff; font-weight: 700; padding: 13px 26px; border-radius: 999px;
+    box-shadow: 0 10px 24px rgba(249,115,22,.3); transition: transform .2s, box-shadow .2s; }
+  .pp-cta a:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(249,115,22,.38); }
+
+  .numbers { padding: 56px 0; background: linear-gradient(135deg, #1E3A8A, #2563EB); color: #fff; position: relative; overflow: hidden; }
+  .numbers::before, .numbers::after { content: ""; position: absolute; border-radius: 50%; background: rgba(255,255,255,.06); }
+  .numbers::before { width: 340px; height: 340px; left: -120px; top: -160px; } .numbers::after { width: 260px; height: 260px; right: -80px; bottom: -140px; }
+  .num-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; position: relative; z-index: 1; }
+  .num-card { text-align: center; padding: 22px 12px; border-radius: 18px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
+  .num-ic { width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 50%; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; }
+  .num-ic svg { width: 26px; height: 26px; color: #FCD34D; }
+  .num-card strong { display: block; font-size: clamp(26px, 3.6vw, 38px); font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .num-card span.lbl { font-size: 14px; color: rgba(255,255,255,.82); }
+
+  .pp-faq { background: var(--bg-alt); }
+  @media (max-width: 768px) {
+    .pp-grid { grid-template-columns: 1fr; gap: 30px; }
+    .pp-grid::before { top: 40px; bottom: 40px; left: 50%; right: auto; border-top: 0; border-left: 3px dashed #FDBA74; }
+    .num-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hero-chips span { font-size: 12.5px; padding: 5px 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-pets *, .cat-item:hover .cat-icon { animation: none !important; }
+    .hero-pets .hp-float { opacity: .9; }
+  }
 </style>
 </head>
 <body>
@@ -575,6 +641,48 @@
 <!-- PET-OWNER SEARCH HERO -->
 <section class="traveler-hero">
   <div class="container">
+    <svg class="hero-pets" viewBox="0 0 320 250" aria-hidden="true" focusable="false">
+      <circle cx="180" cy="150" r="104" fill="rgba(255,255,255,.10)"/>
+      <circle cx="180" cy="150" r="78" fill="rgba(255,255,255,.07)"/>
+      <ellipse cx="170" cy="228" rx="130" ry="10" fill="rgba(15,23,42,.18)"/>
+      <!-- floating hearts and paws -->
+      <g class="hp-float"><path transform="translate(192 70)" d="M0 4C0-2 8-4 10 2c2-6 10-4 10 2 0 7-10 12-10 12S0 11 0 4z" fill="#FDA4AF"/></g>
+      <g class="hp-float d2" fill="#FDE68A"><circle cx="40" cy="96" r="6"/><circle cx="31" cy="85" r="3"/><circle cx="38" cy="81" r="3"/><circle cx="46" cy="82" r="3"/><circle cx="51" cy="89" r="3"/></g>
+      <g class="hp-float d3"><path transform="translate(286 92) scale(.8)" d="M0 4C0-2 8-4 10 2c2-6 10-4 10 2 0 7-10 12-10 12S0 11 0 4z" fill="#FCA5A5"/></g>
+      <!-- dog -->
+      <path class="hp-tail" d="M62 172 q-30 -8 -32 -42" stroke="#D97706" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <ellipse cx="96" cy="180" rx="46" ry="32" fill="#F59E0B"/>
+      <ellipse cx="106" cy="192" rx="26" ry="15" fill="#FCD34D"/>
+      <rect x="68" y="192" width="16" height="36" rx="8" fill="#D97706"/>
+      <rect x="112" y="194" width="16" height="34" rx="8" fill="#F59E0B"/>
+      <g class="hp-dhead">
+        <ellipse cx="104" cy="124" rx="12" ry="25" fill="#B45309" transform="rotate(22 104 124)"/>
+        <ellipse cx="160" cy="124" rx="12" ry="25" fill="#B45309" transform="rotate(-22 160 124)"/>
+        <circle cx="132" cy="128" r="33" fill="#F59E0B"/>
+        <ellipse cx="132" cy="144" rx="18" ry="13" fill="#FDE68A"/>
+        <g class="hp-blink"><circle cx="120" cy="120" r="4.5" fill="#1F2937"/><circle cx="144" cy="120" r="4.5" fill="#1F2937"/><circle cx="121.5" cy="118.5" r="1.4" fill="#fff"/><circle cx="145.5" cy="118.5" r="1.4" fill="#fff"/></g>
+        <ellipse cx="132" cy="137" rx="6" ry="4.5" fill="#1F2937"/>
+        <path d="M125 146 q7 6 14 0" stroke="#1F2937" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M128.5 148 q3.5 12 7 0 z" fill="#F472B6"/>
+        <path d="M108 156 q24 14 48 0" stroke="#EF4444" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <circle cx="132" cy="166" r="5" fill="#FACC15"/>
+      </g>
+      <!-- cat -->
+      <path class="hp-ctail" d="M280 204 q32 -10 22 -52 q-4 -14 -14 -12" stroke="#94A3B8" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <ellipse cx="248" cy="196" rx="36" ry="30" fill="#CBD5E1"/>
+      <path d="M232 176 q6 8 0 16 M250 172 q6 9 0 18 M266 178 q5 8 0 15" stroke="#94A3B8" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="232" cy="224" rx="11" ry="6" fill="#E2E8F0"/>
+      <ellipse cx="258" cy="225" rx="11" ry="6" fill="#E2E8F0"/>
+      <g class="hp-chead">
+        <path d="M219 138 l3 -32 l22 20 z" fill="#CBD5E1"/><path d="M265 138 l-3 -32 l-22 20 z" fill="#CBD5E1"/>
+        <path d="M224 128 l1.5 -15 l10 9 z" fill="#FBCFE8"/><path d="M260 128 l-1.5 -15 l-10 9 z" fill="#FBCFE8"/>
+        <circle cx="242" cy="148" r="28" fill="#CBD5E1"/>
+        <g class="hp-cblink"><ellipse cx="231" cy="145" rx="4.5" ry="6" fill="#16A34A"/><ellipse cx="253" cy="145" rx="4.5" ry="6" fill="#16A34A"/><ellipse cx="231" cy="145" rx="1.6" ry="5" fill="#0F172A"/><ellipse cx="253" cy="145" rx="1.6" ry="5" fill="#0F172A"/></g>
+        <path d="M238.5 155 h7 l-3.5 4 z" fill="#F472B6"/>
+        <path d="M242 159 q-4 5 -8 2 M242 159 q4 5 8 2" stroke="#475569" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <path d="M226 156 h-16 M226 160 l-15 4 M258 156 h16 M258 160 l15 4" stroke="#64748B" stroke-width="1.3" stroke-linecap="round"/>
+      </g>
+    </svg>
     <h1>Find trusted pet services near you — vets, groomers, boarding & more</h1>
     <p class="lead"><span data-stat="listings">34,169</span> pet businesses across <span data-stat="cities">2,212</span> cities in India &amp; the USA. Google ratings where available. Zero booking fees. Enquire on WhatsApp and we connect you.</p>
 
@@ -612,6 +720,12 @@
         Search
       </button>
     </form>
+    <div class="hero-chips">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Free to search</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Zero booking fees</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Google ratings where available</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Enquire on WhatsApp</span>
+    </div>
   </div>
 </section>
 
@@ -634,6 +748,45 @@
       <a class="cat-item" data-cat="pet-taxi-transport" href="/in/mumbai/pet-taxi-transport/"><span class="cat-icon">🚕</span><span class="cat-info"><strong>Pet Taxi</strong><span>500+ listings</span></span></a>
       <a class="cat-item" data-cat="pet-relocation-services" href="/in/mumbai/pet-relocation-services/"><span class="cat-icon">✈️</span><span class="cat-info"><strong>Pet Relocation</strong><span>1,400+ listings</span></span></a>
     </div>
+  </div>
+</section>
+
+<!-- PET PARENTS: HOW IT WORKS -->
+<section class="pp-steps" id="how-pets">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow" style="color:#EA580C;">For pet parents</span>
+      <h2>Happy pet, happy you, in 3 easy steps</h2>
+      <p>No apps to install, no booking fees. Just the right care for your dog, cat or bird.</p>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><circle cx="21" cy="21" r="12" stroke="#2563EB" stroke-width="4"/><path d="M30 30l9 9" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/><circle cx="17" cy="19" r="2" fill="#F97316"/><circle cx="21" cy="16" r="2" fill="#F97316"/><circle cx="25" cy="19" r="2" fill="#F97316"/><ellipse cx="21" cy="24.5" rx="4" ry="3" fill="#F97316"/></svg></div>
+        <h3>Search near you</h3>
+        <p>Pick your city and what your pet needs: a vet, groomer, boarding, walker, trainer or pet taxi.</p>
+      </div>
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><rect x="7" y="9" width="34" height="30" rx="6" stroke="#2563EB" stroke-width="4"/><path d="M15 20h18M15 28h11" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/><path d="M36 26l2 4 4.5.6-3.3 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.3-3.1 4.5-.6z" fill="#F97316"/></svg></div>
+        <h3>Compare &amp; shortlist</h3>
+        <p>See services, photos, timings and Google ratings side by side before you choose.</p>
+      </div>
+      <div class="pp-step">
+        <div class="pp-badge"><svg viewBox="0 0 48 48" fill="none"><path d="M24 6a17 17 0 0 0-14.6 25.7L7 41l9.6-2.4A17 17 0 1 0 24 6z" stroke="#16A34A" stroke-width="4" stroke-linejoin="round"/><path d="M17 24l5 5 9-10" stroke="#F97316" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>Enquire on WhatsApp</h3>
+        <p>Send one message. The Pets24x7 team connects you with the business and helps you confirm a slot.</p>
+      </div>
+    </div>
+    <div class="pp-cta"><a href="#searchForm" onclick="setTimeout(function(){var q=document.getElementById('searchCity');q&&q.focus();},350)">Find care for my pet →</a></div>
+  </div>
+</section>
+
+<!-- NUMBERS: live counts from the API, counted up when they come into view -->
+<section class="numbers" aria-label="Pets24x7 in numbers">
+  <div class="container num-grid">
+    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div><strong data-stat="listings" data-count>34,169</strong><span class="lbl">Pet businesses listed</span></div>
+    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div><strong data-stat="cities" data-count>2,212</strong><span class="lbl">Cities in India &amp; USA</span></div>
+    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div><strong data-stat="categories" data-count>16</strong><span class="lbl">Kinds of pet service</span></div>
+    <div class="num-card"><div class="num-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg></div><strong>0</strong><span class="lbl">Booking fees, ever</span></div>
   </div>
 </section>
 
@@ -774,6 +927,23 @@
           <div class="as-glare"></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- PET PARENTS: FAQ -->
+<section id="faq-pets" class="pp-faq">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-eyebrow" style="color:#EA580C;">Pet parents ask</span>
+      <h2>Good questions, straight answers</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item" open><summary>Is Pets24x7 free for pet parents?</summary><div class="faq-answer">Searching and browsing are free, and there is never a booking fee. A free account shows the contact details of up to 3 businesses a month; the Bronze, Silver and Gold plans on the <a href="/membership/" style="color:var(--primary);font-weight:600;">membership page</a> unlock more.</div></details>
+      <details class="faq-item"><summary>How do I contact a vet, groomer or boarder?</summary><div class="faq-answer">Tap <strong>Enquire</strong> or <strong>WhatsApp</strong> on any listing. Your message reaches the Pets24x7 team on WhatsApp, and we connect you with the business and help you confirm a slot.</div></details>
+      <details class="faq-item"><summary>Are the star ratings real?</summary><div class="faq-answer">Ratings come from the business&rsquo;s own Google profile. We show stars only when there is a review count behind them, so you can open the Google reviews and read them yourself.</div></details>
+      <details class="faq-item"><summary>Which cities do you cover?</summary><div class="faq-answer"><span data-stat="listings">34,169</span> pet businesses across <span data-stat="cities">2,212</span> cities in India and the USA, and growing. Type your city in the search box above to see what is near you.</div></details>
+      <details class="faq-item"><summary>Is there an emergency option?</summary><div class="faq-answer">Yes. Choose <strong>Emergency Vet</strong> in the service list to see animal hospitals near you. In an emergency, call the clinic directly from its listing rather than waiting for a reply.</div></details>
     </div>
   </div>
 </section>
@@ -1303,6 +1473,28 @@
 
   function fmt(v) { return Number(v || 0).toLocaleString('en-IN'); }
 
+  // The big numbers band counts up from zero the first time it scrolls into view.
+  function countUp(d) {
+    var els = document.querySelectorAll('[data-count][data-stat]');
+    if (!els.length || !('IntersectionObserver' in window)) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        io.unobserve(e.target);
+        var el = e.target, to = Number(d[el.getAttribute('data-stat')] || 0), t0 = null;
+        if (!to) return;
+        (function step(t) {
+          if (t0 === null) t0 = t;
+          var k = Math.min(1, (t - t0) / 1400), eased = 1 - Math.pow(1 - k, 3);
+          el.textContent = fmt(Math.round(to * eased));
+          if (k < 1) requestAnimationFrame(step);
+        })(performance.now());
+      });
+    }, { threshold: 0.4 });
+    Array.prototype.forEach.call(els, function (el) { io.observe(el); });
+  }
+
   fetch(BASE + '/api/listings/_stats', { credentials: 'omit' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
@@ -1319,6 +1511,7 @@
         var tpl = el.getAttribute('data-stat-template');
         el.textContent = tpl ? tpl.replace('{n}', v) : v;
       });
+      countUp(d);
     })
     .catch(function () {});
 })();
