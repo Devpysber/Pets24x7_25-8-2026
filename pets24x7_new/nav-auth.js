@@ -507,12 +507,13 @@
     if (/^1\d{10}$/.test(d)) return '+1 ' + d.slice(1, 4) + '-' + d.slice(4, 7) + '-' + d.slice(7);
     return p;
   }
-  function showNumber(btn, phone) {
+  // `fallback`: the business has no number yet, so it is Pets24x7's own line.
+  function showNumber(btn, phone, fallback) {
     var a = document.createElement('a');
     a.className = btn.className;
     a.href = 'tel:' + String(phone).replace(/[^\d+]/g, '');
     a.setAttribute('data-p24-direct', '');
-    a.textContent = '📞 Call ' + prettyPhone(phone);
+    a.textContent = fallback ? '📞 ' + prettyPhone(phone) : '📞 Call ' + prettyPhone(phone);
     btn.parentNode.replaceChild(a, btn);
   }
   function revealCall(btn, quiet) {
@@ -528,11 +529,12 @@
       .then(function (x) {
         btn.disabled = false;
         if (x.d.quota) callQuota = x.d.quota;
-        if (quiet) { if (x.d.ok && x.d.phone) showNumber(btn, x.d.phone); return; }
+        if (quiet) { if (x.d.ok && x.d.phone) showNumber(btn, x.d.phone, x.d.fallback); return; }
         if (x.status === 401) { showGate('call', 'signin'); return; }
         if (x.status === 402) { showGate('call', 'callLimit'); return; }
         if (!x.d.ok || !x.d.phone) { toast(x.d.message || 'Could not get the number. Please try again.'); return; }
-        showNumber(btn, x.d.phone);
+        showNumber(btn, x.d.phone, x.d.fallback);
+        if (x.d.fallback) { toast('This business has not added its number yet. Call Pets24x7 and we will connect you.'); return; }
         var q = x.d.quota;
         if (!x.d.alreadyUnlocked && q && !q.unlimited && authRole === 'pet_parent') {
           toast(q.remaining === 0

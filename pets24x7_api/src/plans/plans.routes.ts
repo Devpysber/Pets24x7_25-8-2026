@@ -89,9 +89,11 @@ accessRouter.post(
 
 // ---------------------------------------------------------------------------
 // Direct calls: the "Or call" button on a listing reveals the business's own
-// number from the directory (listings.phone, else its WhatsApp, else the
-// claiming business's). Pages never carry it: it is served here, one listing
-// at a time, to signed-in people within their plan's monthly calls.
+// number: the claiming business's account number once it has claimed the
+// listing (approved), else the directory's (listings.phone, else its
+// WhatsApp). With none of those, Pets24x7's own line is shown and no call is
+// spent. Pages never carry the number: it is served here, one listing at a
+// time, to signed-in people within their plan's monthly calls.
 // ---------------------------------------------------------------------------
 accessRouter.get(
   '/call',
@@ -103,23 +105,28 @@ accessRouter.get(
   }),
 );
 
+// Pets24x7's own line: what "Or call" dials when a business has no number.
+const PETS24X7_PHONE = '+919930090487';
+
+const usable = (raw: string | null | undefined): string => {
+  const v = (raw ?? '').trim();
+  return v.replace(/\D/g, '').length >= 7 ? v : '';
+};
+
 const CallBody = z.object({ listingId: z.string().min(1).max(191), path: z.string().max(512).optional() });
 
 async function listingNumber(listingId: string): Promise<string | null> {
   const l = getListingById(listingId);
   if (!l) return null;
   const country = l.country === 'US' ? 'US' : 'IN';
-  let raw = (l.phone ?? '').trim();
+  const v = await prisma.vendor.findUnique({ where: { listingId }, select: { phone: true, whatsapp: true, status: true, claimedAt: true } });
+  let raw = v && v.claimedAt && isVendorApproved(v.status) ? usable(v.phone) || usable(v.whatsapp) : '';
+  if (!raw) raw = usable(l.phone);
   if (!raw) {
     const row = await prisma.listing.findUnique({ where: { id: listingId }, select: { phone: true, whatsapp: true } });
-    raw = (row?.phone || row?.whatsapp || '').trim();
+    raw = usable(row?.phone) || usable(row?.whatsapp);
   }
-  if (!raw) {
-    const v = await prisma.vendor.findUnique({ where: { listingId }, select: { phone: true, whatsapp: true } });
-    raw = (v?.phone || v?.whatsapp || '').trim();
-  }
-  if (raw.replace(/\D/g, '').length < 7) return null;
-  return normalizePhone(raw, country);
+  return raw ? normalizePhone(raw, country) : null;
 }
 
 /**
@@ -157,7 +164,9 @@ accessRouter.post(
     if (!who) return res.status(401).json({ ok: false, error: 'sign_in_required', message: 'Sign in to call businesses.' });
     if (!getPublicListingById(body.listingId)) throw new NotFoundError('That business was not found');
     const phone = await listingNumber(body.listingId);
-    if (!phone) return res.status(404).json({ ok: false, error: 'no_phone', message: 'This business has no phone number listed. Send an enquiry instead.' });
+    // No number yet (until the business claims the listing and adds one):
+    // Pets24x7 takes the call, and no call is spent.
+    if (!phone) return res.json({ ok: true, phone: PETS24X7_PHONE, fallback: true, alreadyUnlocked: true });
     if (who.role !== 'pet_parent') return res.json({ ok: true, phone, quota: unlimitedQuota(who.role.toUpperCase()) });
 
     const result = await unlockCall(who.id, body.listingId);

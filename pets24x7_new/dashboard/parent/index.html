@@ -3243,7 +3243,7 @@
       a.className = btn.className;
       a.style.cssText = btn.style.cssText;
       a.href = 'tel:' + String(r.phone).replace(/[^\d+]/g, '');
-      a.textContent = '📞 Call ' + r.phone;
+      a.textContent = r.fallback ? '📞 +91 99300 90487' : '📞 Call ' + r.phone;
       btn.parentNode.replaceChild(a, btn);
       var q = r.quota;
       if (!r.alreadyUnlocked && q && !q.unlimited) {
