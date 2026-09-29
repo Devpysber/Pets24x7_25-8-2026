@@ -149,6 +149,8 @@
   .submit-wa svg { width: 20px; height: 20px; }
   .secondary-call { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; color: var(--primary); font-weight: 700; font-size: 14px; transition: all 0.2s; }
   .secondary-call:hover { background: var(--primary-light); border-color: var(--primary); }
+  button.secondary-call { width: 100%; background: none; font-family: inherit; cursor: pointer; }
+  a.secondary-call { text-decoration: none; }
 
   .trust-points { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
   .trust-points li { list-style: none; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; color: var(--text-muted); }
@@ -1016,7 +1018,7 @@
                   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg>\
                   Send Enquiry on WhatsApp\
                 </button>\
-                ' + (biz.phone ? '<a href="tel:' + escapeAttr(String(biz.phone).replace(/\s+/g,"")) + '" class="secondary-call">📞 Or call ' + esc(biz.phone) + '</a>' : '<a href="tel:+919930090487" class="secondary-call">📞 Or call Pets24x7 <span data-p24-phone="+91 99300 90487">+91 99300 •••••</span></a>') + '\
+                <button type="button" class="secondary-call" data-p24-call="' + escapeAttr(biz.id) + '">📞 Or call the business <span class="p24-call-num">· see number</span></button>\
               </form>\
               <ul class="trust-points">\
                 <li>' + (biz.claimed ? 'Owner-managed listing' : 'Listed from its Google Business profile') + '</li>\

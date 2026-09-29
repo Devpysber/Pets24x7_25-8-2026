@@ -205,6 +205,8 @@
     vendorSubMe:       function ()           { return req('GET',  '/api/vendor/subscriptions/me'); },
     contactQuota:      function ()           { return req('GET',  '/api/access/contact'); },
     contactSpend:      function (target, kind) { return req('POST', '/api/access/contact', { target: target || undefined, kind: kind }); },
+    callQuota:         function ()           { return req('GET',  '/api/access/call'); },
+    revealCall:        function (listingId)  { return req('POST', '/api/access/call', { listingId: listingId, path: location.pathname }); },
     vendorPlanSlots:      function ()                  { return req('GET',    '/api/vendor/plan-featured'); },
     vendorPlanSlotPlace:  function (citySlug, catSlug) { return req('POST',   '/api/vendor/plan-featured', { citySlug: citySlug, categorySlug: catSlug || null }); },
     vendorPlanSlotRemove: function (id)                { return req('DELETE', '/api/vendor/plan-featured/' + encodeURIComponent(id)); },

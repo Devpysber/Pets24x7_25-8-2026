@@ -324,7 +324,7 @@
   // dashboard (the card sends them there with the plan pre-selected).
   var audience = 'parent';
   var vendorSignedIn = false, adminSignedIn = false;
-  var bizPlans = [], vendorSub = null, freeContacts = null;
+  var bizPlans = [], vendorSub = null, freeContacts = null, freeCalls = null;
   var HERO = {
     parent: ['Pets24x7 Membership', 'Pet care, sorted for you.',
       'Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.'],
@@ -405,11 +405,14 @@
     else if (vendorSignedIn || adminSignedIn) label = 'For pet parents';
     else { label = 'Create free account →'; href = SIGN_IN_URL; }
     var perks = [
-      freeContacts + ' business contact' + (freeContacts === 1 ? '' : 's') + ' a month (call, WhatsApp, enquiries)',
+      freeContacts + ' business contact' + (freeContacts === 1 ? '' : 's') + ' a month (WhatsApp & enquiries)',
+    ].concat(freeCalls ? [
+      freeCalls + ' free direct call' + (freeCalls === 1 ? '' : 's') + ' a month: see and call the business’s own number'
+    ] : []).concat([
       'Search every vet, groomer, boarder and trainer',
       'Save businesses and track your enquiries',
       'Pet profiles and vaccination reminders'
-    ].map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    ]).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
     return '<article class="plan free' + (current ? ' current' : '') + '">' +
       (current ? '<span class="badge" style="background:linear-gradient(135deg,#34D399,#10B981)">✓ Current plan</span>' : '') +
       '<div class="tier free">FREE</div>' +
@@ -706,6 +709,8 @@
     allPlans = results[0].plans || [];
     var freeN = results[0].freeContactsPerMonth;
     freeContacts = (typeof freeN === 'number' && freeN >= 0) ? freeN : null;
+    var freeC = results[0].freeCallsPerMonth;
+    freeCalls = (typeof freeC === 'number' && freeC > 0) ? freeC : null;
     signedIn = (results[1] || {}).role === 'pet_parent';
     vendorSignedIn = (results[2] || {}).role === 'vendor';
     adminSignedIn = (results[3] || {}).role === 'admin';

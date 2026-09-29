@@ -361,7 +361,8 @@
 
   var gateBox = null;
   function showGate(kind, mode) {
-    var upgrade = mode === 'upgrade';
+    var callLimit = mode === 'callLimit';
+    var upgrade = mode === 'upgrade' || callLimit;
     track(upgrade ? 'plan_limit' : 'contact_locked', { target: kind });
     if (!gateBox) {
       var st = document.createElement('style');
@@ -403,7 +404,18 @@
     var next = encodeURIComponent(nextUrl());
     var go = gateBox.querySelector('[data-gate-go]');
     var biz = gateBox.querySelector('[data-gate-biz]');
-    if (upgrade) {
+    if (callLimit) {
+      var cq = callQuota || {};
+      var cplan = cq.tier && cq.tier !== 'FREE'
+        ? cq.tier.charAt(0) + cq.tier.slice(1).toLowerCase() + ' membership' : 'free account';
+      gateBox.querySelector('#p24GateTitle').textContent = 'This month’s free calls are used up';
+      gateBox.querySelector('#p24GateText').textContent =
+        'Your ' + cplan + ' includes ' + (cq.limit != null ? cq.limit : '') + ' direct calls a month, and you have used them all. ' +
+        'Buy a membership plan to see and call more businesses now, or send this business an enquiry on WhatsApp instead.';
+      go.textContent = 'See membership plans';
+      go.setAttribute('href', '/membership/?next=' + next + '&utm_source=call_limit');
+      biz.hidden = true;
+    } else if (upgrade) {
       var plan = quota && quota.tier && quota.tier !== 'FREE'
         ? quota.tier.charAt(0) + quota.tier.slice(1).toLowerCase() + ' membership' : 'free account';
       gateBox.querySelector('#p24GateTitle').textContent = 'This month’s contacts are used up';
@@ -418,6 +430,8 @@
       gateBox.querySelector('#p24GateTitle').textContent = 'Sign in to contact';
       gateBox.querySelector('#p24GateText').textContent = kind === 'form'
         ? 'Sign in to send this enquiry on WhatsApp. It is free and takes under a minute — what you typed is kept.'
+        : kind === 'call'
+        ? 'Sign in to see this business’s number. Free accounts include a few direct calls every month.'
         : 'Phone numbers and WhatsApp are available to signed-in members. It is free and takes under a minute.';
       go.textContent = 'Sign in / Create free account';
       go.setAttribute('href', '/parent-login/?next=' + next);
@@ -440,6 +454,8 @@
   window.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!a) return;
+    // A business number revealed by the call button: already paid for.
+    if (a.hasAttribute('data-p24-direct')) { track('phone_click'); return; }
     var href = a.getAttribute('href') || '';
     var kind = contactKind(href);
     if (!kind) return;
@@ -477,6 +493,80 @@
     });
     return null;
   };
+
+  // ---- Direct calls ----
+  // "Or call the business" (<button data-p24-call="<listing id>">) reveals the
+  // business's own number from the directory. The page never carries it:
+  // /api/access/call hands it over to a signed-in person, spending one of the
+  // plan's direct calls a month (the same business again that month is free).
+  // Once shown it becomes a tel: link.
+  var callQuota = null;
+  function prettyPhone(p) {
+    var d = String(p).replace(/\D/g, '');
+    if (/^91\d{10}$/.test(d)) return '+91 ' + d.slice(2, 7) + ' ' + d.slice(7);
+    if (/^1\d{10}$/.test(d)) return '+1 ' + d.slice(1, 4) + '-' + d.slice(4, 7) + '-' + d.slice(7);
+    return p;
+  }
+  function showNumber(btn, phone) {
+    var a = document.createElement('a');
+    a.className = btn.className;
+    a.href = 'tel:' + String(phone).replace(/[^\d+]/g, '');
+    a.setAttribute('data-p24-direct', '');
+    a.textContent = '📞 Call ' + prettyPhone(phone);
+    btn.parentNode.replaceChild(a, btn);
+  }
+  function revealCall(btn, quiet) {
+    if (btn.disabled) return;
+    var id = btn.getAttribute('data-p24-call');
+    btn.disabled = true;
+    fetch(BASE + '/api/access/call', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ listingId: id, path: location.pathname })
+    })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d || {} }; }); })
+      .then(function (x) {
+        btn.disabled = false;
+        if (x.d.quota) callQuota = x.d.quota;
+        if (quiet) { if (x.d.ok && x.d.phone) showNumber(btn, x.d.phone); return; }
+        if (x.status === 401) { showGate('call', 'signin'); return; }
+        if (x.status === 402) { showGate('call', 'callLimit'); return; }
+        if (!x.d.ok || !x.d.phone) { toast(x.d.message || 'Could not get the number. Please try again.'); return; }
+        showNumber(btn, x.d.phone);
+        var q = x.d.quota;
+        if (!x.d.alreadyUnlocked && q && !q.unlimited && authRole === 'pet_parent') {
+          toast(q.remaining === 0
+            ? 'That was your last direct call included this month.'
+            : q.remaining + ' of ' + q.limit + ' direct calls left this month on your plan.');
+        }
+      })
+      .catch(function () { btn.disabled = false; if (!quiet) toast('Could not get the number. Please check your connection.'); });
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button[data-p24-call]') : null;
+    if (!btn) return;
+    e.preventDefault();
+    whenAuthKnown(function () {
+      if (!authRole) { showGate('call', 'signin'); return; }
+      revealCall(btn, false);
+    });
+  });
+  // A business already called this month shows its number straight away.
+  function revealKnownCalls() {
+    var btns = document.querySelectorAll('button[data-p24-call]');
+    if (!btns.length) return;
+    fetch(BASE + '/api/access/call', { credentials: 'include', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var q = d && d.quota;
+        if (!q) return;
+        callQuota = q;
+        Array.prototype.forEach.call(btns, function (b) {
+          if ((q.unlimited && authRole !== 'pet_parent') || (q.unlocked || []).indexOf(b.getAttribute('data-p24-call')) !== -1) revealCall(b, true);
+        });
+      })
+      .catch(function () {});
+  }
 
   function saveDraft(form) {
     try {
@@ -618,6 +708,9 @@
       track('page_view', { title: (document.title || '').slice(0, 200) });
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreDraft);
       else restoreDraft();
+      // listing.html builds its card after load; give it a moment.
+      if (document.readyState === 'complete') setTimeout(revealKnownCalls, 300);
+      else window.addEventListener('load', function () { setTimeout(revealKnownCalls, 300); });
     }
     var ws = authWaiters; authWaiters = [];
     ws.forEach(function (fn) { try { fn(); } catch (e) {} });

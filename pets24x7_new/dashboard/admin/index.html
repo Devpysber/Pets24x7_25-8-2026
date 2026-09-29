@@ -9225,9 +9225,14 @@
       // Whole tables are built here: the page empties any static table body it
       // finds with no rows, which took the input row with it.
       document.getElementById('plParentBox').innerHTML =
-        '<table class="data-table"><thead><tr><th>Free account</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody><tr>' +
+        '<table class="data-table"><thead><tr><th>Per month</th><th>Free account</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody><tr>' +
+        '<td style="font-weight:700;">Contacts (WhatsApp, enquiries)</td>' +
         PL_PARENT.map(function(t) {
           return '<td data-label="' + t + '">' + plInput('plP_' + t, l.parent[t].contactsPerMonth) + '</td>';
+        }).join('') + '</tr><tr>' +
+        '<td style="font-weight:700;">Direct calls (business’s own number)</td>' +
+        PL_PARENT.map(function(t) {
+          return '<td data-label="' + t + '">' + plInput('plPC_' + t, l.parent[t].callsPerMonth) + '</td>';
         }).join('') + '</tr></tbody></table>';
       document.getElementById('plVendorBox').innerHTML =
         '<table class="data-table"><thead><tr><th>Plan</th><th>Leads with contact / month</th><th>Photos</th><th>Review requests / day</th><th>Free Featured slots</th></tr></thead><tbody>' +
@@ -9272,7 +9277,7 @@
     var msg = document.getElementById('plMsg');
     var limits = { parent: {}, vendor: {} }, bad = null;
     function read(id) { var n = plNum(document.getElementById(id).value); if (n === null) bad = id; return n; }
-    PL_PARENT.forEach(function(t) { limits.parent[t] = { contactsPerMonth: read('plP_' + t) }; });
+    PL_PARENT.forEach(function(t) { limits.parent[t] = { contactsPerMonth: read('plP_' + t), callsPerMonth: read('plPC_' + t) }; });
     PL_VENDOR.forEach(function(t) {
       limits.vendor[t] = {
         leadsPerMonth: read('plV_' + t + '_leads'),

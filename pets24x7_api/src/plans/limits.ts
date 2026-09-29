@@ -17,7 +17,15 @@ export const UNLIMITED = -1;
 export type ParentTier = 'FREE' | 'BRONZE' | 'SILVER' | 'GOLD';
 export type VendorTier = 'BASIC' | 'SILVER' | 'GOLD' | 'DIAMOND';
 
-export interface ParentLimits { contactsPerMonth: number }
+export interface ParentLimits {
+  contactsPerMonth: number;
+  /**
+   * Businesses whose own number (the listing's phone in the directory) the
+   * parent may reveal and call directly each month. Counted apart from
+   * contacts: WhatsApp enquiries still go through Pets24x7's own number.
+   */
+  callsPerMonth: number;
+}
 export interface VendorLimits {
   leadsPerMonth: number;
   photos: number;
@@ -39,10 +47,10 @@ export const VENDOR_TIERS: VendorTier[] = ['BASIC', 'SILVER', 'GOLD', 'DIAMOND']
 
 export const DEFAULT_LIMITS: PlanLimits = {
   parent: {
-    FREE: { contactsPerMonth: 3 },
-    BRONZE: { contactsPerMonth: 30 },
-    SILVER: { contactsPerMonth: 100 },
-    GOLD: { contactsPerMonth: UNLIMITED },
+    FREE: { contactsPerMonth: 3, callsPerMonth: 3 },
+    BRONZE: { contactsPerMonth: 30, callsPerMonth: 25 },
+    SILVER: { contactsPerMonth: 100, callsPerMonth: 75 },
+    GOLD: { contactsPerMonth: UNLIMITED, callsPerMonth: UNLIMITED },
   },
   vendor: {
     BASIC: { leadsPerMonth: 5, photos: 2, reviewRequestsPerDay: 5, featuredSlots: 0 },
@@ -74,7 +82,9 @@ export function sanitizeLimits(input: unknown): PlanLimits {
   const out: PlanLimits = JSON.parse(JSON.stringify(DEFAULT_LIMITS));
   for (const t of PARENT_TIERS) {
     const p = src.parent?.[t];
-    if (p) out.parent[t].contactsPerMonth = num(p.contactsPerMonth, out.parent[t].contactsPerMonth);
+    if (!p) continue;
+    out.parent[t].contactsPerMonth = num(p.contactsPerMonth, out.parent[t].contactsPerMonth);
+    out.parent[t].callsPerMonth = num(p.callsPerMonth, out.parent[t].callsPerMonth);
   }
   for (const t of VENDOR_TIERS) {
     const v = src.vendor?.[t];
@@ -153,8 +163,13 @@ export function monthRange(key: string = monthKey()): { start: Date; end: Date }
 // Plan-card copy, generated from the limits.
 // ---------------------------------------------------------------------------
 export function contactsLine(n: number): string {
-  if (n === UNLIMITED) return 'Unlimited business contacts (call, WhatsApp, enquiries)';
-  return `${n} business contacts a month (call, WhatsApp, enquiries)`;
+  if (n === UNLIMITED) return 'Unlimited business contacts (WhatsApp & enquiries)';
+  return `${n} business contacts a month (WhatsApp & enquiries)`;
+}
+
+export function callsLine(n: number): string {
+  if (n === UNLIMITED) return 'Unlimited direct calls: see and call any business’s own number';
+  return `${n} direct call${n === 1 ? '' : 's'} a month: see and call the business’s own number`;
 }
 
 export function leadsLine(n: number): string {
@@ -162,7 +177,7 @@ export function leadsLine(n: number): string {
   return `${n} customer leads a month with full contact details`;
 }
 
-const PARENT_CONTACT_LINE = /business contacts/i;
+const PARENT_CONTACT_LINE = /business contacts|direct calls?/i;
 
 export function decorateParentPlan<T extends { tier?: unknown; perks?: unknown }>(plan: T, limits: PlanLimits): T {
   const tier = normalizeParentTier(plan.tier);
@@ -172,7 +187,8 @@ export function decorateParentPlan<T extends { tier?: unknown; perks?: unknown }
   const rest = perks
     .filter((p) => !PARENT_CONTACT_LINE.test(p))
     .map((p) => (/^cancel any ?time$/i.test(p.trim()) ? 'No auto-renewal: renew only if you want to' : p));
-  return { ...plan, perks: [contactsLine(limits.parent[tier].contactsPerMonth), ...rest] };
+  const l = limits.parent[tier];
+  return { ...plan, perks: [contactsLine(l.contactsPerMonth), callsLine(l.callsPerMonth), ...rest] };
 }
 
 // Lines the vendor catalogue used to carry that the limits now write instead.

@@ -200,6 +200,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .submit-wa svg{width:20px;height:20px}
 .secondary-call{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;margin-top:10px;border:1px solid var(--border);border-radius:10px;color:var(--primary);font-weight:700;font-size:14px;transition:all .2s}
 .secondary-call:hover{background:var(--primary-light);border-color:var(--primary)}
+button.secondary-call{width:100%;background:none;font-family:inherit;cursor:pointer}
+a.secondary-call{text-decoration:none}
 .trust-points{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
 .trust-points li{list-style:none;display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text-muted)}
 .trust-points li::before{content:"✓";color:var(--success);font-weight:800}

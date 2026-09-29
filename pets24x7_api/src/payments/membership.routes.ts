@@ -51,6 +51,7 @@ membershipRouter.get(
       ok: true,
       plans: plans.map((p) => decorateParentPlan(p, limits)),
       freeContactsPerMonth: limits.parent.FREE.contactsPerMonth,
+      freeCallsPerMonth: limits.parent.FREE.callsPerMonth,
     });
   }),
 );

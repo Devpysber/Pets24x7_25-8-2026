@@ -30,7 +30,7 @@ import {
   profileUpdatedEmail,
 } from '../mail/action-templates.js';
 import { isRecommendable } from '../feed/reco/city-index.js';
-import { contactQuota } from '../plans/entitlements.js';
+import { callQuota, contactQuota } from '../plans/entitlements.js';
 import { saveTrash } from '../trash/trash.js';
 
 export const parentDashboardRouter = Router();
@@ -230,8 +230,9 @@ parentDashboardRouter.get(
       nearbyDeals,
       upcomingEvents,
       membership,
-      // Contacts (calls, WhatsApp, enquiries) included this month by the plan.
+      // Contacts (WhatsApp, enquiries) and direct calls included this month by the plan.
       contactQuota: await contactQuota(req.auth!.sub).catch(() => null),
+      callQuota: await callQuota(req.auth!.sub).catch(() => null),
     });
   }),
 );

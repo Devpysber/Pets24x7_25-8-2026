@@ -1009,8 +1009,9 @@
       state.saved = d.saved || [];
       state.nearbyDeals = d.nearbyDeals || [];
       state.upcomingEvents = d.upcomingEvents || [];
-      // Calls, WhatsApp and enquiries included this month by the plan.
+      // WhatsApp, enquiries and direct calls included this month by the plan.
       state.contactQuota = d.contactQuota || null;
+      state.callQuota = d.callQuota || null;
       // /api/memberships/me carries planId + discountPercent; the dashboard
       // summary does not. Whichever answers last must not downgrade the richer
       // one, or "Current plan" and the member-discount strip disappear.
@@ -1133,10 +1134,21 @@
   function contactQuotaLine() {
     var q = state.contactQuota;
     if (!q) return '';
-    if (q.unlimited) return '<div style="font-size: 12px; color: #047857; margin-top: 6px; font-weight: 600;">Unlimited business contacts</div>';
+    if (q.unlimited) return '<div style="font-size: 12px; color: #047857; margin-top: 6px; font-weight: 600;">Unlimited business contacts</div>' + callQuotaLine();
     var out = q.remaining <= 0;
     return '<div style="font-size: 12px; margin-top: 6px; font-weight: 600; color: ' + (out ? '#B45309' : 'var(--text-main)') + ';">' +
       q.remaining + ' of ' + q.limit + ' business contacts left this month' +
+      (out ? ' — upgrade for more' : '') + '</div>' + callQuotaLine();
+  }
+
+  // "1 of 3 direct calls left this month" — business numbers revealed by "Or call".
+  function callQuotaLine() {
+    var q = state.callQuota;
+    if (!q) return '';
+    if (q.unlimited) return '<div style="font-size: 12px; color: #047857; margin-top: 4px; font-weight: 600;">Unlimited direct calls</div>';
+    var out = q.remaining <= 0;
+    return '<div style="font-size: 12px; margin-top: 4px; font-weight: 600; color: ' + (out ? '#B45309' : 'var(--text-main)') + ';">' +
+      q.remaining + ' of ' + q.limit + ' direct calls left this month' +
       (out ? ' — upgrade for more' : '') + '</div>';
   }
 
@@ -2615,6 +2627,7 @@
           '<button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openEnquiryModal(' + idArg + ')">Enquire / Book</button>' +
           '<button class="btn" id="vendorSaveBtn" data-id="' + esc(v.id) + '" style="width:100%; justify-content:center; margin-top:8px;" onclick="toggleSave(' + idArg + ', this)">' + saveButtonLabel(v.id) + '</button>' +
           '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/919930090487?text=' + pwaMsg + '" onclick="return contactViaWhatsApp(event, ' + idArg + ')">💬 Ask Pets24x7 on WhatsApp</a>' +
+          '<button class="btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="callBusiness(' + idArg + ', this)">📞 Or call the business · see number</button>' +
           '<a class="btn" style="width:100%; justify-content:center; margin-top:8px;" href="' + esc(publicListingUrl(v)) + '" target="_blank" rel="noopener">Open full listing ↗</a>' +
         '</div>' +
       '</div>';
@@ -3213,11 +3226,49 @@
     uiConfirm({
       title: 'This month’s contacts are used up',
       body: 'Your ' + (q.tier && q.tier !== 'FREE' ? q.tier.charAt(0) + q.tier.slice(1).toLowerCase() + ' membership' : 'free account') +
-        ' includes ' + (q.limit || '') + ' contacts a month (calls, WhatsApp and enquiries). Upgrade to keep contacting businesses now, or wait until the 1st.',
+        ' includes ' + (q.limit || '') + ' contacts a month (WhatsApp and enquiries). Upgrade to keep contacting businesses now, or wait until the 1st.',
       confirmLabel: 'See membership plans',
       cancelLabel: 'Not now'
     }).then(function(ok) { if (ok) navigate('membership'); });
   }
+  // "Or call the business": reveals the listing's own number, spending one of
+  // the plan's direct calls a month (the same business again that month is
+  // free). Same endpoint as the public listing page.
+  function callBusiness(listingId, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    api.revealCall(listingId).then(function(r) {
+      state.callQuota = r.quota || state.callQuota;
+      var a = document.createElement('a');
+      a.className = btn.className;
+      a.style.cssText = btn.style.cssText;
+      a.href = 'tel:' + String(r.phone).replace(/[^\d+]/g, '');
+      a.textContent = '📞 Call ' + r.phone;
+      btn.parentNode.replaceChild(a, btn);
+      var q = r.quota;
+      if (!r.alreadyUnlocked && q && !q.unlimited) {
+        toast(q.remaining === 0 ? 'That was your last direct call included this month.'
+          : q.remaining + ' of ' + q.limit + ' direct calls left this month.', 'info');
+      }
+      logListingTap(listingId, 'phone_click');
+      if (typeof renderAccount === 'function') renderAccount();
+    }).catch(function(e) {
+      btn.disabled = false;
+      if (e && e.status === 402) {
+        var q = (e.data && e.data.quota) || state.callQuota || {};
+        uiConfirm({
+          title: 'This month’s free calls are used up',
+          body: 'Your ' + (q.tier && q.tier !== 'FREE' ? q.tier.charAt(0) + q.tier.slice(1).toLowerCase() + ' membership' : 'free account') +
+            ' includes ' + (q.limit != null ? q.limit : '') + ' direct calls a month. Buy a membership plan to call more businesses, or send an enquiry instead.',
+          confirmLabel: 'See membership plans',
+          cancelLabel: 'Not now'
+        }).then(function(ok) { if (ok) navigate('membership'); });
+        return;
+      }
+      toast((e && e.message) || 'Could not get the number.', 'error');
+    });
+  }
+  window.callBusiness = callBusiness;
   // WhatsApp to Pets24x7 about a listing: one contact, like the public site.
   function contactViaWhatsApp(e, listingId) {
     if (!quotaAllows(listingId)) { e.preventDefault(); showPlanLimitPrompt(); return false; }

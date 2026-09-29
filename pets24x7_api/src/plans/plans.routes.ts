@@ -2,6 +2,8 @@
 //
 //   GET  /api/access/contact          signed-in caller's contact allowance this month
 //   POST /api/access/contact          spend one contact { target?, kind }
+//   GET  /api/access/call             signed-in caller's direct-call allowance this month
+//   POST /api/access/call             spend one call { listingId } → the listing's own number
 //   GET  /api/admin/plan-limits       the limits in force
 //   PUT  /api/admin/plan-limits       change them
 //
@@ -15,12 +17,14 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { requireAuth } from '../auth/middleware.js';
 import { identifyCaller, recordUserActivity } from '../activity/user-activity.js';
-import { getPublicListingById } from '../listings/index.js';
-import { contactQuota, unlockContact, vendorPlan, type ContactQuota } from './entitlements.js';
+import { getListingById, getPublicListingById } from '../listings/index.js';
+import { normalizePhone } from '../shared/phone.js';
+import { callQuota, contactQuota, unlockCall, unlockContact, vendorPlan, type ContactQuota } from './entitlements.js';
 import { getPlanLimits, savePlanLimits, UNLIMITED } from './limits.js';
 import { placementOptions } from '../listings/index.js';
 import { planSlotsActive, placePlanSlot, removePlanSlot } from './featured-grant.js';
 import { prisma } from '../db.js';
+import { logger } from '../logger.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
 import { notifyIf } from '../mail/notify.js';
 import { vendorPlanLimitsNoticeEmail } from '../mail/action-templates.js';
@@ -80,6 +84,100 @@ accessRouter.post(
       });
     }
     res.json({ ok: true, alreadyUnlocked: result.alreadyUnlocked, quota: result.quota });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Direct calls: the "Or call" button on a listing reveals the business's own
+// number from the directory (listings.phone, else its WhatsApp, else the
+// claiming business's). Pages never carry it: it is served here, one listing
+// at a time, to signed-in people within their plan's monthly calls.
+// ---------------------------------------------------------------------------
+accessRouter.get(
+  '/call',
+  asyncHandler(async (req, res) => {
+    const who = identifyCaller(req);
+    if (!who) return res.json({ ok: true, signedIn: false });
+    if (who.role !== 'pet_parent') return res.json({ ok: true, signedIn: true, role: who.role, quota: unlimitedQuota(who.role.toUpperCase()) });
+    res.json({ ok: true, signedIn: true, role: who.role, quota: await callQuota(who.id) });
+  }),
+);
+
+const CallBody = z.object({ listingId: z.string().min(1).max(191), path: z.string().max(512).optional() });
+
+async function listingNumber(listingId: string): Promise<string | null> {
+  const l = getListingById(listingId);
+  if (!l) return null;
+  const country = l.country === 'US' ? 'US' : 'IN';
+  let raw = (l.phone ?? '').trim();
+  if (!raw) {
+    const row = await prisma.listing.findUnique({ where: { id: listingId }, select: { phone: true, whatsapp: true } });
+    raw = (row?.phone || row?.whatsapp || '').trim();
+  }
+  if (!raw) {
+    const v = await prisma.vendor.findUnique({ where: { listingId }, select: { phone: true, whatsapp: true } });
+    raw = (v?.phone || v?.whatsapp || '').trim();
+  }
+  if (raw.replace(/\D/g, '').length < 7) return null;
+  return normalizePhone(raw, country);
+}
+
+/**
+ * A revealed number still goes through Pets24x7: the call is written down as
+ * a lead (source "direct_call"), so it shows in the admin enquiries and in the
+ * business's own inbox like any enquiry, and the platform knows who called whom.
+ */
+async function recordCallLead(parentId: string, listingId: string): Promise<void> {
+  const listing = getListingById(listingId);
+  const parent = await prisma.petParent.findUnique({ where: { id: parentId }, select: { name: true, phone: true, email: true } });
+  if (!parent || !listing) return;
+  await prisma.enquiry.create({
+    data: {
+      petParentId: parentId,
+      listingId,
+      listingName: listing.name,
+      category: listing.category ?? null,
+      city: listing.city ?? null,
+      country: listing.country ?? null,
+      name: parent.name,
+      phone: parent.phone ?? '',
+      email: parent.email ?? null,
+      notes: 'Took your number from Pets24x7 to call you directly.',
+      source: 'direct_call',
+    },
+  });
+}
+
+accessRouter.post(
+  '/call',
+  unlockLimiter,
+  asyncHandler(async (req, res) => {
+    const body = CallBody.parse(req.body);
+    const who = identifyCaller(req);
+    if (!who) return res.status(401).json({ ok: false, error: 'sign_in_required', message: 'Sign in to call businesses.' });
+    if (!getPublicListingById(body.listingId)) throw new NotFoundError('That business was not found');
+    const phone = await listingNumber(body.listingId);
+    if (!phone) return res.status(404).json({ ok: false, error: 'no_phone', message: 'This business has no phone number listed. Send an enquiry instead.' });
+    if (who.role !== 'pet_parent') return res.json({ ok: true, phone, quota: unlimitedQuota(who.role.toUpperCase()) });
+
+    const result = await unlockCall(who.id, body.listingId);
+    const activity = {
+      actorRole: 'pet_parent' as const, actorId: who.id, path: body.path ?? null, listingId: body.listingId, ip: req.ip,
+      userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+    };
+    if (!result.ok) {
+      recordUserActivity({ ...activity, action: 'plan_limit', label: `Hit the monthly call limit (${result.quota.tier}, ${result.quota.limit}/month)` });
+      return res.status(402).json({
+        ok: false, error: 'plan_limit',
+        message: `You have used all ${result.quota.limit} direct calls included this month. Upgrade your membership to call more businesses.`,
+        quota: result.quota,
+      });
+    }
+    if (!result.alreadyUnlocked) {
+      recordUserActivity({ ...activity, action: 'call_reveal', label: 'Revealed a business number to call' });
+      recordCallLead(who.id, body.listingId).catch((err) => logger.warn({ err }, 'call lead: could not record'));
+    }
+    res.json({ ok: true, phone, alreadyUnlocked: result.alreadyUnlocked, quota: result.quota });
   }),
 );
 
