@@ -166,8 +166,14 @@ const NAVY_LINE = '#1E293B';
 export const NAVY_TEXT = '#CBD5E1';
 const NAVY_MUTED = '#94A3B8';
 
-/** The site logo, served from the public site so every client can fetch it. */
+/**
+ * The site logo's public URL. Templates render it as the <img> src so previews
+ * (admin console, sent log, mail-preview) show it; sendMail swaps it for the
+ * embedded copy at LOGO_CID before the message leaves.
+ */
 export const logoUrl = (): string => siteUrl('/pets24x7_logo.png');
+/** Content-ID of the logo attached inline to every outgoing mail. */
+export const LOGO_CID = 'logo@pets24x7.com';
 /** Logo is 500x182; rendered at this width (height follows the ratio). */
 const LOGO_W = 180;
 const LOGO_H = Math.round((LOGO_W * 182) / 500);

@@ -11,7 +11,8 @@ import { env } from '../env.js';
 import { logger } from '../logger.js';
 import type { MailKind } from './optout.js';
 import { isOptedOut, unsubscribeUrl } from './optout.js';
-import { NAVY_TEXT, UNSUBSCRIBE_SLOT, withTracking } from './components.js';
+import { LOGO_CID, NAVY_TEXT, UNSUBSCRIBE_SLOT, esc, logoUrl, withTracking } from './components.js';
+import { LOGO_PNG_BASE64 } from './logo-data.js';
 import { prisma } from '../db.js';
 
 let cached: Transporter | null = null;
@@ -113,6 +114,29 @@ export function withUnsubscribeFooter(html: string, url: string | null): string 
   return html.includes('</body>') ? html.replace('</body>', `${block}</body>`) : html + block;
 }
 
+/**
+ * Points the logo <img> at an inline attachment instead of the website.
+ * Gmail fetches remote images through its own proxy, and when that fetch fails
+ * the header is left blank; an embedded image always renders. Returns the HTML
+ * unchanged, with no attachment, when the mail carries no logo.
+ */
+export function withInlineLogo(html: string): { html: string; attachments: Array<Record<string, unknown>> } {
+  const remote = `src="${esc(logoUrl())}"`;
+  if (!html.includes(remote)) return { html, attachments: [] };
+  return {
+    html: html.split(remote).join(`src="cid:${LOGO_CID}"`),
+    attachments: [
+      {
+        filename: 'pets24x7-logo.png',
+        content: Buffer.from(LOGO_PNG_BASE64, 'base64'),
+        contentType: 'image/png',
+        cid: LOGO_CID,
+        contentDisposition: 'inline',
+      },
+    ],
+  };
+}
+
 /** Plain-text twin of withUnsubscribeFooter. */
 export function withUnsubscribeText(text: string, url: string | null): string {
   return url ? `${text}\n\nDon't want these emails? Unsubscribe: ${url}\n` : text;
@@ -205,9 +229,19 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           }
         : undefined;
-    const info = await tx.sendMail({ from: env.MAIL_FROM, ...message, ...(headers ? { headers } : {}) });
+    // The sent log keeps the remote-logo version: the admin console previews it
+    // in a browser, where a cid: reference would not resolve.
+    const logged = message.html;
+    const inline = withInlineLogo(message.html);
+    const info = await tx.sendMail({
+      from: env.MAIL_FROM,
+      ...message,
+      html: inline.html,
+      ...(inline.attachments.length ? { attachments: inline.attachments } : {}),
+      ...(headers ? { headers } : {}),
+    });
     logger.info({ to: input.to, subject: safeSubject, messageId: info.messageId }, '[mail] sent');
-    logMail({ ...input, html: message.html }, kind, 'sent', { messageId: info.messageId });
+    logMail({ ...input, html: logged }, kind, 'sent', { messageId: info.messageId });
     return true;
   } catch (err) {
     logger.error({ err, to: input.to, subject: safeSubject }, '[mail] send failed');
