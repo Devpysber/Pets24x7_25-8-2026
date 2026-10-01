@@ -10,7 +10,7 @@
 // with no number and no destination is the kind people unsubscribe from.
 
 import type { MailInput } from './mailer.js';
-import { Button, InfoBox, Note, Text, esc, h, page, siteUrl, track as trackLink, vendorDash, who } from './components.js';
+import { BRAND_TEXT, Button, InfoBox, Note, Text, esc, h, page, siteUrl, track as trackLink, vendorDash, who } from './components.js';
 
 const SITE = () => siteUrl('/').replace(/\/+$/, '');
 const VENDOR_DASH = () => vendorDash();
@@ -282,7 +282,7 @@ export function claimListingEmail(to: string, ctx: VendorPromoContext): MailInpu
           '</ul>',
         ),
         Button('Claim my listing', claimUrl),
-        ...(listingUrl ? [Note(`Prefer to look first? <a href="${esc(listingUrl)}" style="color:#c2410c;font-weight:600">See your listing as it appears today</a>.`)] : []),
+        ...(listingUrl ? [Note(`Prefer to look first? <a href="${esc(listingUrl)}" style="color:${BRAND_TEXT};font-weight:600">See your listing as it appears today</a>.`)] : []),
         Note('We verify with the phone number already on the listing, so nobody else can claim your business.'),
       ],
       preheader: `Claim ${ctx.businessName} on Pets24x7 — free.`,
