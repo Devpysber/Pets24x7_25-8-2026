@@ -100,14 +100,16 @@ export function withUnsubscribeFooter(html: string, url: string | null): string 
   // The URL carries a raw '&' between query params — must be entity-escaped
   // before it can sit inside an href="..." attribute value.
   const safeUrl = url.replace(/&/g, '&amp;');
-  const line =
+  // The slot sits on the navy footer, so its link is light; the fallback block
+  // below sits on the pale canvas and needs the dark grey instead.
+  const line = (color: string): string =>
     `<br>You are receiving occasional Pets24x7 suggestions. ` +
-    `<a href="${safeUrl}" style="color:${NAVY_TEXT};text-decoration:underline">Unsubscribe</a>.`;
-  if (html.includes(UNSUBSCRIBE_SLOT)) return html.split(UNSUBSCRIBE_SLOT).join(line);
+    `<a href="${safeUrl}" style="color:${color};text-decoration:underline">Unsubscribe</a>.`;
+  if (html.includes(UNSUBSCRIBE_SLOT)) return html.split(UNSUBSCRIBE_SLOT).join(line(NAVY_TEXT));
   const block =
     `<div style="max-width:600px;margin:0 auto;padding:0 20px 28px;text-align:center;` +
     `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;` +
-    `font-size:12px;line-height:18px;color:#6b7280">${line.slice(4)}</div>`;
+    `font-size:12px;line-height:18px;color:#6b7280">${line('#4b5563').slice(4)}</div>`;
   return html.includes('</body>') ? html.replace('</body>', `${block}</body>`) : html + block;
 }
 
