@@ -168,6 +168,41 @@ function logMail(input: MailInput, kind: MailKind, status: 'sent' | 'failed' | '
     .catch((err) => logger.warn({ err }, '[mail] could not write the email log'));
 }
 
+/**
+ * Set when the relay reports its daily sending limit. Marketing mail then stops
+ * until this time, so whatever allowance comes back goes to sign-in codes and
+ * other transactional mail first. In memory: a restart clears it, and the next
+ * refusal sets it again.
+ */
+let marketingPausedUntil = 0;
+const QUOTA_PAUSE_MS = 6 * 3_600_000;
+
+/** Gmail: "550 5.4.5 Daily user sending limit exceeded"; other relays word it as a quota or rate limit. */
+export function isQuotaError(message: string): boolean {
+  return /5\.4\.5|sending limit|daily (user )?(sending )?(limit|quota)|quota exceeded|rate limit|too many (messages|emails)/i.test(message);
+}
+
+/**
+ * Why a marketing mail must not go out now, or null when it may. Counts the
+ * marketing mail actually sent in the last 24 hours against
+ * MAIL_MARKETING_DAILY_CAP. Fails closed: if the count cannot be read, the
+ * marketing mail waits rather than risking the transactional budget.
+ */
+async function marketingBlocked(): Promise<string | null> {
+  if (Date.now() < marketingPausedUntil) return 'relay sending limit reached — marketing paused';
+  const cap = env.MAIL_MARKETING_DAILY_CAP;
+  if (cap <= 0) return 'marketing mail disabled (MAIL_MARKETING_DAILY_CAP=0)';
+  try {
+    const sent = await prisma.emailLog.count({
+      where: { kind: 'marketing', status: 'sent', createdAt: { gte: new Date(Date.now() - 86_400_000) } },
+    });
+    return sent >= cap ? `daily marketing cap reached (${sent}/${cap})` : null;
+  } catch (err) {
+    logger.error({ err }, '[mail] could not count marketing mail — holding it back');
+    return 'marketing count unavailable';
+  }
+}
+
 export async function sendMail(rawInput: MailInput): Promise<boolean> {
   const kind: MailKind = rawInput.kind ?? 'transactional';
   // Tag own-site links with UTM parameters before anything logs or sends it.
@@ -186,6 +221,13 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
     if (suppressed) {
       logger.info({ to: input.to, subject: input.subject }, '[mail] suppressed — recipient opted out');
       logMail(input, kind, 'suppressed', { error: 'recipient opted out' });
+      return false;
+    }
+    // Only in production: elsewhere nothing is really sent, so nothing to budget.
+    const blocked = env.NODE_ENV === 'production' && !input.force ? await marketingBlocked() : null;
+    if (blocked) {
+      logger.warn({ to: input.to, subject: input.subject, reason: blocked }, '[mail] marketing held back');
+      logMail(input, kind, 'suppressed', { error: blocked });
       return false;
     }
   }
@@ -244,8 +286,17 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
     logMail({ ...input, html: logged }, kind, 'sent', { messageId: info.messageId });
     return true;
   } catch (err) {
-    logger.error({ err, to: input.to, subject: safeSubject }, '[mail] send failed');
-    logMail(input, kind, 'failed', { error: (err as Error)?.message ?? String(err) });
+    const message = (err as Error)?.message ?? String(err);
+    if (isQuotaError(message)) {
+      marketingPausedUntil = Date.now() + QUOTA_PAUSE_MS;
+      logger.error(
+        { to: input.to, subject: safeSubject, error: message },
+        '[mail] relay daily sending limit reached — marketing mail paused for 6 hours; raise the relay limit or lower MAIL_MARKETING_DAILY_CAP',
+      );
+    } else {
+      logger.error({ err, to: input.to, subject: safeSubject }, '[mail] send failed');
+    }
+    logMail(input, kind, 'failed', { error: message });
     return false;
   }
 }
