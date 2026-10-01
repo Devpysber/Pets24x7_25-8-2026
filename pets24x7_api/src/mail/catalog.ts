@@ -49,6 +49,7 @@ function customEmail(to: string, d: Record<string, any>): MailInput {
     to,
     subject: String(d.subject ?? 'A message from Pets24x7'),
     html: page({
+      signoff: false,
       eyebrow: d.eyebrow ? String(d.eyebrow) : undefined,
       heading: String(d.heading ?? d.subject ?? 'A message from Pets24x7'),
       intro: bodyHtml ? '' : 'No message body.',

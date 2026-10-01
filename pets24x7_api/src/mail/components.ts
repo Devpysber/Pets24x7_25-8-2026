@@ -166,8 +166,14 @@ const NAVY_LINE = '#1E293B';
 export const NAVY_TEXT = '#CBD5E1';
 const NAVY_MUTED = '#94A3B8';
 
-/** The site logo, served from the public site so every client can fetch it. */
+/**
+ * The site logo's public URL. Templates render it as the <img> src so previews
+ * (admin console, sent log, mail-preview) show it; sendMail swaps it for the
+ * embedded copy at LOGO_CID before the message leaves.
+ */
 export const logoUrl = (): string => siteUrl('/pets24x7_logo.png');
+/** Content-ID of the logo attached inline to every outgoing mail. */
+export const LOGO_CID = 'logo@pets24x7.com';
 /** Logo is 500x182; rendered at this width (height follows the ratio). */
 const LOGO_W = 180;
 const LOGO_H = Math.round((LOGO_W * 182) / 500);
@@ -205,6 +211,9 @@ export function Layout(content: string, preheader?: string, title = 'Pets24x7'):
     .pad{padding-left:22px!important;padding-right:22px!important}
     .h1{font-size:22px!important;line-height:30px!important}
     .logo{width:140px!important;height:auto!important}
+    .hide-sm{display:none!important}
+    .stack{display:block!important;width:100%!important;text-align:left!important}
+    .stack-gap{padding:14px 0 0!important}
     .btn,.btn a{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important}
   }
 </style></head>
@@ -224,12 +233,19 @@ ${content}
 }
 
 export function Header(eyebrow?: string): string {
-  return `<tr><td class="pad" align="left" style="padding:24px ${GUTTER}px 20px;border-bottom:1px solid ${LINE}">
-    <a href="${siteUrl('/')}" style="text-decoration:none;display:inline-block">
-      <img class="logo" src="${esc(logoUrl())}" width="${LOGO_W}" height="${LOGO_H}" alt="Pets24x7" style="display:block;width:${LOGO_W}px;height:auto;max-width:100%;border:0;outline:none;text-decoration:none;font-size:22px;font-weight:800;color:${BRAND};font-family:${FONT}">
-    </a>
+  return `<tr><td class="pad" style="padding:22px ${GUTTER}px 18px;border-bottom:1px solid ${LINE}">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td valign="middle" align="left">
+        <a href="${siteUrl('/')}" style="text-decoration:none;display:inline-block">
+          <img class="logo" src="${esc(logoUrl())}" width="${LOGO_W}" height="${LOGO_H}" alt="Pets24x7" style="display:block;width:${LOGO_W}px;height:auto;max-width:100%;border:0;outline:none;text-decoration:none;font-size:22px;font-weight:800;color:${BRAND};font-family:${FONT}">
+        </a>
+      </td>
+      <td class="hide-sm" valign="middle" align="right" style="font-size:12px;line-height:16px;color:${MUTED};font-family:${FONT}">
+        Trusted pet care,<br><span style="color:${BRAND_TEXT};font-weight:700">24 hours a day, 7 days a week</span>
+      </td>
+    </tr></table>
   </td></tr>
-  ${eyebrow ? `<tr><td class="pad" style="padding:24px ${GUTTER}px 0">
+  ${eyebrow ? `<tr><td class="pad" style="padding:28px ${GUTTER}px 0">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
       <td bgcolor="${BRAND_TINT}" style="background:${BRAND_TINT};border-radius:9999px;padding:5px 12px;font-size:11px;line-height:14px;font-weight:700;color:${BRAND_TEXT};text-transform:uppercase;letter-spacing:1.2px;font-family:${FONT}">${esc(eyebrow)}</td>
     </tr></table>
@@ -248,7 +264,7 @@ export function StatusBanner(text: string, type: BannerType = 'info'): string {
   };
   const [bg, fg, border] = palette[type];
   return `<tr><td class="pad" style="padding:16px ${GUTTER}px 0">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate"><tr>
       <td bgcolor="${bg}" style="background:${bg};border:1px solid ${border};color:${fg};padding:6px 12px;border-radius:9999px;font-size:12px;font-weight:700;font-family:${FONT}">${esc(text)}</td>
     </tr></table>
   </td></tr>`;
@@ -286,7 +302,7 @@ export function InfoBox(rows: Array<[string, string]>): string {
     .join('');
   // Padding lives on a cell, not the table: Outlook ignores table padding.
   return `<tr><td class="pad" style="padding:20px ${GUTTER}px 0">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PANEL};border:1px solid ${LINE};border-radius:12px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PANEL};border:1px solid ${LINE};border-radius:12px;border-collapse:separate">
       <tr><td style="padding:6px 18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${cells}</table></td></tr>
     </table>
   </td></tr>`;
@@ -295,7 +311,7 @@ export function InfoBox(rows: Array<[string, string]>): string {
 /** Big monospaced one-time code, the focal point of a sign-in email. */
 export function CodeBlock(code: string): string {
   return `<tr><td class="pad" align="center" style="padding:26px ${GUTTER}px 0">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate"><tr>
       <td bgcolor="${BRAND_TINT}" style="background:${BRAND_TINT};border:1px dashed #93C5FD;border-radius:12px;padding:18px 30px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:34px;line-height:40px;font-weight:700;letter-spacing:10px;color:${BRAND_DEEP}">${esc(code)}</td>
     </tr></table>
   </td></tr>`;
@@ -331,34 +347,63 @@ export function Note(html: string): string {
 
 /** WhatsApp support line, shown in every footer. */
 export const SUPPORT_WHATSAPP = 'https://wa.me/919930090487';
+const SUPPORT_WHATSAPP_LABEL = '+91 99300 90487';
+export const SUPPORT_EMAIL = 'support@pets24x7.com';
+
+/** Closing line under the content, so every mail ends like a letter. */
+export function SignOff(): string {
+  return `<tr><td class="pad" style="padding:30px ${GUTTER}px 0">
+    <p style="margin:0;color:${TEXT};font-size:15px;line-height:24px;font-family:${FONT}">Warm regards,<br><strong style="color:${INK}">The Pets24x7 Team</strong></p>
+  </td></tr>`;
+}
+
+/** Help card: support copy on the left, a WhatsApp pill on the right (stacked on phones). */
+function HelpCard(): string {
+  return `<tr><td class="pad" style="padding:32px ${GUTTER}px 0">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND_TINT};border:1px solid #DBEAFE;border-radius:12px;border-collapse:separate">
+      <tr><td style="padding:18px 20px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td class="stack" valign="middle" style="font-family:${FONT}">
+            <p style="margin:0 0 3px;font-size:14px;line-height:20px;color:${INK};font-weight:700">Need a hand?</p>
+            <p style="margin:0;font-size:13px;line-height:20px;color:${SUBTLE}">Just reply to this email &mdash; a real person answers, usually within a working day.</p>
+          </td>
+          <td class="stack stack-gap" valign="middle" align="right" style="padding-left:16px;white-space:nowrap">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td bgcolor="#16A34A" style="background:#16A34A;border-radius:9999px">
+                <a href="${SUPPORT_WHATSAPP}" target="_blank" style="display:inline-block;padding:9px 16px;font-size:13px;line-height:16px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${FONT}">Chat on WhatsApp</a>
+              </td>
+            </tr></table>
+          </td>
+        </tr></table>
+      </td></tr>
+    </table>
+  </td></tr>`;
+}
 
 export function Footer(): string {
-  const link = `color:${NAVY_TEXT};text-decoration:underline`;
   const nav = `color:#ffffff;text-decoration:none;font-weight:600`;
-  const dot = `<span style="color:${NAVY_MUTED}">&nbsp;&middot;&nbsp;</span>`;
-  return `<tr><td style="padding:32px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>
-  <tr><td class="pad" bgcolor="${BRAND_TINT}" style="padding:20px ${GUTTER}px;background:${BRAND_TINT};border-top:1px solid #DBEAFE">
-    <p style="margin:0 0 4px;font-size:14px;line-height:21px;color:${INK};font-weight:700;font-family:${FONT}">Need a hand?</p>
-    <p style="margin:0;font-size:13px;line-height:20px;color:${SUBTLE};font-family:${FONT}">
-      Reply to this email or message us on
-      <a href="${SUPPORT_WHATSAPP}" style="color:#15803D;text-decoration:none;font-weight:700">WhatsApp</a>.
-      We usually answer within a working day.
+  const soft = `color:${NAVY_TEXT};text-decoration:none`;
+  const dot = `<span style="color:#475569">&nbsp;&nbsp;&bull;&nbsp;&nbsp;</span>`;
+  // Every address-like string is an explicit, styled link: left as plain text,
+  // Gmail and Apple Mail auto-link it in their default blue, unreadable on navy.
+  const domain = SITE().replace(/^https?:\/\//, '');
+  return `${HelpCard()}
+  <tr><td style="padding:36px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>
+  <tr><td class="pad foot" align="center" bgcolor="${NAVY}" style="padding:30px ${GUTTER}px 30px;background:${NAVY};text-align:center">
+    <p style="margin:0 0 4px;font-size:20px;line-height:26px;font-weight:800;letter-spacing:-.3px;color:#ffffff;font-family:${FONT}">Pets<span style="color:${ACCENT}">24x7</span></p>
+    <p style="margin:0 0 18px;font-size:13px;line-height:20px;color:${NAVY_MUTED};font-family:${FONT}">The pet care directory for India and the USA</p>
+    <p style="margin:0 0 18px;font-size:13px;line-height:22px;font-family:${FONT}">
+      <a href="${siteUrl('/search/')}" style="${nav}">Find pet services</a>${dot}<a href="${siteUrl('/membership/')}" style="${nav}">Membership</a>${dot}<a href="${siteUrl('/register-business/')}" style="${nav}">List your business</a>
     </p>
-  </td></tr>
-  <tr><td class="pad foot" bgcolor="${NAVY}" style="padding:24px ${GUTTER}px 28px;background:${NAVY}">
-    <p style="margin:0 0 14px;font-size:13px;line-height:20px;font-family:${FONT}">
-      <a href="${siteUrl('/search/')}" style="${nav}">Find pet services</a>${dot}
-      <a href="${siteUrl('/membership/')}" style="${nav}">Membership</a>${dot}
-      <a href="${siteUrl('/register-business/')}" style="${nav}">List your business</a>
+    <p style="margin:0 0 20px;font-size:13px;line-height:22px;font-family:${FONT}">
+      <a href="mailto:${SUPPORT_EMAIL}" style="${soft}">${SUPPORT_EMAIL}</a>${dot}<a href="${SUPPORT_WHATSAPP}" style="${soft}">WhatsApp ${SUPPORT_WHATSAPP_LABEL}</a>
     </p>
-    <p style="margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid ${NAVY_LINE};font-size:13px;line-height:20px;color:${NAVY_TEXT};font-family:${FONT}">
-      <strong style="color:#ffffff">Pets<span style="color:${ACCENT}">24x7</span></strong> &middot; Pet care directory for India and the USA
-    </p>
-    <p style="margin:0;font-size:12px;line-height:18px;color:${NAVY_MUTED};font-family:${FONT}">
-      &copy; ${new Date().getFullYear()} Pets24x7 &middot;
-      <a href="${siteUrl('/privacy.html')}" style="${link}">Privacy</a> &middot;
-      <a href="${siteUrl('/terms.html')}" style="${link}">Terms</a><br>
-      You received this email because this address is used on ${esc(SITE().replace(/^https?:\/\//, ''))}.${UNSUBSCRIBE_SLOT}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid ${NAVY_LINE};font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>
+    <p style="margin:18px 0 0;font-size:12px;line-height:19px;color:${NAVY_MUTED};font-family:${FONT}">
+      &copy; ${new Date().getFullYear()} Pets24x7. All rights reserved.<br>
+      <a href="${siteUrl('/privacy.html')}" style="color:${NAVY_TEXT};text-decoration:underline">Privacy policy</a>&nbsp;&nbsp;&middot;&nbsp;&nbsp;<a href="${siteUrl('/terms.html')}" style="color:${NAVY_TEXT};text-decoration:underline">Terms of use</a><br>
+      You are receiving this email because this address is registered on
+      <a href="${siteUrl('/')}" style="color:${NAVY_TEXT};text-decoration:underline">${esc(domain)}</a>.${UNSUBSCRIBE_SLOT}
     </p>
   </td></tr>`;
 }
@@ -385,6 +430,8 @@ export function page(parts: {
   intro: string;
   blocks?: string[];
   preheader?: string;
+  /** Adds "Warm regards, The Pets24x7 Team". Off for free-form mail that signs itself. */
+  signoff?: boolean;
 }): string {
   return Layout(
     [
@@ -392,6 +439,7 @@ export function page(parts: {
       parts.banner ? StatusBanner(parts.banner[0], parts.banner[1]) : '',
       Hero(parts.heading, parts.intro),
       ...(parts.blocks ?? []),
+      parts.signoff === false ? '' : SignOff(),
       Footer(),
     ].join(''),
     parts.preheader ?? previewText(parts.intro),
