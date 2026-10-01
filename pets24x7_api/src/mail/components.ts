@@ -7,13 +7,21 @@
 import { env } from '../env.js';
 import type { MailInput } from './mailer.js';
 
-export const BRAND = '#ff6b35';
+// Palette mirrors the website (pets24x7_new/styles.css :root), so a mail reads
+// as the same product as the page it links to.
+/** Site primary blue (--primary). 5.2:1 on white: bars, rules, decoration. */
+export const BRAND = '#2563EB';
 /**
- * The brand orange darkened to pass WCAG AA (5.2:1 on white). #ff6b35 is only
- * 2.8:1, so it is kept for decoration (the top bar, the logo tile) and this is
- * used for anything a reader has to read: links, small labels, button fills.
+ * The primary blue one step darker (--primary-dark, 6.7:1 on white). Used for
+ * anything a reader has to read or tap: links, small labels, button fills.
  */
-export const BRAND_TEXT = '#c2410c';
+export const BRAND_TEXT = '#1D4ED8';
+/** Deep blue of the site's hero gradient, for the top of the brand bar. */
+export const BRAND_DEEP = '#1E40AF';
+/** Pale blue tint (--primary-light) for highlighted panels and chips. */
+export const BRAND_TINT = '#EFF6FF';
+/** Orange accent from the logo and the site's call-outs. Decoration only (2.8:1). */
+export const ACCENT = '#F97316';
 export const INK = '#111827';
 
 export function esc(s: unknown): string {
@@ -21,7 +29,7 @@ export function esc(s: unknown): string {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
-const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
+const FONT = `'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
 /**
  * Base URL for links and branding inside outbound email. MAIL_SITE_URL wins so
  * a dev box still mails production-looking links; PUBLIC_SITE_URL is the
@@ -146,12 +154,23 @@ export function dayTime(d: Date | null | undefined, timeZone: string = MAIL_TZ):
 // ---------------------------------------------------------------------------
 
 /** Grey scale, all AA-contrast on white except MUTED, which is only used for fine print. */
-const TEXT = '#374151';
+const TEXT = '#1F2937';
 const SUBTLE = '#4b5563';
 const MUTED = '#6b7280';
 const LINE = '#e5e7eb';
-const CANVAS = '#f3f4f6';
-const PANEL = '#f9fafb';
+const CANVAS = '#F1F5F9';
+const PANEL = '#F9FAFB';
+/** Site footer navy (#0F172A) and its text colours, AA on the navy. */
+const NAVY = '#0F172A';
+const NAVY_LINE = '#1E293B';
+export const NAVY_TEXT = '#CBD5E1';
+const NAVY_MUTED = '#94A3B8';
+
+/** The site logo, served from the public site so every client can fetch it. */
+export const logoUrl = (): string => siteUrl('/pets24x7_logo.png');
+/** Logo is 500x182; rendered at this width (height follows the ratio). */
+const LOGO_W = 180;
+const LOGO_H = Math.round((LOGO_W * 182) / 500);
 /** Horizontal gutter inside the card. Custom rows in templates use the same 44px. */
 const GUTTER = 44;
 
@@ -172,17 +191,20 @@ export function Layout(content: string, preheader?: string, title = 'Pets24x7'):
 <meta name="format-detection" content="telephone=no,address=no,email=no,date=no">
 <meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
 <title>${esc(title)}</title>
+<!--[if !mso]><!--><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><!--<![endif]-->
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
   :root{color-scheme:light;supported-color-schemes:light}
   body{margin:0!important;padding:0!important;width:100%!important;background:${CANVAS};font-family:${FONT};-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
   table{border-spacing:0;border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0} td{padding:0} img{border:0;display:block;-ms-interpolation-mode:bicubic}
   a{color:${BRAND_TEXT}}
+  .foot a{color:#ffffff!important}
   a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important}
   @media only screen and (max-width:620px){
     .shell{padding:0!important} .main{width:100%!important;border-radius:0!important;border-left:0!important;border-right:0!important}
     .pad{padding-left:22px!important;padding-right:22px!important}
     .h1{font-size:22px!important;line-height:30px!important}
+    .logo{width:140px!important;height:auto!important}
     .btn,.btn a{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important}
   }
 </style></head>
@@ -192,7 +214,7 @@ ${preheader ? `<div style="display:none;max-height:0;max-width:0;overflow:hidden
 <tr><td class="shell" align="center" style="padding:32px 12px">
 <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
 <table role="presentation" class="main" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid ${LINE};border-radius:16px;overflow:hidden">
-<tr><td style="height:4px;line-height:4px;font-size:0;background:${BRAND}">&nbsp;</td></tr>
+<tr><td bgcolor="${BRAND}" style="height:6px;line-height:6px;font-size:0;background:${BRAND};background-image:linear-gradient(90deg,${BRAND_DEEP} 0%,${BRAND} 60%,#3B82F6 100%)">&nbsp;</td></tr>
 ${content}
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
@@ -202,16 +224,15 @@ ${content}
 }
 
 export function Header(eyebrow?: string): string {
-  return `<tr><td class="pad" align="left" style="padding:26px ${GUTTER}px 0">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td valign="middle" width="34" height="34" align="center" bgcolor="${BRAND}" style="width:34px;height:34px;border-radius:9px;background:${BRAND};color:#ffffff;font-size:17px;line-height:34px;font-family:${FONT}">&#128062;</td>
-      <td valign="middle" style="padding-left:10px">
-        <a href="${siteUrl('/')}" style="text-decoration:none;font-size:21px;font-weight:800;letter-spacing:-.4px;color:${INK};font-family:${FONT}">Pets<span style="color:#ea580c">24x7</span></a>
-      </td>
-    </tr></table>
+  return `<tr><td class="pad" align="left" style="padding:24px ${GUTTER}px 20px;border-bottom:1px solid ${LINE}">
+    <a href="${siteUrl('/')}" style="text-decoration:none;display:inline-block">
+      <img class="logo" src="${esc(logoUrl())}" width="${LOGO_W}" height="${LOGO_H}" alt="Pets24x7" style="display:block;width:${LOGO_W}px;height:auto;max-width:100%;border:0;outline:none;text-decoration:none;font-size:22px;font-weight:800;color:${BRAND};font-family:${FONT}">
+    </a>
   </td></tr>
   ${eyebrow ? `<tr><td class="pad" style="padding:24px ${GUTTER}px 0">
-    <span style="display:inline-block;font-size:11px;font-weight:700;color:${BRAND_TEXT};text-transform:uppercase;letter-spacing:1.2px;font-family:${FONT}">${esc(eyebrow)}</span>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td bgcolor="${BRAND_TINT}" style="background:${BRAND_TINT};border-radius:9999px;padding:5px 12px;font-size:11px;line-height:14px;font-weight:700;color:${BRAND_TEXT};text-transform:uppercase;letter-spacing:1.2px;font-family:${FONT}">${esc(eyebrow)}</td>
+    </tr></table>
   </td></tr>` : ''}`;
 }
 
@@ -275,7 +296,7 @@ export function InfoBox(rows: Array<[string, string]>): string {
 export function CodeBlock(code: string): string {
   return `<tr><td class="pad" align="center" style="padding:26px ${GUTTER}px 0">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td bgcolor="${PANEL}" style="background:${PANEL};border:1px solid ${LINE};border-radius:12px;padding:18px 30px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:34px;line-height:40px;font-weight:700;letter-spacing:10px;color:${INK}">${esc(code)}</td>
+      <td bgcolor="${BRAND_TINT}" style="background:${BRAND_TINT};border:1px dashed #93C5FD;border-radius:12px;padding:18px 30px;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:34px;line-height:40px;font-weight:700;letter-spacing:10px;color:${BRAND_DEEP}">${esc(code)}</td>
     </tr></table>
   </td></tr>`;
 }
@@ -290,11 +311,11 @@ export function Button(label: string, url: string): string {
   const text = esc(label);
   const width = Math.min(520, Math.max(180, label.length * 9 + 60));
   return `<tr><td class="pad" align="left" style="padding:26px ${GUTTER}px 0">
-    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${href}" style="height:46px;v-text-anchor:middle;width:${width}px" arcsize="50%" stroke="f" fillcolor="${BRAND_TEXT}"><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">${text}</center></v:roundrect><![endif]-->
+    <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${href}" style="height:46px;v-text-anchor:middle;width:${width}px" arcsize="22%" stroke="f" fillcolor="${BRAND}"><w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold">${text}</center></v:roundrect><![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td align="center" bgcolor="${BRAND_TEXT}" style="border-radius:9999px;background:${BRAND_TEXT}">
-        <a href="${href}" target="_blank" style="display:inline-block;padding:13px 30px;font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:9999px;font-family:${FONT}">${text}</a>
+      <td align="center" bgcolor="${BRAND}" style="border-radius:10px;background:${BRAND};box-shadow:0 4px 12px rgba(37,99,235,.25)">
+        <a href="${href}" target="_blank" style="display:inline-block;padding:14px 30px;font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;border:1px solid ${BRAND_TEXT};font-family:${FONT}">${text}</a>
       </td>
     </tr></table>
     <!--<![endif]-->
@@ -312,24 +333,28 @@ export function Note(html: string): string {
 export const SUPPORT_WHATSAPP = 'https://wa.me/919930090487';
 
 export function Footer(): string {
-  const link = `color:${SUBTLE};text-decoration:underline`;
+  const link = `color:${NAVY_TEXT};text-decoration:underline`;
+  const nav = `color:#ffffff;text-decoration:none;font-weight:600`;
+  const dot = `<span style="color:${NAVY_MUTED}">&nbsp;&middot;&nbsp;</span>`;
   return `<tr><td style="padding:32px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>
-  <tr><td class="pad" bgcolor="${PANEL}" style="padding:24px ${GUTTER}px 28px;border-top:1px solid ${LINE};background:${PANEL}">
-    <p style="margin:0 0 6px;font-size:14px;line-height:21px;color:${INK};font-weight:700;font-family:${FONT}">Need a hand?</p>
-    <p style="margin:0 0 16px;font-size:13px;line-height:20px;color:${SUBTLE};font-family:${FONT}">
+  <tr><td class="pad" bgcolor="${BRAND_TINT}" style="padding:20px ${GUTTER}px;background:${BRAND_TINT};border-top:1px solid #DBEAFE">
+    <p style="margin:0 0 4px;font-size:14px;line-height:21px;color:${INK};font-weight:700;font-family:${FONT}">Need a hand?</p>
+    <p style="margin:0;font-size:13px;line-height:20px;color:${SUBTLE};font-family:${FONT}">
       Reply to this email or message us on
-      <a href="${SUPPORT_WHATSAPP}" style="color:${BRAND_TEXT};text-decoration:none;font-weight:700">WhatsApp</a>.
+      <a href="${SUPPORT_WHATSAPP}" style="color:#15803D;text-decoration:none;font-weight:700">WhatsApp</a>.
       We usually answer within a working day.
     </p>
+  </td></tr>
+  <tr><td class="pad foot" bgcolor="${NAVY}" style="padding:24px ${GUTTER}px 28px;background:${NAVY}">
     <p style="margin:0 0 14px;font-size:13px;line-height:20px;font-family:${FONT}">
-      <a href="${siteUrl('/search/')}" style="color:${INK};text-decoration:none;font-weight:600">Find pet services</a>
-      <span style="color:${MUTED}">&nbsp;&middot;&nbsp;</span>
-      <a href="${siteUrl('/membership/')}" style="color:${INK};text-decoration:none;font-weight:600">Membership</a>
-      <span style="color:${MUTED}">&nbsp;&middot;&nbsp;</span>
-      <a href="${siteUrl('/register-business/')}" style="color:${INK};text-decoration:none;font-weight:600">List your business</a>
+      <a href="${siteUrl('/search/')}" style="${nav}">Find pet services</a>${dot}
+      <a href="${siteUrl('/membership/')}" style="${nav}">Membership</a>${dot}
+      <a href="${siteUrl('/register-business/')}" style="${nav}">List your business</a>
     </p>
-    <p style="margin:0;font-size:12px;line-height:18px;color:${MUTED};font-family:${FONT}">
-      Pets24x7 &middot; Pet care directory for India and the USA<br>
+    <p style="margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid ${NAVY_LINE};font-size:13px;line-height:20px;color:${NAVY_TEXT};font-family:${FONT}">
+      <strong style="color:#ffffff">Pets<span style="color:${ACCENT}">24x7</span></strong> &middot; Pet care directory for India and the USA
+    </p>
+    <p style="margin:0;font-size:12px;line-height:18px;color:${NAVY_MUTED};font-family:${FONT}">
       &copy; ${new Date().getFullYear()} Pets24x7 &middot;
       <a href="${siteUrl('/privacy.html')}" style="${link}">Privacy</a> &middot;
       <a href="${siteUrl('/terms.html')}" style="${link}">Terms</a><br>

@@ -10,7 +10,7 @@
 
 import type { MailInput } from './mailer.js';
 import { unsubscribeUrl } from './optout.js';
-import { BRAND_TEXT, Button, MAIL_TZ, Note, Text, esc, h, page, parentDash, rotate, siteUrl, vendorDash, who, type VendorView } from './components.js';
+import { BRAND_TEXT, BRAND_TINT, Button, MAIL_TZ, Note, Text, esc, h, page, parentDash, rotate, siteUrl, vendorDash, who, type VendorView } from './components.js';
 import type { VendorPromoContext } from './promo-templates.js';
 
 export interface RecoDigestItem {
@@ -132,7 +132,7 @@ export function recoDigestEmail(
         : esc(d.title);
       const meta = [d.vendor, endsLabel(d.endsAt), d.code ? `Code ${d.code}` : ''].filter(Boolean).join(' · ');
       return `<tr><td style="padding:12px 0;border-top:1px solid #eceef2">
-        <span style="display:inline-block;background:#fff4ee;color:${BRAND_TEXT};font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px">${esc(d.offerLabel)}</span>
+        <span style="display:inline-block;background:${BRAND_TINT};color:${BRAND_TEXT};font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px">${esc(d.offerLabel)}</span>
         <div style="font-size:14px;font-weight:700;margin-top:6px">${title}</div>
         ${meta ? `<div style="font-size:12px;color:#6b7280;margin-top:3px">${esc(meta)}</div>` : ''}
       </td></tr>`;

@@ -61,19 +61,19 @@ function page(title: string, body: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} · Pets24x7</title>
 <style>
-  body{margin:0;background:#fafaf9;color:#111827;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
-  .card{max-width:520px;margin:12vh auto;background:#fff;border:1px solid #eceef2;border-radius:16px;padding:36px 34px}
+  body{margin:0;background:#F1F5F9;color:#111827;font:15px/1.6 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .card{max-width:520px;margin:12vh auto;background:#fff;border:1px solid #e5e7eb;border-top:6px solid #2563EB;border-radius:16px;padding:32px 34px 36px}
   h1{margin:0 0 10px;font-size:22px}
   p{margin:0 0 14px;color:#4b5563}
-  button{appearance:none;border:0;background:#c2410c;color:#fff;font:600 15px/1 inherit;padding:13px 26px;border-radius:9999px;cursor:pointer}
+  button{appearance:none;border:0;background:#2563EB;color:#fff;font:600 15px/1 inherit;padding:13px 26px;border-radius:10px;cursor:pointer}
   button.ghost{background:transparent;color:#4b5563;text-decoration:underline;padding-left:0}
-  a{color:#c2410c}
-  .brand{display:block;margin:0 0 22px;font-size:20px;font-weight:800;color:#111827;text-decoration:none}
-  .brand span{color:#ff6b35}
+  a{color:#1D4ED8}
+  .brand{display:inline-block;margin:0 0 22px}
+  .brand img{display:block;width:150px;height:auto;border:0}
   .foot{margin:22px 0 0;font-size:13px;color:#6b7280}
   @media (max-width:560px){.card{margin:0;border-radius:0;border:0;padding:28px 20px}}
 </style></head><body><div class="card">
-<a class="brand" href="${esc(siteHome())}/">Pets<span>24x7</span></a>
+<a class="brand" href="${esc(siteHome())}/"><img src="${esc(siteHome())}/pets24x7_logo.png" width="150" alt="Pets24x7"></a>
 ${body}
 <p class="foot"><a href="${esc(siteHome())}/">Back to Pets24x7</a> &middot; <a href="${esc(siteHome())}/privacy.html">Privacy</a></p>
 </div></body></html>`;

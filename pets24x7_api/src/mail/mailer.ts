@@ -11,7 +11,7 @@ import { env } from '../env.js';
 import { logger } from '../logger.js';
 import type { MailKind } from './optout.js';
 import { isOptedOut, unsubscribeUrl } from './optout.js';
-import { UNSUBSCRIBE_SLOT, withTracking } from './components.js';
+import { NAVY_TEXT, UNSUBSCRIBE_SLOT, withTracking } from './components.js';
 import { prisma } from '../db.js';
 
 let cached: Transporter | null = null;
@@ -102,7 +102,7 @@ export function withUnsubscribeFooter(html: string, url: string | null): string 
   const safeUrl = url.replace(/&/g, '&amp;');
   const line =
     `<br>You are receiving occasional Pets24x7 suggestions. ` +
-    `<a href="${safeUrl}" style="color:#4b5563;text-decoration:underline">Unsubscribe</a>.`;
+    `<a href="${safeUrl}" style="color:${NAVY_TEXT};text-decoration:underline">Unsubscribe</a>.`;
   if (html.includes(UNSUBSCRIBE_SLOT)) return html.split(UNSUBSCRIBE_SLOT).join(line);
   const block =
     `<div style="max-width:600px;margin:0 auto;padding:0 20px 28px;text-align:center;` +

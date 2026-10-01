@@ -97,7 +97,7 @@ export function renderInvoice(d: InvoiceData): string {
   .sheet { max-width:760px; margin:24px auto; background:#fff; padding:40px; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
   h1 { font-size:22px; margin:0 0 2px; }
   .muted { color:#6b7280; }
-  .top { display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; border-bottom:2px solid #ff6b35; padding-bottom:18px; margin-bottom:24px; }
+  .top { display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; border-bottom:3px solid #2563EB; padding-bottom:18px; margin-bottom:24px; }
   .meta { text-align:right; }
   .grid { display:flex; gap:32px; flex-wrap:wrap; margin-bottom:26px; }
   .grid > div { flex:1 1 220px; }

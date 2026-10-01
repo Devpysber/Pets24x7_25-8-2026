@@ -5,7 +5,7 @@
 // Layout primitives live in components.ts.
 
 import type { MailInput } from './mailer.js';
-import { Button, CodeBlock, InfoBox, Note, Quote, Text, adminDash, day, dayTime, esc, h, money, page, parentDash, siteUrl, vendorDash, who } from './components.js';
+import { BRAND_TEXT, Button, CodeBlock, InfoBox, Note, Quote, Text, adminDash, day, dayTime, esc, h, money, page, parentDash, siteUrl, vendorDash, who } from './components.js';
 import { campaignGoalLabel } from '../payments/pricing.js';
 import { digestSubject } from './reco-templates.js';
 
@@ -259,7 +259,7 @@ export function membershipActivatedEmail(
         ]),
         Button('Open my dashboard', parentDash('membership')),
         ...(invoiceUrl
-          ? [Note(`Need an invoice? <a href="${esc(invoiceUrl)}" style="color:#c2410c;font-weight:600">Download it here</a> — it opens in your browser and prints to PDF.`)]
+          ? [Note(`Need an invoice? <a href="${esc(invoiceUrl)}" style="color:${BRAND_TEXT};font-weight:600">Download it here</a> — it opens in your browser and prints to PDF.`)]
           : []),
         Note('Keep this email as your receipt.'),
       ],
@@ -568,7 +568,7 @@ Upgrade to see this customer: ${vendorDash('subscriptions')}
         Quote(enquiry.notes || 'No message left.'),
         ...(dial
           ? [Button(`Call ${enquiry.name}`, `tel:${dial}`),
-             Note(`Prefer WhatsApp? <a href="${esc(`https://wa.me/${dial.replace(/^\+/, '')}`)}" style="color:#c2410c;font-weight:600">Message them on WhatsApp</a> &middot; <a href="${esc(vendorDash('enquiries'))}" style="color:#c2410c;font-weight:600">Open in dashboard</a>`)]
+             Note(`Prefer WhatsApp? <a href="${esc(`https://wa.me/${dial.replace(/^\+/, '')}`)}" style="color:${BRAND_TEXT};font-weight:600">Message them on WhatsApp</a> &middot; <a href="${esc(vendorDash('enquiries'))}" style="color:${BRAND_TEXT};font-weight:600">Open in dashboard</a>`)]
           : [Button('Open vendor dashboard', vendorDash('enquiries'))]),
       ],
       preheader: `${enquiry.name} · ${enquiry.phone}`,
@@ -1057,7 +1057,7 @@ export function campaignCompletedEmail(to: string, businessName: string, goal: s
 
 /** The "download your invoice" line under a vendor receipt. */
 const invoiceNote = (url: string) =>
-  Note(`Need an invoice? <a href="${esc(url)}" style="color:#c2410c;font-weight:600">Download it here</a> — sign in to your business account and it opens in your browser, ready to print to PDF.`);
+  Note(`Need an invoice? <a href="${esc(url)}" style="color:${BRAND_TEXT};font-weight:600">Download it here</a> — sign in to your business account and it opens in your browser, ready to print to PDF.`);
 
 export function featuredLiveEmail(
   to: string,
@@ -1320,7 +1320,7 @@ export function recommendationsEmail(
         <div style="font-size:15px;font-weight:700;line-height:1.35">${title}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:3px">${esc(it.category)}${it.city ? ` · ${esc(it.city)}` : ''}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:3px">${esc(stars)}${esc(reviews)}</div>
-        ${why ? `<div style="font-size:12px;color:#c2410c;font-weight:600;margin-top:5px">${esc(why)}</div>` : ''}
+        ${why ? `<div style="font-size:12px;color:${BRAND_TEXT};font-weight:600;margin-top:5px">${esc(why)}</div>` : ''}
       </td></tr>`;
     })
     .join('');
