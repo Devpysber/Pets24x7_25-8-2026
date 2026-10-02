@@ -49,6 +49,20 @@ jobs:
           mask() { sed -E 's/[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+)/***@\1/g'; }
           ENV_FILE=/opt/pets24x7/app/pets24x7_api/.env
 
+          # Accepted by the relay is not delivered: Gmail and Outlook drop or
+          # spam mail whose From domain lacks SPF / DKIM / DMARC. Resolved from
+          # the runner, so it shows what the rest of the internet sees.
+          echo "::group::DNS for the sending domain"
+          FROM_DOMAIN=$(ssh_vps "sudo grep -E '^MAIL_FROM=' $ENV_FILE" | sed -E 's/.*@([A-Za-z0-9.-]+).*/\1/')
+          FROM_DOMAIN=${FROM_DOMAIN:-pets24x7.com}
+          echo "From domain: $FROM_DOMAIN"
+          for q in "$FROM_DOMAIN TXT" "$FROM_DOMAIN MX" "_dmarc.$FROM_DOMAIN TXT" "resend._domainkey.$FROM_DOMAIN TXT" "send.$FROM_DOMAIN TXT" "send.$FROM_DOMAIN MX"; do
+            set -- $q
+            ans=$(dig +short "$1" "$2" @1.1.1.1 | tr '\n' ' ')
+            echo "$1 $2 -> ${ans:-(no record)}"
+          done
+          echo "::endgroup::"
+
           echo "::group::API service"
           ssh_vps 'sudo systemctl is-active pets24x7-api; sudo systemctl show pets24x7-api -p ActiveEnterTimestamp' || true
           echo "::endgroup::"
