@@ -7,6 +7,8 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
+import { promises as dns } from 'node:dns';
+
 import { env } from '../env.js';
 import { logger } from '../logger.js';
 import type { MailKind } from './optout.js';
@@ -54,6 +56,39 @@ export async function verifyMailTransport(): Promise<{ ok: boolean; error?: stri
       '[mail] SMTP login FAILED — no outbound mail will be delivered',
     );
     return { ok: false, error };
+  }
+}
+
+/**
+ * Warns, once at boot, about addresses mail is meant to reach that cannot
+ * receive any: a domain with no MX (or A) record silently swallows admin
+ * alerts and every reply. pets24x7.com shipped without one, so the daily
+ * admin digest and "reply to this email" both went nowhere.
+ */
+export async function checkMailboxDomains(adminEmails: string[]): Promise<void> {
+  const fromAddress = /<([^>]+)>/.exec(env.MAIL_FROM)?.[1] ?? env.MAIL_FROM;
+  const targets = new Map<string, string>();
+  for (const a of adminEmails) targets.set(a, 'admin alerts');
+  targets.set(env.MAIL_REPLY_TO ?? fromAddress, env.MAIL_REPLY_TO ? 'MAIL_REPLY_TO' : 'replies (MAIL_FROM; set MAIL_REPLY_TO)');
+  const seen = new Map<string, boolean>();
+  for (const [address, role] of targets) {
+    const domain = address.split('@')[1]?.toLowerCase();
+    if (!domain) continue;
+    if (!seen.has(domain)) {
+      // Only a definite answer counts: a lookup that merely failed (network,
+      // timeout) is not evidence the domain cannot receive mail.
+      const receives = await dns
+        .resolveMx(domain)
+        .then((mx) => mx.length > 0)
+        .catch((err: NodeJS.ErrnoException) => !['ENODATA', 'ENOTFOUND'].includes(err.code ?? ''));
+      seen.set(domain, receives);
+    }
+    if (!seen.get(domain)) {
+      logger.error(
+        { address, role, domain },
+        `[mail] ${domain} has no MX record — mail for ${role} to this address can never be delivered`,
+      );
+    }
   }
 }
 
@@ -277,6 +312,7 @@ export async function sendMail(rawInput: MailInput): Promise<boolean> {
     const inline = withInlineLogo(message.html);
     const info = await tx.sendMail({
       from: env.MAIL_FROM,
+      ...(env.MAIL_REPLY_TO ? { replyTo: env.MAIL_REPLY_TO } : {}),
       ...message,
       html: inline.html,
       ...(inline.attachments.length ? { attachments: inline.attachments } : {}),
