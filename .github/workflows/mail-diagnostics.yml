@@ -1,0 +1,73 @@
+# Read-only mail health check on the VPS, run by hand from the Actions tab.
+#
+# Prints what is needed to tell why mail is not arriving, without touching
+# anything: whether the API is up, the non-secret mail settings in its .env
+# (secrets are reported only as set / missing), whether the server can reach
+# the SMTP relay, the API's recent "[mail]" log lines with recipient addresses
+# masked, and the result of `npm run mail:check` (SMTP login, and optionally
+# one test message to the address given when the run is started).
+name: Mail diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_to:
+        description: 'Optional: send one test email to this address'
+        required: false
+        default: ''
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check mail on the VPS
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          TEST_TO: ${{ inputs.test_to }}
+        run: |
+          set -uo pipefail
+          test -n "$SSH_KEY"         || { echo "VPS_SSH_KEY secret is not set"; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "VPS_KNOWN_HOSTS secret is not set"; exit 1; }
+          # Only a plain address may reach the remote shell.
+          if [ -n "$TEST_TO" ] && ! printf '%s' "$TEST_TO" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+            echo "test_to is not a valid email address"; exit 1
+          fi
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY"         > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          ssh_vps() {
+            ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts \
+                -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" "$@"
+          }
+          # Recipient local parts are masked: the log names real customers.
+          mask() { sed -E 's/[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+)/***@\1/g'; }
+          ENV_FILE=/opt/pets24x7/app/pets24x7_api/.env
+
+          echo "::group::API service"
+          ssh_vps 'sudo systemctl is-active pets24x7-api; sudo systemctl show pets24x7-api -p ActiveEnterTimestamp' || true
+          echo "::endgroup::"
+
+          echo "::group::Mail settings in .env (secrets shown only as set/missing)"
+          ssh_vps "sudo grep -E '^(NODE_ENV|SMTP_HOST|SMTP_PORT|SMTP_SECURE|MAIL_FROM|MAIL_SITE_URL|MAIL_ALLOW_DEV_SEND|MAIL_MARKETING_DAILY_CAP|RUN_JOBS)=' $ENV_FILE" || true
+          for k in SMTP_USER SMTP_PASS; do
+            ssh_vps "sudo grep -Eq '^$k=..' $ENV_FILE && echo '$k=(set)' || echo '$k=(MISSING)'" || true
+          done
+          echo "::endgroup::"
+
+          echo "::group::Can the server reach the SMTP relay?"
+          ssh_vps 'for hp in smtp.gmail.com:465 smtp.gmail.com:587 smtp.resend.com:465; do h=${hp%:*}; p=${hp#*:}; if timeout 8 bash -c "</dev/tcp/$h/$p" 2>/dev/null; then echo "$hp open"; else echo "$hp BLOCKED or unreachable"; fi; done' || true
+          echo "::endgroup::"
+
+          echo "::group::API [mail] log, last 48 hours (newest last)"
+          ssh_vps 'sudo journalctl -u pets24x7-api --since "-48h" --no-pager -o cat | grep -F "[mail]" | tail -n 80' | mask || true
+          echo "::endgroup::"
+
+          echo "::group::npm run mail:check"
+          ssh_vps "sudo -u pets24x7 bash -lc '. ~/.nvm/nvm.sh && cd /opt/pets24x7/app/pets24x7_api && npx tsx scripts/mail-check.ts $TEST_TO'" 2>&1 | mask || true
+          echo "::endgroup::"
