@@ -348,7 +348,8 @@ export function Note(html: string): string {
 /** WhatsApp support line, shown in every footer. */
 export const SUPPORT_WHATSAPP = 'https://wa.me/919930090487';
 const SUPPORT_WHATSAPP_LABEL = '+91 99300 90487';
-export const SUPPORT_EMAIL = 'support@pets24x7.com';
+/** Inbox shown in the footer, or null: no address is shown that cannot receive mail. */
+export const supportEmail = (): string | null => env.MAIL_REPLY_TO ?? null;
 
 /** Closing line under the content, so every mail ends like a letter. */
 export function SignOff(): string {
@@ -365,7 +366,7 @@ function HelpCard(): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
           <td class="stack" valign="middle" style="font-family:${FONT}">
             <p style="margin:0 0 3px;font-size:14px;line-height:20px;color:${INK};font-weight:700">Need a hand?</p>
-            <p style="margin:0;font-size:13px;line-height:20px;color:${SUBTLE}">Just reply to this email &mdash; a real person answers, usually within a working day.</p>
+            <p style="margin:0;font-size:13px;line-height:20px;color:${SUBTLE}">${supportEmail() ? 'Just reply to this email or' : 'Message us on WhatsApp &mdash;'} a real person answers, usually within a working day.</p>
           </td>
           <td class="stack stack-gap" valign="middle" align="right" style="padding-left:16px;white-space:nowrap">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -396,7 +397,7 @@ export function Footer(): string {
       <a href="${siteUrl('/search/')}" style="${nav}">Find pet services</a>${dot}<a href="${siteUrl('/membership/')}" style="${nav}">Membership</a>${dot}<a href="${siteUrl('/register-business/')}" style="${nav}">List your business</a>
     </p>
     <p style="margin:0 0 20px;font-size:13px;line-height:22px;font-family:${FONT}">
-      <a href="mailto:${SUPPORT_EMAIL}" style="${soft}">${SUPPORT_EMAIL}</a>${dot}<a href="${SUPPORT_WHATSAPP}" style="${soft}">WhatsApp ${SUPPORT_WHATSAPP_LABEL}</a>
+      ${(() => { const e = supportEmail(); return e ? `<a href="mailto:${esc(e)}" style="${soft}">${esc(e)}</a>${dot}` : ''; })()}<a href="${SUPPORT_WHATSAPP}" style="${soft}">WhatsApp ${SUPPORT_WHATSAPP_LABEL}</a>
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid ${NAVY_LINE};font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>
     <p style="margin:18px 0 0;font-size:12px;line-height:19px;color:${NAVY_MUTED};font-family:${FONT}">

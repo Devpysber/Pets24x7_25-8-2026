@@ -69,6 +69,9 @@ jobs:
 
           echo "::group::Mail settings in .env (secrets shown only as set/missing)"
           ssh_vps "sudo grep -E '^(NODE_ENV|SMTP_HOST|SMTP_PORT|SMTP_SECURE|MAIL_FROM|MAIL_SITE_URL|MAIL_ALLOW_DEV_SEND|MAIL_MARKETING_DAILY_CAP|RUN_JOBS)=' $ENV_FILE" || true
+          # Where admin alerts and replies go, local part masked; the DNS
+          # section above shows whether those domains can receive mail.
+          ssh_vps "sudo grep -E '^(ADMIN_NOTIFY_EMAIL|MAIL_REPLY_TO|SEED_ADMIN_EMAIL)=' $ENV_FILE" | mask || true
           for k in SMTP_USER SMTP_PASS; do
             ssh_vps "sudo grep -Eq '^$k=..' $ENV_FILE && echo '$k=(set)' || echo '$k=(MISSING)'" || true
           done

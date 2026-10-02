@@ -56,7 +56,8 @@ import { startReminderJob } from './jobs/reminders.js';
 import { startEngagementJob } from './jobs/engagement.js';
 import { startVendorEngagementJob } from './jobs/vendor-engagement.js';
 import { startAdminDigestJob } from './jobs/admin-digest.js';
-import { mailEnabled, verifyMailTransport } from './mail/mailer.js';
+import { checkMailboxDomains, mailEnabled, verifyMailTransport } from './mail/mailer.js';
+import { adminNotifyEmails } from './mail/admin-notify.js';
 import { refreshDefaultPlanCopy } from './payments/default-plans.js';
 import { startExpiryJob } from './jobs/expiry.js';
 import { devRouter } from './dev/dev.routes.js';
@@ -357,6 +358,9 @@ async function ensureSeedAdmin(): Promise<void> {
   // unreachable must not stop the API serving, but it must be loud in the log
   // rather than showing up as mail that quietly never arrives.
   void verifyMailTransport().catch(() => {});
+  if (env.NODE_ENV === 'production') {
+    void adminNotifyEmails().then(checkMailboxDomains).catch(() => {});
+  }
   app.listen(env.PORT, env.HOST, () => {
     logger.info(`pets24x7-api ready on http://${env.HOST}:${env.PORT}  (NODE_ENV=${env.NODE_ENV})`);
     startBaileysIfLinked();

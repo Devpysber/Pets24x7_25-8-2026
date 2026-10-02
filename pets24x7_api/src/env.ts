@@ -123,12 +123,16 @@ const Env = z.object({
   // unless this is explicitly set.
   MAIL_ALLOW_DEV_SEND: envBool(false),
   // Most marketing mail (digests, engagement, growth tips) sent in any rolling
-  // 24 hours. One Gmail mailbox sends about 500 a day in total, and the
-  // scheduled sweeps alone can ask for more than that; once the relay's daily
-  // limit is hit, sign-in codes fail too. The cap keeps the rest of the budget
-  // for transactional mail. Raise it on a relay with a bigger allowance
-  // (Workspace, Resend, SES); 0 stops marketing mail entirely.
-  MAIL_MARKETING_DAILY_CAP: z.coerce.number().int().min(0).default(200),
+  // 24 hours. Every relay has a daily allowance shared by all mail (Resend's
+  // free plan: 100 a day; a Gmail mailbox: about 500), and once it is used up
+  // sign-in codes fail too. The cap keeps the rest for transactional mail.
+  // Raise it on a paid plan; 0 stops marketing mail entirely.
+  MAIL_MARKETING_DAILY_CAP: z.coerce.number().int().min(0).default(60),
+  // Inbox that receives replies. MAIL_FROM is usually a no-reply address on a
+  // domain with no mailbox, so without this a reply to any mail bounces even
+  // though many templates invite one. Set, it becomes the Reply-To header and
+  // the address shown in the footer.
+  MAIL_REPLY_TO: z.string().email().optional(),
   // Verification links stay valid this long unless used sooner.
   EMAIL_VERIFY_TTL_MIN: z.coerce.number().int().min(1).default(10),
 
