@@ -50,7 +50,7 @@
   /* Desktop Left Sidebar */
   .sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; }
   .sidebar-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .brand-logo{height:36px;width:auto;max-width:min(200px,46vw);border-radius:0;object-fit:contain;display:block}
+  .brand-logo{height:clamp(44px,2.4vw + 28px,58px);width:auto;max-width:min(240px,52vw);border-radius:0;object-fit:contain;display:block}
   .brand-title { font-weight: 800; font-size: 19px; color: var(--primary); letter-spacing: -0.4px; }
   .brand-title .tld { color: var(--text-main); font-weight: 700; }
 
@@ -430,7 +430,7 @@
   <div class="mobile-top-bar">
     <!-- The logo image already carries the wordmark, so no duplicate text. -->
     <a href="/" title="Go to Pets24x7.com" style="display: flex; align-items: center; min-height: 44px; flex-shrink: 0; text-decoration:none;">
-      <img src="/pets24x7_logo.png" alt="Pets24x7.com home" style="height:30px;width:auto;max-width:130px;object-fit:contain;display:block;" />
+      <img src="/pets24x7_logo.png" alt="Pets24x7.com home" style="height:38px;width:auto;max-width:min(170px,44vw);object-fit:contain;display:block;" />
     </a>
     <button type="button" class="mob-user" id="mobUserLabel" onclick="navigate('account')" aria-label="My account">Pet Parent</button>
   </div>

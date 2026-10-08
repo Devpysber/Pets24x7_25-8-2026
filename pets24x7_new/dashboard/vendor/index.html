@@ -72,7 +72,7 @@
     gap: 10px;
     border-bottom: 1px solid var(--border);
   }
-  .sidebar-brand img { height: 36px; width: auto; max-width: 170px; object-fit: contain; display: block; }
+  .sidebar-brand img { height: clamp(40px, 1.6vw + 26px, 48px); width: auto; max-width: 200px; object-fit: contain; display: block; }
   .sidebar-brand-text { font-weight: 700; font-size: 16px; color: var(--primary); letter-spacing: -0.3px; }
   .sidebar-brand-text span { font-size: 11px; color: var(--text-muted); font-weight: 500; display: block; margin-top: -1px; }
 
@@ -101,7 +101,7 @@
     background: var(--primary);
     border-radius: 0 2px 2px 0;
   }
-  .nav-item svg { color: #64748B; flex-shrink: 0; transition: color 0.15s; }
+  .nav-item svg { width: 20px; height: 20px; color: #64748B; flex-shrink: 0; transition: color 0.15s; }
   .nav-item:hover svg { color: var(--text-main); }
   .nav-item.active svg { color: var(--primary); }
   .nav-item .badge { margin-left: auto; background: #F1F5F9; border: 1px solid var(--border); color: #475569; font-size: 11px; padding: 1px 6px; border-radius: 99px; font-weight: 600; }
@@ -228,9 +228,9 @@
     flex-direction: column;
     justify-content: space-between;
   }
-  .metric-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .metric-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .metric-lbl { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
-  .metric-icon { color: var(--text-subtle); }
+  .metric-icon { width: 22px; height: 22px; color: var(--text-subtle); flex-shrink: 0; }
   .metric-val { font-size: 26px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; line-height: 1.1; }
   .metric-trend { font-size: 11.5px; font-weight: 600; color: var(--success); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
   .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
@@ -430,6 +430,7 @@
   .receipt-head > div:last-child { text-align: right; }
 
   @media (max-width: 840px) {
+    .nav-item svg { width: 22px; height: 22px; }
     .sidebar { transform: translateX(-100%); transition: transform 0.25s ease, visibility 0.25s; visibility: hidden; width: min(280px, 85vw); box-shadow: 0 10px 40px rgba(15,23,42,0.25); }
     .sidebar.open { transform: translateX(0); visibility: visible; }
     .nav-backdrop { display: block; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 95; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -517,7 +518,7 @@
   <!-- Mobile Topbar -->
   <header class="mobile-bar">
     <a class="brand" href="/" title="Go to Pets24x7.com" style="text-decoration:none; color:inherit;">
-      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:30px;width:auto;max-width:150px;object-fit:contain;display:block;" />
+      <img src="/pets24x7_logo.png" alt="Pets24x7" style="height:38px;width:auto;max-width:min(170px,44vw);object-fit:contain;display:block;" />
       <span>Pets24x7 Vendor</span>
     </a>
     <button class="menu-btn" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">

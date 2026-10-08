@@ -85,7 +85,7 @@
   .header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
   .header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; gap: 16px; }
   .brand { display: flex; align-items: center; gap: 12px; line-height: 1; }
-  .brand-logo{height:46px;width:auto;max-width:min(200px,46vw);border-radius:0;object-fit:contain;display:block}
+  .brand-logo{height:clamp(44px,2.4vw + 28px,58px);width:auto;max-width:min(240px,52vw);border-radius:0;object-fit:contain;display:block}
   .brand-mark { display: flex; flex-direction: column; }
   .brand-name { font-weight: 800; font-size: 24px; color: var(--primary); letter-spacing: -0.5px; line-height: 1; }
   .brand-name .tld { color: var(--text); }
@@ -359,7 +359,7 @@
     .feat-card:hover { transform: none; }
   }
   @media (max-width: 400px) {
-    .brand-logo { height: 40px; }
+    .brand-logo{height:44px}
     .header-nav:not(.nav-open) .nav-link.nav-keep { font-size: 13px; }
   }
   a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(37,99,235,.55); outline-offset: 2px; }
