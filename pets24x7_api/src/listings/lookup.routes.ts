@@ -156,6 +156,8 @@ const SearchQuery = z.object({
   citySlug: qs(160),
   country: qs(4),
   newest: qs(8),
+  verified: qs(8),
+  sort: qs(16),
   limit: qs(8),
   offset: qs(8),
 });
@@ -184,6 +186,8 @@ listingsRouter.get(
       limit,
       offset,
       newestFirst,
+      verifiedOnly: query.verified === '1' || query.verified === 'true',
+      sort: query.sort === 'name' ? 'name' : query.sort === 'relevance' ? 'relevance' : undefined,
     });
     res.json({
       ok: true,

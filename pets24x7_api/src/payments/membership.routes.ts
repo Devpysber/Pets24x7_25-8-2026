@@ -20,6 +20,7 @@ import { invoiceUrl, renderInvoice } from './invoice.js';
 import { campaignGoalLabel } from './pricing.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
+import { notifyPaymentReceived } from '../mail/payment-notify.js';
 import {
   campaignSubmittedEmail,
   featuredLiveEmail,
@@ -789,6 +790,29 @@ export async function applyPaymentResult(
           invoiceUrl(payment.merchantTxnId),
         ),
       );
+    }
+    // Team copy of the purchase (PAYMENT_NOTIFY_EMAILS).
+    {
+      const vendor = payment.campaign?.vendor ?? payment.featuredListing?.vendor ?? null;
+      const parent = payment.membership?.parent ?? payment.parent ?? null;
+      const what = payment.membership
+        ? `${payment.membership.plan.name} membership`
+        : payment.campaign
+          ? `${campaignGoalLabel(String(payment.campaign.goal))} campaign (${payment.campaign.durationDays} days)`
+          : payment.featuredListing
+            ? `Featured listing (${payment.featuredListing.durationDays} days)`
+            : String(payment.purpose).toLowerCase();
+      notifyPaymentReceived({
+        what,
+        amountMinor: payment.amountMinor,
+        currency: payment.currency,
+        merchantTxnId: payment.merchantTxnId,
+        paidAt: now,
+        buyerKind: vendor ? 'Business' : 'Pet parent',
+        buyerName: vendor?.businessName ?? parent?.name ?? 'Unknown buyer',
+        buyerEmail: vendor?.email ?? parent?.email ?? null,
+        buyerPhone: vendor?.phone ?? parent?.phone ?? null,
+      });
     }
     return;
   }

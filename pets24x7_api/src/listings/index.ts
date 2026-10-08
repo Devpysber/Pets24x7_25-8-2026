@@ -429,6 +429,10 @@ export function searchListings(opts: {
   /** Matches to skip, for paging. */
   offset?: number;
   newestFirst?: boolean;
+  /** Only businesses that have claimed their listing (verified on Pets24x7). */
+  verifiedOnly?: boolean;
+  /** 'relevance' (default when there is a query) or 'name' (A-Z). */
+  sort?: 'relevance' | 'name';
   /**
    * Hidden listings are skipped unless this is set (admin views only).
    * 'only' returns nothing but hidden ones.
@@ -456,12 +460,19 @@ export function searchListingsPage(opts: Parameters<typeof searchListings>[0]): 
   // Every word must match somewhere (name, category, city or address), so
   // "grooming mumbai" or "vet bandra" works; before, the whole query had to
   // appear as one substring of a single field and those returned nothing.
-  const tokens = q.split(/\s+/).filter(Boolean);
+  // Filler words people type ("dog grooming near me", "best vet in pune")
+  // are dropped first: no listing names "dog" or "near", so they emptied the
+  // results. A query made only of filler keeps its words.
+  const allTokens = q.split(/[\s,]+/).map((t) => t.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')).filter(Boolean);
+  const meaningful = allTokens.filter((t) => !SEARCH_FILLER.has(t));
+  const tokens = (meaningful.length ? meaningful : allTokens).map((t) => SEARCH_SYNONYM[t] ?? t);
+  const ranked = !!q || opts.sort === 'name' || !!opts.verifiedOnly;
 
   // Duplicates are collapsed per city, not across the whole index: a name-only
   // key hid every other branch of a chain once one city had shown it.
   const seenNames = new Set<string>();
   const results: ListingRecord[] = [];
+  const matches: ListingRecord[] = [];
   let skipped = 0;
   let hasMore = false;
   const hiddenMode = opts.includeHidden ?? false;
@@ -488,14 +499,60 @@ export function searchListingsPage(opts: Parameters<typeof searchListings>[0]): 
         if (!tokens.every((t) => hay.includes(t))) continue;
       }
     }
+    if (opts.verifiedOnly && item.claimStatus !== 'CLAIMED') continue;
     seenNames.add(normName);
+    if (ranked) { matches.push(item); continue; }
     if (skipped < offset) { skipped++; continue; }
     // One match past the page proves there is a next one.
     if (results.length >= limit) { hasMore = true; break; }
     results.push(item);
   }
-  return { listings: results, hasMore };
+  if (!ranked) return { listings: results, hasMore };
+
+  // Ranked: every match is scored, so the best ones come first instead of
+  // whichever the index happened to hold first.
+  const phrase = q.replace(/\s+/g, ' ');
+  const score = (item: ListingRecord): number => {
+    const name = item.name.toLowerCase();
+    const category = item.category.toLowerCase();
+    let s = 0;
+    if (phrase && name.includes(phrase)) s += 60;
+    if (phrase && name.startsWith(phrase)) s += 20;
+    for (const t of tokens) {
+      if (name.includes(t)) s += 12;
+      else if (category.includes(t) || (item.category_slug || '').includes(t)) s += 6;
+      else s += 2; // city / address
+    }
+    if (item.claimStatus === 'CLAIMED') s += 8;
+    s += Math.min(shownRating(item), 5);
+    return s;
+  };
+  const sorted = opts.sort === 'name'
+    ? matches.sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)))
+    : matches.map((m) => ({ m, s: score(m) })).sort((a, b) => b.s - a.s).map((x) => x.m);
+  return { listings: sorted.slice(offset, offset + limit), hasMore: sorted.length > offset + limit };
 }
+
+/** A name as A-Z sorts it: leading emoji, ticks and quotes ignored. */
+function sortName(n: string): string {
+  return n.replace(/^[^\p{L}\p{N}]+/u, '').toLowerCase();
+}
+
+/** Words that describe the searcher, not the business. */
+const SEARCH_FILLER = new Set([
+  'a', 'an', 'the', 'in', 'at', 'for', 'of', 'and', 'or', 'to', 'my', 'me', 'near', 'nearby', 'around', 'best', 'top',
+  'good', 'cheap', 'affordable', 'pet', 'pets', 'dog', 'dogs', 'puppy', 'puppies', 'cat', 'cats', 'kitten', 'kittens',
+  'animal', 'animals', 'service', 'services', 'shop', 'centre', 'center', 'open', 'now', 'today', '24', 'hours', 'hrs',
+]);
+/** Everyday words mapped onto the stems the directory uses. */
+const SEARCH_SYNONYM: Record<string, string> = {
+  vets: 'vet', veterinarian: 'vet', veterinary: 'vet', doctor: 'vet', doctors: 'vet', hospital: 'hospital',
+  groomer: 'groom', groomers: 'groom', grooming: 'groom', salon: 'groom', spa: 'spa',
+  boarding: 'board', hostel: 'board', kennel: 'board', daycare: 'daycare', creche: 'daycare',
+  trainer: 'train', trainers: 'train', training: 'train', walker: 'walk', walkers: 'walk', walking: 'walk',
+  sitter: 'sit', sitters: 'sit', sitting: 'sit', vaccine: 'vaccin', vaccines: 'vaccin', vaccination: 'vaccin',
+  taxi: 'taxi', transport: 'transport', relocation: 'relocat', physio: 'physio', dentist: 'dental',
+};
 
 /**
  * Type-ahead suggestions for the admin directory search. Cities and categories

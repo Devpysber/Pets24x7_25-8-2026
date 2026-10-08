@@ -1779,6 +1779,7 @@ def render_listing(biz, all_in_city, all_cats):
 <script src="/config.js"></script>
 <script src="/analytics.js"></script>
 {RECO_TRACK_TAG}
+<script src="/listing-deals.js"></script>
 <script type="application/ld+json">{biz_jsonld}</script>
 <script type="application/ld+json">{bc_jsonld}</script>
 </head>
@@ -1822,6 +1823,8 @@ def render_listing(biz, all_in_city, all_cats):
         {email_line}
         {website_line}
       </section>
+
+      <section id="p24deals" hidden></section>
 
       {services_section}
 
@@ -1974,6 +1977,7 @@ def render_listing(biz, all_in_city, all_cats):
   var RECO_SRC = window.recoLandingSource ? window.recoLandingSource(biz.id) : '';
   logTap('listing_view');
   if (window.loadRecoListing) window.loadRecoListing(biz.id);
+  if (window.loadListingDeals) window.loadListingDeals(biz.id);
 
   function loadListingReviews(){{
     fetch(API_BASE + '/api/reviews/listing/' + encodeURIComponent(biz.id), {{ headers: {{ 'Accept':'application/json' }} }})

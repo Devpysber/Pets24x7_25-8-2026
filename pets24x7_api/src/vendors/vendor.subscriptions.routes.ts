@@ -10,6 +10,7 @@ import { newMerchantTxnId } from '../payments/checkout.js';
 import { fetchPaymentStatus, fetchRazorpayOrder, verifyPaymentSignature } from '../payments/razorpay.js';
 import { alertAdminsAboutPayment } from '../payments/membership.routes.js';
 import { notifyIf } from '../mail/notify.js';
+import { notifyPaymentReceived } from '../mail/payment-notify.js';
 import { paymentReceiptEmail } from '../mail/lifecycle-templates.js';
 import { isVendorApproved } from '../shared/vendor-status.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../shared/errors.js';
@@ -496,8 +497,19 @@ async function activatePaidPlan(opts: {
   }
 
   const vendor = await prisma.vendor
-    .findUnique({ where: { id: vendorId }, select: { email: true, businessName: true } })
+    .findUnique({ where: { id: vendorId }, select: { email: true, businessName: true, phone: true } })
     .catch(() => null);
+  notifyPaymentReceived({
+    what: `${invoice.planName} business plan (${opts.billingPeriod === 'ANNUAL' ? 'yearly' : 'monthly'})`,
+    amountMinor: opts.amountMinor,
+    currency: 'INR',
+    merchantTxnId: opts.merchantTxnId,
+    paidAt: now,
+    buyerKind: 'Business',
+    buyerName: vendor?.businessName ?? vendorId,
+    buyerEmail: vendor?.email ?? null,
+    buyerPhone: vendor?.phone ?? null,
+  });
   notifyIf(vendor?.email, (to) =>
     paymentReceiptEmail(
       to,

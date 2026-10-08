@@ -343,7 +343,7 @@
             <div class="form-grid">
               <div>
                 <label for="bPhone">Phone Number *</label>
-                <input type="tel" id="bPhone" placeholder="+91 98765 43210" required autocomplete="tel" inputmode="tel" />
+                <input type="tel" id="bPhone" data-phone placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
               </div>
               <div>
                 <label for="bEmail">Email Address *</label>
@@ -358,7 +358,7 @@
               </div>
               <div>
                 <label for="bWhatsapp">WhatsApp Number (Optional)</label>
-                <input type="tel" id="bWhatsapp" placeholder="+91 98765 43210" />
+                <input type="tel" id="bWhatsapp" data-phone placeholder="98765 43210" />
               </div>
             </div>
 
@@ -379,16 +379,11 @@
             <label for="bAbout">About Your Business</label>
             <textarea id="bAbout" rows="3" placeholder="Describe your clinic, services, experience, and facilities…"></textarea>
 
-            <div class="form-grid">
-              <div>
-                <label for="bHours">Opening Hours</label>
-                <input type="text" id="bHours" placeholder="e.g. 9:00 AM - 8:00 PM (Mon-Sat)" />
-              </div>
-              <div>
-                <label for="bServices">Services Offered</label>
-                <input type="text" id="bServices" placeholder="e.g. Vaccination, Surgeries, Grooming" />
-              </div>
-            </div>
+            <label for="bHours">Opening Hours</label>
+            <textarea id="bHours" data-hours rows="2"></textarea>
+
+            <label for="bServices">Services Offered</label>
+            <input type="text" id="bServices" placeholder="e.g. Vaccination, Surgeries, Grooming" />
 
             <label for="bImage">Storefront Image URL (Optional)</label>
             <input type="url" id="bImage" placeholder="https://example.com/clinic-photo.jpg" />
@@ -540,6 +535,8 @@
 <script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
 <script src="/nav-auth.js" defer></script>
+<script src="/phone-input.js"></script>
+<script src="/hours-input.js"></script>
 <script>
   var currentStep = 1;
   function $(id){ return document.getElementById(id); }
@@ -578,6 +575,13 @@
     if (e) e.preventDefault();
     clearErr($('err' + fromStep));
 
+    if (fromStep === 2) {
+      var pe = PhoneField.error($('bPhone'));
+      if (pe) { $('bPhone').focus(); return showErr($('err2'), 'Phone number: ' + pe); }
+      var we = PhoneField.error($('bWhatsapp'));
+      if (we) { $('bWhatsapp').focus(); return showErr($('err2'), 'WhatsApp number: ' + we); }
+    }
+
     if (fromStep === 4) {
       var p1 = $('oPass').value;
       var p2 = $('oConfirm').value;
@@ -589,13 +593,20 @@
       $('revCategory').textContent = $('bCategory').value;
       $('revCity').textContent = $('bCity').value.trim() + ' · ' + ($('bCountry').value === 'US' ? 'United States' : 'India');
       $('revAddress').textContent = $('bAddress').value.trim();
-      $('revPhone').textContent = $('bPhone').value.trim();
+      $('revPhone').textContent = PhoneField.value($('bPhone'));
       $('revEmail').textContent = $('bEmail').value.trim();
       $('revOwner').textContent = $('oName').value.trim();
     }
 
     showPane(fromStep + 1);
   }
+
+  // The dialling code follows the country picked in step 1 until the person
+  // chooses one themselves.
+  $('bCountry').addEventListener('change', function () {
+    PhoneField.setCountry($('bPhone'), this.value);
+    PhoneField.setCountry($('bWhatsapp'), this.value);
+  });
 
   function prevStep(fromStep) {
     showPane(fromStep - 1);
@@ -611,10 +622,10 @@
       locality: $('bLocality').value.trim(),
       address: $('bAddress').value.trim(),
       pincode: $('bPincode').value.trim(),
-      phone: $('bPhone').value.trim(),
+      phone: PhoneField.value($('bPhone')),
       email: $('bEmail').value.trim(),
       website: $('bWebsite').value.trim(),
-      whatsapp: $('bWhatsapp').value.trim(),
+      whatsapp: PhoneField.value($('bWhatsapp')),
       about: $('bAbout').value.trim(),
       openingHours: $('bHours').value.trim(),
       servicesList: $('bServices').value.trim(),

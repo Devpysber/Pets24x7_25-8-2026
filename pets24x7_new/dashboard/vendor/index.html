@@ -233,6 +233,11 @@
   .metric-icon { color: var(--text-subtle); }
   .metric-val { font-size: 26px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; line-height: 1.1; }
   .metric-trend { font-size: 11.5px; font-weight: 600; color: var(--success); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .metric-link { font: inherit; text-align: left; cursor: pointer; color: inherit; width: 100%; transition: border-color .15s, box-shadow .15s, transform .15s; }
+  .metric-link:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .metric-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .metric-link.attn { border-color: #FDBA74; background: #FFF7ED; }
 
   /* Professional Data Table */
   .table-container { overflow-x: auto; margin-top: 8px; }
@@ -250,6 +255,15 @@
 
   /* Services Grid */
   .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .deal-card { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+  .deal-card.deal-live { border-color: #BBF7D0; box-shadow: inset 4px 0 0 #16A34A; }
+  .deal-card.deal-paused, .deal-card.deal-expired { opacity: .7; }
+  .deal-badge { display: inline-block; background: #FFF7ED; color: #C2410C; border: 1px dashed #FDBA74; font-weight: 800; font-size: 12px; letter-spacing: .3px; padding: 4px 10px; border-radius: 6px; }
+  .deal-state { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; }
+  .deal-live .deal-state { color: #15803D; }
+  .deal-code { display: inline-block; margin-top: 8px; font-size: 12px; background: #F1F5F9; border-radius: 6px; padding: 3px 8px; font-family: ui-monospace, Menlo, monospace; }
+  .deal-empty { grid-column: 1 / -1; text-align: center; background: #fff; border: 1px dashed var(--border); border-radius: var(--radius); padding: 28px 20px; }
+  .deal-empty p { font-size: 13px; color: var(--text-muted); max-width: 460px; margin: 6px auto 14px; line-height: 1.5; }
   .service-card { background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
 
   /* Reviews list */
@@ -292,7 +306,9 @@
   .bench-track { position: relative; height: 10px; background: var(--border-light); border-radius: 99px; }
   .bench-median { position: absolute; left: 0; top: 0; bottom: 0; background: #CBD5E1; border-radius: 99px; }
   .bench-you { position: absolute; top: -3px; width: 4px; height: 16px; margin-left: -2px; background: var(--primary); border-radius: 2px; }
-  .perf-chart svg { display: block; width: 100%; height: 150px; }
+  .perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
+  .perf-grid > .card { margin-bottom: 0; }
+  @media (max-width: 560px) { .perf-grid { grid-template-columns: 1fr; } }
   .perf-chart .bar-views { fill: #BFDBFE; }
   .perf-chart .bar-taps { fill: var(--primary); }
   .perf-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
@@ -532,9 +548,9 @@
         Enquiries
         <span class="badge" id="enqNavBadge" hidden>0</span>
       </a>
-      <a class="nav-item" data-view="services">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Services
+      <a class="nav-item" data-view="deals">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Deals &amp; Offers
       </a>
       <a class="nav-item" data-view="reviews">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -608,58 +624,57 @@
           <button class="btn btn-sm" onclick="navigate('grow')">🚀 Grow Your Business</button>
         </div>
 
-        <!-- Recommended actions — ranked server-side by GET /api/reco/vendor -->
-        <div class="card" id="recoActionsCard">
-          <div class="card-header" style="margin-bottom:4px;">
-            <div>
-              <div class="card-title">Recommended for your business</div>
-              <div class="card-subtitle">The few things most likely to win you more customers right now.</div>
-            </div>
-          </div>
-          <div id="recoActions" aria-live="polite"><div class="reco-row" aria-hidden="true"><span class="reco-dot skel"></span><div class="reco-main"><div class="skel" style="height:13px; width:45%;"></div><div class="skel" style="height:11px; width:80%; margin-top:8px;"></div></div></div></div>
-        </div>
-
-        <!-- Business Metrics Cards -->
-        <div class="metrics-grid">
-          <div class="metric-card">
+        <!-- At a glance: the numbers a vendor checks first, each opening its own view -->
+        <div class="metrics-grid kpi-grid">
+          <button type="button" class="metric-card metric-link" onclick="navigate('enquiries')">
             <div class="metric-top">
               <span class="metric-lbl">Total Enquiries</span>
               <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
             <div class="metric-val" id="mEnqTotal">—</div>
             <div class="metric-trend" style="color:var(--text-muted);" id="mEnqNew">—</div>
-          </div>
-
-          <div class="metric-card">
+          </button>
+          <button type="button" class="metric-card metric-link" onclick="navigate('enquiries')">
+            <div class="metric-top">
+              <span class="metric-lbl">Need a Reply</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <div class="metric-val" id="mEnqOpen">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mEnqOpenNote">—</div>
+          </button>
+          <button type="button" class="metric-card metric-link" onclick="navigate('performance')">
+            <div class="metric-top">
+              <span class="metric-lbl">Profile Views · 30 days</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="metric-val" id="mViews">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mViewsNote">—</div>
+            <div id="mViewsSpark"></div>
+          </button>
+          <button type="button" class="metric-card metric-link" onclick="navigate('performance')">
+            <div class="metric-top">
+              <span class="metric-lbl">Contact Taps · 30 days</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div class="metric-val" id="mTaps">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mTapsNote">—</div>
+          </button>
+          <button type="button" class="metric-card metric-link" onclick="navigate('reviews')">
             <div class="metric-top">
               <span class="metric-lbl">Published Reviews</span>
               <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
             <div class="metric-val" id="mReviews">—</div>
             <div class="metric-trend" style="color:var(--text-muted);" id="mReviewAvg">—</div>
-          </div>
-
-          <div class="metric-card">
+          </button>
+          <button type="button" class="metric-card metric-link" onclick="navigate('deals')">
             <div class="metric-top">
-              <span class="metric-lbl">Review Requests Sent</span>
-              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <span class="metric-lbl">Live Deals</span>
+              <svg class="metric-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             </div>
-            <div class="metric-val" id="mInvitesSent">—</div>
-            <div class="metric-trend" style="color:var(--text-muted);" id="mInvitesDone">—</div>
-          </div>
-        </div>
-
-        <!-- Recommended next steps — driven by the server's completion checklist -->
-        <div class="card" id="dashChecklistCard" hidden>
-          <div class="card-header" style="margin-bottom:4px;">
-            <div>
-              <div class="card-title">Recommended next steps</div>
-              <div class="card-subtitle">Complete profiles rank higher and win more enquiries.</div>
-            </div>
-            <span style="font-size:20px; font-weight:800; color:var(--primary);" id="dashCompletionPct">0%</span>
-          </div>
-          <div class="progress-track"><div class="progress-fill" id="dashCompletionBar"></div></div>
-          <div id="dashChecklist"></div>
+            <div class="metric-val" id="mDeals">—</div>
+            <div class="metric-trend" style="color:var(--text-muted);" id="mDealsNote">—</div>
+          </button>
         </div>
 
         <!-- Recent Enquiries Section -->
@@ -687,6 +702,30 @@
               <tbody id="dashTableBody"><tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Loading enquiries…</td></tr></tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Recommended actions — ranked server-side by GET /api/reco/vendor -->
+        <div class="card" id="recoActionsCard">
+          <div class="card-header" style="margin-bottom:4px;">
+            <div>
+              <div class="card-title">Recommended for your business</div>
+              <div class="card-subtitle">The few things most likely to win you more customers right now.</div>
+            </div>
+          </div>
+          <div id="recoActions" aria-live="polite"><div class="reco-row" aria-hidden="true"><span class="reco-dot skel"></span><div class="reco-main"><div class="skel" style="height:13px; width:45%;"></div><div class="skel" style="height:11px; width:80%; margin-top:8px;"></div></div></div></div>
+        </div>
+
+        <!-- Recommended next steps — driven by the server's completion checklist -->
+        <div class="card" id="dashChecklistCard" hidden>
+          <div class="card-header" style="margin-bottom:4px;">
+            <div>
+              <div class="card-title">Recommended next steps</div>
+              <div class="card-subtitle">Complete profiles rank higher and win more enquiries.</div>
+            </div>
+            <span style="font-size:20px; font-weight:800; color:var(--primary);" id="dashCompletionPct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="dashCompletionBar"></div></div>
+          <div id="dashChecklist"></div>
         </div>
       </section>
 
@@ -815,17 +854,27 @@
         </div>
       </section>
 
-      <!-- 5. SERVICES VIEW -->
-      <section id="view-services" class="view-pane">
+      <!-- 5. DEALS & OFFERS VIEW (replaced the priced-services list, which no public page showed) -->
+      <section id="view-deals" class="view-pane">
         <div class="card-header" style="margin-bottom:14px;">
           <div>
-            <h2 style="font-size:18px; font-weight:700;">Services &amp; Prices</h2>
-            <div class="card-subtitle">Priced services shown on your public listing. Hidden services stay saved but are not shown.</div>
+            <h2 style="font-size:18px; font-weight:700;">Deals &amp; Offers</h2>
+            <div class="card-subtitle">Live deals show on your public listing and in the deals pet parents see for your city.</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddServiceModal()">+ Add Service</button>
+          <button class="btn btn-primary btn-sm" onclick="openDealModal()">+ Add Deal</button>
         </div>
-        <div class="services-grid" id="servicesGrid">
-          <p style="color:var(--text-muted); padding:20px 0;">Loading services…</p>
+        <div class="services-grid" id="dealsGrid">
+          <p style="color:var(--text-muted); padding:20px 0;">Loading deals…</p>
+        </div>
+        <div class="card" style="margin-top:18px;">
+          <div class="card-title" style="margin-bottom:4px;">Need an idea?</div>
+          <div class="card-subtitle" style="margin-bottom:12px;">Tap one to start from it, then change the details.</div>
+          <div class="reco-chips">
+            <button type="button" class="reco-chip" onclick="useDealIdea('First visit offer', '20% OFF', '20% off your first visit. Mention Pets24x7 when you book.')">+ 20% off first visit</button>
+            <button type="button" class="reco-chip" onclick="useDealIdea('Free nail trim with every bath', 'FREE ADD-ON', 'Book any bath and get a nail trim free.')">+ Free add-on</button>
+            <button type="button" class="reco-chip" onclick="useDealIdea('Vaccination week', '₹100 OFF', '₹100 off every vaccination this week.')">+ Vaccination week</button>
+            <button type="button" class="reco-chip" onclick="useDealIdea('Refer a friend', 'BOTH SAVE', 'Refer a friend: you both get 10% off your next visit.')">+ Refer a friend</button>
+          </div>
         </div>
       </section>
 
@@ -878,7 +927,7 @@
           <div class="metric-card"><span class="metric-lbl">Completed</span><div class="metric-val" id="pEnqDone">—</div></div>
           <div class="metric-card"><span class="metric-lbl">Published Reviews</span><div class="metric-val" id="pReviews">—</div></div>
           <div class="metric-card"><span class="metric-lbl">Average Rating</span><div class="metric-val" id="pRating">—</div></div>
-          <div class="metric-card"><span class="metric-lbl">Services Listed</span><div class="metric-val" id="pServices">—</div></div>
+          <div class="metric-card"><span class="metric-lbl">Live Deals</span><div class="metric-val" id="pDeals">—</div></div>
         </div>
 
         <!-- Visibility on Pets24x7 (last 30 days) — GET /api/reco/vendor performance -->
@@ -894,11 +943,49 @@
         <div class="card" id="perfTrendCard">
           <div class="card-header">
             <div>
-              <div class="card-title">Views vs contact taps</div>
-              <div class="card-subtitle">Daily activity on your listing over the last 30 days.</div>
+              <div class="card-title">Profile views and contact taps</div>
+              <div class="card-subtitle">Daily activity on your listing over the last 30 days. Hover or tap the chart for a day's numbers.</div>
             </div>
           </div>
           <div class="perf-chart" id="perfChart"><div class="skel" style="height:150px;"></div></div>
+        </div>
+
+        <div class="perf-grid">
+          <div class="card">
+            <div class="card-header"><div>
+              <div class="card-title">Enquiries per week</div>
+              <div class="card-subtitle">New enquiries over the last 12 weeks.</div>
+            </div></div>
+            <div id="perfEnqWeekly"><div class="skel" style="height:150px;"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div>
+              <div class="card-title">From view to customer</div>
+              <div class="card-subtitle">Last 30 days: how many people moved to each next step.</div>
+            </div></div>
+            <div id="perfFunnel"><div class="skel" style="height:120px;"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div>
+              <div class="card-title">How customers contact you</div>
+              <div class="card-subtitle">Contact taps on your listing, last 30 days.</div>
+            </div></div>
+            <div id="perfTapSplit"><div class="skel" style="height:40px;"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div>
+              <div class="card-title">Enquiry status</div>
+              <div class="card-subtitle">Where your enquiries stand right now.</div>
+            </div></div>
+            <div id="perfEnqStatus"><div class="skel" style="height:40px;"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div>
+              <div class="card-title">Rating breakdown</div>
+              <div class="card-subtitle">Published reviews by star rating.</div>
+            </div></div>
+            <div id="perfRatings"><div class="skel" style="height:120px;"></div></div>
+          </div>
         </div>
 
         <div class="card" id="perfBenchCard">
@@ -1340,18 +1427,16 @@
       <div class="form-group"><label for="ebPincode">PIN / ZIP code</label><input type="text" class="form-control" id="ebPincode" autocomplete="postal-code" inputmode="numeric" /></div>
       <div class="form-group"><label for="ebAddress">Full Address</label><input type="text" class="form-control" id="ebAddress" autocomplete="street-address" required /></div>
       <div class="grid-2">
-        <div class="form-group"><label for="ebPhone">Phone Number</label><input type="tel" class="form-control" id="ebPhone" autocomplete="tel" inputmode="tel" required /></div>
+        <div class="form-group"><label for="ebPhone">Phone Number</label><input type="tel" class="form-control" id="ebPhone" data-phone autocomplete="tel" inputmode="tel" required /></div>
         <div class="form-group"><label for="ebEmail">Email Address</label><input type="email" class="form-control" id="ebEmail" disabled /></div>
       </div>
       <div class="grid-2">
         <div class="form-group"><label for="ebWebsite">Website</label><input type="url" class="form-control" id="ebWebsite" inputmode="url" autocomplete="url" placeholder="https://..." /></div>
-        <div class="form-group"><label for="ebWhatsapp">WhatsApp Number</label><input type="tel" class="form-control" id="ebWhatsapp" autocomplete="tel" inputmode="tel" /></div>
+        <div class="form-group"><label for="ebWhatsapp">WhatsApp Number</label><input type="tel" class="form-control" id="ebWhatsapp" data-phone autocomplete="tel" inputmode="tel" /></div>
       </div>
       <div class="form-group"><label for="ebAbout">About Business</label><textarea class="form-control" id="ebAbout" rows="2" placeholder="Description of your clinic or services…"></textarea></div>
-      <div class="grid-2">
-        <div class="form-group"><label for="ebHours">Opening Hours</label><input type="text" class="form-control" id="ebHours" placeholder="e.g. 9:00 AM - 8:00 PM" /></div>
-        <div class="form-group"><label for="ebServices">Services Offered</label><input type="text" class="form-control" id="ebServices" placeholder="e.g. Vaccination, Grooming" /></div>
-      </div>
+      <div class="form-group"><label for="ebHours">Opening Hours</label><textarea class="form-control" id="ebHours" data-hours rows="2"></textarea></div>
+      <div class="form-group"><label for="ebServices">Services Offered</label><input type="text" class="form-control" id="ebServices" placeholder="e.g. Vaccination, Grooming" /></div>
       <div class="form-group"><label for="ebImageUrl">Storefront Cover Image URL</label><input type="url" class="form-control" id="ebImageUrl" placeholder="https://..." /></div>
       <div id="ebErr" style="color:red; font-size:12px; font-weight:600; display:none; margin-top:8px;"></div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
@@ -1378,6 +1463,33 @@
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
         <button type="button" class="btn btn-sm" onclick="closeModal('addServiceModal')">Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Save Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="dealModal">
+  <div class="modal-panel" style="max-width:540px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px; font-weight:700;" id="dealModalTitle">Add a deal</h3>
+      <button type="button" class="modal-close" onclick="closeModal('dealModal')" aria-label="Close">✕</button>
+    </div>
+    <form id="dealForm">
+      <div class="form-group"><label for="dTitle">Deal title</label><input type="text" class="form-control" id="dTitle" minlength="2" maxlength="140" required placeholder="e.g. First grooming session" /></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label for="dOffer">Offer badge</label><input type="text" class="form-control" id="dOffer" maxlength="60" required placeholder="e.g. 20% OFF" /></div>
+        <div class="form-group"><label for="dCode">Coupon code (optional)</label><input type="text" class="form-control" id="dCode" maxlength="40" placeholder="e.g. PAWS20" style="text-transform:uppercase;" autocapitalize="characters" /></div>
+      </div>
+      <div class="form-group"><label for="dDesc">What the customer gets</label><textarea class="form-control" id="dDesc" rows="3" minlength="2" maxlength="1000" required placeholder="e.g. 20% off a full grooming session for first-time customers. Valid on weekdays."></textarea></div>
+      <div class="grid-2" style="grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group"><label for="dStart">Starts</label><input type="date" class="form-control" id="dStart" /></div>
+        <div class="form-group"><label for="dEnd">Ends (optional)</label><input type="date" class="form-control" id="dEnd" /></div>
+      </div>
+      <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-top:6px; cursor:pointer;"><input type="checkbox" id="dLive" checked style="width:16px; height:16px;" /> Show this deal on my listing</label>
+      <div id="dealErr" role="alert" style="color:var(--danger); font-size:12.5px; font-weight:600; margin-top:8px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button type="button" class="btn btn-sm" onclick="closeModal('dealModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="dealSubmit">Save deal</button>
       </div>
     </form>
   </div>
@@ -1488,6 +1600,9 @@
 <script src="/analytics.js"></script>
 <script src="/api-client.js"></script>
 <script src="/ui-dialogs.js"></script>
+<script src="/phone-input.js"></script>
+<script src="/hours-input.js"></script>
+<script src="/dashboard/vendor/charts.js"></script>
 <script>
   var state = {
     currentView: 'dash',
@@ -1574,7 +1689,7 @@
 
   // Deep links (mail buttons, payment returns, the email-verify redirect) use
   // these names; map them onto the real panes.
-  var VIEW_ALIASES = { marketing: 'grow', campaigns: 'grow', featured: 'grow', account: 'listing', profile: 'listing', analytics: 'performance', subscription: 'subscriptions', billing: 'subscriptions' };
+  var VIEW_ALIASES = { marketing: 'grow', campaigns: 'grow', featured: 'grow', account: 'listing', profile: 'listing', analytics: 'performance', services: 'deals', offers: 'deals', subscription: 'subscriptions', billing: 'subscriptions' };
 
   function navigate(viewId) {
     viewId = VIEW_ALIASES[viewId] || viewId;
@@ -1594,7 +1709,7 @@
       dash: ['Dashboard', 'Overview of your business activity on Pets24x7.'],
       listing: ['My Listing', 'Manage how your business appears on Pets24x7.'],
       enquiries: ['Customer Enquiries', 'Manage enquiries received from Pet Parents.'],
-      services: ['Services & Prices', 'The services and prices customers see on your listing.'],
+      deals: ['Deals & Offers', 'Offers that show on your listing and in your city\'s deals.'],
       reviews: ['Reviews', 'Collect, read and reply to customer reviews.'],
       performance: ['Business Performance', 'Track profile visibility and customer engagement.'],
       grow: ['Grow Your Business', 'Managed marketing campaigns by the Pets24x7 team.'],
@@ -1606,6 +1721,9 @@
     var info = titles[viewId] || titles['dash'];
     document.getElementById('headerTitle').textContent = info[0];
     document.getElementById('headerSub').textContent = info[1];
+
+    // Charts size themselves to their box, which is 0 wide while the tab is hidden.
+    if (viewId === 'performance') { renderRecoPerformance(); renderPerfCharts(); }
 
     if (viewId === 'subscriptions') {
       loadVendorSubscriptions();
@@ -2468,6 +2586,174 @@
     return currencySymbol(s.currency) + n.toLocaleString(usd ? 'en-US' : 'en-IN', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
   }
 
+  // ---- Deals & offers (replace the old priced-services list) ----
+  // A deal shows on the public listing page and in the city deals feed while
+  // it is live: status ACTIVE and today inside its start/end dates.
+  state.deals = [];
+  state.dealsLoaded = false;
+
+  function dealState(d) {
+    var now = Date.now();
+    var starts = d.startsAt ? new Date(d.startsAt).getTime() : 0;
+    var ends = d.endsAt ? new Date(d.endsAt).getTime() : 0;
+    if (d.status === 'DRAFT') return { key: 'paused', label: 'Paused', live: false };
+    if (d.status === 'EXPIRED' || (ends && ends <= now)) return { key: 'expired', label: 'Expired', live: false };
+    if (starts > now) return { key: 'scheduled', label: 'Starts ' + fmtDate(d.startsAt), live: false };
+    return { key: 'live', label: 'Live on your listing', live: true };
+  }
+
+  function loadDeals() {
+    return api.vendorDeals().then(function(r) {
+      state.deals = r.deals || [];
+      state.dealsLoaded = true;
+      renderDeals();
+    }).catch(function(err) {
+      var grid = document.getElementById('dealsGrid');
+      if (grid) grid.innerHTML = '<p style="color:var(--danger); padding:20px 0;">Could not load your deals (' + esc(fmtErr(err)) + '). ' +
+        '<button class="btn btn-sm" onclick="loadDeals()">Retry</button></p>';
+    });
+  }
+
+  function renderDeals() {
+    var live = state.deals.filter(function(d) { return dealState(d).live; }).length;
+    setText('mDeals', state.dealsLoaded ? live : '—');
+    setText('mDealsNote', !state.dealsLoaded ? '—' : (live ? 'Showing on your listing' : 'Add an offer to stand out'));
+    setText('pDeals', state.dealsLoaded ? live : '—');
+    var grid = document.getElementById('dealsGrid');
+    if (!grid) return;
+    if (!state.deals.length) {
+      grid.innerHTML =
+        '<div class="deal-empty">' +
+          '<div style="font-size:28px;">🏷️</div>' +
+          '<div style="font-weight:700; font-size:15px; margin-top:6px;">No deals yet</div>' +
+          '<p>Offers like “20% off first grooming” or “Free nail trim with a bath” help pet parents pick you. They show on your listing and in the deals for ' + esc(state.vendor.city || 'your city') + '.</p>' +
+          '<button class="btn btn-primary btn-sm" onclick="openDealModal()">+ Add your first deal</button>' +
+        '</div>';
+      return;
+    }
+    grid.innerHTML = state.deals.map(function(d) {
+      var st = dealState(d);
+      var when = d.endsAt ? 'Valid till ' + fmtDate(d.endsAt) : 'No end date';
+      return '<div class="deal-card deal-' + st.key + '">' +
+        '<div>' +
+          '<div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">' +
+            '<span class="deal-badge">' + esc(d.offerLabel) + '</span>' +
+            '<span class="deal-state">' + esc(st.label) + '</span>' +
+          '</div>' +
+          '<div style="font-size:15px; font-weight:700; color:var(--text-main); margin:10px 0 4px;">' + esc(d.title) + '</div>' +
+          '<div style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">' + esc(d.description) + '</div>' +
+          (d.code ? '<div class="deal-code">Code: <strong>' + esc(d.code) + '</strong></div>' : '') +
+          '<div style="font-size:11.5px; color:var(--text-subtle); margin-top:8px;">' + esc(when) + '</div>' +
+        '</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:6px; margin-top:14px; padding-top:10px; border-top:1px solid var(--border-light); flex-wrap:wrap;">' +
+          (st.key === 'expired' ? '' : '<button class="btn btn-sm" onclick="toggleDeal(\'' + esc(d.id) + '\', this)">' + (d.status === 'DRAFT' ? 'Resume' : 'Pause') + '</button>') +
+          '<button class="btn btn-sm" onclick="openDealModal(\'' + esc(d.id) + '\')">' + (st.key === 'expired' ? 'Renew' : 'Edit') + '</button>' +
+          '<button class="btn btn-sm" style="color:var(--danger);" onclick="removeDeal(\'' + esc(d.id) + '\')">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function isoDay(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  function openDealModal(id) {
+    var d = id ? state.deals.find(function(x) { return x.id === id; }) : null;
+    var f = document.getElementById('dealForm');
+    f.reset();
+    f.dataset.dealId = d ? d.id : '';
+    document.getElementById('dealModalTitle').textContent = d ? (dealState(d).key === 'expired' ? 'Renew deal' : 'Edit deal') : 'Add a deal';
+    document.getElementById('dTitle').value = d ? d.title : '';
+    document.getElementById('dOffer').value = d ? d.offerLabel : '';
+    document.getElementById('dDesc').value = d ? d.description : '';
+    document.getElementById('dCode').value = d && d.code ? d.code : '';
+    var today = isoDay(new Date());
+    document.getElementById('dStart').value = d ? isoDay(d.startsAt) : today;
+    document.getElementById('dStart').min = d ? '' : today;
+    document.getElementById('dEnd').value = d && d.endsAt && dealState(d).key !== 'expired' ? isoDay(d.endsAt) : '';
+    document.getElementById('dEnd').min = today;
+    document.getElementById('dLive').checked = !d || d.status !== 'DRAFT';
+    document.getElementById('dealErr').textContent = '';
+    document.getElementById('dealModal').classList.add('show');
+    setTimeout(function() { try { document.getElementById('dTitle').focus(); } catch (e) {} }, 50);
+  }
+
+  function useDealIdea(title, offer, desc) {
+    openDealModal();
+    document.getElementById('dTitle').value = title;
+    document.getElementById('dOffer').value = offer;
+    document.getElementById('dDesc').value = desc;
+  }
+
+  document.getElementById('dealForm').addEventListener('submit', function(ev) {
+    ev.preventDefault();
+    var f = ev.target, id = f.dataset.dealId;
+    var err = document.getElementById('dealErr');
+    var start = document.getElementById('dStart').value, end = document.getElementById('dEnd').value;
+    if (end && start && end < start) { err.textContent = 'The end date must be on or after the start date.'; return; }
+    var payload = {
+      title: document.getElementById('dTitle').value.trim(),
+      offerLabel: document.getElementById('dOffer').value.trim(),
+      description: document.getElementById('dDesc').value.trim(),
+      code: document.getElementById('dCode').value.trim() || null,
+      startsAt: start || null,
+      endsAt: end || null,
+      status: document.getElementById('dLive').checked ? 'ACTIVE' : 'DRAFT'
+    };
+    var sb = document.getElementById('dealSubmit');
+    sb.disabled = true; sb.textContent = 'Saving…';
+    (id ? api.vendorDealUpdate(id, payload) : api.vendorDealCreate(payload)).then(function() {
+      closeModal('dealModal');
+      toast(payload.status === 'ACTIVE'
+        ? (awaitingApproval() ? 'Deal saved. It shows on your listing once your account is approved.' : 'Deal saved — it now shows on your listing.')
+        : 'Deal saved as paused.', 'ok');
+      return loadDeals();
+    }).catch(function(e) {
+      err.textContent = (e && e.data && e.data.error === 'validation_failed')
+        ? 'Check the fields: a title and description of at least 2 characters and an offer label are needed.'
+        : fmtErr(e);
+    }).then(function() { sb.disabled = false; sb.textContent = 'Save deal'; });
+  });
+
+  function toggleDeal(id, btn) {
+    var d = state.deals.find(function(x) { return x.id === id; });
+    if (!d) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    api.vendorDealUpdate(id, { status: d.status === 'DRAFT' ? 'ACTIVE' : 'DRAFT' }).then(loadDeals)
+      .catch(function(e) { toast('Could not update: ' + fmtErr(e), 'error'); renderDeals(); });
+  }
+
+  function removeDeal(id) {
+    uiConfirm({
+      title: 'Delete this deal?',
+      body: 'It comes off your listing straight away.',
+      confirmLabel: 'Delete deal',
+      danger: true
+    }).then(function(ok) {
+      if (!ok) return;
+      api.vendorDealDelete(id).then(function() { toast('Deal deleted', 'ok'); return loadDeals(); })
+        .catch(function(e) { toast('Could not delete: ' + fmtErr(e), 'error'); });
+    });
+  }
+
+  // "Services offered" is the free-text list on the public listing; the
+  // recommendation chips add to it instead of the retired priced-services list.
+  function addServiceToProfile(name) {
+    navigate('listing');
+    openEditBizModal();
+    var f = document.getElementById('ebServices');
+    if (!f) return;
+    if (name) {
+      var have = f.value.split(',').map(function(x) { return x.trim().toLowerCase(); });
+      if (have.indexOf(name.toLowerCase()) < 0) f.value = f.value.trim() ? f.value.trim().replace(/,\s*$/, '') + ', ' + name : name;
+    }
+    setTimeout(function() { try { f.focus(); } catch (e) {} }, 60);
+  }
+
   function renderServices() {
     var grid = document.getElementById('servicesGrid');
     if (!grid) return;
@@ -2753,8 +3039,9 @@
       state.reviewsLoaded = true;
       state.reviewsLoadErr = null;
       renderReviews();
+      renderPerfCharts();
     }).catch(function(err) {
-      if (!state.reviewsLoaded) { state.reviewsLoadErr = fmtErr(err); renderReviews(); }
+      if (!state.reviewsLoaded) { state.reviewsLoadErr = fmtErr(err); renderReviews(); renderPerfCharts(); }
     });
   }
 
@@ -2764,7 +3051,7 @@
     claim_listing:   ['Find my listing', function(){ location.href = '/find-my-listing/'; }],
     add_email:       ['Verify email', function(){ navigate('listing'); var b = document.getElementById('accEmailVerify'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }],
     admin_approve:   ['Contact support', function(){ window.open('https://wa.me/919930090487?text=' + encodeURIComponent('Hi Pets24x7, please review my business listing for approval.'), '_blank', 'noopener'); }],
-    add_services:    ['Add a service', function(){ navigate('services'); openAddServiceModal(); }],
+    add_services:    ['Add services', function(){ addServiceToProfile(''); }],
     collect_reviews: ['Request reviews', function(){ openBulkReviewModal(); }],
     add_photo:       ['Upload photo', function(){ checklistScrollTo('vImgPreview'); }],
     add_gallery:     ['Add photos', function(){ checklistScrollTo('vGalleryGrid'); }],
@@ -2784,6 +3071,8 @@
     navigate('listing');
     openEditBizModal();
     var f = document.getElementById(id);
+    // the hours picker hides its text field behind the day-by-day editor
+    if (f && f.style.display === 'none' && f.previousElementSibling) f = f.previousElementSibling.querySelector('input') || f;
     if (f) setTimeout(function(){ try { f.focus(); } catch (e) {} }, 60);
   }
 
@@ -3097,7 +3386,8 @@
       var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
       state.enquiries.forEach(function(e){ if (agg[e.status] != null) agg[e.status]++; });
       state.enquiryAgg = agg;
-      renderDashTable(); renderFullEnquiries(); renderEnquiryFilters(); renderMetrics();
+      state.enquiriesLoaded = true;
+      renderDashTable(); renderFullEnquiries(); renderEnquiryFilters(); renderMetrics(); renderPerfCharts();
     });
   }
 
@@ -3177,6 +3467,10 @@
     var name = document.getElementById('ebName').value.trim();
     if (name.length < 2) { toast('Business name is required.', 'error'); return; }
     var val = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var phoneErr = PhoneField.error(document.getElementById('ebPhone'));
+    if (phoneErr) { toast('Phone number: ' + phoneErr, 'error'); return; }
+    var waErr = PhoneField.error(document.getElementById('ebWhatsapp'));
+    if (waErr) { toast('WhatsApp number: ' + waErr, 'error'); return; }
     // Optional fields are sent even when empty: `|| undefined` dropped them,
     // so clearing a website or the About text silently never saved.
     var payload = {
@@ -3187,9 +3481,9 @@
       pincode: val('ebPincode'),
       locality: val('ebLocality'),
       address: val('ebAddress') || undefined,
-      phone: val('ebPhone') || undefined,
+      phone: PhoneField.value(document.getElementById('ebPhone')) || undefined,
       website: val('ebWebsite'),
-      whatsapp: val('ebWhatsapp'),
+      whatsapp: PhoneField.value(document.getElementById('ebWhatsapp')),
       about: val('ebAbout'),
       openingHours: val('ebHours'),
       servicesList: val('ebServices')
@@ -3308,6 +3602,7 @@
       time: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—',
       date: valid ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       status: (e.status || 'NEW').toLowerCase(),
+      createdTs: valid ? d.getTime() : null,
       message: e.notes || '',
       email: e.email || '',
       city: e.city || '',
@@ -3392,13 +3687,13 @@
     if ((f = document.getElementById('ebCategory'))) f.value = state.vendor.category;
     if ((f = document.getElementById('ebCity'))) f.value = state.vendor.city;
     if ((f = document.getElementById('ebLocality'))) f.value = state.vendor.locality;
-    if ((f = document.getElementById('ebPhone'))) f.value = state.vendor.phone;
+    if ((f = document.getElementById('ebPhone'))) PhoneField.setValue(f, state.vendor.phone);
     if ((f = document.getElementById('ebEmail'))) f.value = state.vendor.email;
     if ((f = document.getElementById('ebAddress'))) f.value = state.vendor.address;
     if ((f = document.getElementById('ebWebsite'))) f.value = state.vendor.website;
-    if ((f = document.getElementById('ebWhatsapp'))) f.value = state.vendor.whatsapp;
+    if ((f = document.getElementById('ebWhatsapp'))) PhoneField.setValue(f, state.vendor.whatsapp);
     if ((f = document.getElementById('ebAbout'))) f.value = state.vendor.about;
-    if ((f = document.getElementById('ebHours'))) f.value = state.vendor.openingHours;
+    if ((f = document.getElementById('ebHours'))) { f.value = state.vendor.openingHours || ''; HoursField.refresh(f); }
     if ((f = document.getElementById('ebServices'))) f.value = state.vendor.servicesList;
     if ((f = document.getElementById('ebImageUrl'))) f.value = state.vendor.imageUrl;
     if ((f = document.getElementById('ebCountry'))) f.value = state.vendor.country || 'IN';
@@ -3692,8 +3987,10 @@
       reco.error = err || new Error('failed');
     }).then(function() {
       reco.loading = false;
+      reco.loaded = true;
       renderRecoActions();
       renderRecoPerformance();
+      renderPerfCharts();
       renderWhyBoost();
     });
   }
@@ -3766,7 +4063,7 @@
       var cta = a.cta || {};
       var chips = (a.id === 'add_services' && Array.isArray(a.suggestions) && a.suggestions.length)
         ? '<div class="reco-chips">' + a.suggestions.slice(0, 8).map(function(s) {
-            return '<button type="button" class="reco-chip" data-reco-svc="' + esc(s) + '" title="Add this service">+ ' + esc(s) + '</button>';
+            return '<button type="button" class="reco-chip" data-reco-svc="' + esc(s) + '" title="Add to the services on your listing">+ ' + esc(s) + '</button>';
           }).join('') + '</div>'
         : '';
       return '<div class="reco-row" data-reco-id="' + esc(a.id) + '">' +
@@ -3793,11 +4090,7 @@
     });
     box.querySelectorAll('[data-reco-svc]').forEach(function(b) {
       b.addEventListener('click', function() {
-        var name = b.getAttribute('data-reco-svc');
-        navigate('services');
-        openAddServiceModal();
-        var n = document.getElementById('sName');
-        if (n) n.value = name;
+        addServiceToProfile(b.getAttribute('data-reco-svc'));
         try { window.trackEvent('vendor_reco_action', { action: 'add_services_suggestion' }); } catch (e) {}
       });
     });
@@ -3807,6 +4100,7 @@
     var a = recoActionList().filter(function(x) { return x.id === id; })[0];
     if (!a || !a.cta) return;
     try { window.trackEvent('vendor_reco_action', { action: id }); } catch (e) {}
+    if (id === 'add_services') { addServiceToProfile(''); return; }
     if (a.cta.view) {
       navigate(a.cta.view);
       // Boost/renew land on Grow; take the vendor straight to the plans.
@@ -3821,24 +4115,83 @@
 
   function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
 
-  function perfChartSvg(daily) {
-    var n = daily.length;
-    var max = 1;
-    daily.forEach(function(r) { max = Math.max(max, Number(r.views) || 0, Number(r.taps) || 0); });
-    var W = 600, H = 140, slot = W / n, bw = Math.max(2, slot * 0.7), tw = Math.max(1.5, slot * 0.35);
-    var bars = daily.map(function(r, i) {
-      var v = Number(r.views) || 0, t = Number(r.taps) || 0;
-      var vh = (v / max) * (H - 4), th = (t / max) * (H - 4);
-      var x = i * slot + (slot - bw) / 2;
-      return '<g><title>' + esc(r.day) + ': ' + v + ' view' + (v === 1 ? '' : 's') + ', ' + t + ' tap' + (t === 1 ? '' : 's') + '</title>' +
-        '<rect x="0" y="0" width="' + slot.toFixed(2) + '" height="' + H + '" transform="translate(' + (i * slot).toFixed(2) + ',0)" fill="transparent"/>' +
-        '<rect class="bar-views" x="' + x.toFixed(2) + '" y="' + (H - vh).toFixed(2) + '" width="' + bw.toFixed(2) + '" height="' + vh.toFixed(2) + '" rx="1.5"/>' +
-        '<rect class="bar-taps" x="' + (i * slot + (slot - tw) / 2).toFixed(2) + '" y="' + (H - th).toFixed(2) + '" width="' + tw.toFixed(2) + '" height="' + th.toFixed(2) + '" rx="1"/>' +
-      '</g>';
-    }).join('');
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Daily profile views and contact taps, last 30 days">' + bars + '</svg>' +
-      '<div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-subtle); margin-top:4px;"><span>' + esc(daily[0].day) + '</span><span>peak ' + max + '/day</span><span>' + esc(daily[n - 1].day) + '</span></div>' +
-      '<div class="perf-legend"><span><i style="background:#BFDBFE;"></i>Profile views</span><span><i style="background:var(--primary);"></i>Contact taps</span></div>';
+  function perfDayRow(r) {
+    var d = new Date(String(r.day) + 'T00:00:00');
+    var ok = !isNaN(d.getTime());
+    return {
+      label: ok ? d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : String(r.day),
+      short: ok ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : String(r.day),
+      views: Number(r.views) || 0, taps: Number(r.taps) || 0
+    };
+  }
+
+  // Performance charts drawn from the enquiries, reviews and visibility data
+  // the dashboard already holds. Called whenever any of those changes.
+  function renderPerfCharts() {
+    if (!window.VChart) return;
+    var DAY = 86400000, now = Date.now();
+    var weekly = document.getElementById('perfEnqWeekly');
+    if (weekly && state.enquiriesLoaded) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      // Monday of this week, then 11 more weeks back
+      var start = today.getTime() - ((today.getDay() + 6) % 7) * DAY - 11 * 7 * DAY;
+      var weeks = [];
+      for (var w = 0; w < 12; w++) {
+        var ws = new Date(start + w * 7 * DAY);
+        weeks.push({ label: 'Week of ' + ws.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          short: ws.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), value: 0, hint: 'Enquiries: ' });
+      }
+      state.enquiries.forEach(function(e) {
+        if (!e.createdTs || e.createdTs < start) return;
+        var k = Math.floor((e.createdTs - start) / (7 * DAY));
+        if (weeks[k]) weeks[k].value++;
+      });
+      VChart.bars(weekly, weeks, { label: 'Enquiries per week, last 12 weeks', labelHead: 'Week', valueHead: 'Enquiries' });
+    }
+
+    var p = reco.data && reco.data.performance;
+    var visDone = !!reco.loaded;
+    var daily = p && Array.isArray(p.daily) ? p.daily : [];
+    var sum = function(k) { return daily.reduce(function(a, r) { return a + (Number(r[k]) || 0); }, 0); };
+    var funnel = document.getElementById('perfFunnel');
+    if (funnel && visDone && state.enquiriesLoaded) {
+      var since = now - 30 * DAY;
+      var enq30 = state.enquiries.filter(function(e) { return e.createdTs && e.createdTs >= since; });
+      VChart.funnel(funnel, [
+        { name: 'Profile views', value: p ? (p.views || 0) : 0 },
+        { name: 'Contact taps', value: p ? ((p.taps && p.taps.total) || 0) : 0 },
+        { name: 'Enquiries', value: enq30.length },
+        { name: 'Completed', value: enq30.filter(function(e) { return e.status === 'completed'; }).length }
+      ]);
+    }
+    var tapSplit = document.getElementById('perfTapSplit');
+    if (tapSplit && visDone) {
+      var t = (p && p.taps) || {};
+      VChart.split(tapSplit, [
+        { name: 'Phone call', value: t.phone || 0, color: '#2a78d6' },
+        { name: 'Website', value: t.website || 0, color: '#eb6834' },
+        { name: 'WhatsApp', value: t.whatsapp || 0, color: '#1baf7a' }
+      ], { label: 'Contact taps by method', empty: 'No contact taps in the last 30 days yet.' });
+    }
+    var status = document.getElementById('perfEnqStatus');
+    if (status && state.enquiriesLoaded) {
+      var ea = state.enquiryAgg || {};
+      VChart.split(status, [
+        { name: 'New', value: ea.new || 0, color: '#2a78d6' },
+        { name: 'Responded', value: ea.responded || 0, color: '#eb6834' },
+        { name: 'Completed', value: ea.completed || 0, color: '#1baf7a' },
+        { name: 'Archived', value: ea.archived || 0, color: '#94A3B8' }
+      ], { label: 'Enquiries by status', empty: 'No enquiries yet. They appear here as soon as pet parents contact you.' });
+    }
+    var ratings = document.getElementById('perfRatings');
+    if (ratings && (state.reviewsLoaded || state.reviewsLoadErr)) {
+      var pub = state.reviews.filter(function(r) { return !r.status || String(r.status).toUpperCase() === 'PUBLISHED'; });
+      if (!pub.length) ratings.innerHTML = '<div class="vc-empty">No published reviews yet. Send review requests from the Reviews page.</div>';
+      else VChart.hbars(ratings, [5, 4, 3, 2, 1].map(function(n) {
+        var c = pub.filter(function(r) { return Math.round(r.rating) === n; }).length;
+        return { label: n + ' star' + (n === 1 ? '' : 's'), value: c, note: Math.round(100 * c / pub.length) + '%', color: '#eda100' };
+      }));
+    }
   }
 
   function benchRow(label, you, median, fmt) {
@@ -3881,6 +4234,13 @@
       setText('pViews', recoNum(p.views || 0));
       setText('pTaps', recoNum(taps.total || 0));
       setText('pTapsSplit', 'Phone ' + recoNum(taps.phone || 0) + ' · WhatsApp ' + recoNum(taps.whatsapp || 0) + ' · Website ' + recoNum(taps.website || 0));
+      // Dashboard at-a-glance cards
+      setText('mViews', recoNum(p.views || 0));
+      setText('mTaps', recoNum(taps.total || 0));
+      setText('mTapsNote', 'Phone ' + recoNum(taps.phone || 0) + ' · WhatsApp ' + recoNum(taps.whatsapp || 0));
+      setText('mViewsNote', p.views ? (taps.total ? Math.round(100 * taps.total / p.views) + '% of views tapped to contact' : 'No contact taps yet') : 'Share your listing to get seen');
+      var spk = document.getElementById('mViewsSpark');
+      if (spk && window.VChart && Array.isArray(p.daily)) spk.innerHTML = p.views ? VChart.spark(p.daily, 'views', '#2a78d6') : '';
       setText('pRecoImp', recoNum(p.recoImpressions || 0));
       setText('pRecoClk', recoNum(p.recoClicks || 0));
       setText('pRecoCtr', p.recoImpressions ? ((100 * (p.recoClicks || 0) / p.recoImpressions).toFixed(1) + '% click-through') : '');
@@ -3893,11 +4253,15 @@
       }
       var daily = Array.isArray(p.daily) ? p.daily : [];
       var any = daily.some(function(r) { return (Number(r.views) || 0) + (Number(r.taps) || 0) > 0; });
-      chart.innerHTML = (daily.length && any)
-        ? perfChartSvg(daily)
-        : '<p style="font-size:13px; color:var(--text-muted); padding:12px 0;">No profile views or contact taps recorded in the last 30 days yet. Share your listing link and ask happy customers for reviews to get discovered.</p>';
+      if (daily.length && any) VChart.line(chart, daily.map(perfDayRow), [
+        { key: 'views', name: 'Profile views', color: '#2a78d6', area: true },
+        { key: 'taps', name: 'Contact taps', color: '#eb6834' }
+      ], { label: 'Daily profile views and contact taps, last 30 days' });
+      else chart.innerHTML = '<p style="font-size:13px; color:var(--text-muted); padding:12px 0;">No profile views or contact taps recorded in the last 30 days yet. Share your listing link and ask happy customers for reviews to get discovered.</p>';
     } else {
-      ['pViews', 'pTaps', 'pRecoImp', 'pRecoClk'].forEach(function(id) { setText(id, '—'); });
+      ['pViews', 'pTaps', 'pRecoImp', 'pRecoClk', 'mViews', 'mTaps'].forEach(function(id) { setText(id, '—'); });
+      setText('mViewsNote', 'Shown once your listing is live');
+      setText('mTapsNote', '');
       setText('pTapsSplit', '');
       setText('pRecoCtr', '');
       chart.innerHTML = '<p style="font-size:13px; color:var(--text-muted); padding:12px 0;">Visibility data appears once your listing is claimed and approved. <a href="/find-my-listing/" style="font-weight:600;">Find my listing →</a></p>';
@@ -3987,7 +4351,11 @@
     var ea = state.enquiryAgg || {}, ra = state.reviewAgg || {}, iv = state.invites || {};
     var unhandled = (ea.new || 0);
     set('mEnqTotal', ea.total != null ? ea.total : '—');
-    set('mEnqNew', unhandled + ' new / unhandled');
+    set('mEnqNew', (ea.completed || 0) + ' completed');
+    set('mEnqOpen', ea.total != null ? unhandled : '—');
+    set('mEnqOpenNote', unhandled ? 'New enquiries waiting — reply fast' : 'All caught up');
+    var openCard = document.getElementById('mEnqOpen');
+    if (openCard && openCard.parentNode) openCard.parentNode.classList.toggle('attn', unhandled > 0);
     set('mServices', state.serviceCount != null ? state.serviceCount : (state.services.length || 0));
     set('mReviews', ra.published != null ? ra.published : 0);
     // Without the summary there is no way to know the vendor has no reviews;
@@ -4078,6 +4446,7 @@
       loadRecoVendor();
     });
 
+    loadDeals();
     loadServices().catch(function(err){
       if (err && err.status === 403) { showDisabled('SUSPENDED'); return; }
       if (err && err.status === 401) { location.href = '/vendor-login/'; return; }
@@ -4092,10 +4461,12 @@
       var agg = { total: state.enquiries.length, new: 0, responded: 0, completed: 0, archived: 0 };
       state.enquiries.forEach(function(e){ if (agg[e.status] != null) agg[e.status]++; });
       state.enquiryAgg = agg;
+      state.enquiriesLoaded = true;
       renderDashTable();
       renderFullEnquiries();
       renderEnquiryFilters();
       renderMetrics();
+      renderPerfCharts();
     }).catch(function(err){
       var msg = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--danger);">Could not load enquiries (' + esc(fmtErr(err)) + '). Refresh to try again.</td></tr>';
       var a = document.getElementById('dashTableBody'), b = document.getElementById('fullEnquiriesTableBody');

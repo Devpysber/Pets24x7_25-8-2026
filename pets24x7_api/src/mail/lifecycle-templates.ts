@@ -1040,6 +1040,49 @@ export function adminPaymentAlertEmail(
   };
 }
 
+/** Team copy of a successful payment, so the people who follow sales see every purchase as it lands. */
+export function adminPaymentReceivedEmail(
+  to: string,
+  detail: {
+    what: string;
+    amountMinor: number;
+    currency: string;
+    merchantTxnId: string;
+    paidAt: Date;
+    buyerName: string;
+    buyerEmail?: string | null;
+    buyerPhone?: string | null;
+    buyerKind: 'Business' | 'Pet parent';
+  },
+): MailInput {
+  const rows: Array<[string, string]> = [
+    ['Item', detail.what],
+    ['Amount paid', money(detail.amountMinor, detail.currency)],
+    ['Paid on', dayTime(detail.paidAt)],
+    [detail.buyerKind, detail.buyerName],
+  ];
+  if (detail.buyerEmail) rows.push(['Email', detail.buyerEmail]);
+  if (detail.buyerPhone) rows.push(['Phone', detail.buyerPhone]);
+  rows.push(['Reference', detail.merchantTxnId]);
+  return {
+    tag: 'admin_payment_received',
+    to,
+    subject: `Payment received — ${money(detail.amountMinor, detail.currency)} · ${detail.buyerName} · ${detail.what}`,
+    html: page({
+      eyebrow: 'Admin',
+      banner: ['New payment', 'success'],
+      heading: 'A customer just paid',
+      intro: h`${detail.buyerName} paid ${money(detail.amountMinor, detail.currency)} for ${detail.what}. Their receipt has been emailed to them.`,
+      blocks: [InfoBox(rows), Button('Open payments', adminDash('payments'))],
+      preheader: `${money(detail.amountMinor, detail.currency)} from ${detail.buyerName}.`,
+    }),
+    text:
+      `${detail.buyerName} paid ${money(detail.amountMinor, detail.currency)} for ${detail.what}.\n` +
+      rows.map(([k, v]) => `${k}: ${v}`).join('\n') +
+      `\n\nPayments: ${adminDash('payments')}\n`,
+  };
+}
+
 export function adminBroadcastEmail(
   to: string,
   heading: string,

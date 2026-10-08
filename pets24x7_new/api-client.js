@@ -187,6 +187,10 @@
     vendorServiceCreate:  function (p)       { return req('POST',   '/api/vendor/services', p); },
     vendorServiceUpdate:  function (id, p)   { return req('PATCH',  '/api/vendor/services/' + encodeURIComponent(id), p); },
     vendorServiceDelete:  function (id)      { return req('DELETE', '/api/vendor/services/' + encodeURIComponent(id)); },
+    vendorDeals:          function ()        { return req('GET',    '/api/vendor/deals'); },
+    vendorDealCreate:     function (p)       { return req('POST',   '/api/vendor/deals', p); },
+    vendorDealUpdate:     function (id, p)   { return req('PATCH',  '/api/vendor/deals/' + encodeURIComponent(id), p); },
+    vendorDealDelete:     function (id)      { return req('DELETE', '/api/vendor/deals/' + encodeURIComponent(id)); },
 
     // Vendor marketing campaigns
     vendorCampaigns:        function ()      { return req('GET',  '/api/vendor/campaigns'); },
@@ -236,6 +240,10 @@
     deals:  function (city, category) {
       var qs = []; if (city) qs.push('city=' + encodeURIComponent(city)); if (category) qs.push('category=' + encodeURIComponent(category));
       return req('GET', '/api/deals' + (qs.length ? '?' + qs.join('&') : ''));
+    },
+    // One business's live offers, for its listing page.
+    listingDeals: function (listingId) {
+      return req('GET', '/api/deals?listingId=' + encodeURIComponent(listingId) + '&limit=10');
     },
     events: function (city) { return req('GET', '/api/events' + (city ? '?city=' + encodeURIComponent(city) : '')); },
 
@@ -385,7 +393,11 @@
       var city = encodeURIComponent(params.city || '');
       var limit = params.limit || 60;
       return req('GET', '/api/listings/search?q=' + q + '&category=' + cat + '&city=' + city + '&limit=' + limit +
-        (params.newest ? '&newest=1' : ''));
+        (params.newest ? '&newest=1' : '') +
+        (params.country ? '&country=' + encodeURIComponent(params.country) : '') +
+        (params.verified ? '&verified=1' : '') +
+        (params.sort ? '&sort=' + encodeURIComponent(params.sort) : '') +
+        (params.offset ? '&offset=' + encodeURIComponent(params.offset) : ''));
     },
     listingById:      function (id)                      { return req('GET',  '/api/listings/' + encodeURIComponent(id)); },
     listingsPopular:  function (city, category) {

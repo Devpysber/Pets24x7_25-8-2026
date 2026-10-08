@@ -324,6 +324,7 @@
 <script src="/pets-loader.js"></script>
 <script src="/pet-images.js"></script>
 <script src="/reco-track.js" defer></script>
+<script src="/listing-deals.js"></script>
 <script>/* Recommendations on a listing page: "Top-rated similar" (with at most one
    labelled sponsored card first) and "Also nearby", from GET /api/reco/listing/:id.
    Both sections stay hidden when the API has nothing or fails. Impressions and
@@ -924,6 +925,7 @@
               ' + (biz.phone ? '<p style="margin-top:6px;">📞 <strong>Phone:</strong> <a href="tel:' + escapeAttr(String(biz.phone).replace(/\s+/g,"")) + '" style="color:var(--primary);font-weight:600;">' + esc(biz.phone) + '</a></p>' : '') + '\
               ' + (siteUrl ? '<p style="margin-top:6px;">🌐 <strong>Website:</strong> <a href="' + escapeAttr(siteUrl) + '" target="_blank" rel="noopener nofollow" style="color:var(--primary);font-weight:600;">' + esc(siteUrl.replace(/^https?:\/\//,"").replace(/\/$/,"")) + '</a></p>' : '') + '\
             </section>\
+            <section id="p24deals" hidden></section>\
             <section>\
               <h2>Services</h2>\
               ' + (biz.servicesList ? '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
@@ -1043,6 +1045,7 @@
       logTap('listing_view');
     }
     if (window.loadRecoListing) window.loadRecoListing(biz.id);
+    if (window.loadListingDeals) window.loadListingDeals(biz.id);
 
     // default date: tomorrow
     var today = new Date(); var d1 = new Date(today); d1.setDate(d1.getDate()+1);

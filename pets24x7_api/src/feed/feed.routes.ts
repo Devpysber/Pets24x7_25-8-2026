@@ -1,7 +1,7 @@
 // Public "nearby feed" — deals + events shown on the site and the pet-parent
 // dashboard. No auth.
 //
-//   GET /api/deals?city=&category=&limit=
+//   GET /api/deals?city=&category=&listingId=&limit=
 //   GET /api/events?city=&limit=          (upcoming only, soonest first)
 
 import { Router } from 'express';
@@ -24,6 +24,8 @@ feedRouter.get(
   asyncHandler(async (req, res) => {
     const city = String(req.query.city ?? '').trim();
     const category = String(req.query.category ?? '').trim().toLowerCase();
+    // One business's own offers, for its listing page.
+    const listingId = String(req.query.listingId ?? '').trim().slice(0, 120);
     const limit = Math.min(60, Number(req.query.limit ?? 30) || 30);
     const now = new Date();
 
@@ -38,7 +40,13 @@ feedRouter.get(
       deals = await prisma.deal.findMany({
         where: {
           status: 'ACTIVE',
-          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+          startsAt: { lte: now },
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            // A suspended or rejected business's offers stop showing with it.
+            { OR: [{ vendorId: null }, { vendor: { is: { status: { in: ['ACTIVE', 'CLAIMED'] } } } }] },
+          ],
+          ...(listingId ? { listingId } : {}),
           ...(city ? { citySlug: slugify(city) } : {}),
           ...(category ? { category: { contains: category, ...ci } } : {}),
         },
@@ -59,6 +67,7 @@ feedRouter.get(
         category: d.category,
         city: d.city,
         code: d.code,
+        startsAt: d.startsAt,
         endsAt: d.endsAt,
         vendor: d.vendor?.businessName ?? null,
         listingId: d.listingId ?? d.vendor?.listingId ?? null,

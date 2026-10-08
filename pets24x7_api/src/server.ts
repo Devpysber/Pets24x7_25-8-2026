@@ -43,6 +43,7 @@ import { vendorReviewsRouter } from './reviews/vendor.routes.js';
 import { reviewShortLinkRouter, reviewPublicApiRouter } from './reviews/public.routes.js';
 import { enquiryRouter } from './enquiries/enquiry.routes.js';
 import { vendorServicesRouter } from './vendors/service.routes.js';
+import { vendorDealsRouter } from './vendors/deal.routes.js';
 import { vendorCampaignsRouter } from './marketing/campaign.routes.js';
 import { featuredPublicRouter, vendorFeaturedRouter } from './featured/featured.routes.js';
 import { vendorSubscriptionsRouter } from './vendors/vendor.subscriptions.routes.js';
@@ -184,6 +185,7 @@ app.use('/api/memberships', membershipRouter);
 app.use('/api/payments/razorpay', razorpayRouter);
 app.use('/api/vendor/reviews', vendorReviewsRouter);
 app.use('/api/vendor/services', vendorServicesRouter);
+app.use('/api/vendor/deals', vendorDealsRouter);
 app.use('/api/vendor/campaigns', vendorCampaignsRouter);
 app.use('/api/vendor/featured', vendorFeaturedRouter);
 app.use('/api/vendor/plan-featured', vendorPlanSlotsRouter); // placing a plan's Featured slots

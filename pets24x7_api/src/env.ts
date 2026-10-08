@@ -167,6 +167,13 @@ const Env = z.object({
   LISTINGS_SYNC_MS: z.coerce.number().int().min(0).optional(),
 
   ADMIN_NOTIFY_EMAIL: z.string().email().optional(),
+  // Who gets a copy of every successful payment (plan, campaign, Featured,
+  // membership). Comma-separated; unset or empty sends no copies.
+  PAYMENT_NOTIFY_EMAILS: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean))
+    .pipe(z.array(z.string().email())),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_ADMIN_NAME: z.string().optional(),
