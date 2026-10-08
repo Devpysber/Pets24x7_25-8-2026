@@ -1357,7 +1357,7 @@
       return `
         <div class="vendor-card">
           <div class="vendor-banner" style="position:relative; height:110px; background:linear-gradient(135deg, #DBEAFE, #C7D2FE); overflow:hidden;">
-            ${PetImages.cardVisual(v)}
+            ${PetImages.cardVisual(v, null, null, 640, 220)}
           </div>
           <div class="vendor-content">
             <div>
@@ -2256,7 +2256,7 @@
           ' data-surface="' + RECO_SURFACE + '">' +
         '<div class="vendor-banner" style="position:relative; height:120px; background:linear-gradient(135deg,#DBEAFE,#C7D2FE); font-size:40px; overflow:hidden;">' +
           '<span aria-hidden="true" style="position:absolute; z-index:0;">' + catIcon(v) + '</span>' +
-          PetImages.cardVisual(v) + esc(v.category || 'Pet service') + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1;" onerror="this.remove()">' +
+          PetImages.cardVisual(v, null, null, 640, 220) + esc(v.category || 'Pet service') + '" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1;" onerror="this.remove()">' +
           '<span class="vendor-tag" style="z-index:2; position:absolute; top:10px; left:10px;">' + catIcon(v) + ' ' + esc(v.category || 'Pet Service') + '</span>' +
           (sponsored ? '<span class="badge-sponsored" aria-label="Sponsored listing">' + esc(label) + '</span>' : '') +
           (typeof v.rating === 'number' && v.rating > 0
@@ -2358,7 +2358,7 @@
         <div class="vendor-card">
           <div class="vendor-banner" style="position:relative; height:120px; background:linear-gradient(135deg, #DBEAFE, #C7D2FE); font-size:40px; overflow:hidden;">
             <span aria-hidden="true" style="position:absolute; z-index:0;">${catIcon(v)}</span>
-            ${PetImages.cardVisual(v)}
+            ${PetImages.cardVisual(v, null, null, 640, 220)}
             <span class="vendor-tag" style="z-index:2; position:absolute; top:10px; left:10px;">${catIcon(v)} ${esc(v.category || 'Pet Service')}</span>
             ${ratingBadge}
           </div>

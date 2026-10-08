@@ -83,19 +83,19 @@ except OSError:
 # pet-images.js client-side (index.html, listing.html, city.html).
 IMG_POOL = {
     "veterinary-clinics":              ["photo-1628009368231-7bb7cfcb0def","photo-1583337130417-3346a1be7dee","photo-1581888227599-779811939961","photo-1543466835-00a7907e9de1","photo-1535930891776-0c2dfb7fda1a"],
-    "emergency-animal-hospital":       ["photo-1583337130417-3346a1be7dee","photo-1628009368231-7bb7cfcb0def","photo-1543466835-00a7907e9de1","photo-1535930891776-0c2dfb7fda1a","photo-1601758125946-6ec2ef64daf8"],
+    "emergency-animal-hospital":       ["photo-1583337130417-3346a1be7dee","photo-1628009368231-7bb7cfcb0def","photo-1543466835-00a7907e9de1","photo-1535930891776-0c2dfb7fda1a","photo-1543466835-00a7907e9de1"],
     "vaccination-centers":             ["photo-1543466835-00a7907e9de1","photo-1581888227599-779811939961","photo-1628009368231-7bb7cfcb0def","photo-1583337130417-3346a1be7dee","photo-1574144611937-0df059b5ef3e"],
-    "mobile-vet-services":             ["photo-1601758228041-f3b2795255f1","photo-1535930891776-0c2dfb7fda1a","photo-1450778869180-41d0601e046e","photo-1601758003122-53c40e686a19","photo-1520087619250-584c0cbd35e8"],
-    "specialty-vets-exotics-avian-reptiles": ["photo-1452857297128-d9c29adba80b","photo-1574144611937-0df059b5ef3e","photo-1441057206919-63d19fac2369","photo-1535930891776-0c2dfb7fda1a","photo-1583337130417-3346a1be7dee"],
-    "veterinary-labs-diagnostics":     ["photo-1581093588401-fbb62a02f120","photo-1559190394-df5a28aab5c5","photo-1574144611937-0df059b5ef3e","photo-1543466835-00a7907e9de1","photo-1583337130417-3346a1be7dee"],
-    "pet-dental-care":                 ["photo-1548199973-03cce0bbc87b","photo-1601758125946-6ec2ef64daf8","photo-1543466835-00a7907e9de1","photo-1583512603805-3cc6b41f3edb","photo-1552053831-71594a27632d"],
+    "mobile-vet-services":             ["photo-1543466835-00a7907e9de1","photo-1535930891776-0c2dfb7fda1a","photo-1450778869180-41d0601e046e","photo-1601758003122-53c40e686a19","photo-1520087619250-584c0cbd35e8"],
+    "specialty-vets-exotics-avian-reptiles": ["photo-1452857297128-d9c29adba80b","photo-1574144611937-0df059b5ef3e","photo-1543466835-00a7907e9de1","photo-1535930891776-0c2dfb7fda1a","photo-1583337130417-3346a1be7dee"],
+    "veterinary-labs-diagnostics":     ["photo-1543466835-00a7907e9de1","photo-1559190394-df5a28aab5c5","photo-1574144611937-0df059b5ef3e","photo-1543466835-00a7907e9de1","photo-1583337130417-3346a1be7dee"],
+    "pet-dental-care":                 ["photo-1548199973-03cce0bbc87b","photo-1543466835-00a7907e9de1","photo-1543466835-00a7907e9de1","photo-1583512603805-3cc6b41f3edb","photo-1552053831-71594a27632d"],
     "pet-physiotherapy-rehab":         ["photo-1576201836106-db1758fd1c97","photo-1450778869180-41d0601e046e","photo-1601758003122-53c40e686a19","photo-1518020382113-a7e8fc38eac9","photo-1543466835-00a7907e9de1"],
     "pet-grooming-spa":                ["photo-1516734212186-a967f81ad0d7","photo-1596492784531-6e6eb5ea9993","photo-1548767797-d8c844163c4c","photo-1560807707-8cc77767d783","photo-1583512603805-3cc6b41f3edb"],
     "pet-boarding-daycare":            ["photo-1543466835-00a7907e9de1","photo-1477884213360-7e9d7dcc1e48","photo-1596492784531-6e6eb5ea9993","photo-1507146426996-ef05306b995a","photo-1444212477490-ca407925329e"],
-    "pet-walking":                     ["photo-1450778869180-41d0601e046e","photo-1518020382113-a7e8fc38eac9","photo-1601758003122-53c40e686a19","photo-1441057206919-63d19fac2369","photo-1552053831-71594a27632d"],
+    "pet-walking":                     ["photo-1450778869180-41d0601e046e","photo-1518020382113-a7e8fc38eac9","photo-1601758003122-53c40e686a19","photo-1543466835-00a7907e9de1","photo-1552053831-71594a27632d"],
     "pet-training-obedience-behavior": ["photo-1587300003388-59208cc962cb","photo-1551717743-49959800b1f6","photo-1552053831-71594a27632d","photo-1518020382113-a7e8fc38eac9","photo-1594149929911-78975a43d4f5"],
     "pet-sitting-in-home-care":        ["photo-1596492784531-6e6eb5ea9993","photo-1507146426996-ef05306b995a","photo-1522276498395-f4f68f7f8454","photo-1560807707-8cc77767d783","photo-1477884213360-7e9d7dcc1e48"],
-    "pet-relocation-services":         ["photo-1518717758536-85ae29035b6d","photo-1425082661705-1834bfd09dca","photo-1520087619250-584c0cbd35e8","photo-1601758003122-53c40e686a19","photo-1441057206919-63d19fac2369"],
+    "pet-relocation-services":         ["photo-1518717758536-85ae29035b6d","photo-1425082661705-1834bfd09dca","photo-1520087619250-584c0cbd35e8","photo-1601758003122-53c40e686a19","photo-1543466835-00a7907e9de1"],
     "pet-taxi-transport":              ["photo-1425082661705-1834bfd09dca","photo-1518717758536-85ae29035b6d","photo-1520087619250-584c0cbd35e8","photo-1450778869180-41d0601e046e","photo-1601758003122-53c40e686a19"],
     "pet-therapy-services":            ["photo-1541599540903-216a46ca1dc0","photo-1522276498395-f4f68f7f8454","photo-1594149929911-78975a43d4f5","photo-1507146426996-ef05306b995a","photo-1551717743-49959800b1f6"],
 }
@@ -229,6 +229,37 @@ def clean_website(w):
     if not h or re.search(r"(^|\.)google\.(com|co\.[a-z]+)$", h) or h == "business.google.com" or u.path.startswith("/aclk"):
         return None
     return w
+
+# Card photos: the category's own photos first, then a shared pool of ~30 pet
+# photos, handed out in page order (card 1, 2, 3 ... from a per-page start), so
+# neighbouring cards never share a photo and a long page repeats only rarely.
+CARD_GENERIC = ['photo-1543466835-00a7907e9de1', 'photo-1507146426996-ef05306b995a', 'photo-1587300003388-59208cc962cb', 'photo-1583337130417-3346a1be7dee', 'photo-1551717743-49959800b1f6', 'photo-1518020382113-a7e8fc38eac9', 'photo-1596492784531-6e6eb5ea9993', 'photo-1450778869180-41d0601e046e', 'photo-1560807707-8cc77767d783', 'photo-1581888227599-779811939961', 'photo-1535930891776-0c2dfb7fda1a', 'photo-1477884213360-7e9d7dcc1e48', 'photo-1583512603805-3cc6b41f3edb', 'photo-1518717758536-85ae29035b6d', 'photo-1552053831-71594a27632d', 'photo-1522276498395-f4f68f7f8454', 'photo-1444212477490-ca407925329e', 'photo-1574144611937-0df059b5ef3e', 'photo-1541599540903-216a46ca1dc0', 'photo-1516734212186-a967f81ad0d7', 'photo-1594149929911-78975a43d4f5', 'photo-1601758003122-53c40e686a19', 'photo-1548199973-03cce0bbc87b', 'photo-1559190394-df5a28aab5c5', 'photo-1576201836106-db1758fd1c97', 'photo-1520087619250-584c0cbd35e8', 'photo-1628009368231-7bb7cfcb0def']
+CARD_EXOTIC = ['photo-1425082661705-1834bfd09dca', 'photo-1452857297128-d9c29adba80b', 'photo-1548767797-d8c844163c4c']
+
+def card_pool(slug):
+    own = list(IMG_POOL.get(slug, DEFAULT_IMGS))
+    extra = CARD_EXOTIC if slug == "specialty-vets-exotics-avian-reptiles" else []
+    out = []
+    for p in own + extra + CARD_GENERIC:
+        if p not in out:
+            out.append(p)
+    return out
+
+def card_img(biz, idx, seed="", size=240, used=None):
+    pool = card_pool(biz.get("category_slug"))
+    start = djb2(seed) + idx
+    pic = pool[start % len(pool)]
+    if used is not None:
+        # skip photos already on this page (mixed-category pages draw from
+        # different pools); start over once every photo has been used
+        for k in range(len(pool)):
+            if pic not in used:
+                break
+            pic = pool[(start + k + 1) % len(pool)]
+        used.add(pic)
+        if len(used) >= len(CARD_GENERIC):
+            used.clear()
+    return f"https://images.unsplash.com/{pic}?w={size}&h={size}&fit=crop&crop=faces,entropy&q=70"
 
 def img_for(biz, idx=0, w=600, h=450):
     pool = IMG_POOL.get(biz.get("category_slug"), DEFAULT_IMGS)
@@ -545,9 +576,9 @@ def mono_tile_html(b):
             f'<span class="biz-mono-ico">{e(b.get("category_icon") or "🐾")}</span>'
             f'<span class="biz-mono-txt">{e(initials_of(b.get("name")))}</span></span>')
 
-def biz_card_html(b, badge=None):
+def biz_card_html(b, badge=None, idx=0, seed="", used=None):
     photos = own_photos(b)
-    img = photos[0] if photos else None
+    img = photos[0] if photos else card_img(b, idx, seed, used=used)
     amens = "".join(f'<span class="amenity">{e(a)}</span>' for a in amenities_for(b, 4))
     badge_html = ""
     if b.get("premium"):
@@ -571,9 +602,9 @@ def biz_card_html(b, badge=None):
                       f'{e(b["phone"])}</a></div>')
 
     return f"""<article class="biz-card" data-lid="{ea(b["id"])}">
-  <a class="biz-img{' has-photo' if img else ' is-mono'}" href="{listing_url(b)}" tabindex="-1" aria-hidden="true">
+  <a class="biz-img has-photo" href="{listing_url(b)}" tabindex="-1" aria-hidden="true">
     {badge_html}
-    {f'<img loading="lazy" src="{ea(img)}" alt="" width="120" height="120" onerror="this.remove()">' if img else ''}
+    <img loading="lazy" src="{ea(img)}" alt="" width="120" height="120" onerror="this.remove()">
     {mono_tile_html(b)}
   </a>
   <div class="biz-info">
@@ -1041,8 +1072,9 @@ def featured_script(country, city_slug, category_slug=None):
     var tel = '';  // contact details stay with Pets24x7
     var href = esc(withSrc(c.url));
     return '<article class="biz-card is-featured">' +
-      '<a class="biz-img is-mono" href="' + href + '">' +
+      '<a class="biz-img has-photo" href="' + href + '">' +
         '<span class="badge badge-featured badge-sponsored" aria-label="Sponsored listing">' + esc(labelOf(c)) + '</span>' +
+        '<img loading="lazy" src="' + esc(featImg(c)) + '" alt="" onerror="this.remove()">' +
         '<span class="biz-mono" style="--mono-bg:#FEF3C7;--mono-fg:#B45309" aria-hidden="true">' +
           '<span class="biz-mono-ico">' + esc(c.categoryIcon || '🐾') + '</span>' +
           '<span class="biz-mono-txt">' + esc(String(c.name || 'P').split(/[^A-Za-z0-9]+/).filter(Boolean).slice(0, 2).map(function (w) {{ return w.charAt(0); }}).join('').toUpperCase() || 'P') + '</span>' +
@@ -1383,8 +1415,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
     next_link = f'<link rel="next" href="{SITE}{city_url(country, city_slug, page + 1)}" />' if page < total_pages else ""
 
     cards = "".join(
-        biz_card_html(b, badge=("top" if is_top_rated(b) else None))
-        for b in page_items
+        biz_card_html(b, badge=("top" if is_top_rated(b) else None), idx=i, seed=f"{city_slug}:{page}", used=used_photos)
+        for used_photos in [set()] for i, b in enumerate(page_items)
     )
 
     bc_items = [("Home", "/"), (country_n, None), (city, city_url(country, city_slug))]
@@ -1516,8 +1548,8 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 
     canonical = SITE + category_url(country, city_slug, category_slug)
     cards = "".join(
-        biz_card_html(b, badge=("top" if is_top_rated(b) else None))
-        for b in items
+        biz_card_html(b, badge=("top" if is_top_rated(b) else None), idx=i, seed=f"{city_slug}:{category_slug}", used=used_photos)
+        for used_photos in [set()] for i, b in enumerate(items)
     )
 
     bc_items = [("Home", "/"), (country_n, None), (city, city_url(country, city_slug)), (category_name, None)]

@@ -295,7 +295,7 @@
         '<span class="chip">' + esc(it.category || 'Pet Service') + '</span>' +
         '<span class="badge-sponsored" aria-label="Sponsored listing">' + esc(it.label || 'Sponsored') + '</span>' +
         (rating ? '<span class="rate">★ ' + rating.toFixed(1) + '</span>' : '') +
-        PetImages.cardVisual(it) +
+        PetImages.cardVisual(it, null, null, 640, 220) +
       '</div>' +
       '<div class="body">' +
         '<h3>' + esc(it.name) + '</h3>' +
@@ -489,7 +489,7 @@
           '<span class="chip">' + esc(b.category || 'Pet Service') + '</span>' +
           (rating ? '<span class="rate">★ ' + rating.toFixed(1) + '</span>' : '') +
           (b.claimStatus === 'CLAIMED' ? '<span class="badge-verified">\u2713 Verified</span>' : '') +
-          PetImages.cardVisual(b) +
+          PetImages.cardVisual(b, null, null, 640, 220) +
         '</div>' +
         '<div class="body">' +
           '<h3>' + esc(b.name) + '</h3>' +

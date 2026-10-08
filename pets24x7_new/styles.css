@@ -513,7 +513,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 .biz-list,.featured-strip .biz-list{grid-template-columns:repeat(auto-fill,minmax(min(460px,100%),1fr));gap:16px}
 .biz-card{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"img info" "act act";align-items:start;border-radius:16px}
 .biz-card:hover{transform:translateY(-2px)}
-.biz-img{grid-area:img;width:clamp(76px,7vw,104px);aspect-ratio:1;min-height:0;margin:18px 0 0 18px;border-radius:14px;background:none;overflow:hidden}
+.biz-img{grid-area:img;width:clamp(84px,8vw,120px);aspect-ratio:1;min-height:0;margin:18px 0 0 18px;border-radius:14px;background:none;overflow:hidden}
 .biz-img::after{display:none}
 .biz-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
 .biz-card:hover .biz-img img{transform:none}
