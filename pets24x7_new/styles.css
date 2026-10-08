@@ -506,3 +506,42 @@ a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,s
 .biz-list,.featured-strip .biz-list{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
 .biz-card{min-width:0}
 @media (max-width:700px){.biz-list,.featured-strip .biz-list{grid-template-columns:minmax(0,1fr)}}
+
+/* ---- Listing cards v3: compact cards with a photo or monogram tile ----
+   Two columns on desktop, one on phones. No stock photos: a business without
+   its own photo shows its category icon and initials in the category colour. */
+.biz-list,.featured-strip .biz-list{grid-template-columns:repeat(auto-fill,minmax(min(460px,100%),1fr));gap:16px}
+.biz-card{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"img info" "act act";align-items:start;border-radius:16px}
+.biz-card:hover{transform:translateY(-2px)}
+.biz-img{grid-area:img;width:clamp(76px,7vw,104px);aspect-ratio:1;min-height:0;margin:18px 0 0 18px;border-radius:14px;background:none;overflow:hidden}
+.biz-img::after{display:none}
+.biz-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.biz-card:hover .biz-img img{transform:none}
+.biz-img .ct-chip{display:none}
+.biz-img .badge{top:auto;bottom:6px;left:50%;transform:translateX(-50%);padding:2px 8px;font-size:10px;white-space:nowrap;z-index:2}
+.biz-mono{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--mono-bg,#EEF2FF);color:var(--mono-fg,#3730A3)}
+.biz-mono-ico{font-size:clamp(22px,2.2vw,30px);line-height:1}
+.biz-mono-txt{font-weight:800;font-size:clamp(13px,1.2vw,16px);letter-spacing:.5px}
+.biz-info{grid-area:info;padding:16px 18px 8px 16px}
+.biz-info h3{font-size:17px;line-height:1.3;margin-bottom:4px}
+.biz-cat{display:block;font-size:12.5px;font-weight:600;color:var(--primary);margin:4px 0 2px}
+.biz-loc{margin-bottom:4px}
+.biz-rating{margin:6px 0 0}
+.biz-trust{display:none}
+.amenities{margin-top:8px}
+.biz-action{grid-area:act;grid-column:1/-1;border-top:1px solid #F0F2F6;padding:12px 18px 16px;display:flex;flex-direction:row;gap:10px}
+.biz-action .wa-btn{flex:1 1 auto}
+.results-note{display:inline-block;margin-left:10px;font-size:12.5px;font-weight:600;color:#15803D}
+/* category chips: one row that scrolls sideways at every width */
+.cat-chips{overflow:visible}
+.cat-chips-row{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;padding-bottom:14px;-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.cat-chip{flex-shrink:0;scroll-snap-align:start}
+@media (max-width:700px){
+  .biz-list,.featured-strip .biz-list{grid-template-columns:minmax(0,1fr);gap:12px}
+  .biz-card{grid-template-columns:auto minmax(0,1fr)}
+  .biz-img{width:72px;margin:14px 0 0 14px;border-radius:12px}
+  .biz-info{padding:12px 14px 6px 12px}
+  .biz-info h3{font-size:15.5px}
+  .biz-action{padding:10px 12px 12px}
+  .results-note{display:block;margin:4px 0 0}
+}

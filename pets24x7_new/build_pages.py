@@ -510,8 +510,44 @@ def itemlist_jsonld(items, city, base_url):
 
 # ---- Components ----------------------------------------------------------
 
+# Card tile colours per category (background, foreground). A business with no
+# photo of its own gets a monogram tile in its category colour instead of a
+# stock photo: five stock photos per category repeated down every long page
+# and showed animals the business never saw.
+CAT_TINT = {
+    "veterinary-clinics": ("#DBEAFE", "#1D4ED8"),
+    "emergency-animal-hospital": ("#FEE2E2", "#B91C1C"),
+    "vaccination-centers": ("#E0F2FE", "#0369A1"),
+    "mobile-vet-services": ("#E0E7FF", "#4338CA"),
+    "specialty-vets-exotics-avian-reptiles": ("#DCFCE7", "#15803D"),
+    "veterinary-labs-diagnostics": ("#F1F5F9", "#334155"),
+    "pet-dental-care": ("#F0F9FF", "#0E7490"),
+    "pet-physiotherapy-rehab": ("#ECFDF5", "#047857"),
+    "pet-grooming-spa": ("#FCE7F3", "#BE185D"),
+    "pet-boarding-daycare": ("#FEF3C7", "#B45309"),
+    "pet-walking": ("#ECFCCB", "#4D7C0F"),
+    "pet-training-obedience-behavior": ("#FFEDD5", "#C2410C"),
+    "pet-sitting-in-home-care": ("#F3E8FF", "#7E22CE"),
+    "pet-relocation-services": ("#E0F2FE", "#075985"),
+    "pet-taxi-transport": ("#FEF9C3", "#A16207"),
+    "pet-therapy-services": ("#FFE4E6", "#BE123C"),
+    "pet-store": ("#E0E7FF", "#3730A3"),
+}
+
+def initials_of(name):
+    words = [w for w in re.split(r"[^A-Za-z0-9]+", name or "") if w]
+    letters = "".join(w[0] for w in words[:2]).upper()
+    return letters or "P"
+
+def mono_tile_html(b):
+    bg, fg = CAT_TINT.get(b.get("category_slug") or "", ("#EEF2FF", "#3730A3"))
+    return (f'<span class="biz-mono" style="--mono-bg:{bg};--mono-fg:{fg}" aria-hidden="true">'
+            f'<span class="biz-mono-ico">{e(b.get("category_icon") or "🐾")}</span>'
+            f'<span class="biz-mono-txt">{e(initials_of(b.get("name")))}</span></span>')
+
 def biz_card_html(b, badge=None):
-    img = (own_photos(b) or [img_for(b, 0)])[0]
+    photos = own_photos(b)
+    img = photos[0] if photos else None
     amens = "".join(f'<span class="amenity">{e(a)}</span>' for a in amenities_for(b, 4))
     badge_html = ""
     if b.get("premium"):
@@ -535,10 +571,10 @@ def biz_card_html(b, badge=None):
                       f'{e(b["phone"])}</a></div>')
 
     return f"""<article class="biz-card" data-lid="{ea(b["id"])}">
-  <a class="biz-img" href="{listing_url(b)}">
+  <a class="biz-img{' has-photo' if img else ' is-mono'}" href="{listing_url(b)}" tabindex="-1" aria-hidden="true">
     {badge_html}
-    <span class="ct-chip">{e(b.get("category_icon") or "📍")} {e(b["category"])}</span>
-    <img loading="lazy" src="{ea(img)}" alt="{ea(b["name"])}" width="280" height="210" onerror="this.style.display='none';">
+    {f'<img loading="lazy" src="{ea(img)}" alt="" width="120" height="120" onerror="this.remove()">' if img else ''}
+    {mono_tile_html(b)}
   </a>
   <div class="biz-info">
     <h3><a href="{listing_url(b)}">{e(b["name"])}</a></h3>
@@ -553,7 +589,6 @@ def biz_card_html(b, badge=None):
       {google_box}
     </div>
     {f'<div class="amenities">{amens}</div>' if amens else ''}
-    <div class="biz-trust">✓ Free to enquire on WhatsApp</div>
   </div>
   <div class="biz-action">
     {phone_html}
@@ -1006,10 +1041,12 @@ def featured_script(country, city_slug, category_slug=None):
     var tel = '';  // contact details stay with Pets24x7
     var href = esc(withSrc(c.url));
     return '<article class="biz-card is-featured">' +
-      '<a class="biz-img" href="' + href + '">' +
+      '<a class="biz-img is-mono" href="' + href + '">' +
         '<span class="badge badge-featured badge-sponsored" aria-label="Sponsored listing">' + esc(labelOf(c)) + '</span>' +
-        '<img loading="lazy" src="' + esc(featImg(c)) + '" alt="' + esc(c.name) + '" onerror="this.style.display=\\'none\\'">' +
-        '<span class="ct-chip">' + esc(c.categoryIcon || '📍') + ' ' + esc(c.category) + '</span>' +
+        '<span class="biz-mono" style="--mono-bg:#FEF3C7;--mono-fg:#B45309" aria-hidden="true">' +
+          '<span class="biz-mono-ico">' + esc(c.categoryIcon || '🐾') + '</span>' +
+          '<span class="biz-mono-txt">' + esc(String(c.name || 'P').split(/[^A-Za-z0-9]+/).filter(Boolean).slice(0, 2).map(function (w) {{ return w.charAt(0); }}).join('').toUpperCase() || 'P') + '</span>' +
+        '</span>' +
       '</a>' +
       '<div class="biz-info">' +
         '<h3><a href="' + href + '">' + esc(c.name) + '</a></h3>' +
@@ -1019,7 +1056,6 @@ def featured_script(country, city_slug, category_slug=None):
           (rated(c) ? '<span class="google-badge"><span class="gscore">' +
             Number(c.rating || 0).toFixed(1) + '/5</span> ' + c.reviewCount + ' reviews</span>' : '') +
         '</div>' +
-        '<div class="biz-trust">✓ Free to enquire on WhatsApp</div>' +
       '</div>' +
       '<div class="biz-action">' +
         '<a class="wa-btn" href="' + esc(c.url) + '#enquiryForm">Enquire now</a>' +
@@ -1245,6 +1281,8 @@ def cat_chips_html(country, city_slug, categories, active_cat=None):
         + search
         + f'<div class="cat-chips-row">{"".join(chips)}</div>'
         + '</div></section>'
+        + '<script>(function(){var r=document.querySelector(".cat-chips-row"),a=r&&r.querySelector(".cat-chip.active");'
+          'if(a&&a.offsetLeft>r.clientWidth*0.6)r.scrollLeft=a.offsetLeft-16;})();</script>'
     )
 
 def pagination_html(country, city_slug, page, total_pages):
@@ -1400,7 +1438,7 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
 
 <main class="main"><div class="container">
   <div class="results-bar">
-    <div class="results-count"><strong>{len(items):,}</strong> businesses in {e(full_city)}{f' — showing {(page-1)*page_size + 1}–{(page-1)*page_size + len(page_items)}' if total_pages > 1 else ''}</div>
+    <div class="results-count"><strong>{len(items):,}</strong> businesses in {e(full_city)}{f' — showing {(page-1)*page_size + 1}–{(page-1)*page_size + len(page_items)}' if total_pages > 1 else ''}<span class="results-note">✓ Free to enquire on WhatsApp · no booking fees</span></div>
   </div>
   {featured_strip_html()}
   {popular_strip_html()}
@@ -1527,7 +1565,7 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 
 <main class="main"><div class="container">
   <div class="results-bar">
-    <div class="results-count"><strong>{len(items)}</strong> {e(category_name.lower())} provider{'s' if len(items) != 1 else ''} in {e(full_city)}</div>
+    <div class="results-count"><strong>{len(items)}</strong> {e(category_name.lower())} provider{'s' if len(items) != 1 else ''} in {e(full_city)}<span class="results-note">✓ Free to enquire on WhatsApp · no booking fees</span></div>
   </div>
   {featured_strip_html()}
   {popular_strip_html()}

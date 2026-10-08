@@ -75,5 +75,50 @@
     return 'https://images.unsplash.com/' + id + '?w=' + (w || 1000) + '&h=' + (h || 700) + '&fit=crop&q=75';
   }
 
-  window.PetImages = { POOL: POOL, categoryImg: categoryImg, cardImg: cardImg, imgFor: imgFor };
+  // ---- Card visual: the business's own photo, else a monogram tile ----
+  // Stock photos on cards repeated down every long page (five per category)
+  // and showed animals the business never saw. Cards now show the business's
+  // own photo when it has one, and otherwise its category icon and initials in
+  // the category colour. A photo that fails to load falls back to the tile.
+  var TINT = {
+    'veterinary-clinics': ['#DBEAFE', '#1D4ED8'], 'emergency-animal-hospital': ['#FEE2E2', '#B91C1C'],
+    'vaccination-centers': ['#E0F2FE', '#0369A1'], 'mobile-vet-services': ['#E0E7FF', '#4338CA'],
+    'specialty-vets-exotics-avian-reptiles': ['#DCFCE7', '#15803D'], 'veterinary-labs-diagnostics': ['#F1F5F9', '#334155'],
+    'pet-dental-care': ['#F0F9FF', '#0E7490'], 'pet-physiotherapy-rehab': ['#ECFDF5', '#047857'],
+    'pet-grooming-spa': ['#FCE7F3', '#BE185D'], 'pet-boarding-daycare': ['#FEF3C7', '#B45309'],
+    'pet-walking': ['#ECFCCB', '#4D7C0F'], 'pet-training-obedience-behavior': ['#FFEDD5', '#C2410C'],
+    'pet-sitting-in-home-care': ['#F3E8FF', '#7E22CE'], 'pet-relocation-services': ['#E0F2FE', '#075985'],
+    'pet-taxi-transport': ['#FEF9C3', '#A16207'], 'pet-therapy-services': ['#FFE4E6', '#BE123C'],
+    'pet-store': ['#E0E7FF', '#3730A3']
+  };
+  function esc(x) {
+    return String(x == null ? '' : x).replace(/[<>&"']/g, function (c) {
+      return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function initials(name) {
+    var w = String(name || '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+    return ((w[0] || 'P').charAt(0) + (w[1] ? w[1].charAt(0) : '')).toUpperCase();
+  }
+  function monoTile(b) {
+    var t = TINT[slugOf(b)] || ['#EEF2FF', '#3730A3'];
+    return '<span class="biz-mono" style="--mono-bg:' + t[0] + ';--mono-fg:' + t[1] + '" aria-hidden="true">' +
+      '<span class="biz-mono-ico">' + esc((b && (b.category_icon || b.categoryIcon)) || '🐾') + '</span>' +
+      '<span class="biz-mono-txt">' + esc(initials(b && b.name)) + '</span></span>';
+  }
+  /** Card art HTML (place inside a position:relative box). */
+  function cardVisual(b) {
+    var own = b && b.imageUrl;
+    return (own ? '<img class="biz-own" loading="lazy" src="' + esc(own) + '" alt="" onerror="this.remove()">' : '') + monoTile(b);
+  }
+  var css = document.createElement('style');
+  css.textContent =
+    '.biz-mono{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;' +
+    'background:var(--mono-bg,#EEF2FF);color:var(--mono-fg,#3730A3)}' +
+    '.biz-mono-ico{font-size:clamp(22px,2.4vw,38px);line-height:1}' +
+    '.biz-mono-txt{font-weight:800;font-size:clamp(13px,1.3vw,18px);letter-spacing:.5px;font-family:inherit}' +
+    'img.biz-own{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}';
+  (document.head || document.documentElement).appendChild(css);
+
+  window.PetImages = { POOL: POOL, categoryImg: categoryImg, cardImg: cardImg, imgFor: imgFor, monoTile: monoTile, cardVisual: cardVisual };
 })();

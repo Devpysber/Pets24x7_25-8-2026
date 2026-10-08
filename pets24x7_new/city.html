@@ -427,6 +427,12 @@
   // Category photos live in /pet-images.js so city, listing and the page
   // builder all draw from one verified pool.
   // A business's own photo (published with the listing) beats the stock one.
+  function cardArt(b) {
+    var own = (b && Array.isArray(b.photos) ? b.photos : []).filter(function (u) {
+      return /^(https?:\/\/|\/(?!\/))/i.test(String(u || ''));
+    })[0];
+    return window.PetImages.cardVisual(own ? Object.assign({}, b, { imageUrl: own }) : b);
+  }
   function cardImg(b) {
     var own = (b && Array.isArray(b.photos) ? b.photos : []).filter(function (u) {
       return /^(https?:\/\/|\/(?!\/))/i.test(String(u || ''));
@@ -894,7 +900,7 @@
           topBadge +
           '<span class="cat-chip">' + esc(b.category_icon || '📍') + ' ' + esc(b.category) + '</span>' +
           '<span class="biz-icon" aria-hidden="true">' + esc(b.category_icon || '🐾') + '</span>' +
-          '<img loading="lazy" src="' + escapeAttr(cardImg(b)) + '" alt="" onerror="this.remove()">' +
+          cardArt(b) +
         '</a>' +
         '<div class="biz-info">' +
           '<h3><a href="' + href + '">' + esc(b.name) + '</a></h3>' +

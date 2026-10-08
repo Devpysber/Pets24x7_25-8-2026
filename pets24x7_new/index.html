@@ -161,7 +161,7 @@
   .feat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   .feat-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: all 0.2s; cursor: pointer; display: flex; flex-direction: column; }
   .feat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: rgba(37,99,235,0.3); }
-  .feat-img { aspect-ratio: 16/10; background: linear-gradient(135deg, #DBEAFE, #93C5FD); position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .feat-img { aspect-ratio: 16/7; background: linear-gradient(135deg, #DBEAFE, #93C5FD); position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .feat-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
   .feat-img .feat-icon { font-size: 44px; opacity: 0.9; position: absolute; z-index: 0; }
   .feat-img .badge-top { position: absolute; top: 10px; left: 10px; background: var(--success); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; box-shadow: var(--shadow); }
@@ -1353,7 +1353,7 @@
                 (sp ? '<span class="badge-sponsored" aria-label="Sponsored listing">' + escapeAttr(p.label || 'Sponsored') + '</span>' : '') +
                 '<span class="cat-chip">' + pIcon + ' ' + escapeAttr(p.category) + '</span>' +
                 '<span class="feat-icon" aria-hidden="true">' + pIcon + '</span>' +
-                '<img loading="lazy" src="' + escapeAttr(cardImg(p)) + '" alt="" onerror="this.remove()">' +
+                PetImages.cardVisual(p) +
              '</div>' +
              '<div class="feat-body">' +
                 '<h3>' + escapeAttr(p.name) + '</h3>' +
