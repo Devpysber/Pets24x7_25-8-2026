@@ -13,7 +13,7 @@ import { requireAnyAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../shared/errors.js';
 import { logger } from '../logger.js';
-import { verifyPaymentSignature, verifyWebhookSignature, fetchPaymentStatus } from './razorpay.js';
+import { verifyPaymentSignature, verifyWebhookSignature, fetchPaymentStatus, fetchRazorpayOrder } from './razorpay.js';
 import { alertAdminsAboutPayment, applyPaymentResult } from './membership.routes.js';
 import { settleVendorSubscriptionOrder } from '../vendors/vendor.subscriptions.routes.js';
 import { notifyIf } from '../mail/notify.js';
@@ -150,7 +150,11 @@ razorpayRouter.post(
         // the order's notes. Anything else captured against an order we cannot
         // match is money nobody will credit unless an admin is told.
         const handled = await settleVendorSubscriptionOrder(entity.order_id, entity.id, entity.amount, entity.currency);
-        if (!handled && event === 'payment.captured') {
+        // The account is shared with other sites (hotelzz, CarsIndias), whose
+        // payments reach this webhook too. Only an order Pets24x7 created is
+        // money we owe someone; anything else is ignored quietly.
+        const ours = !handled && event === 'payment.captured' ? await isPets24x7Order(entity.order_id) : false;
+        if (!handled && ours) {
           logger.warn({ orderId: entity.order_id, paymentId: entity.id }, 'razorpay.webhook: captured payment for unknown order');
           alertAdminsAboutPayment({
             merchantTxnId: entity.order_id,
@@ -185,6 +189,14 @@ razorpayRouter.post(
  * ends whatever it paid for, exactly as the admin refund route does; a partial
  * one is recorded but leaves the purchase running.
  */
+/** True when the order carries the notes Pets24x7's checkout attaches. */
+async function isPets24x7Order(orderId: string): Promise<boolean> {
+  const order = await fetchRazorpayOrder(orderId).catch(() => null);
+  if (!order) return true; // cannot tell: better one stray alert than a lost payment
+  const n = order.notes;
+  return n.app === 'pets24x7' || (!n.app && !!n.merchantTxnId && !!n.purpose && !!n.userId);
+}
+
 async function applyGatewayRefund(
   refund: { id?: string; payment_id: string; amount?: number },
   totalRefundedMinor?: number,

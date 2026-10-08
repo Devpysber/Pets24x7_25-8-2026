@@ -72,6 +72,9 @@ export async function startCheckout(opts: {
     receipt: opts.merchantTxnId,
     notes: {
       ...(opts.notes ?? {}),
+      // The Razorpay account is shared with other sites on this server, and
+      // every site's webhook receives every payment; this marks ours.
+      app: 'pets24x7',
       purpose: opts.purpose ?? 'PAYMENT',
       userId: opts.userId,
       merchantTxnId: opts.merchantTxnId,
