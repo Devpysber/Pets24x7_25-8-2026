@@ -251,7 +251,7 @@ def img_for(biz, idx=0, w=600, h=450):
     pool = card_pool(biz.get("category_slug"))
     key  = biz.get("id") or biz.get("name") or ""
     pic  = pool[(djb2(key) + idx) % len(pool)]
-    return f"https://images.unsplash.com/{pic}?w={w}&h={h}&fit=crop&crop=faces,entropy&q=70"
+    return f"https://images.unsplash.com/{pic}?w={w}&h={h}&fit=crop&q=70"
 
 def amenities_for(biz, n=10):
     """Services the business itself listed (vendor or admin). Nothing is made up."""

@@ -122,7 +122,7 @@
   function cardImgAt(b, idx, seed, w, h) {
     var pool = cardPool(b);
     var id = pool[hash(String((b && (b.id || b.name)) || '')) % pool.length];
-    return 'https://images.unsplash.com/' + id + '?w=' + (w || 240) + '&h=' + (h || 240) + '&fit=crop&crop=faces,entropy&q=70';
+    return 'https://images.unsplash.com/' + id + '?w=' + (w || 240) + '&h=' + (h || 240) + '&fit=crop&q=70';
   }
   /** Card art HTML (place inside a position:relative box). */
   /** w/h: the box's shape in pixels (wide banners want a wide crop); default a 240px square. */
