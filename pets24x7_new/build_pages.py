@@ -245,27 +245,13 @@ def card_pool(slug):
             out.append(p)
     return out
 
-def card_img(biz, idx, seed="", size=240, used=None):
-    pool = card_pool(biz.get("category_slug"))
-    start = djb2(seed) + idx
-    pic = pool[start % len(pool)]
-    if used is not None:
-        # skip photos already on this page (mixed-category pages draw from
-        # different pools); start over once every photo has been used
-        for k in range(len(pool)):
-            if pic not in used:
-                break
-            pic = pool[(start + k + 1) % len(pool)]
-        used.add(pic)
-        if len(used) >= len(CARD_GENERIC):
-            used.clear()
-    return f"https://images.unsplash.com/{pic}?w={size}&h={size}&fit=crop&crop=faces,entropy&q=70"
-
 def img_for(biz, idx=0, w=600, h=450):
-    pool = IMG_POOL.get(biz.get("category_slug"), DEFAULT_IMGS)
+    """Stock photo idx for a business, picked by the business itself, so its card
+    (photo 0) shows the same picture as the top of its own listing page."""
+    pool = card_pool(biz.get("category_slug"))
     key  = biz.get("id") or biz.get("name") or ""
     pic  = pool[(djb2(key) + idx) % len(pool)]
-    return f"https://images.unsplash.com/{pic}?w={w}&h={h}&fit=crop&q=70"
+    return f"https://images.unsplash.com/{pic}?w={w}&h={h}&fit=crop&crop=faces,entropy&q=70"
 
 def amenities_for(biz, n=10):
     """Services the business itself listed (vendor or admin). Nothing is made up."""
@@ -576,9 +562,9 @@ def mono_tile_html(b):
             f'<span class="biz-mono-ico">{e(b.get("category_icon") or "🐾")}</span>'
             f'<span class="biz-mono-txt">{e(initials_of(b.get("name")))}</span></span>')
 
-def biz_card_html(b, badge=None, idx=0, seed="", used=None):
+def biz_card_html(b, badge=None):
     photos = own_photos(b)
-    img = photos[0] if photos else card_img(b, idx, seed, used=used)
+    img = photos[0] if photos else img_for(b, 0, 240, 240)
     amens = "".join(f'<span class="amenity">{e(a)}</span>' for a in amenities_for(b, 4))
     badge_html = ""
     if b.get("premium"):
@@ -1039,7 +1025,7 @@ def featured_script(country, city_slug, category_slug=None):
     placement covers the whole city while the reader is in one category — is
     drawn from what the API returns.
     """
-    FEAT_STOCK_JSON = json.dumps(dict(IMG_POOL, _default=DEFAULT_IMGS))
+    FEAT_STOCK_JSON = json.dumps(dict({k: card_pool(k) for k in IMG_POOL}, _default=card_pool(None)))
     cat = f", category: {js(category_slug)}" if category_slug else ""
     return f"""<script>
 (function(){{
@@ -1415,8 +1401,8 @@ def render_city(country, city_slug, city, items, categories, page, total_pages, 
     next_link = f'<link rel="next" href="{SITE}{city_url(country, city_slug, page + 1)}" />' if page < total_pages else ""
 
     cards = "".join(
-        biz_card_html(b, badge=("top" if is_top_rated(b) else None), idx=i, seed=f"{city_slug}:{page}", used=used_photos)
-        for used_photos in [set()] for i, b in enumerate(page_items)
+        biz_card_html(b, badge=("top" if is_top_rated(b) else None))
+        for b in page_items
     )
 
     bc_items = [("Home", "/"), (country_n, None), (city, city_url(country, city_slug))]
@@ -1548,8 +1534,8 @@ def render_category(country, city_slug, city, category_name, category_slug, item
 
     canonical = SITE + category_url(country, city_slug, category_slug)
     cards = "".join(
-        biz_card_html(b, badge=("top" if is_top_rated(b) else None), idx=i, seed=f"{city_slug}:{category_slug}", used=used_photos)
-        for used_photos in [set()] for i, b in enumerate(items)
+        biz_card_html(b, badge=("top" if is_top_rated(b) else None))
+        for b in items
     )
 
     bc_items = [("Home", "/"), (country_n, None), (city, city_url(country, city_slug)), (category_name, None)]

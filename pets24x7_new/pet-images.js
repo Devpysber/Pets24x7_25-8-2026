@@ -52,7 +52,7 @@
 
   /** Representative photo URL for a listing, at the requested box size. */
   function categoryImg(b, w, h) {
-    var pool = POOL[slugOf(b)] || FALLBACK;
+    var pool = cardPool(b);
     var key = String((b && (b.id || b.name)) || '');
     var id = pool[hash(key) % pool.length];
     return 'https://images.unsplash.com/' + id + '?w=' + (w || 560) + '&h=' + (h || 420) + '&fit=crop&q=70';
@@ -69,7 +69,7 @@
    * frames differ while staying stable for that business.
    */
   function imgFor(b, idx, w, h) {
-    var pool = POOL[slugOf(b)] || FALLBACK;
+    var pool = cardPool(b);
     var key = String((b && (b.id || b.name)) || '');
     var id = pool[(hash(key) + (idx || 0)) % pool.length];
     return 'https://images.unsplash.com/' + id + '?w=' + (w || 1000) + '&h=' + (h || 700) + '&fit=crop&q=75';
@@ -117,21 +117,16 @@
     for (var i = 0; i < all.length; i++) if (out.indexOf(all[i]) < 0) out.push(all[i]);
     return out;
   }
-  var autoIdx = 0, usedIds = {};
+  // A card shows the same photo as the top of the business's own page
+  // (imgFor(b, 0)): picked by the business, not by its place on the page.
   function cardImgAt(b, idx, seed, w, h) {
     var pool = cardPool(b);
-    var start = hash(String(seed == null ? location.pathname : seed)) + idx, id = pool[start % pool.length];
-    // Skip photos this page already shows (cards of different categories draw
-    // from different pools and could otherwise land on the same one).
-    for (var k = 0; k < pool.length && usedIds[id]; k++) id = pool[(start + k + 1) % pool.length];
-    usedIds[id] = 1;
-    if (Object.keys(usedIds).length >= GENERIC.length) usedIds = {};
+    var id = pool[hash(String((b && (b.id || b.name)) || '')) % pool.length];
     return 'https://images.unsplash.com/' + id + '?w=' + (w || 240) + '&h=' + (h || 240) + '&fit=crop&crop=faces,entropy&q=70';
   }
   /** Card art HTML (place inside a position:relative box). */
   /** w/h: the box's shape in pixels (wide banners want a wide crop); default a 240px square. */
   function cardVisual(b, idx, seed, w, h) {
-    if (idx == null) idx = autoIdx++;
     var src = (b && b.imageUrl) || cardImgAt(b, idx, seed, w, h);
     return '<img class="biz-own" loading="lazy" src="' + esc(src) + '" alt="" onerror="this.remove()">' + monoTile(b);
   }
