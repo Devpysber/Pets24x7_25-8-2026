@@ -12,7 +12,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../db.js';
 import { profileCompletion, type LegacyMissing } from '../../vendors/profile-completion.js';
 import { getListingById, shownRating, type ListingRecord } from '../../listings/index.js';
-import { getFeaturedOptions } from '../../payments/pricing.js';
+import { currencyForCountry, getFeaturedOptions } from '../../payments/pricing.js';
 import { isVendorApproved } from '../../shared/vendor-status.js';
 import { genKey, invalidateVendor, recoCache } from './cache.js';
 import { getRecoConfig, type RecoConfig } from './config.js';
@@ -345,7 +345,13 @@ async function compute(vendorId: string, config: RecoConfig): Promise<Record<str
     queued,
     slotsLive,
     slotsCap: config.sponsored.maxSlotsPerCityCategory,
-    options: getFeaturedOptions().map((o) => ({ durationDays: o.durationDays, label: o.label, rupees: Math.round(o.priceMinor / 100) })),
+    // `rupees` is the price in the business's own currency (dollars in the US).
+    options: getFeaturedOptions(currencyForCountry(listing?.country)).map((o) => ({
+      durationDays: o.durationDays,
+      label: o.label,
+      rupees: Math.round(o.priceMinor / 100),
+      currency: o.currency,
+    })),
   };
 
   // ---- Actions ----

@@ -5,7 +5,8 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { loadPersistedPlanStores, memoryVendorSubPlans } from '../admin/admin.api.routes.js';
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { startCheckout } from '../payments/checkout.js';
+import { checkoutErrorMessage, startCheckout } from '../payments/checkout.js';
+import { currencyForCountry, vendorPlanPriceUsd, type Currency } from '../payments/pricing.js';
 import { newMerchantTxnId } from '../payments/checkout.js';
 import { fetchPaymentStatus, fetchRazorpayOrder, verifyPaymentSignature } from '../payments/razorpay.js';
 import { alertAdminsAboutPayment } from '../payments/membership.routes.js';
@@ -42,6 +43,8 @@ interface VendorSubPlan {
   leadLimit: number;
   badge?: string;
   priceRupees: number;
+  /** US price in dollars; unset = the default US list price for the tier. */
+  priceUsd?: number | null;
   durationDays: number;
   recommended?: boolean;
   active?: boolean;
@@ -280,14 +283,24 @@ function findPlan(planId: string | undefined, plans: VendorSubPlan[] = allPlans(
  * month. A plan that is already annual (Diamond: ₹24,999 / 365 days) was being
  * multiplied by ten again.
  */
-function priceFor(plan: VendorSubPlan, billingPeriod: 'MONTHLY' | 'ANNUAL') {
+/**
+ * What a plan costs for a billing period, in the buyer's currency (major
+ * units: rupees or dollars). Annual is ten months' price on a monthly plan.
+ */
+function priceFor(plan: VendorSubPlan, billingPeriod: 'MONTHLY' | 'ANNUAL', currency: Currency = 'INR') {
   const baseDays = plan.durationDays || 30;
   const alreadyAnnual = plan.billingPeriod === 'ANNUAL' || baseDays >= 365;
-  const priceRupees = Number(plan.priceRupees) || 0;
-  if (billingPeriod === 'ANNUAL' && priceRupees > 0 && !alreadyAnnual) {
-    return { priceRupees: Math.round(priceRupees * 10), durationDays: 365 };
+  const base = currency === 'USD' ? vendorPlanPriceUsd(plan) : Number(plan.priceRupees) || 0;
+  if (billingPeriod === 'ANNUAL' && base > 0 && !alreadyAnnual) {
+    return { price: Math.round(base * 10 * 100) / 100, currency, durationDays: 365 };
   }
-  return { priceRupees, durationDays: baseDays };
+  return { price: base, currency, durationDays: baseDays };
+}
+
+/** A vendor's checkout currency, from its country. */
+async function vendorCurrency(vendorId: string): Promise<Currency> {
+  const v = await prisma.vendor.findUnique({ where: { id: vendorId }, select: { country: true } }).catch(() => null);
+  return currencyForCountry(v?.country);
 }
 
 // A paid checkout in flight, keyed by Razorpay order id. Verify reads the plan,
@@ -298,6 +311,7 @@ interface PendingVendorCheckout {
   planId: string;
   billingPeriod: 'MONTHLY' | 'ANNUAL';
   amountMinor: number;
+  currency: Currency;
   merchantTxnId: string;
   createdAt: number;
 }
@@ -412,6 +426,7 @@ async function checkoutFromOrder(orderId: string): Promise<PendingVendorCheckout
     planId: order.notes.planId,
     billingPeriod: order.notes.billingPeriod === 'ANNUAL' ? 'ANNUAL' : 'MONTHLY',
     amountMinor: order.amount,
+    currency: order.currency === 'USD' ? 'USD' : 'INR',
     merchantTxnId: order.notes.merchantTxnId || order.receipt || orderId,
     createdAt: Date.now(),
   };
@@ -423,12 +438,13 @@ async function activatePaidPlan(opts: {
   plan: VendorSubPlan;
   billingPeriod: 'MONTHLY' | 'ANNUAL';
   amountMinor: number;
+  currency: Currency;
   merchantTxnId: string;
   gatewayTxnId: string;
   paymentMethod: string;
 }) {
   const { vendorId, plan } = opts;
-  const { durationDays } = priceFor(plan, opts.billingPeriod);
+  const { durationDays } = priceFor(plan, opts.billingPeriod, opts.currency);
   await reloadVendorSubscription(vendorId).catch((err) =>
     logger.warn({ err, vendorId }, 'vendor subscriptions: could not re-read the saved subscription; using the cached copy'),
   );
@@ -446,7 +462,9 @@ async function activatePaidPlan(opts: {
     tierName: plan.name || 'Vendor Subscription Plan',
     // What was actually charged, not the request and not the monthly list
     // price (an annual purchase was recorded at one month's price).
+    // Named for rupees, but holds the amount in `currency` (dollars for US businesses).
     pricePaidRupees: Math.round(opts.amountMinor) / 100,
+    currency: opts.currency,
     leadLimit: plan.leadLimit || 9999,
     leadsUsed: 0,
     badge: plan.badge || 'GOLD_PLATINUM',
@@ -467,6 +485,7 @@ async function activatePaidPlan(opts: {
     planName: `${updatedSub.tierName} (${opts.billingPeriod === 'ANNUAL' ? 'Annual' : 'Monthly'})`,
     tier: updatedSub.tier,
     amountRupees: updatedSub.pricePaidRupees,
+    currency: opts.currency,
     status: 'PAID',
     paymentMethod: opts.paymentMethod,
     createdAt: now,
@@ -482,7 +501,7 @@ async function activatePaidPlan(opts: {
     alertAdminsAboutPayment({
       merchantTxnId: opts.merchantTxnId,
       amountMinor: opts.amountMinor,
-      currency: 'INR',
+      currency: opts.currency,
       reason: `Vendor ${vendorId} paid for ${plan.name}, but the subscription could not be saved - check it after the next restart`,
       who: vendorId,
     });
@@ -502,7 +521,7 @@ async function activatePaidPlan(opts: {
   notifyPaymentReceived({
     what: `${invoice.planName} business plan (${opts.billingPeriod === 'ANNUAL' ? 'yearly' : 'monthly'})`,
     amountMinor: opts.amountMinor,
-    currency: 'INR',
+    currency: opts.currency,
     merchantTxnId: opts.merchantTxnId,
     paidAt: now,
     buyerKind: 'Business',
@@ -516,7 +535,7 @@ async function activatePaidPlan(opts: {
       vendor?.businessName ?? 'there',
       `your ${invoice.planName} subscription`,
       opts.amountMinor,
-      'INR',
+      opts.currency,
       opts.merchantTxnId,
       now,
     ),
@@ -543,7 +562,7 @@ async function settleVendorPayment(
       alertAdminsAboutPayment({
         merchantTxnId: ctx.merchantTxnId,
         amountMinor: ctx.amountMinor,
-        currency: 'INR',
+        currency: ctx.currency,
         reason: `Vendor paid for subscription plan "${ctx.planId}", which no longer exists - activate or refund by hand`,
         who: ctx.vendorId,
       });
@@ -575,6 +594,7 @@ async function settleVendorPayment(
       plan,
       billingPeriod: ctx.billingPeriod,
       amountMinor: ctx.amountMinor,
+      currency: ctx.currency,
       merchantTxnId: ctx.merchantTxnId,
       gatewayTxnId: razorpayPaymentId,
       paymentMethod,
@@ -612,12 +632,12 @@ export async function settleVendorSubscriptionOrder(
   const ctx = pendingCheckouts.get(orderId) ?? (await checkoutFromOrder(orderId));
   if (!ctx) return false;
   const shortPaid = typeof paidAmountMinor === 'number' && paidAmountMinor < ctx.amountMinor;
-  const wrongCurrency = !!paidCurrency && paidCurrency !== 'INR';
+  const wrongCurrency = !!paidCurrency && paidCurrency !== ctx.currency;
   if (shortPaid || wrongCurrency) {
     alertAdminsAboutPayment({
       merchantTxnId: ctx.merchantTxnId,
       amountMinor: ctx.amountMinor,
-      currency: 'INR',
+      currency: ctx.currency,
       reason: `Vendor subscription payment ${razorpayPaymentId} captured ${paidAmountMinor ?? '?'} ${paidCurrency ?? ''} against an order for ${ctx.amountMinor} - not credited`,
       who: ctx.vendorId,
     });
@@ -645,7 +665,10 @@ vendorSubscriptionsRouter.get(
     // Perk lines for leads, photos, review requests and Featured are written
     // from the enforced limits, so the card always says what the plan does.
     const limits = await getPlanLimits();
-    res.json({ ok: true, plans: purchasablePlans().map((p) => decorateVendorPlan(p, limits)) });
+    res.json({
+      ok: true,
+      plans: purchasablePlans().map((p) => ({ ...decorateVendorPlan(p, limits), priceUsd: vendorPlanPriceUsd(p) })),
+    });
   }),
 );
 
@@ -715,7 +738,8 @@ vendorSubscriptionsRouter.post(
     const plan = findPlan(planId, purchasablePlans());
     if (!plan) throw new NotFoundError('That plan is no longer available');
 
-    const { priceRupees: finalPrice } = priceFor(plan, billingPeriod);
+    const currency = await vendorCurrency(vendorId);
+    const { price: finalPrice } = priceFor(plan, billingPeriod, currency);
     const merchantTxnId = newMerchantTxnId();
     const amountMinor = Math.round(finalPrice * 100);
     const current = currentVendorSubscription(vendorId);
@@ -762,14 +786,14 @@ vendorSubscriptionsRouter.post(
         amountMinor,
         userId: vendorId,
         purpose: PURPOSE,
-        currency: 'INR',
+        currency,
         notes: { planId: plan.id, billingPeriod },
       });
     } catch (err: any) {
       // No "simulated" fallback: it handed the browser a made-up Razorpay key
       // that the modal rejects, and no payment made there could ever verify.
-      logger.warn({ err, vendorId, planId: plan.id }, 'vendor subscription checkout failed');
-      throw new BadRequestError('Could not start payment — please try again');
+      logger.warn({ err, vendorId, planId: plan.id, currency }, 'vendor subscription checkout failed');
+      throw new BadRequestError(checkoutErrorMessage(err, currency));
     }
 
     if (checkout.mode === 'redirect') {
@@ -782,6 +806,7 @@ vendorSubscriptionsRouter.post(
         plan,
         billingPeriod,
         amountMinor,
+        currency,
         merchantTxnId,
         gatewayTxnId: `DEV_${Date.now()}`,
         paymentMethod: 'Development bypass',
@@ -795,6 +820,7 @@ vendorSubscriptionsRouter.post(
       planId: plan.id,
       billingPeriod,
       amountMinor: checkout.amountMinor,
+      currency,
       merchantTxnId,
       createdAt: Date.now(),
     });
@@ -802,7 +828,9 @@ vendorSubscriptionsRouter.post(
     res.json({
       ok: true,
       merchantTxnId,
+      // Named for rupees; in `currency` (dollars for US businesses).
       amountRupees: finalPrice,
+      currency,
       plan: { id: plan.id, name: plan.name, tier: plan.tier, badge: plan.badge },
       checkout,
     });
@@ -871,7 +899,7 @@ vendorSubscriptionsRouter.post(
         alertAdminsAboutPayment({
           merchantTxnId: ctx.merchantTxnId,
           amountMinor: ctx.amountMinor,
-          currency: 'INR',
+          currency: ctx.currency,
           reason: `Vendor subscription payment ${body.razorpay_payment_id} captured ${live.amount} against an order for ${ctx.amountMinor} - not credited`,
           who: vendorId,
         });

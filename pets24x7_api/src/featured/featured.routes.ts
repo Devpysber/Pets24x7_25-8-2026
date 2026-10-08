@@ -16,9 +16,9 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { makeLimiter } from '../shared/rate-limit.js';
 import { BadRequestError, ForbiddenError, NotFoundError, ConflictError } from '../shared/errors.js';
 import { newMerchantTxnId } from '../payments/checkout.js';
-import { startCheckout } from '../payments/checkout.js';
+import { checkoutErrorMessage, startCheckout } from '../payments/checkout.js';
 import { closeUnpaidCheckout, reconcilePayment } from '../payments/membership.routes.js';
-import { getFeaturedOptions, featuredOptionFor } from '../payments/pricing.js';
+import { getFeaturedOptions, featuredOptionFor, currencyForCountry } from '../payments/pricing.js';
 import { getListingById, publicName, shownRating } from '../listings/index.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
@@ -211,7 +211,9 @@ vendorFeaturedRouter.get(
       orderBy: { createdAt: 'desc' },
       include: { payment: { select: { status: true, merchantTxnId: true } } },
     });
-    res.json({ ok: true, featured, catalogue: { options: getFeaturedOptions() } });
+    const vendor = await prisma.vendor.findUnique({ where: { id: req.auth!.sub }, select: { country: true } });
+    const currency = currencyForCountry(vendor?.country);
+    res.json({ ok: true, featured, currency, catalogue: { options: getFeaturedOptions(currency), currency } });
   }),
 );
 
@@ -228,7 +230,8 @@ vendorFeaturedRouter.post(
     if (!isVendorApproved(vendor.status)) throw new ForbiddenError('Your vendor account must be approved first');
     if (!vendor.listingId) throw new BadRequestError('Claim your listing before buying Featured placement');
 
-    const option = featuredOptionFor(body.durationDays);
+    const currency = currencyForCountry(vendor.country);
+    const option = featuredOptionFor(body.durationDays, currency);
     if (!option) throw new BadRequestError('Unknown Featured package');
 
     // A live placement no longer blocks the sale — the new slot is queued and
@@ -279,7 +282,7 @@ vendorFeaturedRouter.post(
         category: listing?.category ?? vendor.category ?? null,
         categorySlug: listing?.category_slug ?? slugOf(listing?.category ?? vendor.category),
         priceMinor: option.priceMinor,
-        currency: 'INR',
+        currency,
         durationDays: option.durationDays,
         status: 'PENDING_PAYMENT',
       },
@@ -293,7 +296,7 @@ vendorFeaturedRouter.post(
         featuredCreatedEmail(
           to,
           vendor.businessName,
-          { priceMinor: option.priceMinor, currency: 'INR', durationDays: option.durationDays },
+          { priceMinor: option.priceMinor, currency, durationDays: option.durationDays },
           merchantTxnId,
         ),
       );
@@ -303,7 +306,7 @@ vendorFeaturedRouter.post(
         purpose: 'FEATURED',
         featuredListingId: featured.id,
         amountMinor: option.priceMinor,
-        currency: 'INR',
+        currency,
         gateway: 'RAZORPAY',
         merchantTxnId,
         status: 'INITIATED',
@@ -316,9 +319,10 @@ vendorFeaturedRouter.post(
       const checkout = await startCheckout({
         merchantTxnId,
         amountMinor: option.priceMinor,
+        currency,
         userId: vendorId,
         purpose: 'FEATURED',
-        mobileNumber: vendor.phone.replace(/^\+/, '').replace(/^91/, ''),
+        mobileNumber: vendor.phone.replace(/^\+/, '').replace(currency === 'USD' ? /^1(?=\d{10}$)/ : /^91/, ''),
       });
       if (checkout.mode === 'razorpay') {
         await prisma.payment.update({
@@ -339,7 +343,7 @@ vendorFeaturedRouter.post(
         data: { status: 'FAILED', errorMessage: String(err?.message ?? 'gateway error') },
       });
       await prisma.featuredListing.update({ where: { id: featured.id }, data: { status: 'CANCELLED' } });
-      throw new BadRequestError('Could not start payment — please try again');
+      throw new BadRequestError(checkoutErrorMessage(err, currency));
     }
   }),
 );

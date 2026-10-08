@@ -71,7 +71,7 @@ meRouter.get(
         try {
           v = await prisma.vendor.findUnique({
             where: { id: payload.sub },
-            select: { id: true, phone: true, businessName: true, status: true, listingId: true, city: true, category: true, profileCompletion: true, sessionsRevokedAt: true },
+            select: { id: true, phone: true, businessName: true, status: true, listingId: true, city: true, country: true, category: true, profileCompletion: true, sessionsRevokedAt: true },
           });
         } catch (err) {
           req.log.warn({ err, role }, 'session lookup failed');

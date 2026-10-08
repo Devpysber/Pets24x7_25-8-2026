@@ -23,6 +23,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { growPlanPriceUsd, vendorPlanPriceUsd } from '../payments/pricing.js';
 import { Prisma } from '@prisma/client';
 
 import { prisma } from '../db.js';
@@ -2321,6 +2322,8 @@ const GrowPlanBody = z.object({
   // Checkout multiplies this by 100 and charges it, so it must be a real,
   // non-negative number — NaN from a blank field used to go straight through.
   priceRupees: z.coerce.number().min(0).max(10_000_000),
+  // US price in dollars; blank means the default US list price for its length.
+  priceUsd: z.union([z.literal(''), z.null(), z.coerce.number().min(0).max(1_000_000)]).optional(),
   originalPriceRupees: z.coerce.number().min(0).max(10_000_000).nullable().optional(),
   tagline: z.string().max(240).optional(),
   perks: PerksField,
@@ -2342,6 +2345,7 @@ function toGrowPlan(b: GrowPlanInput, base: Record<string, any>): Record<string,
     ...(b.tier !== undefined ? { tier: b.tier } : {}),
     ...(b.durationDays !== undefined ? { durationDays: b.durationDays } : {}),
     ...(b.priceRupees !== undefined ? { priceRupees: Math.round(b.priceRupees) } : {}),
+    ...(b.priceUsd !== undefined ? { priceUsd: b.priceUsd === '' || b.priceUsd == null ? null : Math.round(b.priceUsd * 100) / 100 } : {}),
     ...(b.originalPriceRupees !== undefined
       ? { originalPriceRupees: b.originalPriceRupees == null ? null : Math.round(b.originalPriceRupees) }
       : {}),
@@ -2358,7 +2362,9 @@ adminApiRouter.get(
   asyncHandler(async (_req, res) => {
     res.json({
       ok: true,
-      plans: memoryGrowPlans,
+      // priceUsdEffective: what a US business is charged (the plan's own
+      // priceUsd, or the default US price for its length).
+      plans: memoryGrowPlans.map((p) => ({ ...p, priceUsdEffective: growPlanPriceUsd(p) })),
     });
   }),
 );
@@ -3108,6 +3114,8 @@ const VendorPlanBody = z.object({
   leadLimit: z.coerce.number().int().min(0).max(1_000_000).optional(),
   badge: z.string().max(40).optional(),
   priceRupees: z.coerce.number().min(0).max(10_000_000).optional(),
+  // US price in dollars; blank means the default US list price for the tier.
+  priceUsd: z.union([z.literal(''), z.null(), z.coerce.number().min(0).max(1_000_000)]).optional(),
   durationDays: z.coerce.number().int().min(1).max(3660).optional(),
   recommended: z.boolean().optional(),
   active: z.boolean().optional(),
@@ -3120,6 +3128,7 @@ function toVendorPlan(b: VendorPlanInput, base: Record<string, any>): Record<str
     if (b[k] !== undefined) out[k] = b[k];
   }
   if (b.priceRupees !== undefined) out.priceRupees = Math.round(b.priceRupees);
+  if (b.priceUsd !== undefined) out.priceUsd = b.priceUsd === '' || b.priceUsd == null ? null : Math.round(b.priceUsd * 100) / 100;
   if (b.perks !== undefined) out.perks = normalizePerks(b.perks);
   return out;
 }
@@ -3131,7 +3140,10 @@ adminApiRouter.get(
     // The catalogue's lead, photo, review and Featured lines are written from
     // the enforced limits (plans/limits.ts), exactly as businesses see them.
     const limits = await getPlanLimits();
-    res.json({ ok: true, plans: memoryVendorSubPlans.map((pl) => decorateVendorPlan(pl, limits)) });
+    res.json({
+      ok: true,
+      plans: memoryVendorSubPlans.map((pl) => ({ ...decorateVendorPlan(pl, limits), priceUsdEffective: vendorPlanPriceUsd(pl) })),
+    });
   }),
 );
 

@@ -228,7 +228,7 @@
     reviewSubmit:     function (code, payload)           { return req('POST', '/api/reviews/' + encodeURIComponent(code) + '/submit', payload); },
 
     // Memberships + payments
-    membershipPlans:    function ()        { return req('GET',  '/api/memberships/plans'); },
+    membershipPlans:    function (country) { return req('GET',  '/api/memberships/plans' + (country ? '?country=' + encodeURIComponent(country) : '')); },
     membershipMe:       function ()        { return req('GET',  '/api/memberships/me'); },
     membershipCheckout: function (planId)  { return req('POST', '/api/memberships/checkout', { planId: planId }); },
     razorpayVerify:     function (p)        { return req('POST', '/api/payments/razorpay/verify', p); },

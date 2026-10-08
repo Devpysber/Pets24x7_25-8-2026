@@ -3046,6 +3046,11 @@
               <input type="number" id="gpPrice" class="form-control" required min="0" placeholder="13999" oninput="updateGbpLivePreview()" />
             </div>
             <div class="form-group">
+              <label for="gpPriceUsd" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">US Price ($)</label>
+              <input type="number" id="gpPriceUsd" class="form-control" min="0" step="0.01" placeholder="Default" />
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Charged to US businesses. Blank = default US price.</div>
+            </div>
+            <div class="form-group">
               <label for="gpOriginalPrice" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Original Price (₹)</label>
               <input type="number" id="gpOriginalPrice" class="form-control" min="0" placeholder="18999" oninput="updateGbpLivePreview()" />
             </div>
@@ -3270,6 +3275,11 @@
             <div class="form-group">
               <label for="vspPrice" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Price (₹)</label>
               <input type="number" id="vspPrice" class="form-control" required min="0" placeholder="2999" oninput="updateVspLivePreview()" />
+            </div>
+            <div class="form-group">
+              <label for="vspPriceUsd" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">US Price ($)</label>
+              <input type="number" id="vspPriceUsd" class="form-control" min="0" step="0.01" placeholder="Default" />
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Charged to US businesses. Blank = default US price.</div>
             </div>
             <div class="form-group">
               <label for="vspLeadLimit" style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Lead Limit / Mo</label>
@@ -5713,7 +5723,7 @@
 
       return '<tr><td style="font-weight:700;">' + escH(p.name) + '<div style="font-size:11.5px;color:var(--text-muted);font-weight:normal;">' + escH(p.tagline || '') + '</div></td>' +
         '<td><span class="status-tag" style="background:#F1F5F9;color:#334155;border:1px solid #E2E8F0;font-weight:600;">' + escH(goalLabel) + '</span></td><td>' + (p.durationDays || 30) + ' Days</td>' +
-        '<td style="font-weight:700;">' + inr(priceVal) + (origPriceVal ? ' <span style="text-decoration:line-through;color:var(--text-muted);font-size:11.5px;">' + inr(origPriceVal) + '</span>' : '') + '</td>' +
+        '<td style="font-weight:700;">' + inr(priceVal) + (p.priceUsdEffective != null ? '<div style="font-size:11.5px;color:var(--text-muted);">US $' + p.priceUsdEffective + '</div>' : '') + (origPriceVal ? ' <span style="text-decoration:line-through;color:var(--text-muted);font-size:11.5px;">' + inr(origPriceVal) + '</span>' : '') + '</td>' +
         '<td>' + tag + '</td>' +
         '<td style="text-align:right;"><button class="btn btn-sm" onclick="openEditGrowPlanModal(\'' + pJson + '\')">Edit Plan</button></td></tr>';
     });
@@ -5934,6 +5944,8 @@
     document.getElementById('gpId').value = p.id || '';
     document.getElementById('gpName').value = p.name || '';
     document.getElementById('gpPrice').value = (p.priceRupees != null ? p.priceRupees : p.price) != null ? (p.priceRupees != null ? p.priceRupees : p.price) : '';
+    document.getElementById('gpPriceUsd').value = p.priceUsd != null ? p.priceUsd : '';
+    document.getElementById('gpPriceUsd').placeholder = p.priceUsdEffective != null ? 'Default $' + p.priceUsdEffective : 'Default';
     document.getElementById('gpOriginalPrice').value = (p.originalPriceRupees != null ? p.originalPriceRupees : p.originalPrice) != null ? (p.originalPriceRupees != null ? p.originalPriceRupees : p.originalPrice) : '';
     if (document.getElementById('gpGoal')) document.getElementById('gpGoal').value = p.goal || p.type || 'WHATSAPP_ENQUIRIES';
     document.getElementById('gpDuration').value = p.durationDays || 30;
@@ -5957,6 +5969,7 @@
     var payload = {
       name: document.getElementById('gpName').value.trim(),
       priceRupees: parseFloat(document.getElementById('gpPrice').value) || 0,
+      priceUsd: document.getElementById('gpPriceUsd').value.trim() === '' ? null : parseFloat(document.getElementById('gpPriceUsd').value),
       originalPriceRupees: parseFloat(document.getElementById('gpOriginalPrice').value) || null,
       type: derivedType,
       goal: selectedGoal,
@@ -6505,7 +6518,7 @@
         '<td><span class="status-tag" style="background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE;">' + escH(p.tier) + '</span></td>' +
         '<td><span class="status-tag" style="background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;">' + leadStr + '</span></td>' +
         '<td><span class="status-tag" style="background:#F8FAFC;color:#475569;border:1px solid #CBD5E1;">🏷️ ' + escH(p.badge || 'VERIFIED') + '</span></td>' +
-        '<td style="font-weight:700;">' + inr(p.priceRupees || 0) + '</td>' +
+        '<td style="font-weight:700;">' + inr(p.priceRupees || 0) + (p.priceUsdEffective != null ? '<div style="font-size:11.5px;color:var(--text-muted);">US $' + p.priceUsdEffective + '</div>' : '') + '</td>' +
         '<td>' + tag + '</td>' +
         '<td style="text-align:right;"><button class="btn btn-sm" onclick="openEditVendorSubPlanModal(\'' + pJson + '\')">✏️ Edit Plan</button></td>' +
         '</tr>';
@@ -6695,6 +6708,8 @@
     document.getElementById('vspSku').value = p.sku || '';
     document.getElementById('vspTier').value = p.tier || 'GOLD';
     document.getElementById('vspPrice').value = p.priceRupees != null ? p.priceRupees : '';
+    document.getElementById('vspPriceUsd').value = p.priceUsd != null ? p.priceUsd : '';
+    document.getElementById('vspPriceUsd').placeholder = p.priceUsdEffective != null ? 'Default $' + p.priceUsdEffective : 'Default';
     document.getElementById('vspLeadLimit').value = p.leadLimit != null ? p.leadLimit : 9999;
     document.getElementById('vspDuration').value = p.durationDays || 30;
     document.getElementById('vspTagline').value = p.tagline || '';
@@ -6717,6 +6732,7 @@
       sku: document.getElementById('vspSku').value.trim(),
       tier: document.getElementById('vspTier').value,
       priceRupees: parseFloat(document.getElementById('vspPrice').value) || 0,
+      priceUsd: document.getElementById('vspPriceUsd').value.trim() === '' ? null : parseFloat(document.getElementById('vspPriceUsd').value),
       leadLimit: parseInt(document.getElementById('vspLeadLimit').value, 10) || 9999,
       durationDays: parseInt(document.getElementById('vspDuration').value, 10) || 30,
       tagline: document.getElementById('vspTagline').value.trim(),

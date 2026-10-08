@@ -15,7 +15,8 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, NotFoundError, ConflictError } from '../shared/errors.js';
 import { isDevGatewayBypass, newMerchantTxnId } from './checkout.js';
 import { fetchOrderPayments, hasRazorpayKeys } from './razorpay.js';
-import { startCheckout } from './checkout.js';
+import { checkoutErrorMessage, startCheckout } from './checkout.js';
+import { convertMinor, currencyForCountry } from './pricing.js';
 import { invoiceUrl, renderInvoice } from './invoice.js';
 import { campaignGoalLabel } from './pricing.js';
 import { logger } from '../logger.js';
@@ -40,9 +41,17 @@ export const membershipRouter = Router();
 // ---- Public: list plans ----
 membershipRouter.get(
   '/plans',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    // One country's plans at a time: ?country=US (or ?currency=USD) for the
+    // US site, India otherwise, so a page never lists rupee and dollar plans
+    // side by side.
+    const currency = String(req.query.currency ?? '').toUpperCase() === 'USD'
+      ? 'USD'
+      : currencyForCountry(String(req.query.country ?? ''));
+    // ?country=ALL: every plan (the parent dashboard picks by the parent's country).
+    const all = String(req.query.country ?? '').toUpperCase() === 'ALL';
     const plans = await prisma.membershipPlan.findMany({
-      where: { active: true },
+      where: { active: true, ...(all ? {} : { currency }) },
       orderBy: [{ sortOrder: 'asc' }, { priceMinor: 'asc' }],
     });
     // Each card leads with the enforced monthly contact allowance, and the free
@@ -50,6 +59,7 @@ membershipRouter.get(
     const limits = await getPlanLimits();
     res.json({
       ok: true,
+      currency,
       plans: plans.map((p) => decorateParentPlan(p, limits)),
       freeContactsPerMonth: limits.parent.FREE.contactsPerMonth,
       freeCallsPerMonth: limits.parent.FREE.callsPerMonth,
@@ -250,7 +260,7 @@ membershipRouter.post(
       await prisma.membership
         .update({ where: { id: membership.id }, data: { status: 'CANCELLED' } })
         .catch(() => {});
-      throw new BadRequestError('Could not start payment — please try again');
+      throw new BadRequestError(checkoutErrorMessage(err, plan.currency));
     }
   }),
 );
@@ -657,7 +667,10 @@ export async function applyPaymentResult(
           ) {
             const remainingMs = prior.endsAt.getTime() - now.getTime();
             const priorTermMs = Math.max(1, prior.plan.durationDays * DAY);
-            const remainingValueMinor = prior.plan.priceMinor * (remainingMs / priorTermMs);
+            // A switch between the India and US plans carries the credit across
+            // at a fixed rate; paise and cents must never be compared directly.
+            const remainingValueMinor =
+              convertMinor(prior.plan.priceMinor, prior.plan.currency, newPlan.currency) * (remainingMs / priorTermMs);
             creditMs = (remainingValueMinor / newPlan.priceMinor) * newPlan.durationDays * DAY;
             // Safety clamp: never credit more than one extra year.
             creditMs = Math.max(0, Math.min(creditMs, 365 * DAY));

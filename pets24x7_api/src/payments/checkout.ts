@@ -101,3 +101,16 @@ export function newMerchantTxnId(): string {
   const rand = randomBytes(3).toString('hex');
   return `P24_${ts}_${rand}`.toUpperCase().slice(0, 35);
 }
+
+/**
+ * What to tell a buyer when the gateway would not open a checkout. A dollar
+ * order fails at Razorpay until International Payments is switched on for the
+ * account; saying "try again" to a US buyer then only sends them round in circles.
+ */
+export function checkoutErrorMessage(err: unknown, currency: string | undefined): string {
+  const msg = String((err as { message?: unknown })?.message ?? '');
+  if (String(currency).toUpperCase() !== 'INR' && /currenc|international/i.test(msg)) {
+    return 'Card payments in US dollars are not available yet. Please contact Pets24x7 support and we will set up your plan.';
+  }
+  return 'Could not start payment — please try again';
+}

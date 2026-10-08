@@ -117,6 +117,39 @@ export const DEFAULT_PLANS = [
   },
 ];
 
+// The same plans for the US site, charged in dollars (cents below). Separate
+// rows, so each country's price is edited on its own in the admin.
+const USD_PRICE: Record<string, { minor: number; saved?: string }> = {
+  bronze_monthly: { minor: 499 },
+  bronze_annual: { minor: 4900, saved: '$10.88 saved vs paying monthly' },
+  silver_monthly: { minor: 999 },
+  silver_annual: { minor: 9900, saved: '$20.88 saved vs paying monthly' },
+  gold_monthly: { minor: 1999 },
+  gold_annual: { minor: 19900, saved: '$40.88 saved vs paying monthly' },
+};
+export const DEFAULT_USD_PLANS = DEFAULT_PLANS.map((plan) => {
+  const usd = USD_PRICE[plan.sku]!;
+  return {
+    ...plan,
+    sku: `${plan.sku}_usd`,
+    perks: plan.perks.map((x) => (usd.saved && /saved vs paying monthly/.test(x) ? usd.saved : x)),
+    priceMinor: usd.minor,
+    currency: 'USD',
+    sortOrder: plan.sortOrder + 100,
+  };
+});
+DEFAULT_PLANS.push(...DEFAULT_USD_PLANS);
+
+/** Creates the US plans on a database that predates them. Never overwrites an existing row. */
+export async function ensureUsdPlans(): Promise<void> {
+  for (const plan of DEFAULT_USD_PLANS) {
+    const exists = await prisma.membershipPlan.findUnique({ where: { sku: plan.sku }, select: { id: true } });
+    if (exists) continue;
+    await prisma.membershipPlan.create({ data: { ...plan, perks: plan.perks as any } });
+    logger.info({ sku: plan.sku }, 'US membership plan created');
+  }
+}
+
 // Phrases only the old default perks used. A row containing one still holds
 // the copy that promised partner discounts, free vet consults and a 24x7 vet
 // line; a row an admin rewrote does not, and is left alone.

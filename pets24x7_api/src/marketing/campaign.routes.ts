@@ -14,9 +14,9 @@ import { requireAuth } from '../auth/middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../shared/errors.js';
 import { newMerchantTxnId } from '../payments/checkout.js';
-import { startCheckout } from '../payments/checkout.js';
+import { checkoutErrorMessage, startCheckout } from '../payments/checkout.js';
 import { closeUnpaidCheckout, reconcilePayment } from '../payments/membership.routes.js';
-import { getCampaignOptions, CAMPAIGN_GOALS, campaignOptionFor } from '../payments/pricing.js';
+import { getCampaignOptions, CAMPAIGN_GOALS, campaignOptionFor, currencyForCountry, growPlanPriceUsd } from '../payments/pricing.js';
 import { logger } from '../logger.js';
 import { notifyIf } from '../mail/notify.js';
 import { campaignCreatedEmail } from '../mail/action-templates.js';
@@ -36,11 +36,16 @@ vendorCampaignsRouter.get(
       include: { payment: { select: { status: true, merchantTxnId: true } } },
       take: 200,
     });
-    const activePlans = getActiveGrowPlans().filter((p) => p.type === 'CAMPAIGN');
+    const vendor = await prisma.vendor.findUnique({ where: { id: req.auth!.sub }, select: { country: true } });
+    const currency = currencyForCountry(vendor?.country);
+    const activePlans = getActiveGrowPlans()
+      .filter((p) => p.type === 'CAMPAIGN')
+      .map((p) => ({ ...p, priceUsd: growPlanPriceUsd(p) }));
     res.json({
       ok: true,
       campaigns,
-      catalogue: { options: getCampaignOptions(), goals: CAMPAIGN_GOALS, plans: activePlans },
+      currency,
+      catalogue: { options: getCampaignOptions(undefined, currency), goals: CAMPAIGN_GOALS, plans: activePlans, currency },
     });
   }),
 );
@@ -65,7 +70,8 @@ vendorCampaignsRouter.post(
 
     // Priced per goal: admins can price one duration differently per goal and
     // the dashboard shows the goal's price, so the charge must match it.
-    const option = campaignOptionFor(body.durationDays, body.goal);
+    const currency = currencyForCountry(vendor.country);
+    const option = campaignOptionFor(body.durationDays, body.goal, currency);
     if (!option) throw new BadRequestError('Unknown campaign package');
 
     // One campaign at a time per vendor. Without this a vendor could stack
@@ -121,7 +127,7 @@ vendorCampaignsRouter.post(
         goal: body.goal,
         durationDays: option.durationDays,
         priceMinor: option.priceMinor,
-        currency: 'INR',
+        currency,
         status: 'PENDING_PAYMENT',
         notes: body.notes ?? null,
       },
@@ -132,7 +138,7 @@ vendorCampaignsRouter.post(
         purpose: 'CAMPAIGN',
         campaignId: campaign.id,
         amountMinor: option.priceMinor,
-        currency: 'INR',
+        currency,
         gateway: 'RAZORPAY',
         merchantTxnId,
         status: 'INITIATED',
@@ -149,7 +155,7 @@ vendorCampaignsRouter.post(
         campaignCreatedEmail(
           to,
           vendor.businessName,
-          { goal: String(campaign.goal), durationDays: option.durationDays, priceMinor: option.priceMinor, currency: 'INR' },
+          { goal: String(campaign.goal), durationDays: option.durationDays, priceMinor: option.priceMinor, currency },
           merchantTxnId,
         ),
       );
@@ -158,9 +164,10 @@ vendorCampaignsRouter.post(
       const checkout = await startCheckout({
         merchantTxnId,
         amountMinor: option.priceMinor,
+        currency,
         userId: vendorId,
         purpose: 'CAMPAIGN',
-        mobileNumber: vendor.phone.replace(/^\+/, '').replace(/^91/, ''),
+        mobileNumber: vendor.phone.replace(/^\+/, '').replace(currency === 'USD' ? /^1(?=\d{10}$)/ : /^91/, ''),
       });
       if (checkout.mode === 'razorpay') {
         await prisma.payment.update({
@@ -181,7 +188,7 @@ vendorCampaignsRouter.post(
         data: { status: 'FAILED', errorMessage: String(err?.message ?? 'gateway error') },
       });
       await prisma.marketingCampaign.update({ where: { id: campaign.id }, data: { status: 'CANCELLED' } });
-      throw new BadRequestError('Could not start payment — please try again');
+      throw new BadRequestError(checkoutErrorMessage(err, currency));
     }
   }),
 );

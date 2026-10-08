@@ -1143,7 +1143,7 @@
           <div class="card" style="background:#F8FAFC; border:1px dashed #CBD5E1; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
             <div>
               <h4 style="font-size:16px; font-weight:800;">Custom Campaign</h4>
-              <div style="font-size:14px; font-weight:700; color:var(--primary); margin:2px 0;">Starting from ₹20,000</div>
+              <div style="font-size:14px; font-weight:700; color:var(--primary); margin:2px 0;" id="customCampaignFrom">Starting from ₹20,000</div>
               <p style="font-size:13px; color:var(--text-muted);">For businesses requiring custom targeting, multiple locations, special campaigns or larger marketing requirements.</p>
             </div>
             <a href="https://wa.me/919930090487?text=Hi%20Pets24x7!%20I%20want%20to%20discuss%20a%20Custom%20Marketing%20Campaign..." target="_blank" class="btn btn-wa btn-sm">Talk to Our Marketing Team →</a>
@@ -1906,11 +1906,11 @@
   }
 
   function planPriceFor(p) {
-    var price = Number(p.priceRupees) || 0;
+    var price = vCurrency() === 'USD' && p.priceUsd != null ? Number(p.priceUsd) || 0 : Number(p.priceRupees) || 0;
     if (planIsAnnual(p)) return { price: price, period: '/ year', billing: 'MONTHLY' };
     if (vendorSubState.billingPeriod === 'ANNUAL' && price > 0) {
       // The server charges 10x the monthly price for a year (two months free).
-      return { price: Math.round(price * 10), period: '/ year (2 months free)', billing: 'ANNUAL' };
+      return { price: Math.round(price * 10 * 100) / 100, period: '/ year (2 months free)', billing: 'ANNUAL' };
     }
     return { price: price, period: '/ month', billing: 'MONTHLY' };
   }
@@ -1962,7 +1962,7 @@
           '<h4 style="font-size:18px; font-weight:800; color:var(--text-heading); margin-bottom:4px;">' + esc(p.name) + '</h4>' +
           '<div style="font-size:12px; color:var(--text-muted); min-height:36px;">' + esc(p.tagline || 'Verified business listing & customer leads') + '</div>' +
           '<div style="margin:16px 0;">' +
-            '<span style="font-size:28px; font-weight:800; color:var(--text-heading);">₹' + Number(price).toLocaleString('en-IN') + '</span>' +
+            '<span style="font-size:28px; font-weight:800; color:var(--text-heading);">' + fmtVMoney(Number(price)) + '</span>' +
             '<span style="font-size:12px; color:var(--text-muted); font-weight:600; margin-left:4px;">' + periodText + '</span>' +
           '</div>' +
           '<ul style="list-style:none; padding:0; margin:0 0 20px 0;">' + perksHtml + '</ul>' +
@@ -1988,7 +1988,7 @@
         '<td data-label="Date" style="white-space:nowrap;">' + dStr + '</td>' +
         '<td data-label="Transaction ID"><span style="font-family:monospace; font-weight:700; font-size:12px; overflow-wrap:anywhere;">' + esc(inv.merchantTxnId) + '</span></td>' +
         '<td data-label="Plan"><span class="status-tag" style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; font-weight:700;">' + esc(inv.planName) + '</span></td>' +
-        '<td data-label="Amount" style="font-weight:800; white-space:nowrap;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td>' +
+        '<td data-label="Amount" style="font-weight:800; white-space:nowrap;">' + fmtVMoney(Number(inv.amountRupees || 0), inv.currency || 'INR') + '</td>' +
         '<td data-label="Method"><span style="font-size:12px; color:var(--text-muted);">' + esc(inv.paymentMethod || 'Online') + '</span></td>' +
         '<td data-label="Status">' + invStatusTag(inv.status) + '</td>' +
         '<td class="cell-action" data-label="" style="text-align:right; white-space:nowrap;"><button class="btn btn-sm btn-outline" style="font-size:11.5px; padding:4px 10px;" onclick="openVendorReceiptModal(\'' + esc(inv.id) + '\')">🧾 View Receipt</button></td>' +
@@ -2026,7 +2026,7 @@
       return;
     }
 
-    var basePriceStr = '₹' + Number(price).toLocaleString('en-IN');
+    var basePriceStr = fmtVMoney(Number(price));
     var gst = Math.round(price * 0.18 / 1.18);
 
     if (document.getElementById('vPayModalTitle')) document.getElementById('vPayModalTitle').textContent = title;
@@ -2034,7 +2034,12 @@
     if (document.getElementById('vPayItemDesc')) document.getElementById('vPayItemDesc').textContent = desc;
     if (document.getElementById('vPayBasePrice')) document.getElementById('vPayBasePrice').textContent = basePriceStr;
     if (document.getElementById('vPaySubtotal')) document.getElementById('vPaySubtotal').textContent = basePriceStr;
-    if (document.getElementById('vPayGst')) document.getElementById('vPayGst').textContent = '₹' + Number(gst).toLocaleString('en-IN');
+    var gstEl = document.getElementById('vPayGst');
+    if (gstEl) {
+      gstEl.textContent = fmtVMoney(Number(gst));
+      // Indian GST does not apply to a dollar payment.
+      if (gstEl.parentNode) gstEl.parentNode.style.display = vCurrency() === 'USD' ? 'none' : '';
+    }
     if (document.getElementById('vPayTotal')) document.getElementById('vPayTotal').textContent = basePriceStr;
     if (document.getElementById('vPaySubmitBtn')) document.getElementById('vPaySubmitBtn').textContent = '🔒 Pay ' + basePriceStr + ' & Activate Now';
 
@@ -2151,10 +2156,10 @@
           '<tr><th style="text-align:left; padding:8px;">Item Description</th><th style="text-align:right; padding:8px;">Amount</th></tr>' +
         '</thead>' +
         '<tbody>' +
-          '<tr><td style="padding:10px 8px; border-bottom:1px solid #E2E8F0;">' + esc(inv.planName) + '</td><td style="text-align:right; padding:10px 8px; border-bottom:1px solid #E2E8F0; font-weight:700;">₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</td></tr>' +
+          '<tr><td style="padding:10px 8px; border-bottom:1px solid #E2E8F0;">' + esc(inv.planName) + '</td><td style="text-align:right; padding:10px 8px; border-bottom:1px solid #E2E8F0; font-weight:700;">' + fmtVMoney(Number(inv.amountRupees || 0), inv.currency || 'INR') + '</td></tr>' +
         '</tbody>' +
       '</table>' +
-      '<div style="text-align:right; font-size:14px; font-weight:800; color:#1E3A8A;">Total Paid: ₹' + Number(inv.amountRupees || 0).toLocaleString('en-IN') + '</div>' +
+      '<div style="text-align:right; font-size:14px; font-weight:800; color:#1E3A8A;">Total Paid: ' + fmtVMoney(Number(inv.amountRupees || 0), inv.currency || 'INR') + '</div>' +
     '</div>';
 
     if (document.getElementById('vReceiptModalBody')) document.getElementById('vReceiptModalBody').innerHTML = html;
@@ -2181,7 +2186,9 @@
     })[0];
     var o = (cat.options || []).filter(function(x) { return x.durationDays === durationDays; })[0];
     if (!gp && !o) return null;
-    var rupees = gp ? Number(gp.priceRupees != null ? gp.priceRupees : gp.price) || 0 : Math.round(o.priceMinor / 100);
+    var rupees = gp
+      ? Number(vCurrency() === 'USD' && gp.priceUsd != null ? gp.priceUsd : (gp.priceRupees != null ? gp.priceRupees : gp.price)) || 0
+      : o.priceMinor / 100;
     var label = durationDays === 90 ? '3 Months' : ((o && o.label) || (durationDays + ' Days'));
     return { durationDays: durationDays, label: label, price: rupees, priceMinor: Math.round(rupees * 100) };
   }
@@ -2189,6 +2196,8 @@
   function renderPlans() {
     var grid = document.getElementById('plansGrid');
     if (!grid) return;
+    var from = document.getElementById('customCampaignFrom');
+    if (from) from.textContent = 'Starting from ' + (vCurrency() === 'USD' ? '$249' : '₹20,000');
     var goalCode = GOAL_ENUM[state.selectedGoal] || 'WHATSAPP_ENQUIRIES';
     var cataloguePlans = (state.campaignCatalogue && state.campaignCatalogue.plans) || [];
     var goalPlans = cataloguePlans.filter(function(p){ return p.goal === goalCode && p.active !== false; });
@@ -2196,13 +2205,13 @@
     if (goalPlans.length > 0) {
       grid.innerHTML = goalPlans.map(function(p) {
         var label = p.durationDays === 90 ? '3 Months' : (p.durationDays + ' Days');
-        var price = p.priceRupees != null ? p.priceRupees : (p.price != null ? p.price : 0);
+        var price = vCurrency() === 'USD' && p.priceUsd != null ? p.priceUsd : (p.priceRupees != null ? p.priceRupees : (p.price != null ? p.price : 0));
         var isRec = !!p.recommended;
         return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
           (isRec ? '<span class="plan-rec-badge">Recommended</span>' : '') +
           '<div style="margin-bottom:24px;">' +
             '<h4 style="font-size:20px; font-weight:800;">' + esc(label) + '</h4>' +
-            '<div class="plan-price" style="margin-top:12px;">₹' + Number(price).toLocaleString('en-IN') + '</div>' +
+            '<div class="plan-price" style="margin-top:12px;">' + fmtVMoney(Number(price)) + '</div>' +
           '</div>' +
           '<button class="btn btn-sm btn-primary" style="width:100%;" onclick="startCampaignSetup(' + p.durationDays + ')">Choose ' + esc(label) + ' Plan →</button>' +
         '</div>';
@@ -2213,13 +2222,13 @@
     var opts = (state.campaignCatalogue && state.campaignCatalogue.options) || [];
     if (!opts.length) { grid.innerHTML = '<p style="color:var(--text-muted);">Plans are temporarily unavailable.</p>'; return; }
     grid.innerHTML = opts.map(function(o, i) {
-      var rupees = Math.round(o.priceMinor / 100);
+      var rupees = o.priceMinor / 100;
       var isRec = o.recommended !== undefined ? !!o.recommended : (i === 1);
       return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
         (isRec ? '<span class="plan-rec-badge">Recommended</span>' : '') +
         '<div style="margin-bottom:24px;">' +
           '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
-          '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
+          '<div class="plan-price" style="margin-top:12px;">' + fmtVMoney(rupees) + '</div>' +
         '</div>' +
         '<button class="btn btn-sm btn-primary" style="width:100%;" onclick="startCampaignSetup(' + o.durationDays + ')">Choose ' + esc(o.label) + ' Plan →</button>' +
       '</div>';
@@ -2313,13 +2322,13 @@
       grid.innerHTML = '<p style="color:var(--text-muted);">Featured placements are temporarily unavailable.</p>';
     } else {
       grid.innerHTML = opts.map(function(o, i) {
-        var rupees = Math.round(o.priceMinor / 100);
+        var rupees = o.priceMinor / 100;
         var isRec = o.recommended !== undefined ? !!o.recommended : (i === 0);
         return '<div class="plan-card' + (isRec ? ' recommended' : '') + '">' +
           (isRec ? '<span class="plan-rec-badge">Most popular</span>' : '') +
           '<div style="margin-bottom:24px;">' +
             '<h4 style="font-size:20px; font-weight:800;">' + esc(o.label) + '</h4>' +
-            '<div class="plan-price" style="margin-top:12px;">₹' + rupees.toLocaleString('en-IN') + '</div>' +
+            '<div class="plan-price" style="margin-top:12px;">' + fmtVMoney(rupees) + '</div>' +
             '<p style="font-size:12.5px; color:var(--text-muted); margin-top:8px;">Top of your city + category pages for ' + o.durationDays + ' days.</p>' +
           '</div>' +
           '<button class="btn btn-sm btn-primary" style="width:100%;" ' +
@@ -2351,16 +2360,16 @@
     var opts = (state.featuredCatalogue && state.featuredCatalogue.options) || [];
     var o = opts.filter(function(x){ return x.durationDays === durationDays; })[0];
     if (!o) { toast('That placement is no longer available.', 'error'); return; }
-    var rupees = Math.round(o.priceMinor / 100);
+    var rupees = o.priceMinor / 100;
     var live = liveFeatured();
     var msg = live
-      ? 'Book ' + o.label + ' of featured placement at ₹' + rupees.toLocaleString('en-IN') +
+      ? 'Book ' + o.label + ' of featured placement at ' + fmtVMoney(rupees) +
         '? It starts when your current placement ends on ' + fmtDate(live.endsAt) + '.'
-      : 'Feature your listing for ' + o.label + ' at ₹' + rupees.toLocaleString('en-IN') + '?';
+      : 'Feature your listing for ' + o.label + ' at ' + fmtVMoney(rupees) + '?';
     uiConfirm({
       title: live ? 'Book the next placement?' : 'Feature your listing?',
       body: msg,
-      confirmLabel: 'Pay ₹' + rupees.toLocaleString('en-IN')
+      confirmLabel: 'Pay ' + fmtVMoney(rupees)
     }).then(function (ok) { if (ok) startFeaturedCheckout(o, durationDays, btn); });
   }
 
@@ -2387,7 +2396,7 @@
     if (!o) { toast('That plan is no longer available.', 'error'); return; }
     state.selectedPlan = { name: o.label, price: o.price, durationDays: o.durationDays, priceMinor: o.priceMinor };
     document.getElementById('csGoalDisplay').value = state.selectedGoal;
-    document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ₹' + o.price.toLocaleString('en-IN') + ')';
+    document.getElementById('csPlanName').value = state.selectedGoal + ' (' + o.label + ' — ' + fmtVMoney(o.price) + ')';
     renderCampaignServices();
     document.getElementById('csStep2').style.display = 'block';
     document.getElementById('csStep3').style.display = 'none';
@@ -2445,8 +2454,8 @@
     document.getElementById('revDuration').textContent = state.selectedPlan.name;
     document.getElementById('revLoc').textContent = location + ' · ' + radius;
     document.getElementById('revPhone').textContent = phone;
-    document.getElementById('csReviewPrice').textContent = '₹' + state.selectedPlan.price.toLocaleString('en-IN');
-    document.getElementById('payBtn').textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →';
+    document.getElementById('csReviewPrice').textContent = fmtVMoney(state.selectedPlan.price);
+    document.getElementById('payBtn').textContent = 'Pay ' + fmtVMoney(state.selectedPlan.price) + ' →';
 
     document.getElementById('csStep2').style.display = 'none';
     document.getElementById('csStep3').style.display = 'block';
@@ -2525,11 +2534,11 @@
 
     api.vendorCampaignCreate({ goal: goalEnum, durationDays: durationDays, notes: notes.slice(0, 500) }).then(function(r) {
       var c = r.checkout;
-      if (c && c.mode === 'razorpay') { return openRazorpay(c, r.merchantTxnId, 'Marketing campaign', payBtn, '', 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →'); }
+      if (c && c.mode === 'razorpay') { return openRazorpay(c, r.merchantTxnId, 'Marketing campaign', payBtn, '', 'Pay ' + fmtVMoney(state.selectedPlan.price) + ' →'); }
       if (r.redirectUrl) { location.href = r.redirectUrl; return; }
       throw new Error('No checkout method returned');
     }).catch(function(err) {
-      if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ₹' + state.selectedPlan.price.toLocaleString('en-IN') + ' →'; }
+      if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay ' + fmtVMoney(state.selectedPlan.price) + ' →'; }
       toast('Could not start payment: ' + fmtErr(err), 'error');
       // 409: a campaign is already awaiting payment or running — show it.
       if (err && err.status === 409) {
@@ -2579,6 +2588,14 @@
   // Services are priced in the vendor's own currency (USD for US businesses,
   // stored by the server from the vendor's country).
   function currencySymbol(code) { return String(code || '').toUpperCase() === 'USD' ? '$' : '₹'; }
+  // What this business pays in: dollars for a US business, rupees otherwise.
+  function vCurrency() { return String((state.vendor && state.vendor.country) || '').toUpperCase() === 'US' ? 'USD' : 'INR'; }
+  // An amount in major units (rupees / dollars) as the price label shows it.
+  function fmtVMoney(amount, cur) {
+    var n = Number(amount) || 0;
+    if ((cur || vCurrency()) === 'USD') return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    return '₹' + n.toLocaleString('en-IN');
+  }
   function vendorCurrencySymbol() { return String(state.vendor.country || '').toUpperCase() === 'US' ? '$' : '₹'; }
   function fmtServicePrice(s) {
     var n = Number(s.price) || 0;

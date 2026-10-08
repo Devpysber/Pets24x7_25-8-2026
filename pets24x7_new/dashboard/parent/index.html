@@ -1034,7 +1034,7 @@
 
     // Pull full membership history and available plans for the Membership view.
     state.plansError = false;
-    api.membershipPlans().then(function(p) {
+    api.membershipPlans('ALL').then(function(p) {
       state.availablePlans = p.plans || [];
       renderMembership();
       renderVendorGrids(); // benefit strip quotes the best real discount
@@ -1582,7 +1582,7 @@
     state.plansError = false;
     state.availablePlans = null;
     renderMembership();
-    api.membershipPlans().then(function(p) {
+    api.membershipPlans('ALL').then(function(p) {
       state.availablePlans = p.plans || [];
       renderMembership();
     }).catch(function() { state.plansError = true; renderMembership(); });

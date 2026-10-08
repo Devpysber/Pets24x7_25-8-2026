@@ -37,6 +37,8 @@
   .toggle{display:inline-flex;background:var(--bg);border-radius:999px;padding:4px;margin-bottom:32px}
   .toggle button{background:transparent;border:none;font-family:inherit;font-weight:700;font-size:14px;padding:8px 20px;border-radius:999px;cursor:pointer;color:var(--text-muted)}
   .toggle button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+  .cc-toggle{margin-left:8px}
+  .toggle button:disabled{opacity:.45;cursor:not-allowed}
   .toggle .save{font-size:11px;color:var(--success);font-weight:700;margin-left:6px}
   /* Who the plans are for. Sits above the period toggle. */
   .aud{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:5px;margin:0 0 18px;flex-wrap:wrap;justify-content:center}
@@ -193,6 +195,10 @@
     <button id="tMonthly" class="on" type="button" aria-pressed="true">Monthly</button>
     <button id="tAnnual" type="button" aria-pressed="false">Annual <span class="save">save 2 months</span></button>
   </div>
+  <div class="toggle cc-toggle" role="group" aria-label="Country and currency">
+    <button type="button" data-cc="IN" aria-pressed="true">India · ₹ INR</button>
+    <button type="button" data-cc="US" aria-pressed="false">USA · $ USD</button>
+  </div>
   <div class="hero-trust"><span>🔒 Secure payment by Razorpay</span><span>💬 Real people on WhatsApp</span><span>✓ No lock-in</span></div>
 </section>
 
@@ -325,6 +331,40 @@
   var audience = 'parent';
   var vendorSignedIn = false, adminSignedIn = false;
   var bizPlans = [], vendorSub = null, freeContacts = null, freeCalls = null;
+  // India pays in rupees, the US in dollars. Starts from ?country=, then the
+  // signed-in account's country, then a US page or a US time zone.
+  var country = 'IN', countryLocked = false;
+  function guessCountry() {
+    var q = /[?&]country=(US|IN)\b/i.exec(location.search);
+    if (q) return q[1].toUpperCase();
+    try { var saved = localStorage.getItem('p24-country'); if (saved === 'US' || saved === 'IN') return saved; } catch (e) {}
+    if (/pets24x7\.com\/us\//.test(document.referrer || '')) return 'US';
+    try { if (/^America\//.test(Intl.DateTimeFormat().resolvedOptions().timeZone || '')) return 'US'; } catch (e) {}
+    return 'IN';
+  }
+  function curr() { return country === 'US' ? 'USD' : 'INR'; }
+  function paintCountry() {
+    document.querySelectorAll('[data-cc]').forEach(function (b) {
+      var on = b.getAttribute('data-cc') === country;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.disabled = countryLocked && !on;
+      b.title = countryLocked && !on ? 'Your account pays in its own country\u2019s currency' : '';
+    });
+  }
+  function setCountry(cc) {
+    if (countryLocked || (cc !== 'US' && cc !== 'IN') || cc === country) return;
+    country = cc;
+    try { localStorage.setItem('p24-country', cc); } catch (e) {}
+    paintCountry();
+    var grid = document.getElementById('planGrid');
+    grid.setAttribute('aria-busy', 'true');
+    api.membershipPlans(country).then(function (r) { allPlans = r.plans || []; render(); })
+      .catch(function () { allPlans = []; render(); });
+  }
+  document.querySelectorAll('[data-cc]').forEach(function (b) {
+    b.addEventListener('click', function () { setCountry(b.getAttribute('data-cc')); });
+  });
   var HERO = {
     parent: ['Pets24x7 Membership', 'Pet care, sorted for you.',
       'Tell us what your pet needs on WhatsApp. We find the right vet, groomer or boarding near you, check availability and book it.'],
@@ -418,7 +458,7 @@
       '<div class="tier free">FREE</div>' +
       '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Free account</h3>' +
       '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">For the occasional booking</p>' +
-      '<div class="price"><span class="amt">₹0</span><span class="unit">/for ever</span></div>' +
+      '<div class="price"><span class="amt">' + fmtMoney(0, curr()) + '</span><span class="unit">/for ever</span></div>' +
       '<div class="price-sub">No payment needed</div>' +
       '<ul class="perks">' + perks + '</ul>' +
       (href ? '<a class="buy outline" style="text-align:center" href="' + href + '">' + label + '</a>'
@@ -431,7 +471,8 @@
   // the year (Diamond) is the same in both views.
   function bizPrice(p) {
     var yearly = Number(p.durationDays) >= 365;
-    var rupees = Number(p.priceRupees) || 0;
+    // `rupees` is the amount in the page's currency (dollars on the US view).
+    var rupees = country === 'US' && p.priceUsd != null ? Number(p.priceUsd) || 0 : Number(p.priceRupees) || 0;
     if (yearly) return { rupees: rupees, unit: '/year', period: 'ANNUAL', sub: 'One payment for a year' };
     if (currentPeriod === 'ANNUAL' && rupees > 0) return { rupees: rupees * 10, unit: '/year', period: 'ANNUAL', sub: 'One payment for a year · 2 months free' };
     return { rupees: rupees, unit: '/month', period: 'MONTHLY', sub: rupees > 0 ? 'One payment for a month' : 'Free for ever' };
@@ -487,7 +528,7 @@
         '<div class="tier ' + t + '">' + esc(tierKey) + '</div>' +
         '<h3 style="font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">' + esc(bizName(p)) + '</h3>' +
         (p.tagline ? '<p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">' + esc(p.tagline) + '</p>' : '') +
-        '<div class="price"><span class="amt">' + (free ? '₹0' : fmtMoney(pr.rupees * 100, 'INR')) + '</span><span class="unit">' + (free ? '/for ever' : pr.unit) + '</span></div>' +
+        '<div class="price"><span class="amt">' + fmtMoney(Math.round(pr.rupees * 100), curr()) + '</span><span class="unit">' + (free ? '/for ever' : pr.unit) + '</span></div>' +
         '<div class="price-sub">' + esc(pr.sub) + (free ? '' : ' &middot; no auto-renew') + '</div>' +
         '<ul class="perks">' + perks + '</ul>' +
         (href ? '<a class="' + cls + '" style="text-align:center;display:block" href="' + esc(href) + '">' + esc(label) + '</a>'
@@ -697,8 +738,10 @@
     if (a) { e.preventDefault(); setAudience(a.getAttribute('data-go'), true); }
   });
 
+  country = guessCountry();
+  paintCountry();
   Promise.all([
-    api.membershipPlans(),
+    api.membershipPlans(country),
     // Each role asked for separately: unscoped, a leftover admin/vendor cookie
     // outranks the parent session and the page showed "Sign in to subscribe".
     api.me('pet_parent').catch(function(){ return {role:null}; }),
@@ -715,6 +758,15 @@
     vendorSignedIn = (results[2] || {}).role === 'vendor';
     adminSignedIn = (results[3] || {}).role === 'admin';
     bizPlans = ((results[4] || {}).plans || []).filter(function (p) { return p.active !== false; });
+    // A signed-in account always sees (and pays) its own country's prices.
+    var acct = signedIn ? (results[1] || {}).user : (vendorSignedIn ? (results[2] || {}).user : null);
+    var acctCc = acct && String(acct.country || '').toUpperCase();
+    var refetch = null;
+    if (acctCc === 'US' || acctCc === 'IN') {
+      countryLocked = true;
+      if (acctCc !== country) { country = acctCc; refetch = api.membershipPlans(country).then(function (r) { allPlans = r.plans || []; }); }
+      paintCountry();
+    }
 
     // ?for=business|parent wins; otherwise a signed-in business sees its own plans.
     var q = /[?&]for=(business|parent)/.exec(location.search);
@@ -724,6 +776,7 @@
     // Resolve memberships BEFORE first paint so no card flashes a live "Subscribe" button.
     if (signedIn) waits.push(api.membershipMe().then(function (m) { if (m && m.active) activeMembership = m.active; }).catch(function () {}));
     if (vendorSignedIn) waits.push(api.vendorSubMe().then(function (r) { vendorSub = r.subscription || null; }).catch(function () {}));
+    if (refetch) waits.push(refetch.catch(function () {}));
     return Promise.all(waits).then(function () { setAudience(start, false); });
   }).catch(function (e) {
     document.getElementById('planGrid').removeAttribute('aria-busy');
