@@ -249,12 +249,40 @@ class _SiteShellState extends State<SiteShell> {
   }
 
   Future<void> _openExternal(Uri uri) async {
+    if (uri.scheme.toLowerCase() == 'intent') return _openIntent(uri.toString());
     try {
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok && mounted) _snack('No app on this phone can open that link.');
     } catch (_) {
       if (mounted) _snack('No app on this phone can open that link.');
     }
+  }
+
+  /// Chrome-style `intent://` links (Razorpay's UPI app buttons use them):
+  /// `intent://pay?pa=x#Intent;scheme=upi;package=com.phonepe.app;S.browser_fallback_url=…;end`.
+  /// Android cannot launch that form directly, so open `scheme://pay?pa=x`, then
+  /// the fallback URL, then the app's Play Store page.
+  Future<void> _openIntent(String raw) async {
+    final hash = raw.indexOf('#Intent;');
+    final target = (hash < 0 ? raw : raw.substring(0, hash)).replaceFirst(RegExp(r'^intent:(//)?'), '');
+    final params = <String, String>{};
+    if (hash >= 0) {
+      for (final part in raw.substring(hash + 8).split(';')) {
+        final eq = part.indexOf('=');
+        if (eq > 0) params[part.substring(0, eq)] = Uri.decodeComponent(part.substring(eq + 1));
+      }
+    }
+    final candidates = <Uri>[
+      if (params['scheme'] != null) Uri.parse('${params['scheme']}://$target'),
+      if (params['S.browser_fallback_url'] != null) Uri.parse(params['S.browser_fallback_url']!),
+      if (params['package'] != null) Uri.parse('https://play.google.com/store/apps/details?id=${params['package']}'),
+    ];
+    for (final c in candidates) {
+      try {
+        if (await launchUrl(c, mode: LaunchMode.externalApplication)) return;
+      } catch (_) {}
+    }
+    if (mounted) _snack('No app on this phone can open that link.');
   }
 
   Future<List<String>> _pickFiles(FileSelectorParams params) async {
